@@ -49,6 +49,30 @@
   :group 'approve
   :prefix "approve-api-")
 
+(defcustom approve-username nil
+  "Username used by `approve', see `ghub-request' for details."
+  :type '(choice (const :tag "Read from config" nil)
+          (string :tag "Username value"))
+  :group 'approve)
+
+(defcustom approve-host nil
+  "Host used by `approve', see `ghub-request' for details."
+  :type '(choice (const :tag "Read from config" nil)
+          (string :tag "Host value"))
+  :group 'approve)
+
+(defcustom approve-auth-name 'approve
+  "Auth name used by `approve', see `ghub-request' for details."
+  :type 'symbol
+  :group 'approve)
+
+(defcustom approve-api-timeout 10
+  "Default timeout in seconds for API requests.
+Set to nil to disable timeouts."
+  :type '(choice (const :tag "No timeout" nil)
+          (integer :tag "Seconds"))
+  :group 'approve)
+
 ;;; Error Handling
 
 (define-error 'approve-api-error "Approve API error")
