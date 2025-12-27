@@ -44,7 +44,6 @@
 ;;; Code:
 
 (require 'approve)
-(require 'approve-graphql)
 (require 'pp)
 
 ;;; Custom Variables
@@ -83,6 +82,14 @@
     (pp data (current-buffer)))
   (insert "\n"))
 
+(defun approve-dev--insert-text (text)
+  "Insert TEXT directly into the debug buffer.
+Unlike `approve-dev--insert-result', this inserts the text as-is
+without quoting, suitable for multi-line text content like GraphQL queries."
+  (insert text)
+  (unless (eq (char-before) ?\n)
+    (insert "\n")))
+
 (defun approve-dev--display-result (title data)
   "Display DATA with TITLE in the debug buffer."
   (let ((buffer (approve-dev--get-debug-buffer)))
@@ -91,6 +98,18 @@
       (approve-dev--insert-header title)
       (approve-dev--insert-result data)
       (insert (format "--- %s ---\n" (format-time-string "%Y-%m-%d %H:%M:%S"))))
+    (display-buffer buffer)))
+
+(defun approve-dev--display-text (title text)
+  "Display TEXT with TITLE in the debug buffer.
+Unlike `approve-dev--display-result', this displays TEXT as-is
+without quoting, suitable for multi-line content like GraphQL queries."
+  (let ((buffer (approve-dev--get-debug-buffer)))
+    (with-current-buffer buffer
+      (goto-char (point-max))
+      (approve-dev--insert-header title)
+      (approve-dev--insert-text text)
+      (insert (format "\n--- %s ---\n" (format-time-string "%Y-%m-%d %H:%M:%S"))))
     (display-buffer buffer)))
 
 ;;; Interactive Commands - Test Running
@@ -185,7 +204,7 @@ in the debug buffer."
        (list (completing-read "GraphQL query: " query-names nil t)))))
   (condition-case err
       (let ((resolved-query (approve-graphql-load query-name t))) ; bypass cache
-        (approve-dev--display-result
+        (approve-dev--display-text
          (format "GraphQL Query: %s" query-name)
          resolved-query)
         (message "Query loaded and displayed in debug buffer"))
