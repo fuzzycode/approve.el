@@ -44,6 +44,7 @@
 ;;; Code:
 
 (require 'approve)
+(require 'approve-graphql)
 (require 'pp)
 
 ;;; Custom Variables
