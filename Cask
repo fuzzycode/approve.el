@@ -8,6 +8,7 @@
 (depends-on "magit" "4.0")
 (depends-on "markdown-mode" "2.5")
 (depends-on "ghub" "3.5")
+(depends-on "dash" "2.19")
 
 (development
   (depends-on "undercover")

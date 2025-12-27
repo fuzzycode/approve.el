@@ -300,7 +300,7 @@ Captures the call and stores callbacks for later invocation."
                                      :callback (lambda (_)
                                                  (setq callback-buffer (current-buffer)))
                                      :progress-message nil))
-              (test-approve-api--simulate-graphql-success '((data . nil)))
+              (test-approve-api--simulate-graphql-success '((data . ((result . "ok")))))
               (expect callback-buffer :to-equal test-buffer))
           (kill-buffer test-buffer))))
 
@@ -312,7 +312,7 @@ Captures the call and stores callbacks for later invocation."
                                :callback (lambda (_) (setq callback-called t))
                                :progress-message nil))
         (kill-buffer test-buffer)
-        (test-approve-api--simulate-graphql-success '((data . nil)))
+        (test-approve-api--simulate-graphql-success '((data . ((result . "ok")))))
         (expect callback-called :to-be-truthy)))
 
     (it "calls error callback in the originating buffer"

@@ -52,6 +52,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'dash)
 (require 'subr-x)
 
 ;;; Custom Variables
@@ -145,25 +146,34 @@ METADATA is a plist that can contain :owner, :repo, :number, etc."
        (approve-model--extract-typename data)
        (approve-model--extract-id data)))
 
+(defun approve-model--assert-typename (data context)
+  "Assert that DATA has __typename if it has id.
+CONTEXT is a string describing where the data came from for error messages.
+Signals an error if id is present but __typename is missing."
+  (when (and (listp data)
+             (approve-model--extract-id data)
+             (not (approve-model--extract-typename data)))
+    (error "Missing __typename in entity with id '%s' (context: %s)"
+           (approve-model--extract-id data) context)))
+
 (defun approve-model--normalize-value (value)
-  "Normalize VALUE, returning a ref if it's an entity, or the processed value."
+  "Normalize VALUE, returning a ref if it's an entity, or the processed value.
+Validates that entities with `id' also have `__typename'."
   (cond
-   ;; Normalizable entity - store it and return a ref
    ((approve-model--normalizable-p value)
     (approve-model--normalize-entity value))
-
-   ;; List/vector of items - process each
-   ((and (listp value) (not (approve-model--alist-p value)))
-    (mapcar #'approve-model--normalize-value value))
-
+   ;; Check for entities that have id but missing __typename
+   ((and (approve-model--alist-p value)
+         (approve-model--extract-id value)
+         (not (approve-model--extract-typename value)))
+    (approve-model--assert-typename value "normalizing alist value")
+    value)
    ((vectorp value)
-    (vconcat (mapcar #'approve-model--normalize-value value)))
-
-   ;; Nested alist (not an entity) - process values
+    (vconcat (-map #'approve-model--normalize-value value)))
+   ((and (listp value) (not (approve-model--alist-p value)))
+    (-map #'approve-model--normalize-value value))
    ((approve-model--alist-p value)
     (approve-model--normalize-alist value))
-
-   ;; Primitive value - return as-is
    (t value)))
 
 (defun approve-model--alist-p (obj)
@@ -173,35 +183,27 @@ An alist has dotted pairs like ((key . value) ...), not lists like ((:key ...))"
   (and (listp obj)
        (not (null obj))
        (not (approve-model-ref-p obj))
-       (cl-every (lambda (item)
-                   (and (consp item)
-                        (symbolp (car item))
-                        ;; Must be a dotted pair, not a list starting with symbol
-                        ;; A dotted pair (a . b) has (cdr item) as atom or cons
-                        ;; A list (:key x y) has (cdr item) as a list
-                        ;; We check: not a reference by testing if it looks like (:symbol ...)
-                        (not (and (keywordp (car item))
-                                  (listp (cdr item))
-                                  (not (null (cdr item)))))))
-                 obj)))
+       (--every (and (consp it)
+                     (symbolp (car it))
+                     ;; Must be a dotted pair, not a list starting with symbol
+                     ;; A dotted pair (a . b) has (cdr it) as atom or cons
+                     ;; A list (:key x y) has (cdr it) as a list
+                     (not (and (keywordp (car it))
+                               (listp (cdr it))
+                               (not (null (cdr it))))))
+                obj)))
 
 (defun approve-model--normalize-alist (alist)
   "Normalize all values in ALIST, returning a new alist."
-  (mapcar (lambda (pair)
-            (cons (car pair)
-                  (approve-model--normalize-value (cdr pair))))
-          alist))
+  (--map (cons (car it) (approve-model--normalize-value (cdr it))) alist))
 
 (defun approve-model--normalize-entity (data)
   "Normalize entity DATA and store it.  Return a reference to the entity."
   (let* ((typename (approve-model--extract-typename data))
          (id (approve-model--extract-id data))
          (type-store (approve-model--get-type-store typename))
-         ;; Normalize nested values
          (normalized-data (approve-model--normalize-alist data)))
-    ;; Store the normalized entity
     (puthash id normalized-data type-store)
-    ;; Return a reference
     (approve-model-make-ref typename id)))
 
 (defun approve-model--unwrap-nodes (data)
@@ -210,30 +212,21 @@ Converts { nodes: [...] } to just [...] and { totalCount: N, nodes: [...] }
 to the unwrapped list while preserving totalCount in metadata if needed.
 Vectors are converted to lists for consistency."
   (cond
-   ;; Handle connection objects with 'nodes' key
+   ;; Unwrap connection patterns: extract nodes from { nodes: [...] }
    ((and (approve-model--alist-p data)
          (assq 'nodes data))
-    (let ((nodes (alist-get 'nodes data)))
-      (if (or (listp nodes) (vectorp nodes))
-          (approve-model--unwrap-nodes nodes)
-        nodes)))
-
-   ;; List - process each item
-   ((and (listp data) (not (approve-model--alist-p data)))
-    (mapcar #'approve-model--unwrap-nodes data))
-
-   ;; Vector - convert to list and process each item
+    (-some->> data (alist-get 'nodes) approve-model--unwrap-nodes))
+   ;; Convert vectors to lists, processing each element
    ((vectorp data)
-    (mapcar #'approve-model--unwrap-nodes (append data nil)))
-
-   ;; Alist - process all values recursively
+    (if (= (length data) 0)
+        nil
+      (-map #'approve-model--unwrap-nodes (append data nil))))
+   ;; Process lists (non-alist) recursively
+   ((and (listp data) (not (approve-model--alist-p data)))
+    (-map #'approve-model--unwrap-nodes data))
+   ;; Process alists by recursing into values
    ((approve-model--alist-p data)
-    (mapcar (lambda (pair)
-              (cons (car pair)
-                    (approve-model--unwrap-nodes (cdr pair))))
-            data))
-
-   ;; Primitive
+    (--map (cons (car it) (approve-model--unwrap-nodes (cdr it))) data))
    (t data)))
 
 ;;; Public API - Store Operations
@@ -242,10 +235,13 @@ Vectors are converted to lists for consistency."
   "Load DATA into the normalized store.
 If SET-ROOT is non-nil and DATA is normalizable, set it as the root entity.
 DATA is typically the response from a GraphQL query.
-Returns a reference to the top-level entity if normalizable, else the data."
+Returns a reference to the top-level entity if normalizable, else the data.
+
+Entities are identified by having both `__typename' and `id' fields.
+If an entity has `id' but is missing `__typename', an error is signaled
+to help identify GraphQL queries that need to be fixed."
   (unless approve-model--store
     (approve-model-init))
-  ;; First unwrap GraphQL connection patterns
   (let* ((unwrapped (approve-model--unwrap-nodes data))
          (result (approve-model--normalize-value unwrapped)))
     (when (and set-root (approve-model-ref-p result))
@@ -270,16 +266,12 @@ Automatically resolves references in the returned data."
     (unless entity
       (signal 'approve-model-not-found (list typename id)))
     (cond
-     ;; Single field
      ((and field (symbolp field))
       (approve-model--resolve (alist-get field entity)))
-     ;; Multiple fields
      ((and field (listp field))
-      (mapcar (lambda (f)
-                (cons f (approve-model--resolve (alist-get f entity))))
-              field))
-     ;; Whole entity
-     (t (approve-model--resolve-entity entity)))))
+      (--map (cons it (approve-model--resolve (alist-get it entity))) field))
+     (t
+      (approve-model--resolve-entity entity)))))
 
 (defun approve-model-get-ref (ref &optional field)
   "Get an entity by REF, optionally extracting FIELD.
@@ -312,28 +304,16 @@ REF must be a valid entity reference created by `approve-model-make-ref'."
 (defun approve-model--resolve (value)
   "Resolve VALUE, following references to get actual data."
   (cond
-   ;; Reference - look it up
    ((approve-model-ref-p value)
     (condition-case nil
         (approve-model-get-ref value)
-      (approve-model-not-found value)))  ; Return the ref if not found
-
-   ;; List of items - resolve each
-   ((and (listp value) (not (approve-model--alist-p value)))
-    (mapcar #'approve-model--resolve value))
-
-   ;; Vector - convert to list and resolve each
+      (approve-model-not-found value)))
    ((vectorp value)
-    (mapcar #'approve-model--resolve (append value nil)))
-
-   ;; Alist - resolve values
+    (-map #'approve-model--resolve (-list value)))
+   ((and (listp value) (not (approve-model--alist-p value)))
+    (-map #'approve-model--resolve value))
    ((approve-model--alist-p value)
-    (mapcar (lambda (pair)
-              (cons (car pair)
-                    (approve-model--resolve (cdr pair))))
-            value))
-
-   ;; Primitive
+    (--map (cons (car it) (approve-model--resolve (cdr it))) value))
    (t value)))
 
 (defun approve-model--resolve-entity (entity)
@@ -343,22 +323,18 @@ REF must be a valid entity reference created by `approve-model-make-ref'."
 ;;; Query Helpers
 
 (defun approve-model-entities (typename)
-  "Get all entities of TYPENAME as a list."
-  (when-let ((type-store (gethash typename approve-model--store)))
-    (let (entities)
-      (maphash (lambda (_id entity)
-                 (push (approve-model--resolve-entity entity) entities))
-               type-store)
-      entities)))
+  "Get all entities of TYPENAME as a list of resolved entities."
+  (-when-let (type-store (gethash typename approve-model--store))
+    (-map #'approve-model--resolve-entity (hash-table-values type-store))))
 
 (defun approve-model-entity-ids (typename)
   "Get all IDs for entities of TYPENAME."
-  (when-let ((type-store (gethash typename approve-model--store)))
+  (-when-let (type-store (gethash typename approve-model--store))
     (hash-table-keys type-store)))
 
 (defun approve-model-has-entity-p (typename id)
   "Return non-nil if an entity with TYPENAME and ID exists."
-  (when-let ((type-store (gethash typename approve-model--store)))
+  (-when-let (type-store (gethash typename approve-model--store))
     (gethash id type-store)))
 
 ;;; Convenience Macros
@@ -366,9 +342,8 @@ REF must be a valid entity reference created by `approve-model-make-ref'."
 (defun approve-model--field-to-var (field)
   "Convert FIELD symbol to a variable name.
 Handles camelCase to lisp-case conversion."
-  (let* ((case-fold-search nil)  ; Make regexp matching case-sensitive
+  (let* ((case-fold-search nil)
          (name (symbol-name field))
-         ;; Insert hyphen before each uppercase letter that follows lowercase
          (converted (replace-regexp-in-string
                      "\\([a-z]\\)\\([A-Z]\\)"
                      "\\1-\\2"
@@ -402,10 +377,9 @@ Example:
                 `(approve-model-get-ref ,(cadr entity-spec)))
                (t
                 `(approve-model-get ',(car entity-spec) ,(cadr entity-spec)))))
-            ,@(mapcar
-               (lambda (field)
-                 (let ((var-name (approve-model--field-to-var field)))
-                   `(,var-name (alist-get ',field ,entity-var))))
+            ,@(--map
+               (let ((var-name (approve-model--field-to-var it)))
+                 `(,var-name (alist-get ',it ,entity-var)))
                fields))
        ,@body)))
 
@@ -422,19 +396,16 @@ Example:
                       (author-login (:root) author))
     (message \"%s by %s\" title (alist-get \\='login author-login)))"
   (declare (indent 1) (debug ((&rest (sexp sexp sexp)) body)))
-  `(let ,(mapcar
-          (lambda (binding)
-            (let ((var (nth 0 binding))
-                  (entity-spec (nth 1 binding))
-                  (field (nth 2 binding)))
-              `(,var
-                ,(cond
-                  ((eq (car entity-spec) :root)
-                   `(approve-model-root ',field))
-                  ((eq (car entity-spec) :ref)
-                   `(approve-model-get-ref ,(cadr entity-spec) ',field))
-                  (t
-                   `(approve-model-get ',(car entity-spec) ,(cadr entity-spec) ',field))))))
+  `(let ,(--map
+          (-let [(var entity-spec field) it]
+            `(,var
+              ,(cond
+                ((eq (car entity-spec) :root)
+                 `(approve-model-root ',field))
+                ((eq (car entity-spec) :ref)
+                 `(approve-model-get-ref ,(cadr entity-spec) ',field))
+                (t
+                 `(approve-model-get ',(car entity-spec) ,(cadr entity-spec) ',field)))))
           bindings)
      ,@body))
 
@@ -462,7 +433,7 @@ Returns the updated entity."
 
 (defun approve-model-delete (typename id)
   "Delete entity with TYPENAME and ID from the store."
-  (when-let ((type-store (gethash typename approve-model--store)))
+  (-when-let (type-store (gethash typename approve-model--store))
     (remhash id type-store)))
 
 ;;; Debug/Development Helpers

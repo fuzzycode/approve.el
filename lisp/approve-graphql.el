@@ -42,6 +42,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'dash)
 
 ;;; Custom Variables
 
@@ -107,19 +108,15 @@ Returns the content with all includes expanded."
              (match-end (match-end 0))
              (include-path (match-string 1 result))
              (resolved-path (approve-graphql--resolve-path include-path)))
-        ;; Check for circular includes
-        (when (member resolved-path include-stack)
+        (when (-contains? include-stack resolved-path)
           (signal 'approve-graphql-circular-include
                   (list resolved-path include-stack)))
-        ;; Process the included file
         (let ((included-content
                (approve-graphql--load-and-process resolved-path
                                                   (cons current-file include-stack))))
-          ;; Replace the include directive with the included content
           (setq result (concat (substring result 0 match-start)
                                included-content
                                (substring result match-end)))
-          ;; Update start position to continue after the inserted content
           (setq start (+ match-start (length included-content))))))
     result))
 

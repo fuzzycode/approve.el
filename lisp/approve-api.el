@@ -42,6 +42,7 @@
 
 (require 'ghub)
 (require 'cl-lib)
+(require 'dash)
 
 ;;; Custom Variables
 
@@ -111,8 +112,8 @@ Keys are request IDs, values are plists with request metadata.")
 
 (defun approve-api--cleanup-request (request-id)
   "Clean up request with REQUEST-ID, canceling its timer if present."
-  (when-let ((request-data (gethash request-id approve-api--pending-requests)))
-    (when-let ((timer (plist-get request-data :timer)))
+  (-when-let (request-data (gethash request-id approve-api--pending-requests))
+    (-when-let (timer (plist-get request-data :timer))
       (cancel-timer timer))
     (remhash request-id approve-api--pending-requests)))
 
@@ -133,7 +134,6 @@ If BUFFER is no longer live, call in a temp buffer instead."
   (if (and buffer (buffer-live-p buffer))
       (with-current-buffer buffer
         (apply func args))
-    ;; Buffer was killed, call anyway in a temporary context
     (apply func args)))
 
 (defun approve-api--create-success-callback (request-id buffer callback progress-reporter)
@@ -167,23 +167,19 @@ PROGRESS-REPORTER is finished on error."
   "Process ERROR from ghub into an approve-api error.
 Returns a cons cell (error-symbol . error-data)."
   (cond
-   ;; Rate limiting
    ((and (listp error)
          (eq (car error) 'ghub-http-error)
          (= (cadr error) 403)
          (string-match-p "rate limit" (or (caddr error) "")))
     (cons 'approve-api-rate-limit (cdr error)))
-   ;; Not found
    ((and (listp error)
          (eq (car error) 'ghub-http-error)
          (= (cadr error) 404))
     (cons 'approve-api-not-found (cdr error)))
-   ;; Unauthorized
    ((and (listp error)
          (eq (car error) 'ghub-http-error)
          (= (cadr error) 401))
     (cons 'approve-api-unauthorized (cdr error)))
-   ;; Generic error
    (t
     (cons 'approve-api-error (if (listp error) error (list error))))))
 
@@ -201,8 +197,7 @@ Returns the timer object."
 (defun approve-api--extract-graphql-errors (response)
   "Extract GraphQL errors from RESPONSE if present.
 Returns nil if no errors, or the error list if present."
-  (when-let ((errors (alist-get 'errors response)))
-    errors))
+  (alist-get 'errors response))
 
 ;;; Public API
 
@@ -238,13 +233,11 @@ Returns a request ID that can be used with `approve-api-cancel'."
                     request-id buffer error-callback progress-reporter))
          (timer (approve-api--start-timeout-timer
                  request-id buffer error-callback timeout)))
-    ;; Store request metadata
     (puthash request-id
              (list :timer timer
                    :buffer buffer
                    :start-time (current-time))
              approve-api--pending-requests)
-    ;; Make the request
     (apply #'ghub-graphql query variables
            :callback success-cb
            :errorback error-cb
@@ -262,15 +255,13 @@ PROGRESS-REPORTER is finished on completion."
     (approve-api--cleanup-request request-id)
     (when progress-reporter
       (progress-reporter-done progress-reporter))
-    ;; Check for GraphQL-level errors
-    (if-let ((errors (approve-api--extract-graphql-errors response)))
+    (-if-let (errors (approve-api--extract-graphql-errors response))
         (when error-callback
           (approve-api--call-in-buffer
            buffer error-callback
            (cons 'approve-api-graphql-error errors)))
-      ;; Success - extract data
       (when callback
-        (let ((data (alist-get 'data response)))
+        (-when-let (data (alist-get 'data response))
           (approve-api--call-in-buffer buffer callback data))))))
 
 (cl-defun approve-api-rest (method resource
@@ -309,19 +300,17 @@ Returns a request ID that can be used with `approve-api-cancel'."
                     request-id buffer error-callback progress-reporter))
          (timer (approve-api--start-timeout-timer
                  request-id buffer error-callback timeout)))
-    ;; Store request metadata
     (puthash request-id
              (list :timer timer
                    :buffer buffer
                    :start-time (current-time))
              approve-api--pending-requests)
-    ;; Build request arguments
-    (let ((request-args (append (list method resource)
-                                (when payload (list :payload payload))
-                                (when query (list :query query))
-                                (list :callback success-cb
-                                      :errorback error-cb)
-                                ghub-params)))
+    (let ((request-args (-concat (list method resource)
+                                 (when payload (list :payload payload))
+                                 (when query (list :query query))
+                                 (list :callback success-cb
+                                       :errorback error-cb)
+                                 ghub-params)))
       (apply #'ghub-request request-args))
     request-id))
 

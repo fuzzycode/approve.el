@@ -1,4 +1,5 @@
 fragment LabelFields on Label {
+  __typename
   id
   name
   description

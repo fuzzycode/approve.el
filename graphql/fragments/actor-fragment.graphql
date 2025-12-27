@@ -1,4 +1,5 @@
 fragment ActorFields on Actor {
+  __typename
   login
   ... on User {
     name

@@ -339,3 +339,22 @@
 
 (provide 'test-approve-model)
 ;;; test-approve-model.el ends here
+
+
+  (describe "typename validation"
+
+    (it "signals error when entity has id but no __typename"
+      (let ((bad-entity '((id . "U_123") (login . "testuser"))))
+        (expect (approve-model-load bad-entity)
+                :to-throw 'error)))
+
+    (it "allows data without id (not an entity)"
+      (let ((plain-data '((foo . "bar") (baz . 123))))
+        (expect (approve-model-load plain-data) :not :to-throw)))
+
+    (it "signals error for nested entities missing __typename"
+      (let ((data '((__typename . "PullRequest")
+                    (id . "PR_1")
+                    (author . ((id . "U_123") (login . "testuser"))))))
+        (expect (approve-model-load data)
+                :to-throw 'error))))

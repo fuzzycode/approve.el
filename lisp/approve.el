@@ -5,7 +5,7 @@
 ;; Author: Björn Larsson
 ;; Maintainer: Björn Larsson
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "28.1") (ghub "3.5") (magit-section "4.0") (magit "4.0"))
+;; Package-Requires: ((emacs "28.1") (ghub "3.5") (magit-section "4.0") (magit "4.0") (dash "2.19"))
 ;; Homepage: https://github.com/fuzzycode/Approve.el
 ;; Keywords: tools, vc
 

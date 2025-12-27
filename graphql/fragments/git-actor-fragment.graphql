@@ -3,6 +3,7 @@ fragment GitActorFields on GitActor {
   email
 
   user {
+    __typename
     login
     url
   }

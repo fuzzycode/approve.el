@@ -2,6 +2,7 @@
 ${fragment:fragments/pull-request-review-comment-fragment.graphql}
 
 fragment ReviewThreadFields on PullRequestReviewThread {
+  __typename
   comments(first: 100) {
     nodes {
       ...PullRequestReviewCommentFields

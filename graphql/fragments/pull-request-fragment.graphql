@@ -12,6 +12,7 @@ ${include:fragments/pull-request-review-comment-fragment.graphql}
 ${include:fragments/review-thread-fragment.graphql}
 
 fragment PullRequestFields on PullRequest {
+  __typename
   id
   databaseId
   number
@@ -125,6 +126,7 @@ fragment PullRequestFields on PullRequest {
       # For PULL_REQUEST_COMMIT data
       ... on PullRequestCommit {
         commit {
+          __typename
           id
           abbreviatedOid
           committedDate
@@ -195,6 +197,7 @@ fragment PullRequestFields on PullRequest {
     }
     nodes {
       commit {
+        __typename
         id
         oid # Full SHA hash
         abbreviatedOid #Short SHA hash
@@ -224,6 +227,7 @@ fragment PullRequestFields on PullRequest {
   statusCommit: commits(last: 1) {
     nodes {
       commit {
+        __typename
         oid
         statusCheckRollup {
           state
@@ -235,6 +239,7 @@ fragment PullRequestFields on PullRequest {
               state
             }
             nodes {
+              __typename
               ... on CheckRun {
                 completedAt
                 conclusion
@@ -279,6 +284,7 @@ fragment PullRequestFields on PullRequest {
   closingIssuesReferences(first: 10) {
     totalCount
     nodes {
+      __typename
       number
       title
       url
@@ -304,6 +310,7 @@ fragment PullRequestFields on PullRequest {
     totalCount
     nodes {
       requestedReviewer {
+        __typename
         ...UserFields
         ... on Team {
           name
