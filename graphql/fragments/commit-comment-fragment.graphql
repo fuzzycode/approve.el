@@ -1,5 +1,5 @@
 
-${fragment:fragments/comment-fragment.graphql}
+${include:fragments/comment-fragment.graphql}
 
 fragment CommitCommentFields on CommitComment {
   __typename

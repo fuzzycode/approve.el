@@ -1,5 +1,5 @@
 
-${fragment:fragments/pull-request-review-comment-fragment.graphql}
+${include:fragments/pull-request-review-comment-fragment.graphql}
 
 fragment ReviewThreadFields on PullRequestReviewThread {
   __typename
