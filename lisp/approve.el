@@ -50,6 +50,7 @@
 ;;; Code:
 
 (require 'approve-api)
+(require 'approve-graphql)
 
 (provide 'approve)
 ;;; approve.el ends here

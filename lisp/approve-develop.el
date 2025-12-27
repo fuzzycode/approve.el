@@ -44,7 +44,6 @@
 ;;; Code:
 
 (require 'approve)
-(require 'approve-graphql)
 (require 'pp)
 
 ;;; Custom Variables
@@ -154,24 +153,34 @@ Discovers all .el files in the lisp directory, excluding approve-develop.el."
             (seq-remove (lambda (f) (string= f "approve-develop.el")) files))))
 
 (defun approve-dev-reload ()
-  "Reload all Approve package files.
-Discovers all approve-*.el files in the lisp directory and reloads them.
-Files are unloaded in reverse order and loaded in sorted order to handle
-dependencies correctly (approve.el loads first as it's the base module)."
+  "Reload the Approve package.
+Unloads all approve-* features and then reloads `approve' which
+pulls in all its dependencies."
   (interactive)
-  (let* ((features (approve-dev--list-package-features))
-         (sorted-features (sort features (lambda (a b)
-                                           (string< (symbol-name a)
-                                                    (symbol-name b)))))
-         (reverse-features (reverse sorted-features)))
-    ;; Unload in reverse order (dependents first)
-    (dolist (feature reverse-features)
+  (let* ((project-root (or (and (fboundp 'projectile-project-root)
+                                (projectile-project-root))
+                           (locate-dominating-file default-directory "Cask")))
+         (lisp-dir (expand-file-name "lisp" project-root))
+         (features (approve-dev--list-package-features))
+         ;; Copy list before sorting since sort is destructive
+         ;; Sort alphabetically: approve < approve-api < approve-graphql
+         ;; This puts approve first, which is correct for unloading since
+         ;; approve depends on the others
+         (sorted-features (sort (copy-sequence features)
+                                (lambda (a b)
+                                  (string< (symbol-name a) (symbol-name b))))))
+    ;; Unload all features (approve first since it depends on the others)
+    (dolist (feature sorted-features)
       (when (featurep feature)
         (unload-feature feature t)))
-    ;; Load in sorted order (dependencies first)
-    (dolist (feature sorted-features)
-      (require feature))
-    (message "Reloaded: %s" (mapconcat #'symbol-name sorted-features ", "))))
+    ;; Temporarily put our lisp dir at front of load-path so require
+    ;; finds the correct files (not files from other projects)
+    (let ((load-path (cons lisp-dir load-path)))
+      (load (expand-file-name "approve.el" lisp-dir) nil nil t))
+    (message "Reloaded approve (with dependencies: %s)"
+             (mapconcat #'symbol-name
+                        (seq-filter #'featurep features)
+                        ", "))))
 
 
 ;;; Interactive Commands - Debug Buffer Management
