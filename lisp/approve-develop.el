@@ -140,16 +140,37 @@ without quoting, suitable for multi-line content like GraphQL queries."
 
 ;;; Interactive Commands - Reload Package
 
+(defun approve-dev--list-package-features ()
+  "Return a list of all Approve package features.
+Discovers all .el files in the lisp directory, excluding approve-develop.el."
+  (let* ((project-root (or (and (fboundp 'projectile-project-root)
+                                (projectile-project-root))
+                           (locate-dominating-file default-directory "Cask")))
+         (lisp-dir (expand-file-name "lisp" project-root))
+         (files (directory-files lisp-dir nil "^approve.*\\.el$")))
+    (mapcar (lambda (f)
+              (intern (file-name-sans-extension f)))
+            (seq-remove (lambda (f) (string= f "approve-develop.el")) files))))
+
 (defun approve-dev-reload ()
-  "Reload all Approve package files."
+  "Reload all Approve package files.
+Discovers all approve-*.el files in the lisp directory and reloads them.
+Files are unloaded in reverse order and loaded in sorted order to handle
+dependencies correctly (approve.el loads first as it's the base module)."
   (interactive)
-  (let ((files '("approve" "approve-graphql")))
-    (dolist (file files)
-      (when (featurep (intern file))
-        (unload-feature (intern file) t)))
-    (dolist (file files)
-      (require (intern file)))
-    (message "Reloaded: %s" (string-join files ", "))))
+  (let* ((features (approve-dev--list-package-features))
+         (sorted-features (sort features (lambda (a b)
+                                           (string< (symbol-name a)
+                                                    (symbol-name b)))))
+         (reverse-features (reverse sorted-features)))
+    ;; Unload in reverse order (dependents first)
+    (dolist (feature reverse-features)
+      (when (featurep feature)
+        (unload-feature feature t)))
+    ;; Load in sorted order (dependencies first)
+    (dolist (feature sorted-features)
+      (require feature))
+    (message "Reloaded: %s" (mapconcat #'symbol-name sorted-features ", "))))
 
 
 ;;; Interactive Commands - Debug Buffer Management
