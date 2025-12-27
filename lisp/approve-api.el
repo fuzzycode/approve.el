@@ -1,13 +1,9 @@
-;;; approve.el --- GitHub Pull Request review interface  -*- lexical-binding: t; -*-
+;;; approve-api.el --- GitHub API communication for Approve  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Björn Larsson
 
 ;; Author: Björn Larsson
 ;; Maintainer: Björn Larsson
-;; Version: 0.1.0
-;; Package-Requires: ((emacs "28.1") (ghub "3.5") (magit-section "4.0") (magit "4.0"))
-;; Homepage: https://github.com/fuzzycode/Approve.el
-;; Keywords: tools, vc
 
 ;; This file is not part of GNU Emacs.
 
@@ -32,24 +28,37 @@
 
 ;;; Commentary:
 
-;; Approve is a GitHub Pull Request review interface for Emacs.
+;; This module provides the API layer for communicating with GitHub.
 ;;
-;; It provides a streamlined workflow for reviewing pull requests directly
-;; from Emacs, using familiar tools like Magit sections for navigation and
-;; Transient menus for actions.
+;; It handles all GitHub API interactions including:
+;; - Fetching pull request data via GraphQL
+;; - Submitting reviews and comments
+;; - Updating PR state (approve, request changes, etc.)
 ;;
-;; Key features:
-;; - Browse and review GitHub pull requests
-;; - View diffs and file changes
-;; - Add comments and suggestions
-;; - Approve, request changes, or comment on PRs
-;;
-;; All state is stored on GitHub, so you can seamlessly switch between
-;; Emacs and the GitHub web interface.
+;; All API calls use the `ghub' library for authentication and request handling.
 
 ;;; Code:
 
-(require 'approve-api)
+(require 'ghub)
+(require 'approve-graphql)
 
-(provide 'approve)
-;;; approve.el ends here
+;;; Custom Variables
+
+(defgroup approve-api nil
+  "GitHub API settings for Approve."
+  :group 'approve
+  :prefix "approve-api-")
+
+;;; Error Handling
+
+(define-error 'approve-api-error "Approve API error")
+(define-error 'approve-api-rate-limit "GitHub API rate limit exceeded" 'approve-api-error)
+(define-error 'approve-api-not-found "Resource not found" 'approve-api-error)
+(define-error 'approve-api-unauthorized "Unauthorized access" 'approve-api-error)
+
+;;; Internal Functions
+
+;;; Public API
+
+(provide 'approve-api)
+;;; approve-api.el ends here
