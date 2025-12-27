@@ -44,6 +44,7 @@
 ;;; Code:
 
 (require 'approve)
+(require 'approve-model)
 (require 'pp)
 
 ;;; Custom Variables
@@ -244,6 +245,48 @@ in the debug buffer."
     (approve-graphql-circular-include
      (user-error "Circular include detected: %s -> %s"
                  (cadr err) (caddr err)))))
+
+;;; Interactive Commands - Model Inspection
+
+(defun approve-dev-model-dump ()
+  "Return a string representation of the current store for debugging."
+  (interactive)
+  (if (not approve-model--store)
+      (message "Data store not initialized")
+    (let ((output (list "=== Approve Model Store ===")))
+      (push (format "Root: %S" approve-model--root) output)
+      (push (format "Metadata: %S" approve-model--metadata) output)
+      (push "--- Entities by Type ---" output)
+      (maphash
+       (lambda (typename type-store)
+         (push (format "\n[%s] (%d entities)"
+                       typename (hash-table-count type-store))
+               output)
+         (maphash
+          (lambda (id _entity)
+            (push (format "  - %s" id) output))
+          type-store))
+       approve-model--store)
+      (string-join (nreverse output) "\n"))))
+
+(defun approve-dev-model-stats ()
+  "Return statistics about the current store."
+  (interactive)
+  (if (not approve-model--store)
+      '(:initialized nil)
+    (let ((type-counts nil)
+          (total 0))
+      (maphash
+       (lambda (typename type-store)
+         (let ((count (hash-table-count type-store)))
+           (push (cons typename count) type-counts)
+           (cl-incf total count)))
+       approve-model--store)
+      (list :initialized t
+            :total-entities total
+            :types-count (hash-table-count approve-model--store)
+            :by-type type-counts
+            :has-root (not (null approve-model--root))))))
 
 (provide 'approve-develop)
 ;;; approve-develop.el ends here

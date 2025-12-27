@@ -436,45 +436,5 @@ Returns the updated entity."
   (-when-let (type-store (gethash typename approve-model--store))
     (remhash id type-store)))
 
-;;; Debug/Development Helpers
-
-(defun approve-model-debug-dump ()
-  "Return a string representation of the current store for debugging."
-  (if (not approve-model--store)
-      "Store not initialized"
-    (let ((output (list "=== Approve Model Store ===")))
-      (push (format "Root: %S" approve-model--root) output)
-      (push (format "Metadata: %S" approve-model--metadata) output)
-      (push "--- Entities by Type ---" output)
-      (maphash
-       (lambda (typename type-store)
-         (push (format "\n[%s] (%d entities)"
-                       typename (hash-table-count type-store))
-               output)
-         (maphash
-          (lambda (id _entity)
-            (push (format "  - %s" id) output))
-          type-store))
-       approve-model--store)
-      (string-join (nreverse output) "\n"))))
-
-(defun approve-model-stats ()
-  "Return statistics about the current store."
-  (if (not approve-model--store)
-      '(:initialized nil)
-    (let ((type-counts nil)
-          (total 0))
-      (maphash
-       (lambda (typename type-store)
-         (let ((count (hash-table-count type-store)))
-           (push (cons typename count) type-counts)
-           (cl-incf total count)))
-       approve-model--store)
-      (list :initialized t
-            :total-entities total
-            :types-count (hash-table-count approve-model--store)
-            :by-type type-counts
-            :has-root (not (null approve-model--root))))))
-
 (provide 'approve-model)
 ;;; approve-model.el ends here

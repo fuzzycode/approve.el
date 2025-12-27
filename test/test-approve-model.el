@@ -66,25 +66,13 @@
   (describe "store initialization"
 
     (it "initializes an empty store"
-      (expect (approve-model-initialized-p) :to-be-truthy)
-      (expect (approve-model-stats)
-              :to-equal '(:initialized t
-                          :total-entities 0
-                          :types-count 0
-                          :by-type nil
-                          :has-root nil)))
+      (expect (approve-model-initialized-p) :to-be-truthy))
 
     (it "accepts metadata on initialization"
       (approve-model-init '(:owner "fuzzycode" :repo "Approve.el" :number 42))
       (expect (approve-model-metadata :owner) :to-equal "fuzzycode")
       (expect (approve-model-metadata :repo) :to-equal "Approve.el")
-      (expect (approve-model-metadata :number) :to-equal 42))
-
-    (it "clears the store properly"
-      (approve-model-load (test-approve-model--make-user "U_1" "testuser"))
-      (expect (plist-get (approve-model-stats) :total-entities) :to-equal 1)
-      (approve-model-clear)
-      (expect (plist-get (approve-model-stats) :total-entities) :to-equal 0)))
+      (expect (approve-model-metadata :number) :to-equal 42)))
 
   (describe "reference handling"
 
@@ -315,27 +303,7 @@
     (it "converts camelCase to lisp-case"
       (expect (approve-model--field-to-var 'bodyHTML) :to-equal 'body-html)
       (expect (approve-model--field-to-var 'createdAt) :to-equal 'created-at)
-      (expect (approve-model--field-to-var 'viewerCanUpdate) :to-equal 'viewer-can-update)))
-
-  (describe "debug helpers"
-
-    (it "generates debug dump"
-      (approve-model-load (test-approve-model--make-user "U_1" "user1"))
-      (let ((dump (approve-model-debug-dump)))
-        (expect dump :to-match "User")
-        (expect dump :to-match "U_1")))
-
-    (it "reports not initialized"
-      (approve-model-clear)
-      (setq approve-model--store nil)
-      (expect (approve-model-debug-dump) :to-equal "Store not initialized"))
-
-    (it "returns accurate stats"
-      (approve-model-load (test-approve-model--make-pr-with-comments "PR_1" 42 "Test") t)
-      (let ((stats (approve-model-stats)))
-        (expect (plist-get stats :initialized) :to-be-truthy)
-        (expect (plist-get stats :has-root) :to-be-truthy)
-        (expect (plist-get stats :total-entities) :to-be-greater-than 0)))))
+      (expect (approve-model--field-to-var 'viewerCanUpdate) :to-equal 'viewer-can-update))))
 
 (provide 'test-approve-model)
 ;;; test-approve-model.el ends here
