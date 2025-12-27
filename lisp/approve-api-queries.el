@@ -44,5 +44,46 @@
 
 (require 'cl-lib)
 
+(require 'approve-api)
+(require 'approve-graphql)
+
+;;; Public API
+
+(cl-defun approve-api-query-pull-request (owner repo number
+                                                 &key
+                                                 callback
+                                                 error-callback
+                                                 (buffer (current-buffer)))
+  "Fetch a pull request from GitHub.
+
+OWNER is the repository owner (user or organization).
+REPO is the repository name.
+NUMBER is the pull request number.
+
+Keyword arguments:
+  :callback - Function called with the response data on success.
+              Receives an alist with `repository' containing the PR data.
+  :error-callback - Function called with error info on failure.
+  :buffer - Buffer context for callbacks (defaults to current buffer).
+
+Returns a request ID that can be used with `approve-api-cancel'.
+
+Example:
+  (approve-api-query-pull-request
+   \"fuzzycode\" \"Approve.el\" 42
+   :callback (lambda (data)
+               (let ((pr (alist-get \\='pullRequest
+                                    (alist-get \\='repository data))))
+                 (message \"PR: %s\" (alist-get \\='title pr)))))"
+  (approve-api-graphql
+   (approve-graphql-load "queries/get-pull-request.graphql")
+   `((repo_owner . ,owner)
+     (repo_name . ,repo)
+     (pr_id . ,number))
+   :callback callback
+   :error-callback error-callback
+   :buffer buffer
+   :progress-message (format "Fetching PR #%d from %s/%s..." number owner repo)))
+
 (provide 'approve-api-queries)
 ;;; approve-api-queries.el ends here

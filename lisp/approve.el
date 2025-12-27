@@ -49,8 +49,62 @@
 
 ;;; Code:
 
-(require 'approve-api)
-(require 'approve-graphql)
+(require 'approve-ui)
+
+(defgroup approve nil
+  "Settings for Approve PR review tool."
+  :group 'tools)
+
+;;; URL Parsing
+
+(defconst approve--github-pr-url-regexp
+  (rx string-start
+      (or "https://" "http://")
+      (group (or "github.com"
+                 ;; GitHub Enterprise: subdomain.github.domain or custom domain
+                 (seq (one-or-more (not (any "/")))))) ; any host
+      "/"
+      (group (one-or-more (not (any "/"))))   ; owner
+      "/"
+      (group (one-or-more (not (any "/"))))   ; repo
+      "/pull/"
+      (group (one-or-more digit))             ; PR number
+      (optional "/" (zero-or-more anything))  ; optional trailing path
+      string-end)
+  "Regexp matching GitHub PR URLs.
+Groups: 1=host, 2=owner, 3=repo, 4=number.")
+
+(defun approve--parse-pr-url (url)
+  "Parse a GitHub PR URL and return (owner repo number) or nil.
+Supports both github.com and GitHub Enterprise URLs."
+  (when (string-match approve--github-pr-url-regexp url)
+    (let ((host (match-string 1 url)))
+      ;; Only accept github.com or hosts containing "github"
+      (when (or (string= host "github.com")
+                (string-match-p "github" host))
+        (list (match-string 2 url)
+              (match-string 3 url)
+              (string-to-number (match-string 4 url)))))))
+
+;;; Public API
+
+;;;###autoload
+(defalias 'approve-add-section-hook #'magit-add-section-hook)
+
+;;;###autoload
+(defun approve-view-pr (url)
+  "Start a review session for a GitHub PR at URL.
+URL should be a GitHub pull request URL like:
+  https://github.com/owner/repo/pull/123
+
+For GitHub Enterprise, URLs like:
+  https://github.mycompany.com/owner/repo/pull/123
+are also supported."
+  (interactive "sGitHub PR URL: ")
+  (let ((parsed (approve--parse-pr-url url)))
+    (unless parsed
+      (user-error "Invalid GitHub PR URL: %s" url))
+    (apply #'approve-ui-view-pr parsed)))
 
 (provide 'approve)
 ;;; approve.el ends here
