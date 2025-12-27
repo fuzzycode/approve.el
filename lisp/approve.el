@@ -49,5 +49,7 @@
 
 ;;; Code:
 
+(require 'approve-graphql)
+
 (provide 'approve)
 ;;; approve.el ends here
