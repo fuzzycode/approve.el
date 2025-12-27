@@ -86,7 +86,41 @@
     (insert "\n")
     (insert "# Some content in between\n")
     (insert "\n")
-    (insert "${include:queries/simple.graphql}\n")))
+    (insert "${include:queries/simple.graphql}\n"))
+
+  ;; Create files for testing duplicate include handling
+  ;; Fragment A includes user-fields
+  (with-temp-file (expand-file-name "fragments/fragment-a.graphql"
+                                    test-approve-graphql--temp-dir)
+    (insert "${include:fragments/user-fields.graphql}\n")
+    (insert "fragment FragmentA on Query {\n")
+    (insert "  viewer {\n")
+    (insert "    ...UserFields\n")
+    (insert "  }\n")
+    (insert "}"))
+
+  ;; Fragment B also includes user-fields
+  (with-temp-file (expand-file-name "fragments/fragment-b.graphql"
+                                    test-approve-graphql--temp-dir)
+    (insert "${include:fragments/user-fields.graphql}\n")
+    (insert "fragment FragmentB on Query {\n")
+    (insert "  repository {\n")
+    (insert "    owner {\n")
+    (insert "      ...UserFields\n")
+    (insert "    }\n")
+    (insert "  }\n")
+    (insert "}"))
+
+  ;; Query that includes both fragments (which both include user-fields)
+  (with-temp-file (expand-file-name "queries/duplicate-includes.graphql"
+                                    test-approve-graphql--temp-dir)
+    (insert "${include:fragments/fragment-a.graphql}\n")
+    (insert "${include:fragments/fragment-b.graphql}\n")
+    (insert "\n")
+    (insert "query DuplicateTest {\n")
+    (insert "  ...FragmentA\n")
+    (insert "  ...FragmentB\n")
+    (insert "}")))
 
 (defun test-approve-graphql--teardown-fixtures ()
   "Remove temporary test fixtures."
@@ -101,8 +135,7 @@
 
   (before-each
     (test-approve-graphql--setup-fixtures)
-    (setq approve-graphql-directory test-approve-graphql--temp-dir)
-    (approve-graphql-clear-cache))
+    (setq approve-graphql-directory test-approve-graphql--temp-dir))
 
   (after-each
     (test-approve-graphql--teardown-fixtures))
@@ -172,26 +205,10 @@
         ;; No unexpanded includes
         (expect query :not :to-match "\\${include:")))
 
-    (it "caches loaded queries"
+    (it "returns consistent results on repeated loads"
       (let ((query1 (approve-graphql-load "queries/simple.graphql"))
             (query2 (approve-graphql-load "queries/simple.graphql")))
-        (expect query1 :to-equal query2)
-        ;; Verify it's actually cached
-        (expect (hash-table-count approve-graphql--cache) :to-be-greater-than 0)))
-
-    (it "bypasses cache when no-cache is t"
-      (let ((query1 (approve-graphql-load "queries/simple.graphql")))
-        ;; Modify the cached value to verify reload happens
-        (puthash (approve-graphql--resolve-path "queries/simple.graphql")
-                 "CACHED VALUE"
-                 approve-graphql--cache)
-        ;; Without no-cache, should return cached value
-        (expect (approve-graphql-load "queries/simple.graphql")
-                :to-equal "CACHED VALUE")
-        ;; With no-cache, should reload
-        (let ((reloaded (approve-graphql-load "queries/simple.graphql" t)))
-          (expect reloaded :to-match "query Simple")
-          (expect reloaded :not :to-equal "CACHED VALUE")))))
+        (expect query1 :to-equal query2))))
 
   (describe "circular include detection"
 
@@ -208,29 +225,29 @@
            ;; circular-a includes circular-b, which tries to include circular-a again
            (expect (car data) :to-match "circular-a.graphql"))))))
 
-  (describe "approve-graphql-clear-cache"
+  (describe "duplicate include handling"
 
-    (it "clears all cached queries"
-      ;; Load something to populate cache
-      (approve-graphql-load "queries/simple.graphql")
-      (expect (hash-table-count approve-graphql--cache) :to-be-greater-than 0)
-      ;; Clear cache
-      (approve-graphql-clear-cache)
-      (expect (hash-table-count approve-graphql--cache) :to-equal 0)))
+    (it "includes each file only once even when referenced multiple times"
+      (let ((query (approve-graphql-load "queries/duplicate-includes.graphql")))
+        ;; Count occurrences of the UserFields fragment definition
+        (let ((count 0)
+              (start 0))
+          (while (string-match "fragment UserFields on User" query start)
+            (setq count (1+ count))
+            (setq start (match-end 0)))
+          ;; Should only appear once, not multiple times
+          (expect count :to-equal 1))))
 
-  (describe "approve-graphql-reload"
-
-    (it "forces reload from disk"
-      ;; Load and cache
-      (approve-graphql-load "queries/simple.graphql")
-      ;; Corrupt cache
-      (puthash (approve-graphql--resolve-path "queries/simple.graphql")
-               "CORRUPTED"
-               approve-graphql--cache)
-      ;; Reload should get fresh content
-      (let ((reloaded (approve-graphql-reload "queries/simple.graphql")))
-        (expect reloaded :to-match "query Simple")
-        (expect reloaded :not :to-equal "CORRUPTED"))))
+    (it "includes all unique fragments"
+      (let ((query (approve-graphql-load "queries/duplicate-includes.graphql")))
+        ;; Should have FragmentA
+        (expect query :to-match "fragment FragmentA on Query")
+        ;; Should have FragmentB
+        (expect query :to-match "fragment FragmentB on Query")
+        ;; Should have UserFields (exactly once)
+        (expect query :to-match "fragment UserFields on User")
+        ;; Should have the query
+        (expect query :to-match "query DuplicateTest"))))
 
   (describe "approve-graphql--include-regexp"
 

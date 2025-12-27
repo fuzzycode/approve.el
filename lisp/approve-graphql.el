@@ -67,12 +67,6 @@
   "Regexp matching include directives.
 Group 1 captures the file path.")
 
-;;; Internal Variables
-
-(defvar approve-graphql--cache (make-hash-table :test 'equal)
-  "Cache for processed GraphQL queries.
-Keys are file paths, values are processed query strings.")
-
 ;;; Error Handling
 
 (define-error 'approve-graphql-error "Approve GraphQL error")
@@ -95,11 +89,13 @@ Signals `approve-graphql-file-not-found' if file doesn't exist."
     (insert-file-contents file-path)
     (buffer-string)))
 
-(defun approve-graphql--process-includes (content current-file include-stack)
+(defun approve-graphql--process-includes (content current-file include-stack included-set)
   "Process include directives in CONTENT.
 CURRENT-FILE is the path of the file being processed.
 INCLUDE-STACK is a list of files currently being processed,
 used for cycle detection.
+INCLUDED-SET is a hash table of files already included globally,
+used to prevent duplicate fragment definitions.
 Returns the content with all includes expanded."
   (let ((result content)
         (start 0))
@@ -112,49 +108,39 @@ Returns the content with all includes expanded."
           (signal 'approve-graphql-circular-include
                   (list resolved-path include-stack)))
         (let ((included-content
-               (approve-graphql--load-and-process resolved-path
-                                                  (cons current-file include-stack))))
+               (if (gethash resolved-path included-set)
+                   ;; Already included globally, skip content but still remove directive
+                   ""
+                 ;; Mark as included and process
+                 (puthash resolved-path t included-set)
+                 (approve-graphql--load-and-process resolved-path
+                                                    (cons current-file include-stack)
+                                                    included-set))))
           (setq result (concat (substring result 0 match-start)
                                included-content
                                (substring result match-end)))
           (setq start (+ match-start (length included-content))))))
     result))
 
-(defun approve-graphql--load-and-process (file-path include-stack)
+(defun approve-graphql--load-and-process (file-path include-stack included-set)
   "Load and process FILE-PATH, expanding any includes.
 INCLUDE-STACK is used for circular dependency detection.
+INCLUDED-SET tracks globally included files to prevent duplicates.
 Returns the processed content."
   (let ((content (approve-graphql--read-file file-path)))
-    (approve-graphql--process-includes content file-path include-stack)))
+    (approve-graphql--process-includes content file-path include-stack included-set)))
 
 ;;; Public API
 
-(defun approve-graphql-load (query-name &optional no-cache)
+(defun approve-graphql-load (query-name)
   "Load a GraphQL query by QUERY-NAME.
 QUERY-NAME should be a path relative to the graphql directory,
 e.g., \"queries/get-pull-request.graphql\".
 
-When NO-CACHE is non-nil, bypass the cache and reload from disk.
-
 Returns the processed query string with all includes expanded."
   (let* ((file-path (approve-graphql--resolve-path query-name))
-         (cached (unless no-cache
-                   (gethash file-path approve-graphql--cache))))
-    (or cached
-        (let ((processed (approve-graphql--load-and-process file-path nil)))
-          (puthash file-path processed approve-graphql--cache)
-          processed))))
-
-(defun approve-graphql-clear-cache ()
-  "Clear the GraphQL query cache.
-Useful during development when modifying query files."
-  (interactive)
-  (clrhash approve-graphql--cache)
-  (message "GraphQL cache cleared"))
-
-(defun approve-graphql-reload (query-name)
-  "Reload QUERY-NAME from disk, bypassing the cache."
-  (approve-graphql-load query-name t))
+         (included-set (make-hash-table :test 'equal)))
+    (approve-graphql--load-and-process file-path nil included-set)))
 
 (provide 'approve-graphql)
 ;;; approve-graphql.el ends here
