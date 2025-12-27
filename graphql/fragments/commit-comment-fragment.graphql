@@ -1,0 +1,13 @@
+
+${fragment:fragments/comment-fragment.graphql}
+
+fragment CommitCommentFields on CommitComment {
+  __typename
+  ... CommentFields
+  viewerCanDelete
+  viewerCanUpdate
+
+  reactionGroups {
+    ...ReactionGroupFields
+  }
+}

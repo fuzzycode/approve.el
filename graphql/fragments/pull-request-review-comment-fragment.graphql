@@ -1,0 +1,22 @@
+
+${fragment:fragments/comment-fragment.graphql}
+${fragment:fragments/reaction-group-fragment.graphql}
+
+fragment PullRequestReviewCommentFields on PullRequestReviewComment {
+  __typename
+  ... CommentFields
+
+  draftedAt
+
+  viewerCanDelete
+  viewerCanUpdate
+
+  reactionGroups {
+    ...ReactionGroupFields
+  }
+
+  resourcePath
+  state
+  subjectType
+  url
+}

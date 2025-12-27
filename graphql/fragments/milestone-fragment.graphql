@@ -1,0 +1,8 @@
+fragment MilestoneFields on Milestone {
+  description
+  id
+  number
+  progressPercentage
+  title
+  url
+}

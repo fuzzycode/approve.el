@@ -1,0 +1,17 @@
+
+${fragment:fragments/actor-fragment.graphql}
+
+#Fields common for all comments, shared as a fragment
+fragment CommentFields on Comment {
+  author {
+    ...ActorFields
+  }
+  body
+  bodyHTML
+  createdAt
+  id
+  includesCreatedEdit
+  lastEditedAt
+  publishedAt
+  updatedAt
+}

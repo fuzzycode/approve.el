@@ -1,0 +1,11 @@
+fragment ActorFields on Actor {
+  login
+  ... on User {
+    name
+    email
+    url
+  }
+  ... on Bot {
+    url
+  }
+}

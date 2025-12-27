@@ -1,0 +1,24 @@
+
+${fragment:fragments/pull-request-review-comment-fragment.graphql}
+
+fragment ReviewThreadFields on PullRequestReviewThread {
+  comments(first: 100) {
+    nodes {
+      ...PullRequestReviewCommentFields
+    }
+  }
+
+  diffSide
+  id
+  isCollapsed
+  isOutdated
+  isResolved
+  line
+  originalLine
+  originalStartLine
+  path
+  startDiffSide
+  startLine
+  viewerCanResolve
+  viewerCanUnresolve
+}

@@ -1,0 +1,398 @@
+
+${include:fragments/label-fragment.graphql}
+${include:fragments/user-fragment.graphql}
+${include:fragments/milestone-fragment.graphql}
+${include:fragments/reaction-group-fragment.graphql}
+${include:fragments/ref-fragment.graphql}
+${include:fragments/actor-fragment.graphql}
+${include:fragments/git-actor-fragment.graphql}
+${include:fragments/commit-comment-fragment.graphql}
+${include:fragments/issue-comment-fragment.graphql}
+${include:fragments/pull-request-review-comment-fragment.graphql}
+${include:fragments/review-thread-fragment.graphql}
+
+fragment PullRequestFields on PullRequest {
+  id
+  databaseId
+  number
+  title
+  url
+
+  additions
+  deletions
+  locked
+  activeLockReason
+  body
+  bodyHTML
+  state
+  createdAt
+  updatedAt
+  merged
+  mergedAt
+  closed
+  closedAt
+
+  reviewDecision
+  mergeable
+
+  mergedBy {
+    ...UserFields
+  }
+
+  isCrossRepository
+  baseRefOid
+  headRefOid
+
+  baseRef {
+    ...RefFields
+
+    refUpdateRule {
+      requiredStatusCheckContexts
+    }
+  }
+
+  headRef {
+    ...RefFields
+  }
+
+  viewerCanClose
+  viewerCanLabel
+  viewerCanReact
+  viewerCanUpdate
+  viewerCanSubscribe
+  viewerSubscription
+  viewerDidAuthor
+
+  author {
+    ...ActorFields
+  }
+
+  isDraft
+
+  mergeStateStatus
+  mergeable
+
+  reactionGroups {
+    ...ReactionGroupFields
+  }
+
+  timelineItems(
+    first: 100
+    itemTypes: [
+      ASSIGNED_EVENT
+      CLOSED_EVENT
+      COMMENT_DELETED_EVENT
+      CROSS_REFERENCED_EVENT
+      HEAD_REF_FORCE_PUSHED_EVENT
+      ISSUE_COMMENT
+      LABELED_EVENT
+      MERGED_EVENT
+      PULL_REQUEST_COMMIT
+      PULL_REQUEST_REVIEW
+      PULL_REQUEST_REVIEW_THREAD
+      READY_FOR_REVIEW_EVENT
+      RENAMED_TITLE_EVENT
+      REOPENED_EVENT
+      UNASSIGNED_EVENT
+      UNLABELED_EVENT
+    ]
+  ) {
+    totalCount
+    filteredCount
+
+    nodes {
+      __typename
+
+      ... on AssignedEvent {
+        createdAt
+        actor {
+          ...ActorFields
+        }
+        # assignee {
+        #   ... ActorFields
+        # }
+      }
+
+      # For ISSUE_COMMENT data
+      ... on IssueComment {
+        id
+        createdAt
+        author {
+          ...ActorFields
+        }
+      }
+
+      # For PULL_REQUEST_COMMIT data
+      ... on PullRequestCommit {
+        commit {
+          id
+          abbreviatedOid
+          committedDate
+
+          committer {
+            ...GitActorFields
+          }
+        }
+      }
+
+      ... on LabeledEvent {
+        createdAt
+        actor {
+          ...ActorFields
+        }
+        label {
+          ...LabelFields
+        }
+      }
+
+      ... on MergedEvent {
+        createdAt
+        actor {
+          ...ActorFields
+        }
+      }
+
+      ... on ConvertToDraftEvent {
+        createdAt
+        actor {
+          ...ActorFields
+        }
+      }
+
+      ... on ReadyForReviewEvent {
+        createdAt
+        actor {
+          ...ActorFields
+        }
+      }
+
+      ... on RenamedTitleEvent {
+        createdAt
+        currentTitle
+        previousTitle
+        actor {
+          ...ActorFields
+        }
+      }
+
+      ... on UnlabeledEvent {
+        createdAt
+        actor {
+          ...ActorFields
+        }
+        label {
+          ...LabelFields
+        }
+      }
+    }
+  }
+
+  commits(first: 100) {
+    totalCount
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      commit {
+        id
+        oid # Full SHA hash
+        abbreviatedOid #Short SHA hash
+        authoredByCommitter
+        messageHeadline
+        message
+        committedDate
+        url
+        treeUrl
+        author {
+          ...GitActorFields
+        }
+        committer {
+          ...GitActorFields
+        }
+
+        comments(first: 100) {
+          totalCount
+          nodes {
+            ...CommitCommentFields
+          }
+        }
+      }
+    }
+  }
+  # For loading information about the checks
+  statusCommit: commits(last: 1) {
+    nodes {
+      commit {
+        oid
+        statusCheckRollup {
+          state
+          contexts(first: 100) {
+            totalCount
+            checkRunCount
+            checkRunCountsByState {
+              count
+              state
+            }
+            nodes {
+              ... on CheckRun {
+                completedAt
+                conclusion
+                detailsUrl
+                id
+                name
+                startedAt
+                status
+                text
+                title
+                url
+                # isRequired(pullRequestId: $pr_id)
+              }
+              ... on StatusContext {
+                context
+                createdAt
+                id
+                state
+                targetUrl
+                # isRequired(pullRequestId: $pr_id)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  totalCommentsCount
+  comments(first: 100) {
+    totalCount
+    nodes {
+      ...IssueCommentFields
+    }
+  }
+
+  reviewThreads(first: 100) {
+    nodes {
+      ... ReviewThreadFields
+    }
+  }
+
+  closingIssuesReferences(first: 10) {
+    totalCount
+    nodes {
+      number
+      title
+      url
+    }
+  }
+  milestone {
+    ...MilestoneFields
+  }
+
+  # projectItems(first: 10) {
+  #   totalCount
+  #   nodes {
+  #     id
+  #     # project {
+  #     #   number
+  #     #   title
+  #     #   url
+  #     # }
+  #   }
+  # }
+
+  reviewRequests(first: 10) {
+    totalCount
+    nodes {
+      requestedReviewer {
+        ...UserFields
+        ... on Team {
+          name
+          slug
+          url
+          organization {
+            login
+          }
+        }
+      }
+    }
+  }
+  reviews(first: 100) {
+    totalCount
+    nodes {
+      __typename
+      author {
+        ...ActorFields
+      }
+      comments(first: 100) {
+        totalCount
+        nodes {
+          __typename
+          id
+        }
+      }
+      id
+      createdAt
+      submittedAt
+      publishedAt
+      state
+      body
+      bodyHTML
+      url
+      reactionGroups {
+        ...ReactionGroupFields
+      }
+      viewerCanDelete
+      viewerCanUpdate
+      viewerDidAuthor
+    }
+  }
+  participants(first: 10) {
+    totalCount
+    nodes {
+      ...UserFields
+    }
+  }
+  assignees(first: 10) {
+    totalCount
+    nodes {
+      ...UserFields
+    }
+  }
+  # suggestedActors(first: 10) {
+  #   totalCount
+  #   nodes {
+  #     ... on User {
+  #       ...UserFields
+  #     }
+  #   }
+  # }
+  suggestedReviewers {
+    isAuthor
+    isCommenter
+    reviewer {
+      ... on User {
+        ...UserFields
+      }
+    }
+  }
+  labels(first: 20) {
+    totalCount
+    nodes {
+      ...LabelFields
+    }
+  }
+  files(first: 100) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      additions
+      changeType
+      deletions
+      path
+      viewerViewedState
+    }
+  }
+}

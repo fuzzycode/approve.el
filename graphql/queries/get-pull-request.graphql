@@ -1,0 +1,58 @@
+# Include all sub-fragments from their respective files
+# NOTE: this is NOT part of graphql standard, this is something that Approve adds on top of graphql
+# fragment content is resolved at load time when the API functions are loading the graphql
+${include:fragments/label-fragment.graphql}
+${include:fragments/user-fragment.graphql}
+${include:fragments/milestone-fragment.graphql}
+${include:fragments/reaction-group-fragment.graphql}
+${include:fragments/ref-fragment.graphql}
+${include:fragments/actor-fragment.graphql}
+${include:fragments/git-actor-fragment.graphql}
+${include:fragments/commit-comment-fragment.graphql}
+${include:fragments/issue-comment-fragment.graphql}
+${include:fragments/pull-request-review-comment-fragment.graphql}
+${include:fragments/pull-request-fragment.graphql}
+
+# Actual query to get a pull request and repository with all relevant details
+query GetPullRequest($repo_owner: String!, $repo_name: String!, $pr_id: Int!) {
+  repository(owner: $repo_owner, name: $repo_name) {
+    viewerPermission
+    url
+    labels(first: 100) {
+      totalCount
+      nodes {
+        ...LabelFields
+      }
+    }
+
+    assignableUsers(first: 100) {
+      totalCount
+      nodes {
+        ...UserFields
+      }
+    }
+
+    mentionableUsers(first: 100) {
+      totalCount
+      nodes {
+        ...UserFields
+      }
+    }
+    # suggestedActors(first: 100) {
+    #   totalCount
+    #   nodes {
+    #     ...ActorFields
+    #   }
+    # }
+    milestones(first: 10) {
+      totalCount
+      nodes {
+        ...MilestoneFields
+      }
+    }
+
+    pullRequest(number: $pr_id) {
+      ...PullRequestFields
+    }
+  }
+}

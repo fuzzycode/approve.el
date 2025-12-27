@@ -1,0 +1,13 @@
+fragment RefFields on Ref {
+  name
+  target {
+    abbreviatedOid
+    oid
+    commitUrl
+    repository {
+      owner {
+        login
+      }
+    }
+  }
+}
