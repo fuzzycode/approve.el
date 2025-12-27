@@ -1,4 +1,4 @@
-;;; approve-ui.el --- UI rendering for Approve  -*- lexical-binding: t; -*-
+;;; approve-api-mutations.el --- GraphQL mutation functions for Approve  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Björn Larsson
 
@@ -28,20 +28,24 @@
 
 ;;; Commentary:
 
-;; This module provides the UI rendering layer for Approve.
+;; This module provides mutating GraphQL operations for Approve.
 ;;
 ;; Key responsibilities:
-;; - Creating and managing the Approve buffer
-;; - Rendering PR data using magit-section
-;; - Coordinating between the data model and visual representation
-;; - Handling buffer refresh and updates
+;; - Submitting PR reviews (approve, request changes, comment)
+;; - Adding and editing comments
+;; - Resolving and unresolving review threads
+;; - Merging and closing pull requests
+;; - Managing PR labels and assignees
 ;;
-;; This is the entry point for all visual rendering of pull request
-;; review data.
+;; All functions in this module modify state on GitHub.  For read-only
+;; operations, see `approve-api-queries.el'.
+;;
+;; Mutation responses are designed to be compatible with `approve-model-patch'
+;; for seamless store updates after successful mutations.
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(provide 'approve-ui)
-;;; approve-ui.el ends here
+(provide 'approve-api-mutations)
+;;; approve-api-mutations.el ends here

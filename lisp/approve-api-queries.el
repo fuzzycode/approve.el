@@ -1,4 +1,4 @@
-;;; approve-ui.el --- UI rendering for Approve  -*- lexical-binding: t; -*-
+;;; approve-api-queries.el --- GraphQL query functions for Approve  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Björn Larsson
 
@@ -28,20 +28,21 @@
 
 ;;; Commentary:
 
-;; This module provides the UI rendering layer for Approve.
+;; This module provides read-only GraphQL query functions for Approve.
 ;;
 ;; Key responsibilities:
-;; - Creating and managing the Approve buffer
-;; - Rendering PR data using magit-section
-;; - Coordinating between the data model and visual representation
-;; - Handling buffer refresh and updates
+;; - Fetching pull request data from GitHub
+;; - Fetching comments, reviews, and review threads
+;; - Fetching file diffs and commit information
+;; - Pagination handling for large data sets
 ;;
-;; This is the entry point for all visual rendering of pull request
-;; review data.
+;; All functions in this module are non-mutating - they only read data
+;; from GitHub's GraphQL API.  For operations that modify data, see
+;; `approve-api-mutations.el'.
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(provide 'approve-ui)
-;;; approve-ui.el ends here
+(provide 'approve-api-queries)
+;;; approve-api-queries.el ends here
