@@ -149,7 +149,8 @@ initializes the data model with the PR metadata, and
 fetches the PR data from GitHub."
   (let ((buffer (approve-ui--get-or-create-buffer owner repo number)))
     (switch-to-buffer buffer)
-    (approve-ui-refresh)))
+    (with-current-buffer buffer
+      (approve-ui-refresh))))
 
 (provide 'approve-ui)
 ;;; approve-ui.el ends here

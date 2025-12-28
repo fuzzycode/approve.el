@@ -235,7 +235,7 @@ in the debug buffer."
          (user-error "No GraphQL files found in %s" approve-graphql-directory)
        (list (completing-read "GraphQL query: " query-names nil t)))))
   (condition-case err
-      (let ((resolved-query (approve-graphql-load query-name t))) ; bypass cache
+      (let ((resolved-query (approve-graphql-load query-name)))
         (approve-dev--display-text
          (format "GraphQL Query: %s" query-name)
          resolved-query)
