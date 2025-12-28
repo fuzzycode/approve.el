@@ -5,7 +5,7 @@
 ;; Author: Björn Larsson
 ;; Maintainer: Björn Larsson
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "28.1") (ghub "3.5") (magit-section "4.0") (magit "4.0") (dash "2.19"))
+;; Package-Requires: ((emacs "28.1") (ghub "3.5") (magit-section "4.0") (magit "4.0") (markdown-mode "2.5") (dash "2.19"))
 ;; Homepage: https://github.com/fuzzycode/Approve.el
 ;; Keywords: tools, vc
 
@@ -54,6 +54,27 @@
 (defgroup approve nil
   "Settings for Approve PR review tool."
   :group 'tools)
+
+;;; Keybindings
+
+(defcustom approve-prefix-key "C-c"
+  "Prefix key for Approve commands.
+This prefix is used in `approve-review-mode' for various actions.
+Common choices are \"C-c\" or \"C-c a\"."
+  :group 'approve
+  :type 'key-sequence)
+
+;;; Key Binding Helpers
+
+(defun approve-kbd (key)
+  "Return a key sequence string for KEY with the Approve prefix.
+KEY should be a string like \"e\" or \"RET\"."
+  (kbd (concat approve-prefix-key " " key)))
+
+(defun approve-define-key (keymap key command)
+  "Define KEY to run COMMAND in KEYMAP using the Approve prefix.
+KEY should be a string like \"e\" or \"RET\"."
+  (define-key keymap (approve-kbd key) command))
 
 ;;; URL Parsing
 
