@@ -43,13 +43,15 @@
 
 (require 'magit-section)
 (require 'cl-lib)
+
 (require 'approve-model)
 (require 'approve-api-queries)
+(require 'approve-ui-headers)
 
-;;; Customizations
+;;; Customization
 
 (defcustom approve-review-sections-hook
-  '()
+  '(approve-insert-header-section)
   "Hook run to insert sections in the PR review buffer.
 Each function is called with no arguments and should use the
 PR data stored in buffer-local variables."
