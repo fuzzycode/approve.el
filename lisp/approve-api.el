@@ -183,6 +183,26 @@ Returns a cons cell (error-symbol . error-data)."
    (t
     (cons 'approve-api-error (if (listp error) error (list error))))))
 
+(defun approve-api-default-error-handler (error)
+  "Default handler for API errors.
+ERROR is a cons cell (error-type . error-data).
+Displays an appropriate message based on the error type."
+  (let ((error-type (car error))
+        (error-data (cdr error)))
+    (pcase error-type
+      ('approve-api-not-found
+       (message "Pull request not found"))
+      ('approve-api-unauthorized
+       (message "Unauthorized: Check your GitHub token"))
+      ('approve-api-rate-limit
+       (message "GitHub API rate limit exceeded"))
+      ('approve-api-timeout
+       (message "Request timed out"))
+      ('approve-api-graphql-error
+       (message "GraphQL error: %S" error-data))
+      (_
+       (message "API error: %S" error)))))
+
 (defun approve-api--start-timeout-timer (request-id buffer error-callback timeout)
   "Start a timeout timer for request REQUEST-ID.
 BUFFER is the originating buffer.
@@ -226,13 +246,14 @@ Returns a request ID that can be used with `approve-api-cancel'."
   (let* ((request-id (approve-api--generate-request-id))
          (progress-reporter (when progress-message
                               (make-progress-reporter progress-message)))
+         (effective-error-callback (or error-callback #'approve-api-default-error-handler))
          (ghub-params (approve-api--make-ghub-params))
          (success-cb (approve-api--create-graphql-success-callback
-                      request-id buffer callback error-callback progress-reporter))
+                      request-id buffer callback effective-error-callback progress-reporter))
          (error-cb (approve-api--create-error-callback
-                    request-id buffer error-callback progress-reporter))
+                    request-id buffer effective-error-callback progress-reporter))
          (timer (approve-api--start-timeout-timer
-                 request-id buffer error-callback timeout)))
+                 request-id buffer effective-error-callback timeout)))
     (puthash request-id
              (list :timer timer
                    :buffer buffer
@@ -293,13 +314,14 @@ Returns a request ID that can be used with `approve-api-cancel'."
   (let* ((request-id (approve-api--generate-request-id))
          (progress-reporter (when progress-message
                               (make-progress-reporter progress-message)))
+         (effective-error-callback (or error-callback #'approve-api-default-error-handler))
          (ghub-params (approve-api--make-ghub-params))
          (success-cb (approve-api--create-success-callback
                       request-id buffer callback progress-reporter))
          (error-cb (approve-api--create-error-callback
-                    request-id buffer error-callback progress-reporter))
+                    request-id buffer effective-error-callback progress-reporter))
          (timer (approve-api--start-timeout-timer
-                 request-id buffer error-callback timeout)))
+                 request-id buffer effective-error-callback timeout)))
     (puthash request-id
              (list :timer timer
                    :buffer buffer

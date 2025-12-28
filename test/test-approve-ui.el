@@ -20,22 +20,17 @@
 (defvar test-approve-ui--last-callback nil
   "Stored callback from last query call.")
 
-(defvar test-approve-ui--last-error-callback nil
-  "Stored error callback from last query call.")
-
 (defun test-approve-ui--mock-query (owner repo number &rest args)
   "Mock implementation of `approve-api-query-pull-request'."
   (push (list :owner owner :repo repo :number number :args args)
         test-approve-ui--query-calls)
   (setq test-approve-ui--last-callback (plist-get args :callback))
-  (setq test-approve-ui--last-error-callback (plist-get args :error-callback))
   1) ; Return mock request ID
 
 (defun test-approve-ui--reset-mocks ()
   "Reset all mock state."
   (setq test-approve-ui--query-calls nil)
-  (setq test-approve-ui--last-callback nil)
-  (setq test-approve-ui--last-error-callback nil))
+  (setq test-approve-ui--last-callback nil))
 
 (defun test-approve-ui--make-pr-response ()
   "Create a mock PR response from GitHub API."
@@ -191,29 +186,7 @@
               (expect 'approve-ui--redraw-buffer :to-have-been-called))
           (kill-buffer buffer)))))
 
-  (describe "approve-ui--handle-fetch-error"
 
-    (it "displays message for not found error"
-      (spy-on 'message)
-      (approve-ui--handle-fetch-error '(approve-api-not-found . ("details")))
-      (expect 'message :to-have-been-called-with "Pull request not found"))
-
-    (it "displays message for unauthorized error"
-      (spy-on 'message)
-      (approve-ui--handle-fetch-error '(approve-api-unauthorized . ("details")))
-      (expect 'message :to-have-been-called-with
-              "Unauthorized: Check your GitHub token"))
-
-    (it "displays message for rate limit error"
-      (spy-on 'message)
-      (approve-ui--handle-fetch-error '(approve-api-rate-limit . ("details")))
-      (expect 'message :to-have-been-called-with
-              "GitHub API rate limit exceeded"))
-
-    (it "displays message for timeout error"
-      (spy-on 'message)
-      (approve-ui--handle-fetch-error '(approve-api-timeout . ("details")))
-      (expect 'message :to-have-been-called-with "Request timed out")))
 
   (describe "approve-review-mode"
 

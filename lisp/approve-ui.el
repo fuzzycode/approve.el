@@ -97,24 +97,6 @@ Loads the data into the model and redraws the buffer."
       (approve-model-load pr t))
     (approve-ui--redraw-buffer)))
 
-(defun approve-ui--handle-fetch-error (error)
-  "Handle PR fetch error ERROR."
-  (let ((error-type (car error))
-        (error-data (cdr error)))
-    (pcase error-type
-      ('approve-api-not-found
-       (message "Pull request not found"))
-      ('approve-api-unauthorized
-       (message "Unauthorized: Check your GitHub token"))
-      ('approve-api-rate-limit
-       (message "GitHub API rate limit exceeded"))
-      ('approve-api-timeout
-       (message "Request timed out"))
-      ('approve-api-graphql-error
-       (message "GraphQL error: %S" error-data))
-      (_
-       (message "Error fetching PR: %S" error)))))
-
 (defun approve-ui--buffer-name (owner repo number)
   "Generate a buffer name for PR NUMBER in OWNER/REPO."
   (format "*Approve: %s/%s#%d*" owner repo number))
@@ -158,8 +140,7 @@ This function is suitable for use as `revert-buffer-function'."
       (user-error "Buffer missing PR metadata"))
     (approve-api-query-pull-request
      owner repo number
-     :callback #'approve-ui--handle-fetch-success
-     :error-callback #'approve-ui--handle-fetch-error)))
+     :callback #'approve-ui--handle-fetch-success)))
 
 (defun approve-ui-view-pr (owner repo number)
   "Display and fetch PR NUMBER from OWNER/REPO.
