@@ -253,7 +253,7 @@ in the debug buffer."
   (interactive)
   (if (not approve-model--store)
       (message "Data store not initialized")
-    (let ((output (list "=== Approve Model Store ===")))
+    (let ((output '()))
       (push (format "Root: %S" approve-model--root) output)
       (push (format "Metadata: %S" approve-model--metadata) output)
       (push "--- Entities by Type ---" output)
@@ -267,7 +267,7 @@ in the debug buffer."
             (push (format "  - %s" id) output))
           type-store))
        approve-model--store)
-      (string-join (nreverse output) "\n"))))
+      (approve-dev--display-result "=== Approve Model Store ==="  output))))
 
 (defun approve-dev-model-stats ()
   "Return statistics about the current store."
@@ -282,11 +282,12 @@ in the debug buffer."
            (push (cons typename count) type-counts)
            (cl-incf total count)))
        approve-model--store)
-      (list :initialized t
-            :total-entities total
-            :types-count (hash-table-count approve-model--store)
-            :by-type type-counts
-            :has-root (not (null approve-model--root))))))
+      (approve-dev--display-result "=== Approve Model Stats==="
+                                   (list :initialized t
+                                         :total-entities total
+                                         :types-count (hash-table-count approve-model--store)
+                                         :by-type type-counts
+                                         :has-root (not (null approve-model--root)))))))
 
 (provide 'approve-develop)
 ;;; approve-develop.el ends here

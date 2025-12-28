@@ -95,6 +95,8 @@ Loads the data into the model and redraws the buffer."
     ;; Load the pull request as the root entity
     (when-let ((pr (alist-get 'pullRequest repository)))
       (approve-model-load pr t))
+
+    (switch-to-buffer (current-buffer))
     (approve-ui--redraw-buffer)))
 
 (defun approve-ui--buffer-name (owner repo number)
@@ -148,7 +150,6 @@ Creates or switches to the Approve buffer for this PR,
 initializes the data model with the PR metadata, and
 fetches the PR data from GitHub."
   (let ((buffer (approve-ui--get-or-create-buffer owner repo number)))
-    (switch-to-buffer buffer)
     (with-current-buffer buffer
       (approve-ui-refresh))))
 

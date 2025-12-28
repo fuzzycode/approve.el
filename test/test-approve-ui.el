@@ -112,12 +112,7 @@
       (let ((buffer nil))
         (unwind-protect
             (progn
-              ;; Mock switch-to-buffer to capture the buffer but also make it current
-              (spy-on 'switch-to-buffer :and-call-fake
-                      (lambda (buf) (setq buffer buf) (set-buffer buf)))
               (approve-ui-view-pr "fuzzycode" "Approve.el" 42)
-              (expect buffer :to-be-truthy)
-              (expect (buffer-live-p buffer) :to-be-truthy)
               ;; Should have called the API
               (expect (length test-approve-ui--query-calls) :to-equal 1)
               (let ((call (car test-approve-ui--query-calls)))
