@@ -47,6 +47,44 @@
 (require 'approve-api)
 (require 'approve-graphql)
 
+;;; Internal Functions
+
+(defun approve-api--fetch-diff (owner repo base head callback error-callback buffer)
+  "Fetch the diff between BASE and HEAD for OWNER/REPO.
+CALLBACK is called with the diff data on success.
+ERROR-CALLBACK is called with error info on failure.
+BUFFER is the buffer context for callbacks."
+  (let ((resource (format "/repos/%s/%s/compare/%s...%s"
+                          (url-hexify-string owner)
+                          (url-hexify-string repo)
+                          (url-hexify-string base)
+                          (url-hexify-string head))))
+    (approve-api-rest
+     "GET" resource
+     :callback callback
+     :error-callback error-callback
+     :buffer buffer
+     :progress-message (format "Fetching diff for %s/%s..." owner repo))))
+
+(defun approve-api--extract-pr-refs (data)
+  "Extract base and head refs from PR DATA.
+Returns a cons cell (BASE . HEAD) or nil if refs are not found."
+  (when-let* ((repository (alist-get 'repository data))
+              (pull-request (alist-get 'pullRequest repository))
+              (base (alist-get 'baseRefOid pull-request))
+              (head (alist-get 'headRefOid pull-request)))
+    (cons base head)))
+
+(defun approve-api--merge-diff-into-data (data diff-data)
+  "Merge DIFF-DATA into the PR DATA structure.
+Returns a new alist with the diff added under repository.pullRequest.diff."
+  (let* ((repository (copy-alist (alist-get 'repository data)))
+         (pull-request (copy-alist (alist-get 'pullRequest repository))))
+    (setf (alist-get 'diff pull-request) diff-data)
+    (setf (alist-get 'pullRequest repository) pull-request)
+    (setf (alist-get 'repository data) repository)
+    data))
+
 ;;; Public API
 
 (cl-defun approve-api-query-pull-request (owner repo number
@@ -54,7 +92,7 @@
                                                  callback
                                                  error-callback
                                                  (buffer (current-buffer)))
-  "Fetch a pull request from GitHub.
+  "Fetch a pull request from GitHub including its diff.
 
 OWNER is the repository owner (user or organization).
 REPO is the repository name.
@@ -62,28 +100,48 @@ NUMBER is the pull request number.
 
 Keyword arguments:
   :callback - Function called with the response data on success.
-              Receives an alist with `repository' containing the PR data.
+              Receives an alist with `repository' containing the PR data
+              and the diff under `repository.pullRequest.diff'.
   :error-callback - Function called with error info on failure.
   :buffer - Buffer context for callbacks (defaults to current buffer).
 
 Returns a request ID that can be used with `approve-api-cancel'.
 
+The function first fetches PR metadata via GraphQL, then fetches the diff
+via REST API, and finally calls the callback with the merged data.
+
 Example:
   (approve-api-query-pull-request
    \"fuzzycode\" \"Approve.el\" 42
    :callback (lambda (data)
-               (let ((pr (alist-get \\='pullRequest
-                                    (alist-get \\='repository data))))
-                 (message \"PR: %s\" (alist-get \\='title pr)))))"
+               (let* ((repo (alist-get \\='repository data))
+                      (pr (alist-get \\='pullRequest repo))
+                      (diff (alist-get \\='diff pr)))
+                 (message \"PR: %s, Files changed: %d\"
+                          (alist-get \\='title pr)
+                          (length (alist-get \\='files diff))))))"
   (approve-api-graphql
    (approve-graphql-load "queries/get-pull-request.graphql")
    `((repo_owner . ,owner)
      (repo_name . ,repo)
      (pr_id . ,number))
-   :callback callback
+   :callback (lambda (data)
+               (if-let ((refs (approve-api--extract-pr-refs data)))
+                   (approve-api--fetch-diff
+                    owner repo (car refs) (cdr refs)
+                    (lambda (diff-data)
+                      (when callback
+                        (funcall callback
+                                 (approve-api--merge-diff-into-data data diff-data))))
+                    error-callback
+                    buffer)
+                 ;; No refs found, return data without diff
+                 (when callback
+                   (funcall callback data))))
    :error-callback error-callback
    :buffer buffer
    :progress-message (format "Fetching PR #%d from %s/%s..." number owner repo)))
 
 (provide 'approve-api-queries)
 ;;; approve-api-queries.el ends here
+
