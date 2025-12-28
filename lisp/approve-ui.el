@@ -47,6 +47,7 @@
 (require 'approve-model)
 (require 'approve-api-queries)
 (require 'approve-ui-headers)
+(require 'approve-ui-faces)
 
 ;;; Customization
 

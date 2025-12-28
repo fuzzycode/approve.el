@@ -260,9 +260,9 @@ Returns a request ID that can be used with `approve-api-cancel'."
                    :start-time (current-time))
              approve-api--pending-requests)
     (apply #'ghub-graphql query variables
-           :callback success-cb
-           :errorback error-cb
-           ghub-params)
+           (append (list :callback success-cb
+                         :errorback error-cb)
+                   ghub-params))
     request-id))
 
 (defun approve-api--create-graphql-success-callback (request-id buffer callback error-callback progress-reporter)
@@ -327,13 +327,12 @@ Returns a request ID that can be used with `approve-api-cancel'."
                    :buffer buffer
                    :start-time (current-time))
              approve-api--pending-requests)
-    (let ((request-args (-concat (list method resource)
-                                 (when payload (list :payload payload))
-                                 (when query (list :query query))
-                                 (list :callback success-cb
-                                       :errorback error-cb)
-                                 ghub-params)))
-      (apply #'ghub-request request-args))
+    (apply #'ghub-request method resource nil
+           (append (when payload (list :payload payload))
+                   (when query (list :query query))
+                   (list :callback success-cb
+                         :errorback error-cb)
+                   ghub-params))
     request-id))
 
 (defun approve-api-cancel (request-id)

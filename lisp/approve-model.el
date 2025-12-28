@@ -137,8 +137,10 @@ METADATA is a plist that can contain :owner, :repo, :number, etc."
   (alist-get '__typename data))
 
 (defun approve-model--extract-id (data)
-  "Extract id from DATA, return nil if not present."
-  (alist-get 'id data))
+  "Extract id from DATA, return nil if not present.
+Only returns string IDs (GraphQL node IDs), not numeric IDs (REST API)."
+  (let ((id (alist-get 'id data)))
+    (and (stringp id) id)))
 
 (defun approve-model--normalizable-p (data)
   "Return non-nil if DATA can be normalized (has __typename and id)."

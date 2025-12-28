@@ -49,14 +49,32 @@
 (require 'cl-lib)
 
 (require 'approve-model)
+(require 'approve-ui-faces)
 
 ;;; Customization
 
 (defcustom approve-review-header-sections-hook
-  '()
+  '(approve-insert-title-section)
   "Hook run to insert header sections in the PR review buffer."
   :group 'approve
   :type 'hook)
+
+;; Helpers
+(defun approve-ui--format-title (title)
+  "Return a formatted title string for TITLE."
+  (format "%-17s" title))
+
+;;; Sections
+
+(defun approve-insert-title-section ()
+  "Insert the title section showing the PR title and number."
+  (with-approve-entity ((:root) (title number))
+    (magit-insert-section (title)
+      (insert (approve-ui--format-title "Title:")
+              (propertize title 'face 'approve-title-face)
+              " "
+              (propertize (format "#%d" number) 'face 'approve-pr-number-face)
+              "\n"))))
 
 (defun approve-insert-header-section ()
   "Insert the header section in the PR review buffer."

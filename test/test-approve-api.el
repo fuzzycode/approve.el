@@ -41,9 +41,10 @@ Captures the call and stores callbacks for later invocation."
   (setq test-approve-api--ghub-graphql-errorback (plist-get args :errorback))
   nil)
 
-(defun test-approve-api--mock-ghub-request (method resource &rest args)
+(defun test-approve-api--mock-ghub-request (method resource &optional _params &rest args)
   "Mock implementation of `ghub-request'.
-Captures the call and stores callbacks for later invocation."
+Captures the call and stores callbacks for later invocation.
+_PARAMS is the optional params argument (we ignore it)."
   (push (list :method method :resource resource :args args)
         test-approve-api--ghub-request-calls)
   (setq test-approve-api--ghub-request-callback (plist-get args :callback))
