@@ -62,7 +62,7 @@
 ;; Helpers
 (defun approve-ui--format-title (title)
   "Return a formatted title string for TITLE."
-  (format "%-17s" title))
+  (propertize (format "%-17s" title) 'face 'approve-header-title-face))
 
 ;;; Sections
 

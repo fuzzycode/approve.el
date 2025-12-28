@@ -53,5 +53,10 @@
   "Face for the PR number."
   :group 'approve-faces)
 
+(defface approve-header-title-face
+  '((t :inherit magit-section-secondary-heading))
+  "Face for header titles like \"Title:\", \"Author:\", etc."
+  :group 'approve-faces)
+
 (provide 'approve-ui-faces)
 ;;; approve-ui-faces.el ends here
