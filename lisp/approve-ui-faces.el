@@ -41,10 +41,17 @@
   :group 'approve
   :group 'faces)
 
+;;; Section Faces
+
+(defface approve-section-heading-face
+  '((t :inherit magit-section-heading))
+  "Face for top-level section headings."
+  :group 'approve-faces)
+
 ;;; Header Faces
 
 (defface approve-title-face
-  '((t :inherit magit-section-heading :height 1.3))
+  '((t :inherit approve-section-heading-face :height 1.3))
   "Face for the PR title."
   :group 'approve-faces)
 

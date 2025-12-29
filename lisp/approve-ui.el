@@ -114,12 +114,11 @@ Loads the data into the model and redraws the buffer."
   "Get or create the Approve buffer for PR NUMBER in OWNER/REPO.
 Returns the buffer."
   (let ((buffer-name (approve-ui--buffer-name owner repo number)))
-    (or (get-buffer buffer-name)
         (let ((buffer (get-buffer-create buffer-name)))
           (with-current-buffer buffer
             (approve-review-mode)
             (approve-model-init `(:owner ,owner :repo ,repo :number ,number)))
-          buffer))))
+          buffer)))
 
 (defun approve-ui-redraw ()
   "Redraw the current Approve buffer using the data model.

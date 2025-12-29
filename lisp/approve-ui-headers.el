@@ -59,19 +59,19 @@
 ;;; Customization
 
 (defcustom approve-review-header-sections-hook
-  '(approve-insert-title-section
-    approve-insert-author-section)
-  "Hook run to insert header sections in the PR review buffer."
+  '(approve-insert-author-section)
+  "Hook run to insert header sections in the PR review buffer.
+These sections are rendered inside the collapsible headers section."
   :group 'approve
   :type 'hook)
 
 ;;; Section Keymaps
 
-(defvar magit-title-section-map
+(defvar magit-headers-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'approve-action-browse-pr)
     map)
-  "Keymap for the title section.
+  "Keymap for the headers section.
 Named with `magit-' prefix to be automatically used by magit-section.")
 
 (defvar magit-author-section-map
@@ -83,7 +83,7 @@ Named with `magit-' prefix to be automatically used by magit-section.")
 
 ;; Add the prefixed key binding at load time
 (with-eval-after-load 'approve
-  (approve-define-key magit-title-section-map "e" #'approve-action-edit-title))
+  (approve-define-key magit-headers-section-map "e" #'approve-action-edit-title))
 
 ;;; Helpers
 
@@ -92,16 +92,6 @@ Named with `magit-' prefix to be automatically used by magit-section.")
   (propertize (format "%-17s" title) 'face 'approve-header-title-face))
 
 ;;; Sections
-
-(defun approve-insert-title-section ()
-  "Insert the title section showing the PR title and number."
-  (with-approve-entity ((:root) (title number))
-    (magit-insert-section (title)
-      (insert (approve-ui--format-title "Title:")
-              (propertize title 'face 'approve-title-face)
-              " "
-              (propertize (format "#%d" number) 'face 'approve-pr-number-face)
-              "\n"))))
 
 (defun approve-insert-author-section ()
   "Insert the author section showing the PR author."
@@ -123,8 +113,16 @@ Named with `magit-' prefix to be automatically used by magit-section.")
                   "\n"))))))
 
 (defun approve-insert-header-section ()
-  "Insert the header section in the PR review buffer."
-  (run-hooks 'approve-review-header-sections-hook))
+  "Insert the header section in the PR review buffer.
+All header sections are wrapped in a collapsible section with the
+PR title as the heading."
+  (with-approve-entity ((:root) (title number))
+    (magit-insert-section (headers)
+      (magit-insert-heading
+        (propertize title 'face 'approve-title-face)
+        " "
+        (propertize (format "#%d" number) 'face 'approve-pr-number-face))
+      (run-hooks 'approve-review-header-sections-hook))))
 
 (provide 'approve-ui-headers)
 ;;; approve-ui-headers.el ends here
