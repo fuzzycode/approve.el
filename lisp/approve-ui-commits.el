@@ -58,6 +58,11 @@ See `format-time-string' for available format specifiers."
   :group 'approve
   :type 'string)
 
+;;; Keymaps
+
+(defvar-keymap approve-commit-section-map
+  :doc "Keymap for `approve-commit' sections.")
+
 ;;; Section Insert Functions
 
 (defun approve-review-commit-insert-sha-section (commit)
@@ -87,6 +92,67 @@ See `format-time-string' for available format specifiers."
   "Insert the commit title (message headline) for COMMIT."
   (let ((headline (alist-get 'messageHeadline commit)))
     (insert headline)))
+
+;;; Commit Data Accessors
+
+(defun approve--get-commit-by-oid (oid)
+  "Return the commit data for commit with OID."
+  (when-let ((commits-data (approve-model-root 'commits)))
+    (let ((commits (approve-model-get-nodes commits-data)))
+      (cl-loop for commit-wrapper in commits
+               for commit = (alist-get 'commit commit-wrapper)
+               when (and commit (equal (alist-get 'oid commit) oid))
+               return commit))))
+
+(defun approve--current-commit-section-p ()
+  "Return non-nil if point is on an `approve-commit' section."
+  (when-let ((section (magit-current-section)))
+    (eq (oref section type) 'approve-commit)))
+
+(defun approve--current-commit-oid ()
+  "Return the OID of the commit at point, or nil if not on a commit section."
+  (when (approve--current-commit-section-p)
+    (oref (magit-current-section) value)))
+
+(defun approve--current-commit ()
+  "Return the commit data at point, or nil if not on a commit section."
+  (when-let ((oid (approve--current-commit-oid)))
+    (approve--get-commit-by-oid oid)))
+
+;;; Commit Actions
+
+(defun approve-commit-yank-abbreviated-sha ()
+  "Copy the abbreviated SHA of the commit at point to the kill ring."
+  (interactive)
+  (approve-with-pr-buffer
+    (if-let ((commit (approve--current-commit)))
+        (let ((sha (alist-get 'abbreviatedOid commit)))
+          (kill-new sha)
+          (message "Copied: %s" sha))
+      (user-error "No commit at point"))))
+
+(defun approve-commit-yank-sha ()
+  "Copy the full SHA of the commit at point to the kill ring."
+  (interactive)
+  (approve-with-pr-buffer
+    (if-let ((commit (approve--current-commit)))
+        (let ((sha (alist-get 'oid commit)))
+          (kill-new sha)
+          (message "Copied: %s" sha))
+      (user-error "No commit at point"))))
+
+(defun approve-commit-yank-message ()
+  "Copy the commit message of the commit at point to the kill ring."
+  (interactive)
+  (approve-with-pr-buffer
+    (if-let ((commit (approve--current-commit)))
+        (let ((message (alist-get 'message commit)))
+          (if (and message (not (string-empty-p message)))
+              (progn
+                (kill-new message)
+                (message "Copied commit message"))
+            (user-error "Commit has no message")))
+      (user-error "No commit at point"))))
 
 ;;; Main Section
 
