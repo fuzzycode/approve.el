@@ -50,6 +50,7 @@
 
 (require 'approve-model)
 (require 'approve-ui-faces)
+(require 'approve-ui-helpers)
 (require 'approve-actions)
 (require 'approve-eldoc)
 
@@ -113,15 +114,13 @@ Named with `magit-' prefix to be automatically used by magit-section.")
                   "\n"))))))
 
 (defun approve-insert-header-section ()
-  "Insert the header section in the PR review buffer.
-All header sections are wrapped in a collapsible section with the
-PR title as the heading."
+  "Insert the header section in the PR review buffer."
   (with-approve-entity ((:root) (title number))
     (magit-insert-section (headers)
       (magit-insert-heading
-        (approve-ui--propertize-face title 'approve-title-face)
+        (approve-ui-propertize-face title 'approve-title-face)
         " "
-        (approve-ui--propertize-face (format "#%d" number) 'approve-pr-number-face))
+        (approve-ui-propertize-face (format "#%d" number) 'approve-pr-number-face))
       (run-hooks 'approve-review-header-sections-hook))))
 
 (provide 'approve-ui-headers)

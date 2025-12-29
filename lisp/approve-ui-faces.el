@@ -72,13 +72,26 @@
   "Face for the PR author username."
   :group 'approve-faces)
 
+;;; Commit Faces
+
+(defface approve-commit-sha-face
+  '((t :inherit magit-hash))
+  "Face for commit SHA hashes."
+  :group 'approve-faces)
+
+(defface approve-commit-date-face
+  '((t :inherit magit-log-date))
+  "Face for commit dates."
+  :group 'approve-faces)
+
+(defface approve-commit-author-face
+  '((t :inherit magit-log-author))
+  "Face for commit author names."
+  :group 'approve-faces)
+
 ;;; Utility Functions
 
-(defun approve-ui--propertize-face (string face)
-  "Propertize STRING with FACE using both `face' and `font-lock-face'.
-This ensures the face is applied correctly in buffers where
-`font-lock-mode' is active."
-  (propertize string 'face face 'font-lock-face face))
+;; Note: approve-ui-propertize-face and other helpers are in approve-ui-helpers.el
 
 (provide 'approve-ui-faces)
 ;;; approve-ui-faces.el ends here
