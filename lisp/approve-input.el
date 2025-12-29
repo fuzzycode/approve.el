@@ -97,6 +97,9 @@ Possible values:
 (defvar-local approve-input--source-window nil
   "The window from which the input was initiated.")
 
+(defvar-local approve-input--window-config nil
+  "Window configuration to restore after input is done.")
+
 (defvar-local approve-input--content-start nil
   "Marker for the start of editable content.")
 
@@ -182,14 +185,17 @@ Use `C-c C-c' to commit the changes and `C-c C-k' to abort.
 
 (defun approve-input--cleanup ()
   "Clean up the input buffer and restore window configuration."
-  (let ((buffer (current-buffer))
-        (source-window approve-input--source-window)
-        (source-buffer approve-input--source-buffer))
-    (quit-window t)
-    (when (and source-window (window-valid-p source-window))
-      (select-window source-window))
+  (let ((win-config approve-input--window-config)
+        (source-buffer approve-input--source-buffer)
+        (input-buffer (current-buffer)))
+    ;; Kill the input buffer
+    (kill-buffer input-buffer)
+    ;; Restore window configuration
+    (when win-config
+      (set-window-configuration win-config))
+    ;; Ensure we're in the source buffer
     (when (and source-buffer (buffer-live-p source-buffer))
-      (set-buffer source-buffer))))
+      (switch-to-buffer source-buffer))))
 
 ;;; Commands
 
@@ -227,12 +233,14 @@ ON-ABORT is a function called with no arguments when the user
 Returns the input buffer."
   (let* ((source-buffer (current-buffer))
          (source-window (selected-window))
+         (win-config (current-window-configuration))
          (buffer (approve-input--create-buffer prompt initial multiline)))
     (with-current-buffer buffer
       (setq approve-input--on-commit on-commit
             approve-input--on-abort on-abort
             approve-input--source-buffer source-buffer
-            approve-input--source-window source-window))
+            approve-input--source-window source-window
+            approve-input--window-config win-config))
     (approve-input--display-buffer buffer)
     buffer))
 

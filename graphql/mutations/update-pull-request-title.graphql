@@ -1,0 +1,14 @@
+# Mutation to update the title of a pull request
+# Returns the updated pull request with essential fields for patching the model
+
+mutation UpdatePullRequestTitle($pullRequestId: ID!, $title: String!) {
+  updatePullRequest(input: { pullRequestId: $pullRequestId, title: $title }) {
+    pullRequest {
+      __typename
+      id
+      number
+      title
+      updatedAt
+    }
+  }
+}

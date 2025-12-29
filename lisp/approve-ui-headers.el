@@ -50,6 +50,10 @@
 
 (require 'approve-model)
 (require 'approve-ui-faces)
+(require 'approve-actions)
+
+;; Forward declaration for approve-define-key
+(declare-function approve-define-key "approve")
 
 ;;; Customization
 
@@ -59,7 +63,21 @@
   :group 'approve
   :type 'hook)
 
-;; Helpers
+;;; Section Keymaps
+
+(defvar magit-title-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'approve-action-browse-pr)
+    map)
+  "Keymap for the title section.
+Named with `magit-' prefix to be automatically used by magit-section.")
+
+;; Add the prefixed key binding at load time
+(with-eval-after-load 'approve
+  (approve-define-key magit-title-section-map "e" #'approve-action-edit-title))
+
+;;; Helpers
+
 (defun approve-ui--format-title (title)
   "Return a formatted title string for TITLE."
   (propertize (format "%-17s" title) 'face 'approve-header-title-face))

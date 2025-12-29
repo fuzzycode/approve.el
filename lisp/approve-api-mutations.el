@@ -47,5 +47,37 @@
 
 (require 'cl-lib)
 
+(require 'approve-api)
+(require 'approve-graphql)
+
+;;; Pull Request Mutations
+
+(cl-defun approve-api-mutation-update-pr-title (pr-id title
+                                                       &key
+                                                       on-success
+                                                       on-error
+                                                       (buffer (current-buffer)))
+  "Update the title of a pull request.
+
+PR-ID is the GraphQL node ID of the pull request.
+TITLE is the new title string.
+
+Keyword arguments:
+  :on-success - Function called with mutation response data on success.
+                Receives the `updatePullRequest' response which includes
+                the updated pull request fields.
+  :on-error - Function called with error info on failure.
+  :buffer - Buffer context for callbacks (defaults to current buffer).
+
+Returns a request ID that can be used with `approve-api-cancel'."
+  (approve-api-graphql
+   (approve-graphql-load "mutations/update-pull-request-title.graphql")
+   `((pullRequestId . ,pr-id)
+     (title . ,title))
+   :callback on-success
+   :error-callback on-error
+   :buffer buffer
+   :progress-message "Updating PR title..."))
+
 (provide 'approve-api-mutations)
 ;;; approve-api-mutations.el ends here

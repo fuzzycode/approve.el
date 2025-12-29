@@ -100,7 +100,7 @@ Loads the data into the model and redraws the buffer."
       (approve-model-load pr t))
 
     (switch-to-buffer (current-buffer))
-    (approve-ui--redraw-buffer)))
+    (approve-ui-redraw)))
 
 (defun approve-ui--buffer-name (owner repo number)
   "Generate a buffer name for PR NUMBER in OWNER/REPO."
@@ -117,10 +117,10 @@ Returns the buffer."
             (approve-model-init `(:owner ,owner :repo ,repo :number ,number)))
           buffer))))
 
-(defun approve-ui--redraw-buffer ()
+(defun approve-ui-redraw ()
   "Redraw the current Approve buffer using the data model.
 This clears the buffer and runs `approve-review-sections-hook' to
-insert all sections."
+insert all sections.  Does not fetch new data from GitHub."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (magit-insert-section (approve-root)

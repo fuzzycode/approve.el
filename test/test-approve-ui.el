@@ -176,9 +176,9 @@
       (let ((buffer (approve-ui--get-or-create-buffer "owner" "repo" 42)))
         (unwind-protect
             (with-current-buffer buffer
-              (spy-on 'approve-ui--redraw-buffer)
+              (spy-on 'approve-ui-redraw)
               (approve-ui--handle-fetch-success (test-approve-ui--make-pr-response))
-              (expect 'approve-ui--redraw-buffer :to-have-been-called))
+              (expect 'approve-ui-redraw :to-have-been-called))
           (kill-buffer buffer)))))
 
 
