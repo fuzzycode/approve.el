@@ -50,6 +50,8 @@
 
 ;; Forward declarations to avoid circular dependencies
 (declare-function approve-ui-redraw "approve-ui")
+(declare-function magit-current-section "magit-section")
+(declare-function magit-section-value "magit-section")
 
 ;;; Helpers
 
@@ -85,6 +87,16 @@ After redraw, recenters the window around point."
         (user-error "No URL available for this pull request"))
       (browse-url url)
       (message "Opened PR in browser"))))
+
+(defun approve-action-browse-author ()
+  "Open the PR author's GitHub profile in the default web browser."
+  (interactive)
+  (approve-with-pr-buffer
+    (let ((url (magit-section-value (magit-current-section))))
+      (unless url
+        (user-error "No URL available for this author"))
+      (browse-url url)
+      (message "Opened author profile in browser"))))
 
 (defun approve-action-edit-title ()
   "Edit the title of the current pull request."

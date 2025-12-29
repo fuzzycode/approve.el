@@ -58,5 +58,12 @@
   "Face for header titles like \"Title:\", \"Author:\", etc."
   :group 'approve-faces)
 
+;;; Author Faces
+
+(defface approve-author-face
+  '((t :inherit font-lock-keyword-face))
+  "Face for the PR author username."
+  :group 'approve-faces)
+
 (provide 'approve-ui-faces)
 ;;; approve-ui-faces.el ends here

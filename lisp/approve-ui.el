@@ -48,6 +48,7 @@
 (require 'approve-api-queries)
 (require 'approve-ui-headers)
 (require 'approve-ui-faces)
+(require 'approve-eldoc)
 
 ;;; Customization
 
@@ -78,6 +79,9 @@ PR data stored in buffer-local variables."
               show-trailing-whitespace nil)
 
   (setq buffer-read-only t)
+
+  ;; Enable eldoc for hover documentation
+  (approve-eldoc-setup)
 
   (run-mode-hooks 'approve-review-mode-hook))
 

@@ -51,6 +51,7 @@
 (require 'approve-model)
 (require 'approve-ui-faces)
 (require 'approve-actions)
+(require 'approve-eldoc)
 
 ;; Forward declaration for approve-define-key
 (declare-function approve-define-key "approve")
@@ -58,7 +59,8 @@
 ;;; Customization
 
 (defcustom approve-review-header-sections-hook
-  '(approve-insert-title-section)
+  '(approve-insert-title-section
+    approve-insert-author-section)
   "Hook run to insert header sections in the PR review buffer."
   :group 'approve
   :type 'hook)
@@ -70,6 +72,13 @@
     (define-key map (kbd "RET") #'approve-action-browse-pr)
     map)
   "Keymap for the title section.
+Named with `magit-' prefix to be automatically used by magit-section.")
+
+(defvar magit-author-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'approve-action-browse-author)
+    map)
+  "Keymap for the author section.
 Named with `magit-' prefix to be automatically used by magit-section.")
 
 ;; Add the prefixed key binding at load time
@@ -93,6 +102,25 @@ Named with `magit-' prefix to be automatically used by magit-section.")
               " "
               (propertize (format "#%d" number) 'face 'approve-pr-number-face)
               "\n"))))
+
+(defun approve-insert-author-section ()
+  "Insert the author section showing the PR author."
+  (with-approve-entity ((:root) (author))
+    (when author
+      (let* ((login (alist-get 'login author))
+             (name (alist-get 'name author))
+             (email (alist-get 'email author))
+             (url (alist-get 'url author))
+             (hover-doc (approve-eldoc-format-user login name email))
+             (author-text (approve-eldoc-propertize
+                           (propertize (concat "@" login) 'face 'approve-author-face)
+                           (concat "@" login)
+                           hover-doc
+                           'approve-author-face)))
+        (magit-insert-section (author url)
+          (insert (approve-ui--format-title "Author:")
+                  author-text
+                  "\n"))))))
 
 (defun approve-insert-header-section ()
   "Insert the header section in the PR review buffer."
