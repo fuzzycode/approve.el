@@ -5,7 +5,6 @@
 ;; Author: Björn Larsson
 ;; URL: https://github.com/fuzzycode/approve
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "28.1"))
 
 ;; SPDX-License-Identifier: MIT
 
