@@ -98,16 +98,8 @@ Named with `magit-' prefix to be automatically used by magit-section.")
   "Insert the author section showing the PR author."
   (with-approve-entity ((:root) (author))
     (when author
-      (let* ((login (alist-get 'login author))
-             (name (alist-get 'name author))
-             (email (alist-get 'email author))
-             (url (alist-get 'url author))
-             (hover-doc (approve-eldoc-format-user login name email))
-             (author-text (approve-eldoc-propertize
-                           (propertize (concat "@" login) 'face 'approve-author-face)
-                           (concat "@" login)
-                           hover-doc
-                           'approve-author-face)))
+      (let ((url (alist-get 'url author))
+            (author-text (approve-ui-format-actor author 'approve-author-face)))
         (magit-insert-section (author url)
           (insert (approve-ui--format-title "Author:")
                   author-text

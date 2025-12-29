@@ -57,6 +57,23 @@ Returns nil if DATE-STRING cannot be parsed."
 
 ;;; Actor Helpers
 
+(defun approve-ui-format-actor (actor face)
+  "Format ACTOR for display, returning propertized string with eldoc.
+ACTOR is an alist with `login', `name', `email', and `url' fields.
+This is for GitHub Actor types (users, bots, etc.) as returned by the API.
+FACE is the face to apply to the formatted string."
+  (let* ((login (alist-get 'login actor))
+         (name (alist-get 'name actor))
+         (email (alist-get 'email actor))
+         ;; Display preference: login > name > email
+         (display-name (or (and login (concat "@" login)) name email "unknown"))
+         (hover-doc (approve-eldoc-format-user login name email)))
+    (approve-eldoc-propertize
+     (approve-ui-propertize-face display-name face)
+     display-name
+     hover-doc
+     face)))
+
 (defun approve-ui-format-git-actor (git-actor face)
   "Format GIT-ACTOR for display, returning propertized string with eldoc.
 GIT-ACTOR is an alist with `name', `email', and optionally `user' fields.
