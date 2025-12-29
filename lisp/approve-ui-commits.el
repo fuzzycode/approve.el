@@ -94,35 +94,52 @@ See `format-time-string' for available format specifiers."
   "Insert the commits section in the PR review buffer.
 Loops through all commits and inserts them one per line using
 `approve-review-commit-sections' for each commit.
-The section heading shows \"Commits (N)\" where N is the total count.
+The section heading shows the number of displayed commits and indicates
+if more commits exist that weren't fetched.
 Expanding a commit shows its full commit message.
 Individual commits are collapsed by default."
-  (when-let ((commits (approve-model-root 'commits)))
-    (let ((commit-count (length commits)))
+  (when-let ((commits-data (approve-model-root 'commits)))
+    (let* ((commits (approve-model-get-nodes commits-data))
+           (commit-count (length commits))
+           (total-count (approve-model-get-total-count commits-data))
+           (truncated-p (approve-model-truncated-p commits-data)))
       ;; Add blank line before the section for visual separation
       (insert "\n")
       (magit-insert-section (commits)
-        (magit-insert-heading commit-count (if (> commit-count 1) "Commits" "Commit"))
+        (magit-insert-heading
+          commit-count
+          (if (> commit-count 1) "Commits" "Commit"))
         (dolist (commit-wrapper commits)
           ;; Each commit in the list is wrapped in a `commit' key
           (let ((commit (alist-get 'commit commit-wrapper)))
             (when commit
               (let ((oid (alist-get 'oid commit))
-                    (message (alist-get 'message commit))
-                    (first t))
+                    (message (alist-get 'message commit)))
                 (magit-insert-section (approve-commit oid t)
                   (magit-insert-heading
-                    (dolist (fn approve-review-commit-sections)
-                      (if first
-                          (setq first nil)
-                        (insert " "))
-                      (funcall fn commit)))
+                    (approve--format-commit-line commit))
                   ;; Full commit message as hidden content
                   (when (and message (not (string-empty-p message)))
                     (insert message)
                     (unless (string-suffix-p "\n" message)
                       (insert "\n"))))))))
+        ;; Show truncation info at the end of the section
+        (when truncated-p
+          (insert (propertize
+                   (format "(showing %d of %d)" commit-count (or total-count "?"))
+                   'face 'approve-pagination-truncated-face)
+                  "\n"))
         (insert "\n")))))
+
+(defun approve--format-commit-line (commit)
+  "Format a single COMMIT for display as a heading line.
+Uses `approve-review-commit-sections' to build the line."
+  (let ((parts '()))
+    (dolist (fn approve-review-commit-sections)
+      (with-temp-buffer
+        (funcall fn commit)
+        (push (buffer-string) parts)))
+    (string-join (nreverse parts) " ")))
 
 (provide 'approve-ui-commits)
 ;;; approve-ui-commits.el ends here

@@ -127,11 +127,14 @@
     (it "unwraps GraphQL connection patterns"
       (let ((data (test-approve-model--make-pr-with-comments "PR_1" 42 "Test PR")))
         (approve-model-load data t)
-        ;; Comments should be unwrapped from nodes
-        (let ((comments (approve-model-root 'comments)))
-          (expect (length comments) :to-equal 2)
-          ;; Each comment should be resolved
-          (expect (alist-get 'body (car comments)) :to-equal "First comment"))))
+        ;; Comments with totalCount should be wrapped with pagination metadata
+        (let ((comments-data (approve-model-root 'comments)))
+          ;; Should have nodes and totalCount
+          (expect (alist-get 'totalCount comments-data) :to-equal 2)
+          (let ((comments (alist-get 'nodes comments-data)))
+            (expect (length comments) :to-equal 2)
+            ;; Each comment should be resolved
+            (expect (alist-get 'body (car comments)) :to-equal "First comment")))))
 
     (it "handles non-normalizable data"
       (let ((result (approve-model-load '((foo . "bar") (baz . 123)))))
@@ -152,7 +155,8 @@
     (it "resolves nested references in lists"
       (approve-model-load (test-approve-model--make-pr-with-comments "PR_1" 42 "Test PR") t)
       (let* ((pr (approve-model-root))
-             (comments (alist-get 'comments pr))
+             (comments-data (alist-get 'comments pr))
+             (comments (alist-get 'nodes comments-data))
              (first-comment (car comments))
              (author (alist-get 'author first-comment)))
         ;; Comment authors should be resolved
@@ -303,11 +307,86 @@
     (it "converts camelCase to lisp-case"
       (expect (approve-model--field-to-var 'bodyHTML) :to-equal 'body-html)
       (expect (approve-model--field-to-var 'createdAt) :to-equal 'created-at)
-      (expect (approve-model--field-to-var 'viewerCanUpdate) :to-equal 'viewer-can-update))))
+      (expect (approve-model--field-to-var 'viewerCanUpdate) :to-equal 'viewer-can-update)))
 
-(provide 'test-approve-model)
-;;; test-approve-model.el ends here
+  (describe "pagination helpers"
 
+    (describe "approve-model-paginated-p"
+
+      (it "returns non-nil for data with nodes and totalCount"
+        (let ((data '((nodes . ((item1) (item2))) (totalCount . 5))))
+          (expect (approve-model-paginated-p data) :to-be-truthy)))
+
+      (it "returns non-nil for data with nodes and pageInfo"
+        (let ((data '((nodes . ((item1))) (pageInfo . ((hasNextPage . t))))))
+          (expect (approve-model-paginated-p data) :to-be-truthy)))
+
+      (it "returns nil for plain list"
+        (expect (approve-model-paginated-p '((item1) (item2))) :to-be nil))
+
+      (it "returns nil for data with only nodes (no metadata)"
+        (let ((data '((nodes . ((item1))))))
+          (expect (approve-model-paginated-p data) :to-be nil))))
+
+    (describe "approve-model-get-nodes"
+
+      (it "extracts nodes from paginated wrapper"
+        (let ((data '((nodes . ((item1) (item2))) (totalCount . 5))))
+          (expect (approve-model-get-nodes data) :to-equal '((item1) (item2)))))
+
+      (it "returns plain list unchanged"
+        (let ((data '((item1) (item2))))
+          (expect (approve-model-get-nodes data) :to-equal data))))
+
+    (describe "approve-model-get-total-count"
+
+      (it "returns totalCount from paginated wrapper"
+        (let ((data '((nodes . ((item1))) (totalCount . 42))))
+          (expect (approve-model-get-total-count data) :to-equal 42)))
+
+      (it "returns nil for non-paginated data"
+        (expect (approve-model-get-total-count '((item1))) :to-be nil)))
+
+    (describe "approve-model-get-page-info"
+
+      (it "returns pageInfo from paginated wrapper"
+        (let ((data '((nodes . ((item1))) (totalCount . 5) (pageInfo . ((hasNextPage . t) (endCursor . "abc"))))))
+          (expect (approve-model-get-page-info data)
+                  :to-equal '((hasNextPage . t) (endCursor . "abc")))))
+
+      (it "returns nil for non-paginated data"
+        (expect (approve-model-get-page-info '((item1))) :to-be nil)))
+
+    (describe "approve-model-has-next-page-p"
+
+      (it "returns t when hasNextPage is true"
+        (let ((data '((nodes . ((item1))) (totalCount . 5) (pageInfo . ((hasNextPage . t))))))
+          (expect (approve-model-has-next-page-p data) :to-be t)))
+
+      (it "returns nil when hasNextPage is false"
+        (let ((data '((nodes . ((item1))) (totalCount . 5) (pageInfo . ((hasNextPage . nil))))))
+          (expect (approve-model-has-next-page-p data) :to-be nil)))
+
+      (it "returns nil when no pageInfo"
+        (let ((data '((nodes . ((item1))) (totalCount . 5))))
+          (expect (approve-model-has-next-page-p data) :to-be nil))))
+
+    (describe "approve-model-truncated-p"
+
+      (it "returns t when hasNextPage is true"
+        (let ((data '((nodes . ((item1))) (totalCount . 1) (pageInfo . ((hasNextPage . t))))))
+          (expect (approve-model-truncated-p data) :to-be-truthy)))
+
+      (it "returns t when totalCount exceeds nodes length"
+        (let ((data '((nodes . ((item1) (item2))) (totalCount . 5))))
+          (expect (approve-model-truncated-p data) :to-be-truthy)))
+
+      (it "returns nil when all items are present"
+        (let ((data '((nodes . ((item1) (item2))) (totalCount . 2) (pageInfo . ((hasNextPage . nil))))))
+          (expect (approve-model-truncated-p data) :to-be nil)))
+
+      (it "returns nil for non-paginated data"
+        (expect (approve-model-truncated-p '((item1) (item2))) :to-be nil))))
 
   (describe "typename validation"
 
@@ -325,4 +404,7 @@
                     (id . "PR_1")
                     (author . ((id . "U_123") (login . "testuser"))))))
         (expect (approve-model-load data)
-                :to-throw 'error))))
+                :to-throw 'error)))))
+
+(provide 'test-approve-model)
+;;; test-approve-model.el ends here

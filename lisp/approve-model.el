@@ -217,16 +217,42 @@ An alist has dotted pairs like ((key . value) ...), not lists like ((:key ...))"
     (puthash id normalized-data type-store)
     (approve-model-make-ref typename id)))
 
+(defun approve-model--connection-p (data)
+  "Return non-nil if DATA looks like a GraphQL connection (has nodes key).
+A connection is an alist with a `nodes' key, optionally with
+`totalCount' and `pageInfo'."
+  (and (approve-model--alist-p data)
+       (assq 'nodes data)))
+
+(defun approve-model--unwrap-connection (data)
+  "Unwrap a GraphQL connection DATA, preserving pagination info.
+If DATA has `totalCount' or `pageInfo', wraps the result as:
+  ((nodes . <unwrapped-items>) (totalCount . N) (pageInfo . ...))
+Otherwise, returns just the unwrapped items list."
+  (let* ((nodes (alist-get 'nodes data))
+         (total-count (alist-get 'totalCount data))
+         (page-info (alist-get 'pageInfo data))
+         (unwrapped-nodes (approve-model--unwrap-nodes nodes)))
+    (if (or total-count page-info)
+        ;; Preserve pagination metadata in a wrapper structure
+        ;; Use regular symbols (not keywords) to be recognized as alist
+        `((nodes . ,unwrapped-nodes)
+          ,@(when total-count `((totalCount . ,total-count)))
+          ,@(when page-info `((pageInfo . ,page-info))))
+      ;; No pagination info, just return the list
+      unwrapped-nodes)))
+
 (defun approve-model--unwrap-nodes (data)
   "Recursively unwrap GraphQL connection patterns in DATA.
-Converts { nodes: [...] } to just [...] and { totalCount: N, nodes: [...] }
-to the unwrapped list while preserving totalCount in metadata if needed.
+Converts { nodes: [...] } to just [...].
+When totalCount or pageInfo are present, preserves them in a wrapper:
+  { nodes: [...], totalCount: N, pageInfo: {...} }
+  => ((:nodes . <list>) (:totalCount . N) (:pageInfo . {...}))
 Vectors are converted to lists for consistency."
   (cond
    ;; Unwrap connection patterns: extract nodes from { nodes: [...] }
-   ((and (approve-model--alist-p data)
-         (assq 'nodes data))
-    (-some->> data (alist-get 'nodes) approve-model--unwrap-nodes))
+   ((approve-model--connection-p data)
+    (approve-model--unwrap-connection data))
    ;; Convert vectors to lists, processing each element
    ((vectorp data)
     (if (= (length data) 0)
@@ -446,6 +472,54 @@ Returns the updated entity."
   "Delete entity with TYPENAME and ID from the store."
   (-when-let (type-store (gethash typename approve-model--store))
     (remhash id type-store)))
+
+;;; Pagination Helpers
+
+(defun approve-model-paginated-p (data)
+  "Return non-nil if DATA is a paginated wrapper with nodes and metadata.
+A paginated wrapper is an alist with at least `nodes' key and optionally
+`totalCount' and/or `pageInfo' keys."
+  (and (listp data)
+       (not (null data))
+       (assq 'nodes data)
+       (or (assq 'totalCount data)
+           (assq 'pageInfo data))))
+
+(defun approve-model-get-nodes (data)
+  "Extract the list of items from DATA.
+If DATA is a paginated wrapper, returns the `nodes' list.
+If DATA is already a plain list, returns it unchanged."
+  (if (approve-model-paginated-p data)
+      (alist-get 'nodes data)
+    data))
+
+(defun approve-model-get-total-count (data)
+  "Return the totalCount from DATA if present, otherwise nil.
+Works with paginated wrapper structures."
+  (when (approve-model-paginated-p data)
+    (alist-get 'totalCount data)))
+
+(defun approve-model-get-page-info (data)
+  "Return the pageInfo from DATA if present, otherwise nil.
+Works with paginated wrapper structures."
+  (when (approve-model-paginated-p data)
+    (alist-get 'pageInfo data)))
+
+(defun approve-model-has-next-page-p (data)
+  "Return non-nil if DATA indicates there are more items to fetch.
+Returns t if pageInfo.hasNextPage is true, nil otherwise."
+  (when-let ((page-info (approve-model-get-page-info data)))
+    (alist-get 'hasNextPage page-info)))
+
+(defun approve-model-truncated-p (data)
+  "Return non-nil if DATA is truncated (more items exist than were fetched).
+This is true when either:
+- pageInfo.hasNextPage is true
+- totalCount is greater than the number of nodes"
+  (or (approve-model-has-next-page-p data)
+      (when-let ((total (approve-model-get-total-count data))
+                 (nodes (approve-model-get-nodes data)))
+        (> total (length nodes)))))
 
 (provide 'approve-model)
 ;;; approve-model.el ends here

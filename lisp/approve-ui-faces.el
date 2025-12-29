@@ -89,6 +89,13 @@
   "Face for commit author names."
   :group 'approve-faces)
 
+;;; Pagination Faces
+
+(defface approve-pagination-truncated-face
+  '((t :inherit warning))
+  "Face for indicating truncated/incomplete data."
+  :group 'approve-faces)
+
 ;;; Utility Functions
 
 ;; Note: approve-ui-propertize-face and other helpers are in approve-ui-helpers.el
