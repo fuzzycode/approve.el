@@ -72,5 +72,13 @@
   "Face for the PR author username."
   :group 'approve-faces)
 
+;;; Utility Functions
+
+(defun approve-ui--propertize-face (string face)
+  "Propertize STRING with FACE using both `face' and `font-lock-face'.
+This ensures the face is applied correctly in buffers where
+`font-lock-mode' is active."
+  (propertize string 'face face 'font-lock-face face))
+
 (provide 'approve-ui-faces)
 ;;; approve-ui-faces.el ends here

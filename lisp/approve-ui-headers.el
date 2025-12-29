@@ -119,9 +119,9 @@ PR title as the heading."
   (with-approve-entity ((:root) (title number))
     (magit-insert-section (headers)
       (magit-insert-heading
-        (propertize title 'face 'approve-title-face)
+        (approve-ui--propertize-face title 'approve-title-face)
         " "
-        (propertize (format "#%d" number) 'face 'approve-pr-number-face))
+        (approve-ui--propertize-face (format "#%d" number) 'approve-pr-number-face))
       (run-hooks 'approve-review-header-sections-hook))))
 
 (provide 'approve-ui-headers)
