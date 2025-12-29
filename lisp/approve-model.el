@@ -123,6 +123,15 @@ METADATA is a plist that can contain :owner, :repo, :number, etc."
   "Return non-nil if the store has been initialized."
   (not (null approve-model--store)))
 
+(defmacro approve-with-pr-buffer (&rest body)
+  "Execute BODY only if the current buffer is an initialized Approve buffer.
+Signal a `user-error' if the model has not been initialized."
+  (declare (indent 0) (debug t))
+  `(progn
+     (unless (approve-model-initialized-p)
+       (user-error "Not in an Approve buffer"))
+     ,@body))
+
 ;;; Internal Normalization
 
 (defun approve-model--get-type-store (typename)

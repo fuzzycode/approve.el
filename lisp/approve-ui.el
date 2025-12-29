@@ -136,16 +136,15 @@ stored in the buffer's metadata, then redraws the buffer.
 
 This function is suitable for use as `revert-buffer-function'."
   (interactive)
-  (unless (approve-model-initialized-p)
-    (user-error "Not in an Approve buffer"))
-  (let ((owner (approve-model-metadata :owner))
-        (repo (approve-model-metadata :repo))
-        (number (approve-model-metadata :number)))
-    (unless (and owner repo number)
-      (user-error "Buffer missing PR metadata"))
-    (approve-api-query-pull-request
-     owner repo number
-     :callback #'approve-ui--handle-fetch-success)))
+  (approve-with-pr-buffer
+    (let ((owner (approve-model-metadata :owner))
+          (repo (approve-model-metadata :repo))
+          (number (approve-model-metadata :number)))
+      (unless (and owner repo number)
+        (user-error "Buffer missing PR metadata"))
+      (approve-api-query-pull-request
+       owner repo number
+       :callback #'approve-ui--handle-fetch-success))))
 
 (defun approve-ui-view-pr (owner repo number)
   "Display and fetch PR NUMBER from OWNER/REPO.

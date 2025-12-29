@@ -79,49 +79,47 @@ After redraw, recenters the window around point."
 (defun approve-action-browse-pr ()
   "Open the current pull request in the default web browser."
   (interactive)
-  (unless (approve-model-initialized-p)
-    (user-error "Not in an Approve buffer"))
-  (let ((url (approve-model-root 'url)))
-    (unless url
-      (user-error "No URL available for this pull request"))
-    (browse-url url)
-    (message "Opened PR in browser")))
+  (approve-with-pr-buffer
+    (let ((url (approve-model-root 'url)))
+      (unless url
+        (user-error "No URL available for this pull request"))
+      (browse-url url)
+      (message "Opened PR in browser"))))
 
 (defun approve-action-edit-title ()
   "Edit the title of the current pull request."
   (interactive)
-  (unless (approve-model-initialized-p)
-    (user-error "Not in an Approve buffer"))
-  (when (approve-actions--check-permission 'viewerCanUpdate "edit title")
-    (let ((current-title (approve-model-root 'title))
-          (pr-id (approve-model-root 'id))
-          (buffer (current-buffer)))
-      (approve-input-read
-       :prompt "Edit PR Title"
-       :initial current-title
-       :multiline nil
-       :on-commit
-       (lambda (new-title)
-         (if (string= new-title current-title)
-             (message "Title unchanged")
-           (with-current-buffer buffer
-             (approve-api-mutation-update-pr-title
-              pr-id new-title
-              :on-success
-              (lambda (data)
-                (with-current-buffer buffer
-                  ;; Patch the model with the returned PR data
-                  (when-let ((pr-data (alist-get 'pullRequest
-                                                 (alist-get 'updatePullRequest data))))
-                    (approve-model-patch pr-data))
-                  (approve-actions--redraw-preserving-point))
-                (message "Title updated"))
-              :on-error
-              (lambda (err)
-                (message "Failed to update title: %s" err))))))
-       :on-abort
-       (lambda ()
-         (message "Title edit cancelled"))))))
+  (approve-with-pr-buffer
+    (when (approve-actions--check-permission 'viewerCanUpdate "edit title")
+      (let ((current-title (approve-model-root 'title))
+            (pr-id (approve-model-root 'id))
+            (buffer (current-buffer)))
+        (approve-input-read
+         :prompt "Edit PR Title"
+         :initial current-title
+         :multiline nil
+         :on-commit
+         (lambda (new-title)
+           (if (string= new-title current-title)
+               (message "Title unchanged")
+             (with-current-buffer buffer
+               (approve-api-mutation-update-pr-title
+                pr-id new-title
+                :on-success
+                (lambda (data)
+                  (with-current-buffer buffer
+                    ;; Patch the model with the returned PR data
+                    (when-let ((pr-data (alist-get 'pullRequest
+                                                   (alist-get 'updatePullRequest data))))
+                      (approve-model-patch pr-data))
+                    (approve-actions--redraw-preserving-point))
+                  (message "Title updated"))
+                :on-error
+                (lambda (err)
+                  (message "Failed to update title: %s" err))))))
+         :on-abort
+         (lambda ()
+           (message "Title edit cancelled")))))))
 
 (provide 'approve-actions)
 ;;; approve-actions.el ends here
