@@ -113,7 +113,7 @@ Named with `magit-' prefix to be automatically used by magit-section.")
         (approve-ui-propertize-face title 'approve-title-face)
         " "
         (approve-ui-propertize-face (format "#%d" number) 'approve-pr-number-face))
-      (run-hooks 'approve-review-header-sections-hook))))
+      (magit-run-section-hook 'approve-review-header-sections-hook))))
 
 (provide 'approve-ui-headers)
 ;;; approve-ui-headers.el ends here

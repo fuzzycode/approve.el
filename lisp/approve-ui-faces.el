@@ -96,6 +96,45 @@
   "Face for indicating truncated/incomplete data."
   :group 'approve-faces)
 
+;;; Diffstat Faces
+
+(defface approve-diffstat-added-face
+  '((t :inherit magit-diffstat-added))
+  "Face for added lines indicator in diffstat."
+  :group 'approve-faces)
+
+(defface approve-diffstat-removed-face
+  '((t :inherit magit-diffstat-removed))
+  "Face for removed lines indicator in diffstat."
+  :group 'approve-faces)
+
+(defface approve-diffstat-file-face
+  '((t :inherit magit-filename))
+  "Face for filenames in diffstat."
+  :group 'approve-faces)
+
+(defface approve-diffstat-count-face
+  '((t :inherit default))
+  "Face for the change count in diffstat."
+  :group 'approve-faces)
+
+;;; File Viewed State Faces
+
+(defface approve-file-viewed-face
+  '((t :inherit success))
+  "Face for the viewed indicator on files."
+  :group 'approve-faces)
+
+(defface approve-file-unviewed-face
+  '((t :inherit warning))
+  "Face for the unviewed indicator on files."
+  :group 'approve-faces)
+
+(defface approve-file-dismissed-face
+  '((t :inherit error))
+  "Face for the dismissed (new changes) indicator on files."
+  :group 'approve-faces)
+
 ;;; Utility Functions
 
 ;; Note: approve-ui-propertize-face and other helpers are in approve-ui-helpers.el

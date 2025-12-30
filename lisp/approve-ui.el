@@ -50,12 +50,14 @@
 (require 'approve-ui-commits)
 (require 'approve-ui-faces)
 (require 'approve-ui-headers)
+(require 'approve-ui-changes)
 
 ;;; Customization
 
 (defcustom approve-review-sections-hook
   '(approve-insert-header-section
-    approve-insert-commits-section)
+    approve-insert-commits-section
+    approve-insert-changes-section)
   "Hook run to insert sections in the PR review buffer.
 Each function is called with no arguments and should use the
 PR data stored in buffer-local variables."
@@ -129,7 +131,7 @@ insert all sections.  Does not fetch new data from GitHub."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (magit-insert-section (approve-root)
-      (run-hooks 'approve-review-sections-hook))
+      (magit-run-section-hook 'approve-review-sections-hook))
     (goto-char (point-min))))
 
 ;;; Public API
