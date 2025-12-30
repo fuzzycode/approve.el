@@ -79,5 +79,61 @@ Returns a request ID that can be used with `approve-api-cancel'."
    :buffer buffer
    :progress-message "Updating PR title..."))
 
+;;; File Viewed State Mutations
+
+(cl-defun approve-api-mutation-mark-file-as-viewed (pr-id path
+                                                          &key
+                                                          on-success
+                                                          on-error
+                                                          (buffer (current-buffer)))
+  "Mark a file as viewed in a pull request.
+
+PR-ID is the GraphQL node ID of the pull request.
+PATH is the file path to mark as viewed.
+
+Keyword arguments:
+  :on-success - Function called with mutation response data on success.
+                Receives the `markFileAsViewed' response which includes
+                the updated pull request files.
+  :on-error - Function called with error info on failure.
+  :buffer - Buffer context for callbacks (defaults to current buffer).
+
+Returns a request ID that can be used with `approve-api-cancel'."
+  (approve-api-graphql
+   (approve-graphql-load "mutations/mark-file-as-viewed.graphql")
+   `((pullRequestId . ,pr-id)
+     (path . ,path))
+   :callback on-success
+   :error-callback on-error
+   :buffer buffer
+   :progress-message (format "Marking %s as viewed..." path)))
+
+(cl-defun approve-api-mutation-unmark-file-as-viewed (pr-id path
+                                                            &key
+                                                            on-success
+                                                            on-error
+                                                            (buffer (current-buffer)))
+  "Unmark a file as viewed in a pull request (mark as unviewed).
+
+PR-ID is the GraphQL node ID of the pull request.
+PATH is the file path to mark as unviewed.
+
+Keyword arguments:
+  :on-success - Function called with mutation response data on success.
+                Receives the `unmarkFileAsViewed' response which includes
+                the updated pull request files.
+  :on-error - Function called with error info on failure.
+  :buffer - Buffer context for callbacks (defaults to current buffer).
+
+Returns a request ID that can be used with `approve-api-cancel'."
+  (approve-api-graphql
+   (approve-graphql-load "mutations/unmark-file-as-viewed.graphql")
+   `((pullRequestId . ,pr-id)
+     (path . ,path))
+   :callback on-success
+   :error-callback on-error
+   :buffer buffer
+   :progress-message (format "Marking %s as unviewed..." path)))
+
 (provide 'approve-api-mutations)
 ;;; approve-api-mutations.el ends here

@@ -1,0 +1,28 @@
+# Mutation to mark a pull request file as viewed
+# Returns the updated pull request with files data for patching the model
+# Includes essential PR fields to avoid losing them during patch
+
+mutation MarkFileAsViewed($pullRequestId: ID!, $path: String!) {
+  markFileAsViewed(input: { pullRequestId: $pullRequestId, path: $path }) {
+    pullRequest {
+      __typename
+      id
+      number
+      title
+      files(first: 100) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          additions
+          changeType
+          deletions
+          path
+          viewerViewedState
+        }
+      }
+    }
+  }
+}

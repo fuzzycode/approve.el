@@ -208,13 +208,27 @@ An alist has dotted pairs like ((key . value) ...), not lists like ((:key ...))"
   "Normalize all values in ALIST, returning a new alist."
   (--map (cons (car it) (approve-model--normalize-value (cdr it))) alist))
 
+(defun approve-model--merge-alists (old new)
+  "Merge NEW alist into OLD alist.
+Keys in NEW override keys in OLD.  Returns a new alist."
+  (let ((result (copy-sequence old)))
+    (dolist (pair new)
+      (setq result (cons pair (assq-delete-all (car pair) result))))
+    result))
+
 (defun approve-model--normalize-entity (data)
-  "Normalize entity DATA and store it.  Return a reference to the entity."
+  "Normalize entity DATA and store it.  Return a reference to the entity.
+If an entity with the same typename and id already exists, the new data
+is merged into the existing entity (new fields override old fields)."
   (let* ((typename (approve-model--extract-typename data))
          (id (approve-model--extract-id data))
          (type-store (approve-model--get-type-store typename))
-         (normalized-data (approve-model--normalize-alist data)))
-    (puthash id normalized-data type-store)
+         (existing (gethash id type-store))
+         (normalized-data (approve-model--normalize-alist data))
+         (final-data (if existing
+                         (approve-model--merge-alists existing normalized-data)
+                       normalized-data)))
+    (puthash id final-data type-store)
     (approve-model-make-ref typename id)))
 
 (defun approve-model--connection-p (data)

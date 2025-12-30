@@ -1,0 +1,28 @@
+# Mutation to unmark a pull request file as viewed (mark it as unviewed)
+# Returns the updated pull request with files data for patching the model
+# Includes essential PR fields to avoid losing them during patch
+
+mutation UnmarkFileAsViewed($pullRequestId: ID!, $path: String!) {
+  unmarkFileAsViewed(input: { pullRequestId: $pullRequestId, path: $path }) {
+    pullRequest {
+      __typename
+      id
+      number
+      title
+      files(first: 100) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          additions
+          changeType
+          deletions
+          path
+          viewerViewedState
+        }
+      }
+    }
+  }
+}

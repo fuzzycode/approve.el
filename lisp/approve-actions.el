@@ -43,6 +43,7 @@
 
 (require 'browse-url)
 (require 'cl-lib)
+(require 'eieio)
 
 (require 'approve-model)
 (require 'approve-input)
@@ -132,6 +133,70 @@ After redraw, recenters the window around point."
          :on-abort
          (lambda ()
            (message "Title edit cancelled")))))))
+
+;;; File Actions
+
+(defun approve-actions--get-file-at-point ()
+  "Return the file path at point, or nil if not on a file section."
+  (when-let ((section (magit-current-section)))
+    (and (eq (oref section type) 'file)
+         (oref section value))))
+
+(defun approve-actions--get-file-viewed-state (path)
+  "Return the viewed state for file at PATH.
+Returns one of \"VIEWED\", \"UNVIEWED\", or \"DISMISSED\", or nil if not found."
+  (when-let ((files-data (approve-model-root 'files)))
+    (let ((files (approve-model-get-nodes files-data)))
+      (cl-loop for file in files
+               when (string= (alist-get 'path file) path)
+               return (alist-get 'viewerViewedState file)))))
+
+(defun approve-action-toggle-file-viewed ()
+  "Toggle the viewed state of the file at point.
+
+The state transitions are:
+  VIEWED    -> UNVIEWED
+  UNVIEWED  -> VIEWED
+  DISMISSED -> VIEWED"
+  (interactive)
+  (approve-with-pr-buffer
+    (let ((path (approve-actions--get-file-at-point)))
+      (unless path
+        (user-error "No file at point"))
+      (let* ((current-state (approve-actions--get-file-viewed-state path))
+             (pr-id (approve-model-root 'id))
+             (buffer (current-buffer))
+             ;; Determine target state and mutation
+             ;; VIEWED -> UNVIEWED (use unmark)
+             ;; UNVIEWED/DISMISSED/nil -> VIEWED (use mark)
+             (should-mark (not (string= current-state "VIEWED"))))
+        (if should-mark
+            (approve-api-mutation-mark-file-as-viewed
+             pr-id path
+             :on-success
+             (lambda (data)
+               (with-current-buffer buffer
+                 (when-let ((pr-data (alist-get 'pullRequest
+                                                (alist-get 'markFileAsViewed data))))
+                   (approve-model-patch pr-data))
+                 (approve-actions--redraw-preserving-point))
+               (message "Marked %s as viewed" path))
+             :on-error
+             (lambda (err)
+               (message "Failed to mark file as viewed: %s" err)))
+          (approve-api-mutation-unmark-file-as-viewed
+           pr-id path
+           :on-success
+           (lambda (data)
+             (with-current-buffer buffer
+               (when-let ((pr-data (alist-get 'pullRequest
+                                              (alist-get 'unmarkFileAsViewed data))))
+                 (approve-model-patch pr-data))
+               (approve-actions--redraw-preserving-point))
+             (message "Marked %s as unviewed" path))
+           :on-error
+           (lambda (err)
+             (message "Failed to mark file as unviewed: %s" err))))))))
 
 (provide 'approve-actions)
 ;;; approve-actions.el ends here
