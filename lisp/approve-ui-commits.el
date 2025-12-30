@@ -34,6 +34,7 @@
 ;;; Code:
 
 (require 'browse-url)
+(require 'magit)
 (require 'magit-section)
 
 (require 'approve-model)
@@ -58,6 +59,18 @@ insert its content at point (without trailing newline)."
 See `format-time-string' for available format specifiers."
   :group 'approve
   :type 'string)
+
+(defcustom approve-project-folders nil
+  "List of directories to search for local git repositories.
+This can be either:
+- A list of strings, where each string is an absolute path to a directory
+- A function that returns such a list
+
+These directories are searched when viewing a commit locally to find
+a repository that contains the commit."
+  :group 'approve
+  :type '(choice (repeat directory)
+                 function))
 
 ;;; Keymaps
 
@@ -166,6 +179,58 @@ See `format-time-string' for available format specifiers."
                 (browse-url tree-url)
                 (message "Opened commit tree in browser"))
             (user-error "Commit has no tree URL")))
+      (user-error "No commit at point"))))
+
+(defun approve-commit-browse ()
+  "Open the commit at point in the default web browser."
+  (interactive)
+  (approve-with-pr-buffer
+    (if-let ((commit (approve--current-commit)))
+        (let ((url (alist-get 'url commit)))
+          (if (and url (not (string-empty-p url)))
+              (progn
+                (browse-url url)
+                (message "Opened commit in browser"))
+            (user-error "Commit has no URL")))
+      (user-error "No commit at point"))))
+
+(defun approve--get-project-folders ()
+  "Return the list of project folders to search for repositories.
+Evaluates `approve-project-folders' which can be a list or a function."
+  (cond
+   ((null approve-project-folders) nil)
+   ((functionp approve-project-folders) (funcall approve-project-folders))
+   ((listp approve-project-folders) approve-project-folders)
+   (t nil)))
+
+(defun approve--find-repo-for-commit (sha)
+  "Find a local repository containing commit SHA.
+Searches directories in `approve-project-folders' and returns the
+absolute path to the first directory where SHA is a valid commit,
+or nil if not found."
+  (catch 'found
+    (dolist (folder (approve--get-project-folders))
+      (when (and folder (file-directory-p folder))
+        (let ((default-directory folder))
+          (let ((type (magit-object-type sha)))
+            (when (and type (string= type "commit"))
+              (throw 'found (expand-file-name folder)))))))))
+
+(defun approve-commit-show ()
+  "Show the commit at point using Magit.
+Searches for the commit in local repositories configured via
+`approve-project-folders'.  If the commit is not found locally,
+offers to open it in the browser instead."
+  (interactive)
+  (approve-with-pr-buffer
+    (if-let ((commit (approve--current-commit)))
+        (let* ((sha (alist-get 'oid commit))
+               (folder (approve--find-repo-for-commit sha)))
+          (if (and folder (file-directory-p folder))
+              (let ((default-directory folder))
+                (magit-show-commit sha))
+            (when (y-or-n-p "Local commit not found. Open in browser? ")
+              (approve-commit-browse))))
       (user-error "No commit at point"))))
 
 ;;; Main Section
