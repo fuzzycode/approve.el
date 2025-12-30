@@ -43,7 +43,7 @@
 
 ;;; Customization
 
-(defcustom approve-review-commit-sections
+(defcustom approve-review-commit-sections-hook
   '(approve-review-commit-insert-sha-section
     approve-review-commit-insert-date-section
     approve-review-commit-insert-actor-section
@@ -238,7 +238,7 @@ offers to open it in the browser instead."
 (defun approve-insert-commits-section ()
   "Insert the commits section in the PR review buffer.
 Loops through all commits and inserts them one per line using
-`approve-review-commit-sections' for each commit.
+`approve-review-commit-sections-hook' for each commit.
 The section heading shows the number of displayed commits and indicates
 if more commits exist that weren't fetched.
 Expanding a commit shows its full commit message.
@@ -278,9 +278,9 @@ Individual commits are collapsed by default."
 
 (defun approve--format-commit-line (commit)
   "Format a single COMMIT for display as a heading line.
-Uses `approve-review-commit-sections' to build the line."
+Uses `approve-review-commit-sections-hook' to build the line."
   (let ((parts '()))
-    (dolist (fn approve-review-commit-sections)
+    (dolist (fn approve-review-commit-sections-hook)
       (with-temp-buffer
         (funcall fn commit)
         (push (buffer-string) parts)))
