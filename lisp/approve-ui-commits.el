@@ -33,6 +33,7 @@
 
 ;;; Code:
 
+(require 'browse-url)
 (require 'magit-section)
 
 (require 'approve-model)
@@ -152,6 +153,19 @@ See `format-time-string' for available format specifiers."
                 (kill-new message)
                 (message "Copied commit message"))
             (user-error "Commit has no message")))
+      (user-error "No commit at point"))))
+
+(defun approve-commit-browse-tree ()
+  "Open the repository tree at the commit at point in the default web browser."
+  (interactive)
+  (approve-with-pr-buffer
+    (if-let ((commit (approve--current-commit)))
+        (let ((tree-url (alist-get 'treeUrl commit)))
+          (if (and tree-url (not (string-empty-p tree-url)))
+              (progn
+                (browse-url tree-url)
+                (message "Opened commit tree in browser"))
+            (user-error "Commit has no tree URL")))
       (user-error "No commit at point"))))
 
 ;;; Main Section
