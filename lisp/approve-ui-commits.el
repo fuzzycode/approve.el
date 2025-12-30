@@ -40,6 +40,7 @@
 (require 'approve-model)
 (require 'approve-ui-faces)
 (require 'approve-ui-helpers)
+(require 'approve-eldoc)
 
 ;;; Customization
 
@@ -80,9 +81,15 @@ a repository that contains the commit."
 ;;; Section Insert Functions
 
 (defun approve-review-commit-insert-sha-section (commit)
-  "Insert the abbreviated SHA for COMMIT."
-  (let ((abbreviated-oid (alist-get 'abbreviatedOid commit)))
-    (insert (approve-ui-propertize-face abbreviated-oid 'approve-commit-sha-face))))
+  "Insert the abbreviated SHA for COMMIT.
+Hovering over the SHA displays the full SHA via eldoc."
+  (let ((abbreviated-oid (alist-get 'abbreviatedOid commit))
+        (full-oid (alist-get 'oid commit)))
+    (insert (approve-eldoc-propertize
+             (approve-ui-propertize-face abbreviated-oid 'approve-commit-sha-face)
+             abbreviated-oid
+             full-oid
+             'approve-commit-sha-face))))
 
 (defun approve-review-commit-insert-date-section (commit)
   "Insert the commit date for COMMIT."
