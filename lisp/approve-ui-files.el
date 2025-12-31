@@ -1,4 +1,4 @@
-;;; approve-ui-changes.el --- Changes UI components for Approve  -*- lexical-binding: t; -*-
+;;; approve-ui-files.el --- Files UI components for Approve  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Björn Larsson
 
@@ -190,8 +190,8 @@ MAX-CHANGES is used for scaling the graph."
 
 ;;; Public Section Functions
 
-(defun approve-insert-changes-section ()
-  "Insert the changes section in the PR review buffer.
+(defun approve-insert-files-section ()
+  "Insert the files section in the PR review buffer.
 Shows a diffstat summary followed by per-file changes."
   (when-let ((files-data (approve-model-root 'files)))
     (let* ((files (approve-model-get-nodes files-data))
@@ -224,5 +224,5 @@ Shows a diffstat summary followed by per-file changes."
                       "\n")))
           (insert "\n"))))))
 
-(provide 'approve-ui-changes)
-;;; approve-ui-changes.el ends here
+(provide 'approve-ui-files)
+;;; approve-ui-files.el ends here
