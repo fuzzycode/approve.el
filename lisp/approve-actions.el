@@ -48,6 +48,7 @@
 (require 'approve-model)
 (require 'approve-input)
 (require 'approve-api-mutations)
+(require 'approve-file-view)
 
 ;; Forward declarations to avoid circular dependencies
 (declare-function approve-ui-redraw "approve-ui")
@@ -197,6 +198,17 @@ The state transitions are:
            :on-error
            (lambda (err)
              (message "Failed to mark file as unviewed: %s" err))))))))
+
+(defun approve-action-view-file ()
+  "View the file at point with diff indicators.
+Downloads the file from GitHub (using cache if available) and displays
+it with syntax highlighting and fringe indicators showing changes."
+  (interactive)
+  (approve-with-pr-buffer
+    (let ((path (approve-actions--get-file-at-point)))
+      (unless path
+        (user-error "No file at point"))
+      (approve-file-view-open path))))
 
 (provide 'approve-actions)
 ;;; approve-actions.el ends here

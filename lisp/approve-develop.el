@@ -139,6 +139,24 @@ without quoting, suitable for multi-line content like GraphQL queries."
       (buttercup-run)
     (user-error "Buttercup is not loaded.  Try: (require 'buttercup)")))
 
+;;; Doom Emacs Integration
+
+(defun approve-dev-setup-doom-popups ()
+  "Set up Doom Emacs popup rules for Approve buffers.
+Call this from your Doom config to prevent Approve file view buffers
+from being treated as popups.
+
+Example usage in config.el:
+  (after! approve
+    (require \\='approve-develop)
+    (approve-dev-setup-doom-popups))"
+  (interactive)
+  (when (fboundp 'set-popup-rule!)
+    ;; Ignore file view buffers - they should open as regular buffers
+    ;; Buffer name pattern: *Approve: owner/repo - filepath*
+    (set-popup-rule! "^\\*Approve: .+/.+ - .+\\*$" :ignore t)
+    (message "Doom popup rules configured for Approve")))
+
 ;;; Interactive Commands - Reload Package
 
 (defun approve-dev--list-package-features ()
