@@ -162,6 +162,16 @@
   "Face for inline code in comments."
   :group 'approve-faces)
 
+(defface approve-comment-blockquote-face
+  '((t :inherit font-lock-comment-face :slant italic))
+  "Face for blockquotes in comments."
+  :group 'approve-faces)
+
+(defface approve-comment-blockquote-border-face
+  '((t :inherit font-lock-comment-delimiter-face))
+  "Face for the border character of blockquotes in comments."
+  :group 'approve-faces)
+
 (defface approve-comment-reaction-face
   '((t :inherit default))
   "Face for reaction counts on comments."

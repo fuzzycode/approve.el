@@ -81,6 +81,12 @@ See `format-time-string' for available format specifiers."
   :group 'approve-comments
   :type 'string)
 
+(defcustom approve-comment-blockquote-prefix "▌ "
+  "Prefix string for blockquote lines.
+This is inserted at the beginning of each line in a blockquote."
+  :group 'approve-comments
+  :type 'string)
+
 ;;; HTML Rendering
 
 (defun approve-comment--shr-tag-pre (dom)
@@ -99,6 +105,27 @@ Adds inline code face when not inside a <pre> block."
     (shr-generic dom)
     (add-face-text-property start (point) 'approve-comment-code-inline-face)))
 
+(defun approve-comment--shr-tag-blockquote (dom)
+  "Custom rendering for <blockquote> tags in DOM.
+Adds a visual border prefix and applies blockquote face."
+  (shr-ensure-newline)
+  (let ((start (point)))
+    (shr-generic dom)
+    (shr-ensure-newline)
+    ;; Apply face to the entire blockquote content
+    (add-face-text-property start (point) 'approve-comment-blockquote-face)
+    ;; Add prefix to each line within the blockquote
+    (save-excursion
+      (goto-char start)
+      (while (< (point) (point-max))
+        (unless (eolp)
+          (let ((prefix (propertize approve-comment-blockquote-prefix
+                                    'face 'approve-comment-blockquote-border-face)))
+            (insert prefix)))
+        (forward-line 1)
+        (when (>= (point) (point-max))
+          (goto-char (point-max)))))))
+
 (defun approve-comment--render-html (html &optional indent)
   "Render HTML string and return the result as a string.
 INDENT is the number of spaces to add before each line (default 0).
@@ -111,7 +138,8 @@ of code blocks, links, and other common markdown-generated HTML."
             (shr-use-fonts nil)
             (shr-external-rendering-functions
              '((pre . approve-comment--shr-tag-pre)
-               (code . approve-comment--shr-tag-code)))
+               (code . approve-comment--shr-tag-code)
+               (blockquote . approve-comment--shr-tag-blockquote)))
             (dom (with-temp-buffer
                    (insert html)
                    (libxml-parse-html-region (point-min) (point-max)))))
