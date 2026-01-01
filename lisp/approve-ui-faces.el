@@ -135,6 +135,70 @@
   "Face for the dismissed (new changes) indicator on files."
   :group 'approve-faces)
 
+;;; Comment Faces
+
+(defface approve-comment-author-face
+  '((t :inherit font-lock-keyword-face))
+  "Face for comment author names."
+  :group 'approve-faces)
+
+(defface approve-comment-timestamp-face
+  '((t :inherit font-lock-comment-face))
+  "Face for comment timestamps."
+  :group 'approve-faces)
+
+(defface approve-comment-empty-face
+  '((t :inherit font-lock-comment-face :slant italic))
+  "Face for placeholder text when no comments exist."
+  :group 'approve-faces)
+
+(defface approve-comment-code-block-face
+  '((t :inherit (fixed-pitch font-lock-string-face) :extend t))
+  "Face for code blocks in comments."
+  :group 'approve-faces)
+
+(defface approve-comment-code-inline-face
+  '((t :inherit (fixed-pitch font-lock-constant-face)))
+  "Face for inline code in comments."
+  :group 'approve-faces)
+
+(defface approve-comment-reaction-face
+  '((t :inherit default))
+  "Face for reaction counts on comments."
+  :group 'approve-faces)
+
+;;; Comment State Faces
+
+(defface approve-comment-state-approved-face
+  '((t :inherit success))
+  "Face for APPROVED review state."
+  :group 'approve-faces)
+
+(defface approve-comment-state-changes-requested-face
+  '((t :inherit error))
+  "Face for CHANGES_REQUESTED review state."
+  :group 'approve-faces)
+
+(defface approve-comment-state-commented-face
+  '((t :inherit font-lock-comment-face))
+  "Face for COMMENTED review state."
+  :group 'approve-faces)
+
+(defface approve-comment-state-dismissed-face
+  '((t :inherit warning))
+  "Face for DISMISSED review state."
+  :group 'approve-faces)
+
+(defface approve-comment-state-pending-face
+  '((t :inherit font-lock-warning-face))
+  "Face for PENDING review state."
+  :group 'approve-faces)
+
+(defface approve-comment-state-default-face
+  '((t :inherit default))
+  "Default face for unknown review states."
+  :group 'approve-faces)
+
 ;;; Utility Functions
 
 ;; Note: approve-ui-propertize-face and other helpers are in approve-ui-helpers.el

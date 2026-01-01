@@ -47,6 +47,7 @@
 (require 'approve-api-queries)
 (require 'approve-eldoc)
 (require 'approve-model)
+(require 'approve-ui-comments)
 (require 'approve-ui-commits)
 (require 'approve-ui-faces)
 (require 'approve-ui-headers)
@@ -57,6 +58,7 @@
 (defcustom approve-review-sections-hook
   '(approve-insert-header-section
     approve-insert-commits-section
+    approve-insert-conversation-section
     approve-insert-files-section)
   "Hook run to insert sections in the PR review buffer.
 Each function is called with no arguments and should use the
