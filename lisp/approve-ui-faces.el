@@ -177,6 +177,26 @@
   "Face for reaction counts on comments."
   :group 'approve-faces)
 
+(defface approve-comment-edited-face
+  '((t :inherit font-lock-comment-face :slant italic))
+  "Face for the edited indicator on comments."
+  :group 'approve-faces)
+
+(defface approve-comment-list-bullet-face
+  '((t :inherit font-lock-builtin-face))
+  "Face for list bullet points in comments."
+  :group 'approve-faces)
+
+(defface approve-comment-task-checked-face
+  '((t :inherit success))
+  "Face for checked task list items in comments."
+  :group 'approve-faces)
+
+(defface approve-comment-task-unchecked-face
+  '((t :inherit shadow))
+  "Face for unchecked task list items in comments."
+  :group 'approve-faces)
+
 ;;; Comment State Faces
 
 (defface approve-comment-state-approved-face
@@ -207,6 +227,60 @@
 (defface approve-comment-state-default-face
   '((t :inherit default))
   "Default face for unknown review states."
+  :group 'approve-faces)
+
+;;; HTML Rendering Faces
+
+(defface approve-html-blockquote-face
+  '((t :inherit font-lock-comment-face :slant italic))
+  "Face for blockquotes in HTML content."
+  :group 'approve-faces)
+
+(defface approve-html-blockquote-border-face
+  '((t :inherit font-lock-comment-delimiter-face))
+  "Face for the border character of blockquotes in HTML content."
+  :group 'approve-faces)
+
+(defface approve-html-inline-code-face
+  '((t :inherit (fixed-pitch font-lock-constant-face)))
+  "Face for inline code in HTML content."
+  :group 'approve-faces)
+
+(defface approve-html-code-block-face
+  '((t :inherit (fixed-pitch font-lock-string-face) :extend t))
+  "Face for code blocks in HTML content."
+  :group 'approve-faces)
+
+(defface approve-html-list-bullet-face
+  '((t :inherit font-lock-builtin-face))
+  "Face for list bullet points in HTML content."
+  :group 'approve-faces)
+
+(defface approve-html-task-checked-face
+  '((t :inherit success))
+  "Face for checked task list items in HTML content."
+  :group 'approve-faces)
+
+(defface approve-html-task-unchecked-face
+  '((t :inherit shadow))
+  "Face for unchecked task list items in HTML content."
+  :group 'approve-faces)
+
+;;; Suggested Changes / Diff Faces
+
+(defface approve-diff-context-face
+  '((t :inherit default))
+  "Face for context lines in diffs and suggested changes."
+  :group 'approve-faces)
+
+(defface approve-diff-addition-face
+  '((t :inherit magit-diff-added))
+  "Face for added lines in diffs and suggested changes."
+  :group 'approve-faces)
+
+(defface approve-diff-deletion-face
+  '((t :inherit magit-diff-removed))
+  "Face for removed lines in diffs and suggested changes."
   :group 'approve-faces)
 
 ;;; Utility Functions

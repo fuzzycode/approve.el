@@ -44,12 +44,11 @@
 
 (require 'cl-lib)
 (require 'magit-section)
-(require 'shr)
-(require 'dom)
 
 (require 'approve-model)
 (require 'approve-ui-faces)
 (require 'approve-ui-helpers)
+(require 'approve-ui-html)
 (require 'approve-eldoc)
 
 ;;; Customization
@@ -75,101 +74,32 @@ This affects both plain text and HTML rendering."
   :group 'approve-comments
   :type 'string)
 
-(defcustom approve-comment-blockquote-prefix "▌ "
-  "Prefix string for blockquote lines.
-This is inserted at the beginning of each line in a blockquote."
-  :group 'approve-comments
-  :type 'string)
-
-;;; HTML Rendering
-
-(defun approve-comment--shr-tag-pre (dom)
-  "Custom rendering for <pre> tags in DOM.
-Adds appropriate faces for code blocks."
-  (let ((start (point)))
-    (shr-ensure-newline)
-    (shr-generic dom)
-    (shr-ensure-newline)
-    (add-face-text-property start (point) 'approve-comment-code-block-face)))
-
-(defun approve-comment--shr-tag-code (dom)
-  "Custom rendering for <code> tags in DOM.
-Adds inline code face when not inside a <pre> block."
-  (let ((start (point)))
-    (shr-generic dom)
-    (add-face-text-property start (point) 'approve-comment-code-inline-face)))
-
-(defun approve-comment--shr-tag-blockquote (dom)
-  "Custom rendering for <blockquote> tags in DOM.
-Adds a visual border prefix and applies blockquote face."
-  (shr-ensure-newline)
-  (let ((start (point)))
-    (shr-generic dom)
-    (shr-ensure-newline)
-    ;; Apply face to the entire blockquote content
-    (add-face-text-property start (point) 'approve-comment-blockquote-face)
-    ;; Add prefix to each line within the blockquote
-    (save-excursion
-      (goto-char start)
-      (while (< (point) (point-max))
-        (unless (eolp)
-          (let ((prefix (propertize approve-comment-blockquote-prefix
-                                    'face 'approve-comment-blockquote-border-face)))
-            (insert prefix)))
-        (forward-line 1)
-        (when (>= (point) (point-max))
-          (goto-char (point-max)))))))
-
-(defun approve-comment--render-html (html &optional indent)
-  "Render HTML string and return the result as a string.
-INDENT is the number of spaces to add before each line (default 0).
-The rendering is optimized for comment bodies with proper handling
-of code blocks, links, and other common markdown-generated HTML."
-  (let ((indent-pixels (* (or indent 0) (shr-string-pixel-width " "))))
-    (with-temp-buffer
-      (let ((shr-width approve-comment-fill-column)
-            (shr-indentation indent-pixels)
-            (shr-use-fonts nil)
-            (shr-external-rendering-functions
-             '((pre . approve-comment--shr-tag-pre)
-               (code . approve-comment--shr-tag-code)
-               (blockquote . approve-comment--shr-tag-blockquote)))
-            (dom (with-temp-buffer
-                   (insert html)
-                   (libxml-parse-html-region (point-min) (point-max)))))
-        (shr-insert-document dom))
-      ;; Clean up excessive whitespace
-      (goto-char (point-min))
-      (while (re-search-forward "\n\n\n+" nil t)
-        (replace-match "\n\n"))
-      ;; Remove trailing whitespace
-      (goto-char (point-min))
-      (while (re-search-forward "[ \t]+$" nil t)
-        (replace-match ""))
-      ;; Return trimmed result
-      (string-trim (buffer-string)))))
+;;; Comment Body Rendering
 
 (defun approve-comment--insert-body (body-html &optional indent)
   "Insert rendered comment body from BODY-HTML at point.
 INDENT specifies additional indentation in spaces.
 If BODY-HTML is nil or empty, inserts a placeholder message."
-  (let ((indent-str (make-string (or indent approve-comment-body-indent) ?\s)))
+  (let ((indent-val (or indent approve-comment-body-indent))
+        (indent-str (make-string (or indent approve-comment-body-indent) ?\s)))
     (if (or (null body-html) (string-empty-p (string-trim body-html)))
         (insert indent-str
                 (propertize "No content" 'face 'approve-comment-empty-face)
                 "\n")
-      (let* ((rendered (approve-comment--render-html body-html indent))
-             (lines (split-string rendered "\n")))
-        (dolist (line lines)
-          (insert indent-str line "\n"))))))
+      ;; Render HTML directly into buffer, preserving text properties
+      (let ((approve-html-fill-column approve-comment-fill-column))
+        (approve-html--insert-raw body-html indent-val)))))
 
 ;;; Comment Metadata Formatting
 
-(defun approve-comment--format-header (author created-at &optional state)
+(defun approve-comment--format-header (author created-at &optional state edited-info)
   "Format a comment header line with AUTHOR and CREATED-AT timestamp.
 AUTHOR is an alist with `login', `name', `email', `url' fields.
 CREATED-AT is an ISO 8601 date string.
-Optional STATE is a string like \"APPROVED\", \"CHANGES_REQUESTED\", etc."
+Optional STATE is a string like \"APPROVED\", \"CHANGES_REQUESTED\", etc.
+Optional EDITED-INFO is a cons cell (EDITED-P . LAST-EDITED-AT) where EDITED-P
+is non-nil if the comment was edited and LAST-EDITED-AT is the ISO 8601 date
+of the last edit."
   (let* ((author-text (approve-ui-format-actor author 'approve-comment-author-face))
          (timestamp (approve-ui-format-date created-at approve-timestamp-format))
          (timestamp-text (if timestamp
@@ -177,10 +107,13 @@ Optional STATE is a string like \"APPROVED\", \"CHANGES_REQUESTED\", etc."
                            ""))
          (state-text (when state
                        (propertize (format "[%s]" state)
-                                   'face (approve-comment--state-face state)))))
+                                   'face (approve-comment--state-face state))))
+         (edited-text (approve-comment--format-edited-indicator edited-info)))
     (concat author-text
             (when timestamp-text
               (concat " " (propertize "·" 'face 'shadow) " " timestamp-text))
+            (when edited-text
+              (concat " " edited-text))
             (when state-text
               (concat " " state-text)))))
 
@@ -193,6 +126,37 @@ Optional STATE is a string like \"APPROVED\", \"CHANGES_REQUESTED\", etc."
     ("DISMISSED" 'approve-comment-state-dismissed-face)
     ("PENDING" 'approve-comment-state-pending-face)
     (_ 'approve-comment-state-default-face)))
+
+;;; Edited Indicator
+
+(defun approve-comment--format-edited-indicator (edited-info)
+  "Format an edited indicator from EDITED-INFO.
+EDITED-INFO is a cons cell (EDITED-P . LAST-EDITED-AT) where EDITED-P
+is non-nil if the comment was edited and LAST-EDITED-AT is the ISO 8601
+date of the last edit (may be nil).
+Returns a propertized string with eldoc hover showing the edit timestamp,
+or nil if the comment was not edited."
+  (when (and edited-info (car edited-info))
+    (let* ((last-edited-at (cdr edited-info))
+           (formatted-date (when last-edited-at
+                             (approve-ui-format-date last-edited-at
+                                                     approve-timestamp-format)))
+           (hover-doc (if formatted-date
+                          formatted-date
+                        "Edited")))
+      (approve-eldoc-propertize
+       (approve-ui-propertize-face "(edited)" 'approve-comment-edited-face)
+       "Last Edited"
+       hover-doc
+       'approve-comment-edited-face))))
+
+(defun approve-comment--make-edited-info (comment)
+  "Extract edited information from COMMENT.
+Returns a cons cell (EDITED-P . LAST-EDITED-AT) suitable for passing to
+`approve-comment--format-header'."
+  (let ((includes-created-edit (alist-get 'includesCreatedEdit comment))
+        (last-edited-at (alist-get 'lastEditedAt comment)))
+    (cons includes-created-edit last-edited-at)))
 
 ;;; Reaction Formatting
 
@@ -260,15 +224,17 @@ This displays IssueComment entries from the PR's comments field."
 
 (defun approve-comment--insert-issue-comment (comment)
   "Insert a single issue COMMENT as a magit section.
-COMMENT is an alist with author, body, bodyHTML, createdAt, id, reactionGroups."
+COMMENT is an alist with author, body, bodyHTML, createdAt, id, reactionGroups,
+includesCreatedEdit, and lastEditedAt."
   (let* ((id (alist-get 'id comment))
          (author (alist-get 'author comment))
          (body-html (alist-get 'bodyHTML comment))
          (created-at (alist-get 'createdAt comment))
-         (reaction-groups (alist-get 'reactionGroups comment)))
+         (reaction-groups (alist-get 'reactionGroups comment))
+         (edited-info (approve-comment--make-edited-info comment)))
     (magit-insert-section (issue-comment id)
       (magit-insert-heading
-        (approve-comment--format-header author created-at))
+        (approve-comment--format-header author created-at nil edited-info))
       ;; Comment body
       (approve-comment--insert-body body-html)
       ;; Reactions
