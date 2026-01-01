@@ -39,6 +39,15 @@
 (require 'approve-ui-faces)
 (require 'approve-eldoc)
 
+;;; Customization
+
+(defcustom approve-timestamp-format "%Y-%m-%d %H:%M"
+  "Format string for displaying timestamps throughout Approve.
+Used for commit dates, comment timestamps, and other date/time display.
+See `format-time-string' for available format specifiers."
+  :group 'approve
+  :type 'string)
+
 ;;; Date Helpers
 
 (defun approve-ui-parse-iso-date (date-string)

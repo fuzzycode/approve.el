@@ -1,17 +1,17 @@
-;;; test-approve-ui-changes.el --- Tests for approve-ui-changes  -*- lexical-binding: t; -*-
+;;; test-approve-ui-files.el --- Tests for approve-ui-files  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2025 Björn Larsson
 
 ;;; Commentary:
 
-;; Tests for the approve-ui-changes module.
+;; Tests for the approve-ui-files module.
 
 ;;; Code:
 
 (require 'buttercup)
 (require 'magit-section)
 (require 'approve-model)
-(require 'approve-ui-changes)
+(require 'approve-ui-files)
 
 ;;; Test Helpers
 
@@ -29,7 +29,7 @@ FILES is a list of alists with additions, deletions, path, and changeType."
 
 ;;; Tests
 
-(describe "approve-ui-changes"
+(describe "approve-ui-files"
   (describe "approve--diffstat-summary-string"
     (it "formats singular file correctly"
       (expect (approve--diffstat-summary-string 1 5 3)
@@ -189,7 +189,7 @@ FILES is a list of alists with additions, deletions, path, and changeType."
              (result (approve--format-diffstat-line file 20 3 10)))
         (expect (string-match-p approve-file-dismissed-indicator result) :to-be-truthy))))
 
-  (describe "approve-insert-changes-section"
+  (describe "approve-insert-files-section"
     (it "does nothing when no files data"
       (let ((buffer (generate-new-buffer " *test-changes*")))
         (unwind-protect
@@ -200,7 +200,7 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                                     (id . "PR_123"))
                                   t)
               (let ((inhibit-read-only t))
-                (approve-insert-changes-section))
+                (approve-insert-files-section))
               (expect (buffer-string) :to-equal ""))
           (kill-buffer buffer))))
 
@@ -224,7 +224,7 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                            (totalCount . 2))))
                t)
               (let ((inhibit-read-only t))
-                (approve-insert-changes-section))
+                (approve-insert-files-section))
               (expect (buffer-string) :to-match "2 files changed"))
           (kill-buffer buffer))))
 
@@ -248,7 +248,7 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                            (totalCount . 2))))
                t)
               (let ((inhibit-read-only t))
-                (approve-insert-changes-section))
+                (approve-insert-files-section))
               (expect (buffer-string) :to-match "lisp/approve.el")
               (expect (buffer-string) :to-match "test/test-approve.el"))
           (kill-buffer buffer))))
@@ -271,7 +271,7 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                            (pageInfo . ((hasNextPage . t))))))
                t)
               (let ((inhibit-read-only t))
-                (approve-insert-changes-section))
+                (approve-insert-files-section))
               (expect (buffer-string) :to-match "(showing 1 of 5 files)"))
           (kill-buffer buffer))))
 
@@ -293,7 +293,7 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                t)
               (let ((inhibit-read-only t))
                 (magit-insert-section (root)
-                  (approve-insert-changes-section)))
+                  (approve-insert-files-section)))
               (goto-char (point-min))
               ;; Find the file section by checking section types
               (let ((section (magit-current-section)))
@@ -330,12 +330,12 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                            (totalCount . 3))))
                t)
               (let ((inhibit-read-only t))
-                (approve-insert-changes-section))
+                (approve-insert-files-section))
               ;; Check that all three indicators are present
               (expect (buffer-string) :to-match approve-file-viewed-indicator)
               (expect (buffer-string) :to-match approve-file-unviewed-indicator)
               (expect (buffer-string) :to-match approve-file-dismissed-indicator))
           (kill-buffer buffer))))))
 
-(provide 'test-approve-ui-changes)
-;;; test-approve-ui-changes.el ends here
+(provide 'test-approve-ui-files)
+;;; test-approve-ui-files.el ends here

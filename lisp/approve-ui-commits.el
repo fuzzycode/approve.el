@@ -55,12 +55,6 @@ insert its content at point (without trailing newline)."
   :group 'approve
   :type 'hook)
 
-(defcustom approve-commit-date-format "%Y-%m-%d %H:%M"
-  "Format string for displaying commit dates.
-See `format-time-string' for available format specifiers."
-  :group 'approve
-  :type 'string)
-
 (defcustom approve-project-folders nil
   "List of directories to search for local git repositories.
 This can be either:
@@ -95,7 +89,7 @@ Hovering over the SHA displays the full SHA via eldoc."
   "Insert the commit date for COMMIT."
   (when-let ((date-str (approve-ui-format-date
                         (alist-get 'committedDate commit)
-                        approve-commit-date-format)))
+                        approve-timestamp-format)))
     (insert (approve-ui-propertize-face date-str 'approve-commit-date-face))))
 
 (defun approve-review-commit-insert-actor-section (commit)

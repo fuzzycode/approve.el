@@ -70,12 +70,6 @@ This affects both plain text and HTML rendering."
   :group 'approve-comments
   :type 'integer)
 
-(defcustom approve-comment-timestamp-format "%Y-%m-%d %H:%M"
-  "Format string for displaying comment timestamps.
-See `format-time-string' for available format specifiers."
-  :group 'approve-comments
-  :type 'string)
-
 (defcustom approve-comment-empty-message "No comments yet."
   "Message to display when there are no comments."
   :group 'approve-comments
@@ -177,7 +171,7 @@ AUTHOR is an alist with `login', `name', `email', `url' fields.
 CREATED-AT is an ISO 8601 date string.
 Optional STATE is a string like \"APPROVED\", \"CHANGES_REQUESTED\", etc."
   (let* ((author-text (approve-ui-format-actor author 'approve-comment-author-face))
-         (timestamp (approve-ui-format-date created-at approve-comment-timestamp-format))
+         (timestamp (approve-ui-format-date created-at approve-timestamp-format))
          (timestamp-text (if timestamp
                              (propertize timestamp 'face 'approve-comment-timestamp-face)
                            ""))
