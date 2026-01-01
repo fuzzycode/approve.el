@@ -218,6 +218,31 @@ TYPE is a GitHub PrismJS class suffix (after pl-)."
     ("l" 'font-lock-warning-face)  ; Literal
     (_ nil)))
 
+(defun approve-html--tag-ul (dom)
+  "Custom renderer for <ul> elements in DOM.
+Renders unordered lists with 1 char indentation."
+  (shr-ensure-paragraph)
+  (let ((shr-list-mode 'ul)
+        (shr-indentation (1+ shr-indentation)))
+    (shr-generic dom))
+  (unless (bolp)
+    (insert "\n"))
+  (shr-ensure-paragraph))
+
+(defun approve-html--tag-ol (dom)
+  "Custom renderer for <ol> elements in DOM.
+Renders ordered lists with dots after numbers and 1 char indentation."
+  (shr-ensure-paragraph)
+  (let* ((attrs (dom-attributes dom))
+         (start-attr (alist-get 'start attrs))
+         (start-index (condition-case _
+                          (cl-parse-integer start-attr)
+                        (t 1)))
+         (shr-list-mode start-index)
+         (shr-indentation (1+ shr-indentation)))
+    (shr-generic dom))
+  (shr-ensure-paragraph))
+
 (defun approve-html--tag-li (dom)
   "Custom renderer for <li> tags in DOM, supporting GitHub task lists.
 For regular list items, delegates to shr's default handling.
@@ -239,7 +264,21 @@ For task list items, renders checkboxes with appropriate faces."
       (shr-generic dom)
       (unless (bolp)
         (insert "\n")))
-     ;; Regular list item - use default shr handling
+     ;; Numbered list item - format with dot after number
+     ((numberp shr-list-mode)
+      (shr-ensure-newline)
+      (let* ((start (point))
+             (bullet (format "%d. " shr-list-mode))
+             (width (shr-string-pixel-width bullet)))
+        (setq shr-list-mode (1+ shr-list-mode))
+        (insert bullet)
+        (shr-mark-fill start)
+        (let ((shr-indentation (+ shr-indentation width)))
+          (put-text-property start (1+ start)
+                             'shr-continuation-indentation shr-indentation)
+          (put-text-property start (1+ start) 'shr-prefix-length (length bullet))
+          (shr-generic dom))))
+     ;; Regular unordered list item - use default shr handling
      (t
       (shr-tag-li dom)))))
 
@@ -304,6 +343,8 @@ This is the core rendering function that inserts into the current buffer."
             (td . approve-html--tag-td)
             (code . approve-html--tag-code)
             (p . approve-html--tag-p)
+            (ul . approve-html--tag-ul)
+            (ol . approve-html--tag-ol)
             (li . approve-html--tag-li))))
     (shr-insert-document dom))
   ;; Clean up excessive whitespace
