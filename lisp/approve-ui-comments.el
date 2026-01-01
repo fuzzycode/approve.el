@@ -241,12 +241,7 @@ This displays IssueComment entries from the PR's comments field."
            (truncated-p (approve-model-truncated-p comments-data)))
       (insert "\n")
       (magit-insert-section (conversation)
-        (magit-insert-heading
-          (format "%d %s"
-                  (or total-count comment-count)
-                  (if (= (or total-count comment-count) 1)
-                      "Comment"
-                    "Comments")))
+        (magit-insert-heading comment-count (if (= comment-count 1) "Comment" "Comments"))
         (if (zerop comment-count)
             (progn
               (insert (propertize approve-comment-empty-message
