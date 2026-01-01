@@ -133,6 +133,13 @@ Applies inline code face to the content."
     (shr-generic dom)
     (approve-html--add-font start (point) 'approve-html-inline-code-face)))
 
+(defun approve-html--tag-del (dom)
+  "Custom renderer for <del> elements in DOM.
+Applies strikethrough face to the content."
+  (let ((start (point)))
+    (shr-generic dom)
+    (approve-html--add-font start (point) 'approve-html-strikethrough-face)))
+
 (defun approve-html--tag-pre (dom)
   "Custom renderer for <pre> elements in DOM with syntax highlighting.
 Handles GitHub's syntax highlighting classes for proper colorization."
@@ -342,6 +349,7 @@ This is the core rendering function that inserts into the current buffer."
             (span . approve-html--tag-span)
             (td . approve-html--tag-td)
             (code . approve-html--tag-code)
+            (del . approve-html--tag-del)
             (p . approve-html--tag-p)
             (ul . approve-html--tag-ul)
             (ol . approve-html--tag-ol)

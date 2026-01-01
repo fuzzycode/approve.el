@@ -266,6 +266,11 @@
   "Face for unchecked task list items in HTML content."
   :group 'approve-faces)
 
+(defface approve-html-strikethrough-face
+  '((t :strike-through t))
+  "Face for strikethrough text in HTML content."
+  :group 'approve-faces)
+
 ;;; Suggested Changes / Diff Faces
 
 (defface approve-diff-context-face
