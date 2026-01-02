@@ -50,6 +50,7 @@
 (require 'approve-ui-comments)
 (require 'approve-ui-commits)
 (require 'approve-ui-description)
+(require 'approve-ui-diff)
 (require 'approve-ui-faces)
 (require 'approve-ui-headers)
 (require 'approve-ui-files)
@@ -61,7 +62,8 @@
     approve-insert-description-section
     approve-insert-commits-section
     approve-insert-conversation-section
-    approve-insert-files-section)
+    approve-insert-files-section
+    approve-insert-diff-section)
   "Hook run to insert sections in the PR review buffer.
 Each function is called with no arguments and should use the
 PR data stored in buffer-local variables."
