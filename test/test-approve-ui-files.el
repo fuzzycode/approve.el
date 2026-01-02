@@ -152,6 +152,24 @@ FILES is a list of alists with additions, deletions, path, and changeType."
       (let ((result (approve--format-viewed-indicator nil)))
         (expect result :to-match approve-file-unviewed-indicator))))
 
+  (describe "approve--format-comment-indicator"
+    (it "returns empty string for zero comments"
+      (expect (approve--format-comment-indicator 0) :to-equal ""))
+
+    (it "returns empty string for nil comments"
+      (expect (approve--format-comment-indicator nil) :to-equal ""))
+
+    (it "returns indicator with count for positive comments"
+      (let ((result (approve--format-comment-indicator 3)))
+        (expect (string-match-p approve-file-comment-indicator result) :to-be-truthy)
+        (expect (string-match-p "3" result) :to-be-truthy)))
+
+    (it "applies the comment indicator face"
+      (let ((result (approve--format-comment-indicator 5)))
+        ;; Result starts with a space, so check position 1
+        (expect (get-text-property 1 'face result)
+                :to-equal 'approve-file-comment-indicator-face))))
+
   (describe "approve--format-diffstat-line"
     (it "formats a file line correctly"
       (let* ((file '((path . "lisp/test.el")
@@ -187,7 +205,22 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                      (deletions . 2)
                      (viewerViewedState . "DISMISSED")))
              (result (approve--format-diffstat-line file 20 3 10)))
-        (expect (string-match-p approve-file-dismissed-indicator result) :to-be-truthy))))
+        (expect (string-match-p approve-file-dismissed-indicator result) :to-be-truthy)))
+
+    (it "includes comment indicator when comment count is provided"
+      (let* ((file '((path . "file.el")
+                     (additions . 5)
+                     (deletions . 2)))
+             (result (approve--format-diffstat-line file 20 3 10 3)))
+        (expect (string-match-p approve-file-comment-indicator result) :to-be-truthy)
+        (expect (string-match-p "3" result) :to-be-truthy)))
+
+    (it "does not include comment indicator when comment count is zero"
+      (let* ((file '((path . "file.el")
+                     (additions . 5)
+                     (deletions . 2)))
+             (result (approve--format-diffstat-line file 20 3 10 0)))
+        (expect (string-match-p approve-file-comment-indicator result) :not :to-be-truthy))))
 
   (describe "approve-insert-files-section"
     (it "does nothing when no files data"
@@ -335,7 +368,198 @@ FILES is a list of alists with additions, deletions, path, and changeType."
               (expect (buffer-string) :to-match approve-file-viewed-indicator)
               (expect (buffer-string) :to-match approve-file-unviewed-indicator)
               (expect (buffer-string) :to-match approve-file-dismissed-indicator))
-          (kill-buffer buffer))))))
+          (kill-buffer buffer))))
+
+    (it "shows comment indicator for files with FILE type review threads"
+      (let ((buffer (generate-new-buffer " *test-changes*")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (magit-section-mode)
+              (approve-model-init)
+              (approve-model-load
+               `((__typename . "PullRequest")
+                 (id . "PR_123")
+                 (additions . 10)
+                 (deletions . 5)
+                 (files . ((nodes . [((path . "file-with-comments.el")
+                                      (additions . 10)
+                                      (deletions . 5))])
+                           (totalCount . 1)))
+                 (reviewThreads . ((nodes . [((__typename . "PullRequestReviewThread")
+                                              (id . "RT_1")
+                                              (path . "file-with-comments.el")
+                                              (line . 1)
+                                              (subjectType . "FILE")
+                                              (comments . ((nodes . [((__typename . "PullRequestReviewComment")
+                                                                      (id . "C_1"))
+                                                                     ((__typename . "PullRequestReviewComment")
+                                                                      (id . "C_2"))])
+                                                           (totalCount . 2))))])
+                                   (totalCount . 1))))
+               t)
+              (let ((inhibit-read-only t))
+                (approve-insert-files-section))
+              (expect (buffer-string) :to-match approve-file-comment-indicator))
+          (kill-buffer buffer))))
+
+    (it "does not show comment indicator for files with only LINE type review threads"
+      (let ((buffer (generate-new-buffer " *test-changes*")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (magit-section-mode)
+              (approve-model-init)
+              (approve-model-load
+               `((__typename . "PullRequest")
+                 (id . "PR_123")
+                 (additions . 10)
+                 (deletions . 5)
+                 (files . ((nodes . [((path . "file-with-line-comments.el")
+                                      (additions . 10)
+                                      (deletions . 5))])
+                           (totalCount . 1)))
+                 (reviewThreads . ((nodes . [((__typename . "PullRequestReviewThread")
+                                              (id . "RT_1")
+                                              (path . "file-with-line-comments.el")
+                                              (line . 10)
+                                              (subjectType . "LINE")
+                                              (comments . ((nodes . [((__typename . "PullRequestReviewComment")
+                                                                      (id . "C_1"))])
+                                                           (totalCount . 1))))])
+                                   (totalCount . 1))))
+               t)
+              (let ((inhibit-read-only t))
+                (approve-insert-files-section))
+              (expect (buffer-string) :not :to-match approve-file-comment-indicator))
+          (kill-buffer buffer))))
+
+    (it "does not show comment indicator for files without review threads"
+      (let ((buffer (generate-new-buffer " *test-changes*")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (magit-section-mode)
+              (approve-model-init)
+              (approve-model-load
+               `((__typename . "PullRequest")
+                 (id . "PR_123")
+                 (additions . 10)
+                 (deletions . 5)
+                 (files . ((nodes . [((path . "file-no-comments.el")
+                                      (additions . 10)
+                                      (deletions . 5))])
+                           (totalCount . 1)))
+                 (reviewThreads . ((nodes . [])
+                                   (totalCount . 0))))
+               t)
+              (let ((inhibit-read-only t))
+                (approve-insert-files-section))
+              (expect (buffer-string) :not :to-match approve-file-comment-indicator))
+          (kill-buffer buffer)))))
+
+  (describe "approve--build-review-threads-by-path"
+    (it "returns empty hash table when no review threads"
+      (let ((buffer (generate-new-buffer " *test*")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (approve-model-init)
+              (approve-model-load
+               '((__typename . "PullRequest")
+                 (id . "PR_123")
+                 (reviewThreads . ((nodes . [])
+                                   (totalCount . 0))))
+               t)
+              (let ((result (approve--build-review-threads-by-path)))
+                (expect (hash-table-count result) :to-equal 0)))
+          (kill-buffer buffer))))
+
+    (it "groups threads by file path"
+      (let ((buffer (generate-new-buffer " *test*")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (approve-model-init)
+              (approve-model-load
+               `((__typename . "PullRequest")
+                 (id . "PR_123")
+                 (reviewThreads . ((nodes . [((__typename . "PullRequestReviewThread")
+                                              (id . "RT_1")
+                                              (path . "file1.el")
+                                              (line . 10))
+                                             ((__typename . "PullRequestReviewThread")
+                                              (id . "RT_2")
+                                              (path . "file2.el")
+                                              (line . 20))
+                                             ((__typename . "PullRequestReviewThread")
+                                              (id . "RT_3")
+                                              (path . "file1.el")
+                                              (line . 30))])
+                                   (totalCount . 3))))
+               t)
+              (let ((result (approve--build-review-threads-by-path)))
+                (expect (hash-table-count result) :to-equal 2)
+                (expect (length (gethash "file1.el" result)) :to-equal 2)
+                (expect (length (gethash "file2.el" result)) :to-equal 1)))
+          (kill-buffer buffer)))))
+
+  (describe "approve--count-thread-comments"
+    (it "returns zero for thread with no comments"
+      (let ((thread '((id . "RT_1")
+                      (comments . ((nodes . ())
+                                   (totalCount . 0))))))
+        (expect (approve--count-thread-comments thread) :to-equal 0)))
+
+    (it "counts comments in thread"
+      (let ((thread '((id . "RT_1")
+                      (comments . ((nodes . (((id . "C_1"))
+                                             ((id . "C_2"))
+                                             ((id . "C_3"))))
+                                   (totalCount . 3))))))
+        (expect (approve--count-thread-comments thread) :to-equal 3))))
+
+  (describe "approve--count-file-comments"
+    (it "returns zero for empty threads list"
+      (expect (approve--count-file-comments nil) :to-equal 0))
+
+    (it "returns zero for threads with only LINE subject type"
+      (let ((threads '(((id . "RT_1")
+                        (subjectType . "LINE")
+                        (comments . ((nodes . (((id . "C_1"))
+                                               ((id . "C_2"))))
+                                     (totalCount . 2))))
+                       ((id . "RT_2")
+                        (subjectType . "LINE")
+                        (comments . ((nodes . (((id . "C_3"))))
+                                     (totalCount . 1)))))))
+        (expect (approve--count-file-comments threads) :to-equal 0)))
+
+    (it "sums comments across FILE subject type threads only"
+      (let ((threads '(((id . "RT_1")
+                        (subjectType . "FILE")
+                        (comments . ((nodes . (((id . "C_1"))
+                                               ((id . "C_2"))))
+                                     (totalCount . 2))))
+                       ((id . "RT_2")
+                        (subjectType . "LINE")
+                        (comments . ((nodes . (((id . "C_3"))))
+                                     (totalCount . 1))))
+                       ((id . "RT_3")
+                        (subjectType . "FILE")
+                        (comments . ((nodes . (((id . "C_4"))))
+                                     (totalCount . 1)))))))
+        (expect (approve--count-file-comments threads) :to-equal 3))))
+
+  (describe "approve--thread-file-comment-p"
+    (it "returns t for FILE subject type"
+      (let ((thread '((id . "RT_1")
+                      (subjectType . "FILE"))))
+        (expect (approve--thread-file-comment-p thread) :to-be-truthy)))
+
+    (it "returns nil for LINE subject type"
+      (let ((thread '((id . "RT_1")
+                      (subjectType . "LINE"))))
+        (expect (approve--thread-file-comment-p thread) :to-be nil)))
+
+    (it "returns nil when subjectType is missing"
+      (let ((thread '((id . "RT_1"))))
+        (expect (approve--thread-file-comment-p thread) :to-be nil)))))
 
 (provide 'test-approve-ui-files)
 ;;; test-approve-ui-files.el ends here

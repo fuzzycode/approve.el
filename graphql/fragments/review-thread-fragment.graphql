@@ -20,6 +20,7 @@ fragment ReviewThreadFields on PullRequestReviewThread {
   path
   startDiffSide
   startLine
+  subjectType
   viewerCanResolve
   viewerCanUnresolve
 }

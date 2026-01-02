@@ -96,7 +96,7 @@ If BODY-HTML is nil or empty, inserts a placeholder message."
   "Format a comment header line with AUTHOR and CREATED-AT timestamp.
 AUTHOR is an alist with `login', `name', `email', `url' fields.
 CREATED-AT is an ISO 8601 date string.
-Optional STATE is a string like \"APPROVED\", \"CHANGES_REQUESTED\", etc.
+Optional STATE is a string like \"PENDING\", etc.
 Optional EDITED-INFO is a cons cell (EDITED-P . LAST-EDITED-AT) where EDITED-P
 is non-nil if the comment was edited and LAST-EDITED-AT is the ISO 8601 date
 of the last edit."
@@ -105,9 +105,7 @@ of the last edit."
          (timestamp-text (if timestamp
                              (propertize timestamp 'face 'approve-comment-timestamp-face)
                            ""))
-         (state-text (when state
-                       (propertize (format "[%s]" state)
-                                   'face (approve-comment--state-face state))))
+         (state-text (approve-comment--format-state-indicator state))
          (edited-text (approve-comment--format-edited-indicator edited-info)))
     (concat author-text
             (when timestamp-text
@@ -149,6 +147,16 @@ or nil if the comment was not edited."
        "Last Edited"
        hover-doc
        'approve-comment-edited-face))))
+
+(defun approve-comment--format-state-indicator (state)
+  "Format a state indicator for STATE.
+Returns a propertized string for PENDING state, or nil for other states."
+  (when (equal state "PENDING")
+    (approve-eldoc-propertize
+     (approve-ui-propertize-face "(pending)" 'approve-comment-pending-face)
+     "Status"
+     "This comment is part of a pending review"
+     'approve-comment-pending-face)))
 
 (defun approve-comment--make-edited-info (comment)
   "Extract edited information from COMMENT.

@@ -34,13 +34,16 @@
 ;; The display format follows the magit commit buffer style:
 ;;
 ;;   2 files changed, 19 insertions(+), 10 deletions(-)
-;;   ✓ lisp/approve-ui-headers.el | 12 ++----------
+;;   ✓ lisp/approve-ui-headers.el | 12 ++---------- 💬2
 ;;   • lisp/approve-ui-helpers.el | 17 +++++++++++++++++
 ;;
 ;; Files are marked with a viewed state indicator:
 ;;   ✓ (checkmark) - File has been viewed
 ;;   • (bullet)    - File has not been viewed
 ;;   ↻ (refresh)   - File has new changes since last viewed (dismissed)
+;;
+;; Files with review comments show a comment indicator (💬) with the count.
+;; Each file is an expandable section that shows its review threads when expanded.
 
 ;;; Code:
 
@@ -50,6 +53,7 @@
 (require 'approve-model)
 (require 'approve-ui-faces)
 (require 'approve-ui-helpers)
+(require 'approve-ui-comments)
 
 ;;; Customization
 
@@ -74,6 +78,11 @@ This is the maximum number of +/- characters shown for a file."
   :group 'approve
   :type 'string)
 
+(defcustom approve-file-comment-indicator "🗨"
+  "Indicator shown for files that have review comments."
+  :group 'approve
+  :type 'string)
+
 ;;; Internal Constants
 
 (defconst approve--diffstat-graph-char-added ?+
@@ -81,6 +90,40 @@ This is the maximum number of +/- characters shown for a file."
 
 (defconst approve--diffstat-graph-char-removed ?-
   "Character used to represent removed lines in diffstat graph.")
+
+;;; Review Threads Lookup
+
+(defun approve--build-review-threads-by-path ()
+  "Build a hash table mapping file paths to their review threads.
+Returns a hash table where keys are file paths and values are lists
+of review thread alists."
+  (let ((threads-by-path (make-hash-table :test 'equal)))
+    (when-let ((threads-data (approve-model-root 'reviewThreads)))
+      (let ((threads (approve-model-get-nodes threads-data)))
+        (dolist (thread threads)
+          (when-let ((path (alist-get 'path thread)))
+            (puthash path
+                     (cons thread (gethash path threads-by-path))
+                     threads-by-path)))))
+    threads-by-path))
+
+(defun approve--count-thread-comments (thread)
+  "Count the number of comments in THREAD."
+  (let ((comments-data (alist-get 'comments thread)))
+    (length (approve-model-get-nodes comments-data))))
+
+(defun approve--thread-file-comment-p (thread)
+  "Return non-nil if THREAD is a file-level comment.
+A file comment has subjectType \"FILE\" as opposed to \"LINE\"."
+  (equal (alist-get 'subjectType thread) "FILE"))
+
+(defun approve--count-file-comments (threads)
+  "Count total comments across all file-level THREADS.
+Only counts comments in threads with subjectType \"FILE\"."
+  (let ((count 0))
+    (dolist (thread threads count)
+      (when (approve--thread-file-comment-p thread)
+        (setq count (+ count (approve--count-thread-comments thread)))))))
 
 ;;; Private Functions
 
@@ -166,19 +209,32 @@ VIEWED-STATE is one of \"VIEWED\", \"UNVIEWED\", or \"DISMISSED\"."
      (approve-ui-propertize-face approve-file-unviewed-indicator
                                  'approve-file-unviewed-face))))
 
-(defun approve--format-diffstat-line (file path-width count-width max-changes)
+(defun approve--format-comment-indicator (comment-count)
+  "Format the comment indicator for COMMENT-COUNT.
+Returns an empty string if COMMENT-COUNT is zero."
+  (if (and comment-count (> comment-count 0))
+      (concat " "
+              (approve-ui-propertize-face
+               (format "%s%d" approve-file-comment-indicator comment-count)
+               'approve-file-comment-indicator-face))
+    ""))
+
+(defun approve--format-diffstat-line (file path-width count-width max-changes
+                                           &optional comment-count)
   "Format a single diffstat line for FILE.
 PATH-WIDTH is the width to use for the path column.
 COUNT-WIDTH is the width for the change count column.
-MAX-CHANGES is used for scaling the graph."
+MAX-CHANGES is used for scaling the graph.
+COMMENT-COUNT is the number of review comments on this file."
   (let* ((path (alist-get 'path file))
          (additions (or (alist-get 'additions file) 0))
          (deletions (or (alist-get 'deletions file) 0))
          (viewed-state (alist-get 'viewerViewedState file))
          (total (+ additions deletions))
          (graph (approve--diffstat-graph-string additions deletions max-changes))
-         (indicator (approve--format-viewed-indicator viewed-state)))
-    (format "%s %s | %s %s"
+         (indicator (approve--format-viewed-indicator viewed-state))
+         (comment-indicator (approve--format-comment-indicator comment-count)))
+    (format "%s %s | %s %s%s"
             indicator
             (approve-ui-propertize-face
              (format (format "%%-%ds" path-width) path)
@@ -186,19 +242,70 @@ MAX-CHANGES is used for scaling the graph."
             (approve-ui-propertize-face
              (format (format "%%%dd" count-width) total)
              'approve-diffstat-count-face)
-            graph)))
+            graph
+            comment-indicator)))
+
+;;; Review Thread Rendering
+
+(defun approve--insert-review-thread (thread)
+  "Insert a review THREAD as a magit section.
+THREAD is an alist with id, path, line, comments, isResolved, etc."
+  (let* ((id (alist-get 'id thread))
+         (is-resolved (alist-get 'isResolved thread))
+         (is-outdated (alist-get 'isOutdated thread))
+         (comments-data (alist-get 'comments thread))
+         (comments (approve-model-get-nodes comments-data)))
+    (magit-insert-section (review-thread id)
+      ;; Thread header with status indicators
+      (magit-insert-heading
+        (concat
+         (when is-outdated
+           (propertize "(outdated)" 'face 'warning))
+         (when (and is-outdated is-resolved)
+           " ")
+         (when is-resolved
+           (propertize "(resolved)" 'face 'success))))
+      ;; Insert each comment in the thread
+      (dolist (comment comments)
+        (approve--insert-review-comment comment)))))
+
+(defun approve--insert-review-comment (comment)
+  "Insert a single review COMMENT as a magit section.
+COMMENT is an alist with author, body, bodyHTML, createdAt, id, state, etc."
+  (let* ((id (alist-get 'id comment))
+         (author (alist-get 'author comment))
+         (body-html (alist-get 'bodyHTML comment))
+         (created-at (alist-get 'createdAt comment))
+         (state (alist-get 'state comment))
+         (reaction-groups (alist-get 'reactionGroups comment))
+         (edited-info (approve-comment--make-edited-info comment))
+         ;; Only show PENDING state indicator, others are not relevant for individual comments
+         (display-state (when (equal state "PENDING") state)))
+    (magit-insert-section (review-comment id)
+      (magit-insert-heading
+        (approve-comment--format-header author created-at display-state edited-info))
+      ;; Comment body
+      (approve-comment--insert-body body-html)
+      ;; Reactions
+      (when-let ((reactions-str (approve-comment--format-reactions reaction-groups)))
+        (insert (make-string approve-comment-body-indent ?\s)
+                reactions-str
+                "\n"))
+      (insert "\n"))))
 
 ;;; Public Section Functions
 
 (defun approve-insert-files-section ()
   "Insert the files section in the PR review buffer.
-Shows a diffstat summary followed by per-file changes."
+Shows a diffstat summary followed by per-file changes.
+Files with review comments are expandable to show the comments."
   (when-let ((files-data (approve-model-root 'files)))
     (let* ((files (approve-model-get-nodes files-data))
            (file-count (length files))
            (additions (or (approve-model-root 'additions) 0))
            (deletions (or (approve-model-root 'deletions) 0))
-           (truncated-p (approve-model-truncated-p files-data)))
+           (truncated-p (approve-model-truncated-p files-data))
+           (threads-by-path (approve--build-review-threads-by-path)))
       (when (> file-count 0)
         (insert "\n")
         (magit-insert-section (changes)
@@ -209,11 +316,29 @@ Shows a diffstat summary followed by per-file changes."
                 (path-width (approve--diffstat-max-path-width files))
                 (count-width (approve--diffstat-max-count-width files)))
             (dolist (file files)
-              (let ((path (alist-get 'path file)))
-                (magit-insert-section (file path)
-                  (insert (approve--format-diffstat-line
-                           file path-width count-width max-changes)
-                          "\n")))))
+              (let* ((path (alist-get 'path file))
+                     (threads (gethash path threads-by-path))
+                     (file-threads (seq-filter #'approve--thread-file-comment-p threads))
+                     (comment-count (approve--count-file-comments threads)))
+                (magit-insert-section (file path (and file-threads t))
+                  (magit-insert-heading
+                    (approve--format-diffstat-line
+                     file path-width count-width max-changes comment-count))
+                  ;; Insert file-level review threads for this file if any
+                  (when file-threads
+                    (magit-insert-section-body
+                      ;; Sort threads by line number (file comments typically have line 1)
+                      (let ((sorted-threads
+                             (sort (copy-sequence file-threads)
+                                   (lambda (a b)
+                                     (< (or (alist-get 'line a)
+                                            (alist-get 'originalLine a)
+                                            0)
+                                        (or (alist-get 'line b)
+                                            (alist-get 'originalLine b)
+                                            0))))))
+                        (dolist (thread sorted-threads)
+                          (approve--insert-review-thread thread)))))))))
           ;; Show truncation info at the end of the section
           (when truncated-p
             (let ((total-count (approve-model-get-total-count files-data)))

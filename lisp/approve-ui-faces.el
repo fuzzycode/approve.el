@@ -135,6 +135,11 @@
   "Face for the dismissed (new changes) indicator on files."
   :group 'approve-faces)
 
+(defface approve-file-comment-indicator-face
+  '((t :inherit font-lock-comment-face))
+  "Face for the comment count indicator on files."
+  :group 'approve-faces)
+
 ;;; Comment Faces
 
 (defface approve-comment-author-face
@@ -187,6 +192,11 @@
 (defface approve-comment-edited-face
   '((t :inherit font-lock-comment-face :slant italic))
   "Face for the edited indicator on comments."
+  :group 'approve-faces)
+
+(defface approve-comment-pending-face
+  '((t :inherit font-lock-warning-face :slant italic))
+  "Face for the pending indicator on comments."
   :group 'approve-faces)
 
 (defface approve-comment-list-bullet-face
