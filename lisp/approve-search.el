@@ -47,6 +47,7 @@
 (require 'tabulated-list)
 
 (require 'approve-api-queries)
+(require 'approve-pr-utils)
 (require 'approve-ui-faces)
 (require 'approve-ui-helpers)
 
@@ -104,92 +105,20 @@ to persist across sessions.")
 (defvar-local approve-search--pr-data nil
   "Alist mapping PR URLs to their full data.")
 
-;;; Time Formatting
-
-(defun approve-search--format-relative-time (date-string)
-  "Format DATE-STRING as a relative time (e.g., \"2h\", \"3d\").
-DATE-STRING should be in ISO 8601 format."
-  (when-let ((time (approve-ui-parse-iso-date date-string)))
-    (let* ((now (current-time))
-           (diff (float-time (time-subtract now time)))
-           (minutes (/ diff 60))
-           (hours (/ diff 3600))
-           (days (/ diff 86400))
-           (weeks (/ diff 604800)))
-      (cond
-       ((< minutes 1) "now")
-       ((< minutes 60) (format "%dm" (floor minutes)))
-       ((< hours 24) (format "%dh" (floor hours)))
-       ((< days 7) (format "%dd" (floor days)))
-       ((< weeks 52) (format "%dw" (floor weeks)))
-       (t (format-time-string "%Y-%m-%d" time))))))
-
 ;;; Entry Formatting
-
-(defun approve-search--format-state (pr)
-  "Format the state indicator for PR."
-  (let ((state (alist-get 'state pr))
-        (is-draft (alist-get 'isDraft pr)))
-    (cond
-     (is-draft
-      (approve-ui-propertize-face "Draft" 'approve-dashboard-draft-face))
-     ((string= state "OPEN")
-      (approve-ui-propertize-face "Open" 'approve-dashboard-state-open-face))
-     ((string= state "MERGED")
-      (approve-ui-propertize-face "Merged" 'approve-dashboard-state-merged-face))
-     ((string= state "CLOSED")
-      (approve-ui-propertize-face "Closed" 'approve-dashboard-state-closed-face))
-     (t state))))
-
-(defun approve-search--format-review (pr)
-  "Format the review decision for PR."
-  (let ((decision (alist-get 'reviewDecision pr)))
-    (pcase decision
-      ("APPROVED"
-       (approve-ui-propertize-face "✓" 'approve-dashboard-review-approved-face))
-      ("CHANGES_REQUESTED"
-       (approve-ui-propertize-face "✗" 'approve-dashboard-review-changes-requested-face))
-      ("REVIEW_REQUIRED"
-       (approve-ui-propertize-face "○" 'approve-dashboard-review-required-face))
-      (_ ""))))
-
-(defun approve-search--truncate (str width)
-  "Truncate STR to WIDTH characters, adding ellipsis if needed."
-  (if (> (length str) width)
-      (concat (substring str 0 (- width 1)) "…")
-    str))
 
 (defun approve-search--make-entry (pr)
   "Create a tabulated-list entry from PR data."
-  (let* ((url (alist-get 'url pr))
-         (number (alist-get 'number pr))
-         (title (or (alist-get 'title pr) ""))
-         (repo (alist-get 'repository pr))
-         (owner (alist-get 'login (alist-get 'owner repo)))
-         (repo-name (alist-get 'name repo))
-         (full-repo (format "%s/%s" owner repo-name))
-         (author (alist-get 'login (alist-get 'author pr)))
-         (updated-at (alist-get 'updatedAt pr))
-         (state-str (approve-search--format-state pr))
-         (review-str (approve-search--format-review pr)))
+  (let ((url (approve-pr-get-url pr)))
     (list url
           (vector
-           (approve-ui-propertize-face (format "#%d" number)
-                                       'approve-dashboard-pr-number-face)
-           review-str
-           state-str
-           (approve-ui-propertize-face
-            (approve-search--truncate title approve-search-title-width)
-            'approve-dashboard-pr-title-face)
-           (approve-ui-propertize-face
-            (approve-search--truncate full-repo approve-search-repo-width)
-            'approve-dashboard-repo-face)
-           (approve-ui-propertize-face
-            (or author "")
-            'approve-dashboard-author-face)
-           (approve-ui-propertize-face
-            (or (approve-search--format-relative-time updated-at) "")
-            'approve-dashboard-time-face)))))
+           (approve-pr-format-number pr)
+           (approve-pr-format-review-status pr)
+           (approve-pr-format-state pr)
+           (approve-pr-format-title pr approve-search-title-width)
+           (approve-pr-format-repo pr approve-search-repo-width)
+           (approve-pr-format-author pr approve-search-author-width)
+           (approve-pr-format-time pr)))))
 
 ;;; Mode Definition
 
@@ -276,7 +205,7 @@ DATE-STRING should be in ISO 8601 format."
                    approve-search--result-count (or count (length nodes))
                    approve-search--pr-data
                    (mapcar (lambda (pr)
-                             (cons (alist-get 'url pr) pr))
+                             (cons (approve-pr-get-url pr) pr))
                            nodes)
                    tabulated-list-entries
                    (mapcar #'approve-search--make-entry nodes))

@@ -52,6 +52,7 @@
 (require 'magit-section)
 
 (require 'approve-api-queries)
+(require 'approve-pr-utils)
 (require 'approve-ui-faces)
 (require 'approve-ui-helpers)
 
@@ -166,92 +167,26 @@ Each entry is (TITLE . DATA) where DATA is the search results.")
 (defclass approve-dashboard-pr-section (magit-section) ()
   "A single PR entry within a dashboard section.")
 
-;;; Time Formatting
-
-(defun approve-dashboard--format-relative-time (date-string)
-  "Format DATE-STRING as a relative time (e.g., \"2h\", \"3d\").
-DATE-STRING should be in ISO 8601 format."
-  (when-let ((time (approve-ui-parse-iso-date date-string)))
-    (let* ((now (current-time))
-           (diff (float-time (time-subtract now time)))
-           (minutes (/ diff 60))
-           (hours (/ diff 3600))
-           (days (/ diff 86400))
-           (weeks (/ diff 604800)))
-      (cond
-       ((< minutes 1) "now")
-       ((< minutes 60) (format "%dm" (floor minutes)))
-       ((< hours 24) (format "%dh" (floor hours)))
-       ((< days 7) (format "%dd" (floor days)))
-       ((< weeks 52) (format "%dw" (floor weeks)))
-       (t (format-time-string "%Y-%m-%d" time))))))
-
 ;;; PR Formatting
-
-(defun approve-dashboard--format-pr-number (pr)
-  "Format the PR number from PR data."
-  (let ((number (alist-get 'number pr)))
-    (approve-ui-propertize-face
-     (format "#%-5d" number)
-     'approve-dashboard-pr-number-face)))
-
-(defun approve-dashboard--format-pr-title (pr)
-  "Format the PR title from PR data, truncating if needed."
-  (let* ((title (alist-get 'title pr))
-         (is-draft (alist-get 'isDraft pr))
-         (truncated (if (> (length title) approve-dashboard-title-width)
-                        (concat (substring title 0 (- approve-dashboard-title-width 1)) "…")
-                      title))
-         (padded (format (format "%%-%ds" approve-dashboard-title-width) truncated)))
-    (if is-draft
-        (approve-ui-propertize-face padded 'approve-dashboard-draft-face)
-      (approve-ui-propertize-face padded 'approve-dashboard-pr-title-face))))
-
-(defun approve-dashboard--format-repo (pr)
-  "Format the repository name from PR data."
-  (let* ((repo (alist-get 'repository pr))
-         (owner (alist-get 'login (alist-get 'owner repo)))
-         (name (alist-get 'name repo))
-         (full-name (format "%s/%s" owner name))
-         (truncated (if (> (length full-name) approve-dashboard-repo-width)
-                        (concat (substring full-name 0 (- approve-dashboard-repo-width 1)) "…")
-                      full-name))
-         (padded (format (format "%%-%ds" approve-dashboard-repo-width) truncated)))
-    (approve-ui-propertize-face padded 'approve-dashboard-repo-face)))
-
-(defun approve-dashboard--format-time (pr)
-  "Format the updated time from PR data."
-  (let ((updated-at (alist-get 'updatedAt pr)))
-    (approve-ui-propertize-face
-     (format "%5s" (or (approve-dashboard--format-relative-time updated-at) ""))
-     'approve-dashboard-time-face)))
-
-(defun approve-dashboard--format-review-status (pr)
-  "Format the review decision status from PR data."
-  (let ((decision (alist-get 'reviewDecision pr)))
-    (pcase decision
-      ("APPROVED"
-       (approve-ui-propertize-face "✓" 'approve-dashboard-review-approved-face))
-      ("CHANGES_REQUESTED"
-       (approve-ui-propertize-face "✗" 'approve-dashboard-review-changes-requested-face))
-      ("REVIEW_REQUIRED"
-       (approve-ui-propertize-face "○" 'approve-dashboard-review-required-face))
-      (_ " "))))
 
 (defun approve-dashboard--format-pr-line (pr)
   "Format a complete PR line from PR data."
   (concat
-   (approve-dashboard--format-review-status pr) " "
-   (approve-dashboard--format-pr-number pr) " "
-   (approve-dashboard--format-pr-title pr) " "
-   (approve-dashboard--format-repo pr) " "
-   (approve-dashboard--format-time pr)))
+   (approve-pr-format-review-status pr) " "
+   (approve-pr-format-number pr 6) " "
+   (approve-pr-pad-string
+    (approve-pr-format-title pr approve-dashboard-title-width t)
+    approve-dashboard-title-width) " "
+   (approve-pr-pad-string
+    (approve-pr-format-repo pr approve-dashboard-repo-width)
+    approve-dashboard-repo-width) " "
+   (approve-pr-format-time pr 5)))
 
 ;;; Section Rendering
 
 (defun approve-dashboard--insert-pr (pr)
   "Insert a single PR entry for PR data."
-  (let ((url (alist-get 'url pr)))
+  (let ((url (approve-pr-get-url pr)))
     (magit-insert-section (approve-dashboard-pr url)
       (insert (approve-dashboard--format-pr-line pr))
       (insert "\n"))))
