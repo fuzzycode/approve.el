@@ -152,6 +152,13 @@
   "Face for placeholder text when no comments exist."
   :group 'approve-faces)
 
+;;; Description Faces
+
+(defface approve-description-empty-face
+  '((t :inherit font-lock-comment-face :slant italic))
+  "Face for placeholder text when no PR description exists."
+  :group 'approve-faces)
+
 (defface approve-comment-code-block-face
   '((t :inherit (fixed-pitch font-lock-string-face) :extend t))
   "Face for code blocks in comments."
@@ -269,6 +276,11 @@
 (defface approve-html-strikethrough-face
   '((t :strike-through t))
   "Face for strikethrough text in HTML content."
+  :group 'approve-faces)
+
+(defface approve-html-link-face
+  '((t :inherit link))
+  "Face for links in HTML content."
   :group 'approve-faces)
 
 ;;; Suggested Changes / Diff Faces

@@ -49,6 +49,7 @@
 (require 'approve-model)
 (require 'approve-ui-comments)
 (require 'approve-ui-commits)
+(require 'approve-ui-description)
 (require 'approve-ui-faces)
 (require 'approve-ui-headers)
 (require 'approve-ui-files)
@@ -57,6 +58,7 @@
 
 (defcustom approve-review-sections-hook
   '(approve-insert-header-section
+    approve-insert-description-section
     approve-insert-commits-section
     approve-insert-conversation-section
     approve-insert-files-section)
@@ -120,11 +122,11 @@ Loads the data into the model and redraws the buffer."
   "Get or create the Approve buffer for PR NUMBER in OWNER/REPO.
 Returns the buffer."
   (let ((buffer-name (approve-ui--buffer-name owner repo number)))
-        (let ((buffer (get-buffer-create buffer-name)))
-          (with-current-buffer buffer
-            (approve-review-mode)
-            (approve-model-init `(:owner ,owner :repo ,repo :number ,number)))
-          buffer)))
+    (let ((buffer (get-buffer-create buffer-name)))
+      (with-current-buffer buffer
+        (approve-review-mode)
+        (approve-model-init `(:owner ,owner :repo ,repo :number ,number)))
+      buffer)))
 
 (defun approve-ui-redraw ()
   "Redraw the current Approve buffer using the data model.

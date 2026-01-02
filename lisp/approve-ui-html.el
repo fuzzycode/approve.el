@@ -32,6 +32,8 @@
 ;; It uses `shr' (Simple HTML Renderer) with custom tag handlers
 ;; to provide proper rendering of GitHub-generated HTML including:
 ;;
+;; - Links with custom face and click-to-browse support
+;; - Images with proper indentation alignment
 ;; - Code blocks with syntax highlighting (using GitHub's PrismJS classes)
 ;; - Inline code
 ;; - Blockquotes with visual borders
@@ -316,6 +318,39 @@ Used for GitHub's suggested changes feature which displays diffs in tables."
   (shr-generic dom)
   (shr-ensure-newline))
 
+(defun approve-html--tag-img (dom)
+  "Render <img> tags in DOM with proper indentation.
+Uses shr's default image rendering but ensures proper indentation
+to align with the rest of the body text."
+  (let ((indent-str (make-string shr-indentation ?\s)))
+    (shr-ensure-newline)
+    (insert indent-str)
+    (shr-tag-img dom)))
+
+(defun approve-html--tag-a (dom)
+  "Render <a> tags in DOM with custom link face.
+Renders clickable links with `approve-html-link-face' and sets up
+appropriate text properties for URL browsing via RET or mouse click."
+  (let ((url (dom-attr dom 'href))
+        (title (dom-attr dom 'title))
+        (start (point)))
+    (shr-generic dom)
+    (when (and url
+               (not (string-empty-p url))
+               (< start (point)))
+      (approve-html--add-font start (point) 'approve-html-link-face)
+      (add-text-properties
+       start (point)
+       (list 'shr-url url
+             'button t
+             'category 'shr
+             'help-echo (if title
+                            (format "%s (%s)" url title)
+                          url)
+             'follow-link t
+             'mouse-face 'highlight
+             'keymap shr-map)))))
+
 ;;; Public API
 
 (defun approve-html-render (html)
@@ -344,16 +379,18 @@ This is the core rendering function that inserts into the current buffer."
          (shr-indentation indent)
          (shr-bullet "• ")
          (shr-external-rendering-functions
-          '((blockquote . approve-html--tag-blockquote)
+          '((a . approve-html--tag-a)
+            (blockquote . approve-html--tag-blockquote)
+            (code . approve-html--tag-code)
+            (del . approve-html--tag-del)
+            (img . approve-html--tag-img)
+            (li . approve-html--tag-li)
+            (ol . approve-html--tag-ol)
+            (p . approve-html--tag-p)
             (pre . approve-html--tag-pre)
             (span . approve-html--tag-span)
             (td . approve-html--tag-td)
-            (code . approve-html--tag-code)
-            (del . approve-html--tag-del)
-            (p . approve-html--tag-p)
-            (ul . approve-html--tag-ul)
-            (ol . approve-html--tag-ol)
-            (li . approve-html--tag-li))))
+            (ul . approve-html--tag-ul))))
     (shr-insert-document dom))
   ;; Clean up excessive whitespace
   (save-excursion
