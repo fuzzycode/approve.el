@@ -34,6 +34,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'parse-time)
 
 (require 'approve-ui-faces)
@@ -125,6 +126,41 @@ AUTHOR and COMMITTER are alists with `name' and `email' fields."
 This ensures the face is applied correctly in buffers where
 `font-lock-mode' is active."
   (propertize string 'face face 'font-lock-face face))
+
+;;; Reaction Formatting
+
+(defconst approve-ui-reaction-emoji-map
+  '(("THUMBS_UP" . "👍")
+    ("THUMBS_DOWN" . "👎")
+    ("LAUGH" . "😄")
+    ("HOORAY" . "🎉")
+    ("CONFUSED" . "😕")
+    ("HEART" . "❤️")
+    ("ROCKET" . "🚀")
+    ("EYES" . "👀"))
+  "Mapping from GitHub reaction types to emoji.")
+
+(defun approve-ui-format-reactions (reaction-groups)
+  "Format REACTION-GROUPS for display.
+REACTION-GROUPS is a list of alists with `content' and `reactors' fields.
+Returns a formatted string or nil if no reactions."
+  (let ((reactions-with-count
+         (cl-remove-if
+          (lambda (rg)
+            (zerop (or (alist-get 'totalCount (alist-get 'reactors rg)) 0)))
+          reaction-groups)))
+    (when reactions-with-count
+      (mapconcat
+       (lambda (rg)
+         (let* ((content (alist-get 'content rg))
+                (count (alist-get 'totalCount (alist-get 'reactors rg)))
+                (emoji (or (alist-get content approve-ui-reaction-emoji-map
+                                      nil nil #'string=)
+                           content)))
+           (propertize (format "%s %d" emoji count)
+                       'face 'approve-comment-reaction-face)))
+       reactions-with-count
+       "  "))))
 
 (provide 'approve-ui-helpers)
 ;;; approve-ui-helpers.el ends here

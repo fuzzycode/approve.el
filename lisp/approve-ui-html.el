@@ -48,6 +48,7 @@
 
 (require 'shr)
 (require 'dom)
+(require 'magit-section)
 
 (require 'approve-ui-faces)
 (require 'approve-ui-helpers)
@@ -351,6 +352,43 @@ appropriate text properties for URL browsing via RET or mouse click."
              'mouse-face 'highlight
              'keymap shr-map)))))
 
+(defun approve-html--tag-details (dom)
+  "Render <details> elements in DOM as a collapsible magit section.
+The <details> element represents a disclosure widget that can be toggled
+with TAB.  The initial state is determined by the `open' attribute."
+  (let* ((open-p (dom-attr dom 'open))
+         (summary-dom (car (dom-by-tag dom 'summary)))
+         (summary-text (if summary-dom
+                           (with-temp-buffer
+                             (shr-generic summary-dom)
+                             (string-trim (buffer-string)))
+                         "Details")))
+    ;; Ensure spacing above
+    (shr-ensure-paragraph)
+    ;; Create a magit section for the details element
+    (magit-insert-section (approve-details nil (not open-p))
+      ;; Insert heading with summary text
+      (magit-insert-heading
+        (approve-ui-propertize-face summary-text 'approve-html-details-summary-face))
+      ;; Insert body content inside section-body for proper indentation
+      (magit-insert-section-body
+        (let ((shr-indentation (+ shr-indentation 2)))
+          (dolist (child (dom-children dom))
+            (unless (and (listp child) (eq (dom-tag child) 'summary))
+              (if (stringp child)
+                  (unless (string-blank-p child)
+                    (insert child))
+                (shr-descend child)))))))
+    ;; Ensure spacing below
+    (shr-ensure-paragraph)))
+
+(defun approve-html--tag-summary (_dom)
+  "Render <summary> elements in DOM.
+This is intentionally a no-op because <summary> content is handled
+by the parent <details> tag renderer."
+  ;; Do nothing - summary is rendered by the details handler
+  nil)
+
 ;;; Public API
 
 (defun approve-html-render (html)
@@ -383,12 +421,14 @@ This is the core rendering function that inserts into the current buffer."
             (blockquote . approve-html--tag-blockquote)
             (code . approve-html--tag-code)
             (del . approve-html--tag-del)
+            (details . approve-html--tag-details)
             (img . approve-html--tag-img)
             (li . approve-html--tag-li)
             (ol . approve-html--tag-ol)
             (p . approve-html--tag-p)
             (pre . approve-html--tag-pre)
             (span . approve-html--tag-span)
+            (summary . approve-html--tag-summary)
             (td . approve-html--tag-td)
             (ul . approve-html--tag-ul))))
     (shr-insert-document dom))

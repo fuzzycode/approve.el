@@ -65,11 +65,12 @@
 
 (defun approve-insert-description-section ()
   "Insert the description section showing the PR body."
-  (with-approve-entity ((:root) (bodyHTML))
+  (with-approve-entity ((:root) (bodyHTML reactionGroups))
     (insert "\n")
     (magit-insert-section (description)
       (magit-insert-heading "Description")
-      (approve-description--insert-body body-html))))
+      (approve-description--insert-body body-html)
+      (approve-description--insert-reactions reaction-groups))))
 
 ;;; Private Functions
 
@@ -83,6 +84,14 @@ If BODY-HTML is nil or empty, inserts a placeholder message."
               "\n")
     ;; Render HTML directly into buffer, preserving text properties
     (approve-html-insert body-html approve-description-body-indent)))
+
+(defun approve-description--insert-reactions (reaction-groups)
+  "Insert REACTION-GROUPS below the description body.
+REACTION-GROUPS is a list of alists with `content' and `reactors' fields."
+  (when-let ((reactions-str (approve-ui-format-reactions reaction-groups)))
+    (insert (make-string approve-description-body-indent ?\s)
+            reactions-str
+            "\n")))
 
 (provide 'approve-ui-description)
 ;;; approve-ui-description.el ends here

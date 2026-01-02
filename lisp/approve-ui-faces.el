@@ -300,6 +300,11 @@
   "Face for links in HTML content."
   :group 'approve-faces)
 
+(defface approve-html-details-summary-face
+  '((t :inherit bold))
+  "Face for the summary line of a <details> element."
+  :group 'approve-faces)
+
 ;;; Dashboard Faces
 
 (defface approve-dashboard-section-title-face
