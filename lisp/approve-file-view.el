@@ -179,6 +179,15 @@ Used for navigation between changes.")
     map)
   "Keymap for `approve-file-view-mode'.")
 
+(with-eval-after-load 'evil
+  (declare-function evil-define-key* "evil-core")
+  (evil-define-key* 'normal approve-file-view-mode-map
+    "]]" #'approve-file-view-next-change
+    "[[" #'approve-file-view-previous-change
+    "v" #'approve-file-view-toggle-viewed
+    "q" #'approve-file-view-quit
+    "gr" #'approve-file-view-refresh))
+
 (define-minor-mode approve-file-view-mode
   "Minor mode for viewing PR files with diff indicators.
 

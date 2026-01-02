@@ -133,6 +133,15 @@ to persist across sessions.")
     map)
   "Keymap for `approve-search-mode'.")
 
+(with-eval-after-load 'evil
+  (declare-function evil-define-key* "evil-core")
+  (evil-define-key* 'normal approve-search-mode-map
+    (kbd "RET") #'approve-search-open-pr
+    "o" #'approve-search-browse-pr
+    "gr" #'approve-search-refresh
+    "s" #'approve-search-new-query
+    "/" #'approve-search-new-query))
+
 (define-derived-mode approve-search-mode tabulated-list-mode "Approve-Search"
   "Major mode for displaying GitHub Pull Request search results.
 

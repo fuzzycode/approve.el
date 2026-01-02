@@ -140,7 +140,7 @@ After redraw, recenters the window around point."
 (defun approve-actions--get-file-at-point ()
   "Return the file path at point, or nil if not on a file section."
   (when-let ((section (magit-current-section)))
-    (and (eq (oref section type) 'file)
+    (and (eq (oref section type) 'approve-file)
          (oref section value))))
 
 (defun approve-actions--get-file-viewed-state (path)

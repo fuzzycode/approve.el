@@ -76,6 +76,11 @@ PR data stored in buffer-local variables."
     map)
   "Keymap for `approve-review-mode'.")
 
+(with-eval-after-load 'evil
+  (declare-function evil-define-key* "evil-core")
+  (evil-define-key* 'normal approve-review-mode-map
+    "gr" #'approve-ui-refresh))
+
 (define-derived-mode approve-review-mode magit-section-mode "Approve Review"
   "Major mode for GitHub PR reviews with Approve."
   :group 'approve

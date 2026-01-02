@@ -330,11 +330,11 @@ FILES is a list of alists with additions, deletions, path, and changeType."
               (goto-char (point-min))
               ;; Find the file section by checking section types
               (let ((section (magit-current-section)))
-                (while (and section (not (eq (oref section type) 'file)))
+                (while (and section (not (eq (oref section type) 'approve-file)))
                   (magit-section-forward)
                   (setq section (magit-current-section)))
                 (expect section :to-be-truthy)
-                (expect (oref section type) :to-equal 'file)))
+                (expect (oref section type) :to-equal 'approve-file)))
           (kill-buffer buffer))))
 
     (it "shows viewed indicators for files with different viewed states"

@@ -150,6 +150,14 @@ Each entry is (TITLE . DATA) where DATA is the search results.")
     map)
   "Keymap for `approve-dashboard-mode'.")
 
+(with-eval-after-load 'evil
+  (declare-function evil-define-key* "evil-core")
+  (evil-define-key* 'normal approve-dashboard-mode-map
+    (kbd "RET") #'approve-dashboard-open-pr
+    "gr" #'approve-dashboard-refresh
+    "gR" #'approve-dashboard-refresh-section
+    "o" #'approve-dashboard-browse-pr))
+
 (define-derived-mode approve-dashboard-mode magit-section-mode "Approve-Dashboard"
   "Major mode for displaying a GitHub Pull Request dashboard.
 
@@ -317,7 +325,7 @@ If FILTER is a string, return it as-is."
   "Open the PR at point in an Approve review buffer."
   (interactive)
   (when-let ((section (magit-current-section)))
-    (when (cl-typep section 'approve-dashboard-pr-section)
+    (when (eq 'approve-dashboard-pr (oref section type))
       (let ((url (oref section value)))
         (when url
           (approve-view-pr url))))))
@@ -326,7 +334,7 @@ If FILTER is a string, return it as-is."
   "Open the PR at point in a web browser."
   (interactive)
   (when-let ((section (magit-current-section)))
-    (when (cl-typep section 'approve-dashboard-pr-section)
+    (when (eq 'approve-dashboard-pr (oref section type))
       (let ((url (oref section value)))
         (when url
           (browse-url url))))))
@@ -346,9 +354,9 @@ If FILTER is a string, return it as-is."
   (interactive)
   (when-let ((section (magit-current-section)))
     ;; Navigate up to the dashboard section if we're on a PR
-    (while (and section (not (cl-typep section 'approve-dashboard-section)))
+    (while (and section (not (eq 'approve-dashboard-section (oref section type))))
       (setq section (oref section parent)))
-    (when (cl-typep section 'approve-dashboard-section)
+    (when (eq 'approve-dashboard-section (oref section type))
       (let* ((title (oref section value))
              (section-config (cl-find title approve-dashboard-sections
                                       :key (lambda (s) (plist-get s :title))

@@ -53,6 +53,7 @@
 (require 'approve-model)
 (require 'approve-ui-faces)
 (require 'approve-ui-helpers)
+(require 'approve-actions)
 (require 'approve-ui-comments)
 
 ;;; Customization
@@ -100,6 +101,25 @@ This is the maximum number of +/- characters shown for a file."
 
 (defconst approve--diffstat-graph-char-removed ?-
   "Character used to represent removed lines in diffstat graph.")
+
+;;; Section Keymaps
+
+(defvar magit-approve-file-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") #'approve-action-view-file)
+    (define-key map (kbd "v") #'approve-action-toggle-file-viewed)
+    map)
+  "Keymap for approve file sections.
+Named with `magit-' prefix to be automatically used by magit-section.")
+
+(with-eval-after-load 'evil
+  (declare-function evil-define-key* "evil-core")
+  (evil-define-key* 'normal magit-approve-file-section-map
+    (kbd "RET") #'approve-action-view-file
+    "v" #'approve-action-toggle-file-viewed))
+
+;; Register the section type with its keymap
+(put 'approve-file 'magit-section-map 'magit-approve-file-section-map)
 
 ;;; Review Threads Lookup
 
@@ -359,7 +379,7 @@ Files with review comments are expandable to show the comments."
                      (threads (gethash path threads-by-path))
                      (file-threads (seq-filter #'approve--thread-file-comment-p threads))
                      (comment-count (approve--count-file-comments threads)))
-                (magit-insert-section (file path (and file-threads t))
+                (magit-insert-section (approve-file path (and file-threads t))
                   (magit-insert-heading
                     (approve--format-diffstat-line
                      file path-width count-width max-changes comment-count))
