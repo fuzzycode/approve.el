@@ -1,0 +1,19 @@
+${include:fragments/search-pull-request-fragment.graphql}
+
+# Search for pull requests using GitHub search syntax
+# The query parameter should include "is:pr" plus any additional filters
+# Example: "is:pr is:open review-requested:@me"
+query SearchPullRequests($query: String!, $first: Int!) {
+  search(query: $query, type: ISSUE, first: $first) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      ... on PullRequest {
+        ...SearchPullRequestFields
+      }
+    }
+  }
+}

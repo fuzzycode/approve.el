@@ -300,6 +300,93 @@
   "Face for links in HTML content."
   :group 'approve-faces)
 
+;;; Dashboard Faces
+
+(defface approve-dashboard-section-title-face
+  '((t :inherit magit-section-heading))
+  "Face for dashboard section titles."
+  :group 'approve-faces)
+
+(defface approve-dashboard-section-count-face
+  '((t :inherit font-lock-comment-face))
+  "Face for the count indicator in dashboard section titles."
+  :group 'approve-faces)
+
+(defface approve-dashboard-pr-number-face
+  '((t :inherit magit-hash))
+  "Face for PR numbers in the dashboard."
+  :group 'approve-faces)
+
+(defface approve-dashboard-pr-title-face
+  '((t :inherit default))
+  "Face for PR titles in the dashboard."
+  :group 'approve-faces)
+
+(defface approve-dashboard-repo-face
+  '((t :inherit font-lock-comment-face))
+  "Face for repository names in the dashboard."
+  :group 'approve-faces)
+
+(defface approve-dashboard-author-face
+  '((t :inherit font-lock-keyword-face))
+  "Face for PR author names in the dashboard."
+  :group 'approve-faces)
+
+(defface approve-dashboard-time-face
+  '((t :inherit font-lock-comment-face))
+  "Face for relative time display in the dashboard."
+  :group 'approve-faces)
+
+(defface approve-dashboard-draft-face
+  '((t :inherit shadow :slant italic))
+  "Face for draft PR indicator in the dashboard."
+  :group 'approve-faces)
+
+(defface approve-dashboard-state-open-face
+  '((t :inherit success))
+  "Face for open PR state indicator."
+  :group 'approve-faces)
+
+(defface approve-dashboard-state-merged-face
+  '((t :inherit magit-branch-remote))
+  "Face for merged PR state indicator."
+  :group 'approve-faces)
+
+(defface approve-dashboard-state-closed-face
+  '((t :inherit error))
+  "Face for closed PR state indicator."
+  :group 'approve-faces)
+
+(defface approve-dashboard-review-approved-face
+  '((t :inherit success))
+  "Face for approved review decision indicator."
+  :group 'approve-faces)
+
+(defface approve-dashboard-review-changes-requested-face
+  '((t :inherit error))
+  "Face for changes requested review decision indicator."
+  :group 'approve-faces)
+
+(defface approve-dashboard-review-required-face
+  '((t :inherit warning))
+  "Face for review required indicator."
+  :group 'approve-faces)
+
+(defface approve-dashboard-empty-face
+  '((t :inherit font-lock-comment-face :slant italic))
+  "Face for empty section placeholder text."
+  :group 'approve-faces)
+
+(defface approve-dashboard-loading-face
+  '((t :inherit font-lock-comment-face :slant italic))
+  "Face for loading indicator text."
+  :group 'approve-faces)
+
+(defface approve-dashboard-error-face
+  '((t :inherit error))
+  "Face for error messages in the dashboard."
+  :group 'approve-faces)
+
 ;;; Suggested Changes / Diff Faces
 
 (defface approve-diff-context-face

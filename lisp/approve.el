@@ -50,6 +50,7 @@
 ;;; Code:
 
 (require 'approve-ui)
+(require 'approve-dashboard)
 
 (defgroup approve nil
   "Settings for Approve PR review tool."

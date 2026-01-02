@@ -142,6 +142,46 @@ Example:
    :buffer buffer
    :progress-message (format "Fetching PR #%d from %s/%s..." number owner repo)))
 
+(cl-defun approve-api-search-pull-requests (query
+                                                 &key
+                                                 (limit 20)
+                                                 callback
+                                                 error-callback
+                                                 (buffer (current-buffer)))
+  "Search for pull requests on GitHub using QUERY.
+
+QUERY is a GitHub search query string.  The function automatically
+prepends \"is:pr\" if not already present.
+
+Keyword arguments:
+  :limit - Maximum number of results to return (default 20).
+  :callback - Function called with the search results on success.
+              Receives an alist with `search' containing the results.
+  :error-callback - Function called with error info on failure.
+  :buffer - Buffer context for callbacks (defaults to current buffer).
+
+Returns a request ID that can be used with `approve-api-cancel'.
+
+Example:
+  (approve-api-search-pull-requests
+   \"is:open review-requested:@me\"
+   :limit 10
+   :callback (lambda (data)
+               (let* ((search (alist-get \\='search data))
+                      (nodes (alist-get \\='nodes search)))
+                 (message \"Found %d PRs\" (length nodes)))))"
+  (let ((full-query (if (string-match-p "\\bis:pr\\b" query)
+                        query
+                      (concat "is:pr " query))))
+    (approve-api-graphql
+     (approve-graphql-load "queries/search-pull-requests.graphql")
+     `((query . ,full-query)
+       (first . ,limit))
+     :callback callback
+     :error-callback error-callback
+     :buffer buffer
+     :progress-message "Searching pull requests...")))
+
 (provide 'approve-api-queries)
 ;;; approve-api-queries.el ends here
 
