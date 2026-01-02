@@ -546,6 +546,61 @@ FILES is a list of alists with additions, deletions, path, and changeType."
                                      (totalCount . 1)))))))
         (expect (approve--count-file-comments threads) :to-equal 3))))
 
+  (describe "approve--sort-comments-chronologically"
+    (it "returns empty list for nil input"
+      (expect (approve--sort-comments-chronologically nil) :to-equal nil))
+
+    (it "returns empty list for empty input"
+      (expect (approve--sort-comments-chronologically '()) :to-equal '()))
+
+    (it "returns single comment unchanged"
+      (let ((comments '(((id . "C1") (createdAt . "2024-01-15T10:00:00Z")))))
+        (expect (approve--sort-comments-chronologically comments)
+                :to-equal comments)))
+
+    (it "sorts comments by createdAt ascending"
+      (let* ((c1 '((id . "C1") (createdAt . "2024-01-15T12:00:00Z")))
+             (c2 '((id . "C2") (createdAt . "2024-01-15T10:00:00Z")))
+             (c3 '((id . "C3") (createdAt . "2024-01-15T14:00:00Z")))
+             (comments (list c1 c2 c3))
+             (sorted (approve--sort-comments-chronologically comments)))
+        ;; Should be sorted: C2 (10:00), C1 (12:00), C3 (14:00)
+        (expect (alist-get 'id (nth 0 sorted)) :to-equal "C2")
+        (expect (alist-get 'id (nth 1 sorted)) :to-equal "C1")
+        (expect (alist-get 'id (nth 2 sorted)) :to-equal "C3")))
+
+    (it "sorts across different dates"
+      (let* ((c1 '((id . "C1") (createdAt . "2024-01-16T08:00:00Z")))
+             (c2 '((id . "C2") (createdAt . "2024-01-15T22:00:00Z")))
+             (c3 '((id . "C3") (createdAt . "2024-01-15T10:00:00Z")))
+             (comments (list c1 c2 c3))
+             (sorted (approve--sort-comments-chronologically comments)))
+        ;; Should be sorted: C3 (Jan 15 10:00), C2 (Jan 15 22:00), C1 (Jan 16 08:00)
+        (expect (alist-get 'id (nth 0 sorted)) :to-equal "C3")
+        (expect (alist-get 'id (nth 1 sorted)) :to-equal "C2")
+        (expect (alist-get 'id (nth 2 sorted)) :to-equal "C1")))
+
+    (it "puts comments with nil createdAt last"
+      (let* ((c1 '((id . "C1") (createdAt . "2024-01-15T10:00:00Z")))
+             (c2 '((id . "C2") (createdAt . nil)))
+             (c3 '((id . "C3") (createdAt . "2024-01-15T08:00:00Z")))
+             (comments (list c1 c2 c3))
+             (sorted (approve--sort-comments-chronologically comments)))
+        ;; Should be sorted: C3 (08:00), C1 (10:00), C2 (nil - last)
+        (expect (alist-get 'id (nth 0 sorted)) :to-equal "C3")
+        (expect (alist-get 'id (nth 1 sorted)) :to-equal "C1")
+        (expect (alist-get 'id (nth 2 sorted)) :to-equal "C2")))
+
+    (it "does not modify original list"
+      (let* ((c1 '((id . "C1") (createdAt . "2024-01-15T12:00:00Z")))
+             (c2 '((id . "C2") (createdAt . "2024-01-15T10:00:00Z")))
+             (original-order (list c1 c2))
+             (sorted (approve--sort-comments-chronologically original-order)))
+        ;; Original list should still have C1 first
+        (expect (alist-get 'id (car original-order)) :to-equal "C1")
+        ;; Sorted list should have C2 first
+        (expect (alist-get 'id (car sorted)) :to-equal "C2"))))
+
   (describe "approve--thread-file-comment-p"
     (it "returns t for FILE subject type"
       (let ((thread '((id . "RT_1")

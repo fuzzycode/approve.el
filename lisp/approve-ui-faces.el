@@ -140,6 +140,13 @@
   "Face for the comment count indicator on files."
   :group 'approve-faces)
 
+;;; Thread Visual Faces
+
+(defface approve-thread-connector-face
+  '((t :inherit shadow))
+  "Face for the thread connector line between comments."
+  :group 'approve-faces)
+
 ;;; Comment Faces
 
 (defface approve-comment-author-face

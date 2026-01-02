@@ -78,6 +78,16 @@ This is the maximum number of +/- characters shown for a file."
   :group 'approve
   :type 'string)
 
+(defcustom approve-thread-connector-char "│"
+  "Character used to show thread continuation."
+  :group 'approve
+  :type 'string)
+
+(defcustom approve-thread-indent 2
+  "Number of spaces to indent thread comments."
+  :group 'approve
+  :type 'integer)
+
 (defcustom approve-file-comment-indicator "🗨"
   "Indicator shown for files that have review comments."
   :group 'approve
@@ -247,6 +257,20 @@ COMMENT-COUNT is the number of review comments on this file."
 
 ;;; Review Thread Rendering
 
+(defun approve--sort-comments-chronologically (comments)
+  "Sort COMMENTS chronologically by createdAt timestamp.
+COMMENTS is a list of comment alists.  Returns a new sorted list."
+  (sort (copy-sequence comments)
+        (lambda (a b)
+          (let ((date-a (alist-get 'createdAt a))
+                (date-b (alist-get 'createdAt b)))
+            (cond
+             ;; If either is nil, put nil ones last
+             ((null date-a) nil)
+             ((null date-b) t)
+             ;; Compare timestamps lexicographically (ISO 8601 sorts correctly)
+             (t (string< date-a date-b)))))))
+
 (defun approve--insert-review-thread (thread)
   "Insert a review THREAD as a magit section.
 THREAD is an alist with id, path, line, comments, isResolved, etc."
@@ -254,7 +278,9 @@ THREAD is an alist with id, path, line, comments, isResolved, etc."
          (is-resolved (alist-get 'isResolved thread))
          (is-outdated (alist-get 'isOutdated thread))
          (comments-data (alist-get 'comments thread))
-         (comments (approve-model-get-nodes comments-data)))
+         (comments (approve-model-get-nodes comments-data))
+         (sorted-comments (approve--sort-comments-chronologically comments))
+         (comment-count (length sorted-comments)))
     (magit-insert-section (review-thread id)
       ;; Thread header with status indicators
       (magit-insert-heading
@@ -265,13 +291,18 @@ THREAD is an alist with id, path, line, comments, isResolved, etc."
            " ")
          (when is-resolved
            (propertize "(resolved)" 'face 'success))))
-      ;; Insert each comment in the thread
-      (dolist (comment comments)
-        (approve--insert-review-comment comment)))))
+      ;; Insert each comment in the thread with visual grouping
+      (let ((index 0))
+        (dolist (comment sorted-comments)
+          (approve--insert-review-comment comment
+                                          :last-p (= index (1- comment-count)))
+          (setq index (1+ index)))))))
 
-(defun approve--insert-review-comment (comment)
+(cl-defun approve--insert-review-comment (comment &key last-p)
   "Insert a single review COMMENT as a magit section.
-COMMENT is an alist with author, body, bodyHTML, createdAt, id, state, etc."
+COMMENT is an alist with author, body, bodyHTML, createdAt, id, state, etc.
+LAST-P indicates if this is the last comment in a thread, used for
+visual grouping (no connector line after the last comment)."
   (let* ((id (alist-get 'id comment))
          (author (alist-get 'author comment))
          (body-html (alist-get 'bodyHTML comment))
@@ -280,18 +311,26 @@ COMMENT is an alist with author, body, bodyHTML, createdAt, id, state, etc."
          (reaction-groups (alist-get 'reactionGroups comment))
          (edited-info (approve-comment--make-edited-info comment))
          ;; Only show PENDING state indicator, others are not relevant for individual comments
-         (display-state (when (equal state "PENDING") state)))
+         (display-state (when (equal state "PENDING") state))
+         ;; Build thread visual prefix
+         (connector (approve-ui-propertize-face approve-thread-connector-char
+                                                'approve-thread-connector-face))
+         (indent-str (make-string approve-thread-indent ?\s)))
     (magit-insert-section (review-comment id)
       (magit-insert-heading
-        (approve-comment--format-header author created-at display-state edited-info))
-      ;; Comment body
-      (approve-comment--insert-body body-html)
+        (concat indent-str
+                (approve-comment--format-header author created-at display-state edited-info)))
+      ;; Comment body with thread visual connector
+      (approve-comment--insert-body body-html (+ approve-comment-body-indent
+                                                 approve-thread-indent))
       ;; Reactions
       (when-let ((reactions-str (approve-comment--format-reactions reaction-groups)))
-        (insert (make-string approve-comment-body-indent ?\s)
+        (insert (make-string (+ approve-comment-body-indent approve-thread-indent) ?\s)
                 reactions-str
                 "\n"))
-      (insert "\n"))))
+      ;; Add spacing between comments in thread (but not after the last)
+      (unless last-p
+        (insert indent-str connector "\n")))))
 
 ;;; Public Section Functions
 
