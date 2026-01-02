@@ -77,14 +77,12 @@
   "Insert the description BODY-HTML content.
 If BODY-HTML is nil or empty, inserts a placeholder message."
   (if (or (null body-html) (string-empty-p (string-trim body-html)))
-      (progn
-        (insert (make-string approve-description-body-indent ?\s)
-                (propertize approve-description-empty-message
-                            'face 'approve-description-empty-face)
-                "\n"))
+      (insert (make-string approve-description-body-indent ?\s)
+              (propertize approve-description-empty-message
+                          'face 'approve-description-empty-face)
+              "\n")
     ;; Render HTML directly into buffer, preserving text properties
-    (approve-html-insert body-html approve-description-body-indent))
-  (insert "\n"))
+    (approve-html-insert body-html approve-description-body-indent)))
 
 (provide 'approve-ui-description)
 ;;; approve-ui-description.el ends here

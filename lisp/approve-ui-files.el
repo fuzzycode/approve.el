@@ -346,8 +346,7 @@ Files with review comments are expandable to show the comments."
                        (format "(showing %d of %d files)"
                                file-count (or total-count "?"))
                        'face 'approve-pagination-truncated-face)
-                      "\n")))
-          (insert "\n"))))))
+                      "\n"))))))))
 
 (provide 'approve-ui-files)
 ;;; approve-ui-files.el ends here

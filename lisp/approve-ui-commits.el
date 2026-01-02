@@ -274,8 +274,7 @@ Individual commits are collapsed by default."
           (insert (propertize
                    (format "(showing %d of %d)" commit-count (or total-count "?"))
                    'face 'approve-pagination-truncated-face)
-                  "\n"))
-        (insert "\n")))))
+                  "\n"))))))
 
 (defun approve--format-commit-line (commit)
   "Format a single COMMIT for display as a heading line.

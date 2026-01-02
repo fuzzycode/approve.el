@@ -227,8 +227,7 @@ This displays IssueComment entries from the PR's comments field."
           (insert (propertize
                    (format "(showing %d of %d)" comment-count (or total-count "?"))
                    'face 'approve-pagination-truncated-face)
-                  "\n"))
-        (insert "\n")))))
+                  "\n"))))))
 
 (defun approve-comment--insert-issue-comment (comment)
   "Insert a single issue COMMENT as a magit section.
@@ -249,8 +248,7 @@ includesCreatedEdit, and lastEditedAt."
       (when-let ((reactions-str (approve-comment--format-reactions reaction-groups)))
         (insert (make-string approve-comment-body-indent ?\s)
                 reactions-str
-                "\n"))
-      (insert "\n"))))
+                "\n")))))
 
 (provide 'approve-ui-comments)
 ;;; approve-ui-comments.el ends here
