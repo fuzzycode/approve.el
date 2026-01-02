@@ -80,6 +80,7 @@
 Each section is a plist with the following keys:
   :title  - The section title (required)
   :filter - GitHub search filter (required).
+            Can be a string or a function that returns a string.
             Note: \"is:pr\" is automatically added.
   :limit  - Maximum number of PRs to fetch (optional, default 20)
 
@@ -89,12 +90,16 @@ Example:
      :limit 20)
     (:title \"My Pull Requests\"
      :filter \"is:open author:@me\"
-     :limit 10))"
+     :limit 10)
+    (:title \"Recent in Org\"
+     :filter (lambda ()
+               (format \"is:open org:%s\" my-github-org))
+     :limit 15))"
   :group 'approve-dashboard
   :type '(repeat
           (plist :options
                  ((:title string)
-                  (:filter string)
+                  (:filter (choice string function))
                   (:limit integer)))))
 
 (defcustom approve-dashboard-default-limit 20
@@ -313,10 +318,20 @@ DATE-STRING should be in ISO 8601 format."
 
 ;;; Data Fetching
 
+(defun approve-dashboard--resolve-filter (filter)
+  "Resolve FILTER to a string.
+If FILTER is a function, call it and return the result.
+If FILTER is a string, return it as-is."
+  (cond
+   ((functionp filter) (funcall filter))
+   ((stringp filter) filter)
+   (t (error "Invalid filter type: %S" filter))))
+
 (defun approve-dashboard--fetch-section (section-config)
   "Fetch data for SECTION-CONFIG and update the buffer."
   (let* ((title (plist-get section-config :title))
-         (filter (plist-get section-config :filter))
+         (filter-spec (plist-get section-config :filter))
+         (filter (approve-dashboard--resolve-filter filter-spec))
          (limit (or (plist-get section-config :limit)
                     approve-dashboard-default-limit))
          (buffer (current-buffer)))

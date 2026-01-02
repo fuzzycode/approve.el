@@ -51,6 +51,7 @@
 
 (require 'approve-ui)
 (require 'approve-dashboard)
+(require 'approve-search)
 
 (defgroup approve nil
   "Settings for Approve PR review tool."
