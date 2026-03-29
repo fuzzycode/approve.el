@@ -43,6 +43,8 @@
 (eval-when-compile
   (require 'cl-lib))
 
+(require 'approve-log)
+
 (defvar approve-graphql-base-directory
   (expand-file-name "graphql"
                     (file-name-directory
@@ -71,6 +73,7 @@ resolved.  Cyclic dependencies are detected and signaled as errors."
          (absolute (if (file-name-absolute-p file)
                        file
                      (expand-file-name file base))))
+    (approve-log--message "Loading GraphQL file: %s" absolute)
     (approve-graphql--resolve absolute base nil)))
 
 (defun approve-graphql--resolve (file base-directory visited)
@@ -101,6 +104,7 @@ VISITED is the list of already-visited files for cycle detection."
    (lambda (match)
      (let* ((relative-path (match-string 1 match))
             (absolute-path (expand-file-name relative-path base-directory)))
+       (approve-log--message "Resolving include: %s" relative-path)
        (approve-graphql--resolve absolute-path base-directory visited)))
    content
    t t))
