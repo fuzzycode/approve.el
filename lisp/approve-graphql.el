@@ -53,7 +53,7 @@
 Include paths in `${include:...}' directives are resolved relative
 to this directory.")
 
-(defconst approve--graphql-include-regexp
+(defconst approve-graphql--include-regexp
   "\\${include:\\([^}]+\\)}"
   "Regexp matching include directives in GraphQL files.
 Group 1 captures the relative file path.")
@@ -70,9 +70,9 @@ resolved.  Cyclic dependencies are detected and signaled as errors."
          (absolute (if (file-name-absolute-p file)
                        file
                      (expand-file-name file base))))
-    (approve--graphql-resolve absolute base nil)))
+    (approve-graphql--resolve absolute base nil)))
 
-(defun approve--graphql-resolve (file base-directory visited)
+(defun approve-graphql--resolve (file base-directory visited)
   "Resolve GraphQL FILE, expanding include directives.
 
 BASE-DIRECTORY is the root for resolving relative include paths.
@@ -88,19 +88,19 @@ cycle detection."
                      (insert-file-contents absolute)
                      (buffer-string)))
           (new-visited (cons absolute visited)))
-      (approve--graphql-expand-includes content base-directory new-visited))))
+      (approve-graphql--expand-includes content base-directory new-visited))))
 
-(defun approve--graphql-expand-includes (content base-directory visited)
+(defun approve-graphql--expand-includes (content base-directory visited)
   "Expand all include directives in CONTENT.
 
 BASE-DIRECTORY is the root for resolving relative include paths.
 VISITED is the list of already-visited files for cycle detection."
   (replace-regexp-in-string
-   approve--graphql-include-regexp
+   approve-graphql--include-regexp
    (lambda (match)
      (let* ((relative-path (match-string 1 match))
             (absolute-path (expand-file-name relative-path base-directory)))
-       (approve--graphql-resolve absolute-path base-directory visited)))
+       (approve-graphql--resolve absolute-path base-directory visited)))
    content
    t t))
 
