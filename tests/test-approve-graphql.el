@@ -109,7 +109,7 @@
                                   :base-directory test-approve-graphql--base-dir)
             :to-throw 'error))
 
-  (it "allows the same fragment to be included from multiple files"
+  (it "deduplicates fragments included from multiple files"
     (test-approve-graphql--setup-file
      "fragments/shared.graphql"
      "fragment Shared on Node { id }")
@@ -126,7 +126,14 @@
                                         :base-directory test-approve-graphql--base-dir)))
       (expect result :to-match "query A")
       (expect result :to-match "query B")
-      (expect result :not :to-match "\\${include:")))
+      (expect result :not :to-match "\\${include:")
+      ;; Fragment should appear exactly once
+      (let ((count 0)
+            (start 0))
+        (while (string-match "fragment Shared" result start)
+          (setq count (1+ count)
+                start (match-end 0)))
+        (expect count :to-equal 1))))
 
   (it "signals an error for missing files"
     (expect (approve-graphql-load "nonexistent.graphql"

@@ -68,44 +68,54 @@ FILE is a path relative to BASE-DIRECTORY, or an absolute path.
 BASE-DIRECTORY defaults to `approve-graphql-base-directory'.
 
 Include directives of the form ${include:path} are recursively
-resolved.  Cyclic dependencies are detected and signaled as errors."
+resolved.  Each file is included at most once (subsequent includes
+of the same file are replaced with an empty string).  Cyclic
+dependencies are detected and signaled as errors."
   (let* ((base (or base-directory approve-graphql-base-directory))
          (absolute (if (file-name-absolute-p file)
                        file
-                     (expand-file-name file base))))
+                     (expand-file-name file base)))
+         (included (make-hash-table :test 'equal)))
     (approve-log--message "Loading GraphQL file: %s" absolute)
-    (approve-graphql--resolve absolute base nil)))
+    (approve-graphql--resolve absolute base nil included)))
 
-(defun approve-graphql--resolve (file base-directory visited)
+(cl-defun approve-graphql--resolve (file base-directory visited included)
   "Resolve GraphQL FILE, expanding include directives.
 
 BASE-DIRECTORY is the root for resolving relative include paths.
 VISITED is a list of already-visited absolute file paths for
-cycle detection."
+cycle detection (per-branch).
+INCLUDED is a hash table of all files already included for
+deduplication (across all branches)."
   (let ((absolute (expand-file-name file)))
     (when (member absolute visited)
       (error "Cyclic GraphQL include detected: %s (visited: %s)"
              absolute (string-join visited " -> ")))
+    (when (gethash absolute included)
+      (approve-log--message "Skipping duplicate include: %s" absolute)
+      (cl-return-from approve-graphql--resolve ""))
     (unless (file-exists-p absolute)
       (error "GraphQL file not found: %s" absolute))
+    (puthash absolute t included)
     (let ((content (with-temp-buffer
                      (insert-file-contents absolute)
                      (buffer-string)))
           (new-visited (cons absolute visited)))
-      (approve-graphql--expand-includes content base-directory new-visited))))
+      (approve-graphql--expand-includes content base-directory new-visited included))))
 
-(defun approve-graphql--expand-includes (content base-directory visited)
+(defun approve-graphql--expand-includes (content base-directory visited included)
   "Expand all include directives in CONTENT.
 
 BASE-DIRECTORY is the root for resolving relative include paths.
-VISITED is the list of already-visited files for cycle detection."
+VISITED is the list of already-visited files for cycle detection.
+INCLUDED is a hash table of all files already included for deduplication."
   (replace-regexp-in-string
    approve-graphql--include-regexp
    (lambda (match)
      (let* ((relative-path (match-string 1 match))
             (absolute-path (expand-file-name relative-path base-directory)))
        (approve-log--message "Resolving include: %s" relative-path)
-       (approve-graphql--resolve absolute-path base-directory visited)))
+       (approve-graphql--resolve absolute-path base-directory visited included)))
    content
    t t))
 
