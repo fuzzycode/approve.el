@@ -4,6 +4,7 @@
 ;;
 ;; Author: Björn Larsson <develop@bjornlarsson.net>
 ;; URL: https://github.com/bjornlarsson/approve
+;; Version: 0.1.0
 ;; Package-Requires: ((emacs "29.1"))
 
 ;; This file is part of Approve.
