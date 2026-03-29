@@ -1,0 +1,7 @@
+fragment ReactionGroupFields on ReactionGroup {
+  content
+  reactors {
+    totalCount
+  }
+  viewerHasReacted
+}

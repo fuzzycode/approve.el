@@ -1,0 +1,10 @@
+fragment GitActorFields on GitActor {
+  name
+  email
+
+  user {
+    __typename
+    login
+    url
+  }
+}

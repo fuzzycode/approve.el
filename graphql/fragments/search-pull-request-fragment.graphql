@@ -1,0 +1,31 @@
+${include:fragments/actor-fragment.graphql}
+
+# Lightweight PR fragment for search results
+# Contains only the fields needed for dashboard display
+fragment SearchPullRequestFields on PullRequest {
+  __typename
+  id
+  number
+  title
+  url
+  state
+  isDraft
+  createdAt
+  updatedAt
+  reviewDecision
+  author {
+    ...ActorFields
+  }
+  repository {
+    name
+    owner {
+      login
+    }
+  }
+  labels(first: 5) {
+    nodes {
+      name
+      color
+    }
+  }
+}
