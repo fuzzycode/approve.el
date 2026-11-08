@@ -440,6 +440,10 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
         (expect (approve-api-in-flight-count) :to-equal 0))))
 
   (it "calls the debugger first when debug-on-error is set"
+    ;; Under `make cover' edebug instruments the code and binds `debugger'
+    ;; to its own, which waits for input in batch: skip it there.
+    (assume (not (get 'approve-api--deliver 'edebug))
+            "edebug (make cover) owns the debugger in instrumented code")
     (test-approve-api--with-fake
       (let* ((entered nil)
              (debug-on-error t)

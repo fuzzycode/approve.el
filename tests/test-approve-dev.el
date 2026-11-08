@@ -310,14 +310,24 @@
   (it "records the loading plan through the installed transport and writes it"
     (let* ((directory (make-temp-file "approve-dev-record-" t))
            (requests nil)
+           (empty '((totalCount . 0)
+                    (pageInfo (hasNextPage) (endCursor))
+                    (nodes)))
+           ;; Every list of the loading plan, empty, as GitHub answers for
+           ;; a PR without files, threads, events, commits or checks.
+           (pull-request `((__typename . "PullRequest") (id . "PR_1")
+                           (files ,@empty) (reviewThreads ,@empty)
+                           (timelineItems ,@empty) (commits ,@empty)
+                           (statusCheckRollup (__typename . "StatusCheckRollup")
+                                              (id . "SCR_1")
+                                              (contexts ,@empty))))
            (inner (lambda (request)
                     (push (approve-dev-request-key request) requests)
                     (run-at-time
                      0 nil (plist-get request :on-success)
                      (if (eq (plist-get request :kind) 'rest)
                          '(((filename . "a.go")))
-                       '((data (repository (pullRequest (__typename . "PullRequest")
-                                                        (id . "PR_1")))
+                       `((data (repository (pullRequest ,@pull-request))
                                (viewer (__typename . "User") (login . "vera")))))
                      '(("X-RateLimit-Remaining" . "4990")))
                     nil))
@@ -325,6 +335,7 @@
            (approve-api-timeout nil)
            written)
       (spy-on 'message)
+      (spy-on 'approve-log)
       (unwind-protect
           (progn
             (approve-dev-record "https://github.com/acme/rocket/pull/7" "rec"
@@ -347,7 +358,11 @@
                                   "queries/pull-request-commits.graphql"
                                   "queries/pull-request-checks.graphql"
                                   "/repos/acme/rocket/pulls/7/files"))
-              (expect (length requests) :to-equal 7)))
+              (expect (length requests) :to-equal 7)
+              ;; Every request succeeded: no failure was logged.
+              (expect (seq-filter (lambda (args) (memq (car args) '(warn error)))
+                                  (spy-calls-all-args 'approve-log))
+                      :to-equal nil)))
         (delete-directory directory t)))))
 
 ;;; The committed fixtures
