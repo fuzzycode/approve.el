@@ -272,8 +272,8 @@ are the (KEY . VALUE) pairs of the original, or nil."
   "Return CONNECTION unwrapped to its nodes, keeping its paging data.
 Only the outermost paged connections of a page are appended: below a
 connection that carries `pageInfo', the nodes are normalized as a
-first page.  A connection without `pageInfo' (such as `headCommit:
-commits(last: 1)') passes the page on to its nodes."
+first page.  A connection without `pageInfo' (such as `commits(last:
+1)' around a head commit) passes the page on to its nodes."
   (let ((nodes (let ((approve-model--append-pages
                       (and approve-model--append-pages
                            (not (assq 'pageInfo connection)))))

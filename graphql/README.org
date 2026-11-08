@@ -16,7 +16,7 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   | =pull-request-threads.graphql=  | =reviewThreads=, pages of 100                  |
   | =pull-request-timeline.graphql= | =timelineItems= (the conversation), pages      |
   | =pull-request-commits.graphql=  | =commits=, pages of 100                        |
-  | =pull-request-checks.graphql=   | head commit's check runs and statuses, pages   |
+  | =pull-request-checks.graphql=   | status rollup's check runs and statuses, pages |
   All take =$owner=, =$name=, =$number=; the paged ones also =$after=.
 
 * Includes
@@ -43,12 +43,12 @@ The store depends on these (store contract):
    - =pendingReviews: reviews(states: PENDING, first: 1)= on PullRequest.
    - The PR's paged lists (=files=, =reviewThreads=, =timelineItems=,
      =commits=) keep their plain names only in their own query; elsewhere
-     they are aliased (=commitCount: commits { totalCount }=,
-     =headCommit: commits(last: 1)=).
+     they are aliased (=commitCount: commits { totalCount }=).
    - =commentCount: comments { totalCount }= on reviews, because the
      pending review selects the plain =comments= list.
    - =contextCounts: contexts { … }= on the core's =statusCheckRollup=,
-     because the checks query pages the plain =contexts=.
+     because the checks query pages the plain =contexts= of the same
+     rollup (=pullRequest.statusCheckRollup=, the head commit's).
    - =mergeCommit: commit= on =MergedEvent= in the timeline: GraphQL
      rejects one response name with two types there
      (=PullRequestCommit.commit= is non-null).

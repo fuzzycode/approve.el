@@ -156,7 +156,7 @@ schema on 2026-11-08.
 |                        | isOutdated, subjectType, viewerCan*, comments(first: 50)                                                     |
 | Conversation           | =pullRequest.timelineItems(first: 100, itemTypes: […])=                                                      |
 | Commits                | =pullRequest.commits(first: 100)= → oid, message, author, statusCheckRollup                                  |
-| Checks detail          | =commit.statusCheckRollup.contexts= → CheckRun / StatusContext                                               |
+| Checks detail          | =pullRequest.statusCheckRollup.contexts(first: 100)= → CheckRun / StatusContext                              |
 | Patch text             | REST =GET /repos/{o}/{r}/pulls/{n}/files?per_page=100&page=…= (≤ 3000 files)                                 |
 | Commit range diff      | REST =GET /repos/{o}/{r}/compare/{base}...{head}=                                                            |
 | File contents          | =repository.object(expression: "OID:path") { ... on Blob { text isBinary byteSize } }=                       |

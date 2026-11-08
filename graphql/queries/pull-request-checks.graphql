@@ -2,38 +2,28 @@ ${include:fragments/check-run.graphql}
 ${include:fragments/status-context.graphql}
 
 # Checks detail (F16, loaded lazily): the check runs and statuses of the
-# head commit, 100 per page.  The head commit is aliased (headCommit), so
-# this never replaces the PR's commits list.
+# PR's status rollup (its head commit's), 100 per page.  The core query
+# selects the same StatusCheckRollup with the contextCounts alias, so
+# this never replaces those counts.
 query PullRequestChecks($owner: String!, $name: String!, $number: Int!, $after: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       __typename
       id
-      headCommit: commits(last: 1) {
-        nodes {
-          __typename
-          id
-          commit {
+      statusCheckRollup {
+        __typename
+        id
+        state
+        contexts(first: 100, after: $after) {
+          totalCount
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
             __typename
-            id
-            oid
-            statusCheckRollup {
-              __typename
-              id
-              state
-              contexts(first: 100, after: $after) {
-                totalCount
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-                nodes {
-                  __typename
-                  ...CheckRunFields
-                  ...StatusContextFields
-                }
-              }
-            }
+            ...CheckRunFields
+            ...StatusContextFields
           }
         }
       }
