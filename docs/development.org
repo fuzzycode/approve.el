@@ -100,7 +100,9 @@ and what goes to GitHub.
 
 - Fixtures are recorded with =approve-dev-record= from real PRs, then scrubbed:
   no tokens, and personal data replaced where possible.  Their format is in
-  [[file:../tests/fixtures/README.org][tests/fixtures/README.org]].
+  [[file:../tests/fixtures/README.org][tests/fixtures/README.org]].  Until real recordings replace them, the
+  fixtures are synthetic, built by =tests/fixtures/generate.el= in the same
+  format.
 - No test touches the network or the user's config (=emacs -Q= in batch).
 - Development helpers (=approve-dev.el=) are not packaged.  The parts tests
   rely on (fixture files, replay, recording) have tests of their own.

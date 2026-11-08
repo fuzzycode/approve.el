@@ -1,0 +1,1457 @@
+{
+  "approveFixture": 1,
+  "name": "small",
+  "description": "A small pull request: three files, two threads (one with a reply), one conversation comment, no pending review, passing checks.",
+  "pullRequest": {
+    "host": "github.com",
+    "owner": "acme-example",
+    "repo": "greeter",
+    "number": 7,
+    "viewer": "vera-example"
+  },
+  "exchanges": [
+    {
+      "request": {
+        "kind": "graphql",
+        "name": "queries/pull-request.graphql",
+        "variables": {
+          "owner": "acme-example",
+          "name": "greeter",
+          "number": 7
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "X-RateLimit-Limit": "5000",
+          "X-RateLimit-Remaining": "4999",
+          "X-RateLimit-Reset": "1790848800",
+          "X-RateLimit-Used": "1",
+          "X-RateLimit-Resource": "graphql"
+        },
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "__typename": "PullRequest",
+                "id": "PR_kwDO8Dd5Ob7Ei0qgq0",
+                "number": 7,
+                "url": "https://github.com/acme-example/greeter/pull/7",
+                "title": "Greet people by name",
+                "state": "OPEN",
+                "isDraft": false,
+                "locked": false,
+                "activeLockReason": null,
+                "createdAt": "2026-10-01T09:00:00Z",
+                "updatedAt": "2026-10-01T10:30:00Z",
+                "closed": false,
+                "closedAt": null,
+                "merged": false,
+                "mergedAt": null,
+                "mergedBy": null,
+                "author": {
+                  "__typename": "User",
+                  "id": "U_kgDOUisnajVr3zkBPf",
+                  "login": "alice-example",
+                  "url": "https://github.com/alice-example",
+                  "name": "Alice Example"
+                },
+                "authorAssociation": "MEMBER",
+                "body": "Greets by name instead of `World`.\n\nCloses #3.",
+                "bodyHTML": "<p dir=\"auto\">Greets by name instead of <code class=\"notranslate\">World</code>.</p>\n<p dir=\"auto\">Closes #3.</p>",
+                "lastEditedAt": null,
+                "includesCreatedEdit": false,
+                "baseRefName": "main",
+                "baseRefOid": "7f9e0af4f70b2f06c05ea5bb8a3ef754c9c8318f",
+                "headRefName": "greet-by-name",
+                "headRefOid": "70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                "isCrossRepository": false,
+                "baseRef": {
+                  "__typename": "Ref",
+                  "id": "REF_kwDObYb7jUuzwIoSwA",
+                  "name": "main",
+                  "prefix": "refs/heads/",
+                  "repository": {
+                    "__typename": "Repository",
+                    "id": "R_kwDOxyJITtqiFx31zT",
+                    "nameWithOwner": "acme-example/greeter",
+                    "url": "https://github.com/acme-example/greeter",
+                    "isFork": false,
+                    "owner": {
+                      "__typename": "Organization",
+                      "id": "O_kgDOAd61x1o1n1tKFz",
+                      "login": "acme-example",
+                      "url": "https://github.com/acme-example"
+                    }
+                  }
+                },
+                "headRef": {
+                  "__typename": "Ref",
+                  "id": "REF_kwDOuYYzQYlSykkyeG",
+                  "name": "greet-by-name",
+                  "prefix": "refs/heads/",
+                  "repository": {
+                    "__typename": "Repository",
+                    "id": "R_kwDOxyJITtqiFx31zT",
+                    "nameWithOwner": "acme-example/greeter",
+                    "url": "https://github.com/acme-example/greeter",
+                    "isFork": false,
+                    "owner": {
+                      "__typename": "Organization",
+                      "id": "O_kgDOAd61x1o1n1tKFz",
+                      "login": "acme-example",
+                      "url": "https://github.com/acme-example"
+                    }
+                  }
+                },
+                "headRepositoryOwner": {
+                  "__typename": "Organization",
+                  "id": "O_kgDOAd61x1o1n1tKFz",
+                  "login": "acme-example",
+                  "url": "https://github.com/acme-example"
+                },
+                "headRepository": {
+                  "__typename": "Repository",
+                  "id": "R_kwDOxyJITtqiFx31zT",
+                  "nameWithOwner": "acme-example/greeter",
+                  "url": "https://github.com/acme-example/greeter"
+                },
+                "additions": 27,
+                "deletions": 4,
+                "changedFiles": 3,
+                "commitCount": {
+                  "totalCount": 2
+                },
+                "threadCount": {
+                  "totalCount": 2
+                },
+                "labels": {
+                  "nodes": []
+                },
+                "assignees": {
+                  "nodes": []
+                },
+                "milestone": null,
+                "reviewRequests": {
+                  "nodes": [
+                    {
+                      "__typename": "ReviewRequest",
+                      "id": "RR_kwDODHjwOqJ8_nsUoq",
+                      "asCodeOwner": false,
+                      "requestedReviewer": {
+                        "__typename": "User",
+                        "id": "U_kgDOSBgazSKz7a68ik",
+                        "login": "bob-example",
+                        "url": "https://github.com/bob-example",
+                        "name": "Bob Example"
+                      }
+                    }
+                  ]
+                },
+                "latestOpinionatedReviews": {
+                  "nodes": []
+                },
+                "reviewDecision": "REVIEW_REQUIRED",
+                "mergeable": "MERGEABLE",
+                "mergeStateStatus": "BLOCKED",
+                "statusCheckRollup": {
+                  "__typename": "StatusCheckRollup",
+                  "id": "SCR_kwDOlcxtdg60qxZ63r",
+                  "state": "SUCCESS",
+                  "contextCounts": {
+                    "checkRunCount": 2,
+                    "checkRunCountsByState": [
+                      {
+                        "state": "ACTION_REQUIRED",
+                        "count": 0
+                      },
+                      {
+                        "state": "CANCELLED",
+                        "count": 0
+                      },
+                      {
+                        "state": "COMPLETED",
+                        "count": 0
+                      },
+                      {
+                        "state": "FAILURE",
+                        "count": 0
+                      },
+                      {
+                        "state": "IN_PROGRESS",
+                        "count": 0
+                      },
+                      {
+                        "state": "NEUTRAL",
+                        "count": 0
+                      },
+                      {
+                        "state": "PENDING",
+                        "count": 0
+                      },
+                      {
+                        "state": "QUEUED",
+                        "count": 0
+                      },
+                      {
+                        "state": "SKIPPED",
+                        "count": 0
+                      },
+                      {
+                        "state": "STALE",
+                        "count": 0
+                      },
+                      {
+                        "state": "STARTUP_FAILURE",
+                        "count": 0
+                      },
+                      {
+                        "state": "SUCCESS",
+                        "count": 2
+                      },
+                      {
+                        "state": "TIMED_OUT",
+                        "count": 0
+                      },
+                      {
+                        "state": "WAITING",
+                        "count": 0
+                      }
+                    ],
+                    "statusContextCount": 0,
+                    "statusContextCountsByState": [
+                      {
+                        "state": "EXPECTED",
+                        "count": 0
+                      },
+                      {
+                        "state": "ERROR",
+                        "count": 0
+                      },
+                      {
+                        "state": "FAILURE",
+                        "count": 0
+                      },
+                      {
+                        "state": "PENDING",
+                        "count": 0
+                      },
+                      {
+                        "state": "SUCCESS",
+                        "count": 0
+                      }
+                    ]
+                  }
+                },
+                "closingIssuesReferences": {
+                  "nodes": [
+                    {
+                      "__typename": "Issue",
+                      "id": "I_kwDOikG7WbEoqP_SAI",
+                      "number": 3,
+                      "title": "Say hello to the user",
+                      "state": "OPEN",
+                      "url": "https://github.com/acme-example/greeter/issues/3"
+                    }
+                  ]
+                },
+                "reactionGroups": [
+                  {
+                    "content": "THUMBS_UP",
+                    "viewerHasReacted": true,
+                    "reactors": {
+                      "totalCount": 3
+                    }
+                  },
+                  {
+                    "content": "THUMBS_DOWN",
+                    "viewerHasReacted": false,
+                    "reactors": {
+                      "totalCount": 0
+                    }
+                  },
+                  {
+                    "content": "LAUGH",
+                    "viewerHasReacted": false,
+                    "reactors": {
+                      "totalCount": 0
+                    }
+                  },
+                  {
+                    "content": "HOORAY",
+                    "viewerHasReacted": false,
+                    "reactors": {
+                      "totalCount": 0
+                    }
+                  },
+                  {
+                    "content": "CONFUSED",
+                    "viewerHasReacted": false,
+                    "reactors": {
+                      "totalCount": 0
+                    }
+                  },
+                  {
+                    "content": "HEART",
+                    "viewerHasReacted": false,
+                    "reactors": {
+                      "totalCount": 0
+                    }
+                  },
+                  {
+                    "content": "ROCKET",
+                    "viewerHasReacted": false,
+                    "reactors": {
+                      "totalCount": 1
+                    }
+                  },
+                  {
+                    "content": "EYES",
+                    "viewerHasReacted": false,
+                    "reactors": {
+                      "totalCount": 0
+                    }
+                  }
+                ],
+                "viewerDidAuthor": false,
+                "viewerSubscription": "UNSUBSCRIBED",
+                "viewerCanUpdate": false,
+                "viewerCanReact": true,
+                "viewerCanSubscribe": true,
+                "viewerCanLabel": false,
+                "viewerCanAssign": false,
+                "viewerCanClose": false,
+                "viewerCanReopen": false,
+                "viewerCanApplySuggestion": false,
+                "viewerCanEditFiles": false,
+                "viewerCanUpdateBranch": false,
+                "viewerCanDeleteHeadRef": false,
+                "viewerCanEnableAutoMerge": false,
+                "viewerCanDisableAutoMerge": false,
+                "viewerCanMergeAsAdmin": false,
+                "viewerLatestReview": null,
+                "pendingReviews": {
+                  "nodes": []
+                }
+              }
+            },
+            "viewer": {
+              "__typename": "User",
+              "id": "U_kgDOiG_tAXiSV0JCKN",
+              "login": "vera-example",
+              "name": "Vera Example",
+              "url": "https://github.com/vera-example"
+            },
+            "rateLimit": {
+              "cost": 1,
+              "remaining": 4999,
+              "resetAt": "2026-10-01T10:00:00Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "graphql",
+        "name": "queries/pull-request-files.graphql",
+        "variables": {
+          "owner": "acme-example",
+          "name": "greeter",
+          "number": 7
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "X-RateLimit-Limit": "5000",
+          "X-RateLimit-Remaining": "4998",
+          "X-RateLimit-Reset": "1790848800",
+          "X-RateLimit-Used": "2",
+          "X-RateLimit-Resource": "graphql"
+        },
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "__typename": "PullRequest",
+                "id": "PR_kwDO8Dd5Ob7Ei0qgq0",
+                "files": {
+                  "totalCount": 3,
+                  "pageInfo": {
+                    "hasNextPage": false,
+                    "endCursor": "Mw=="
+                  },
+                  "nodes": [
+                    {
+                      "path": "README.md",
+                      "additions": 2,
+                      "deletions": 1,
+                      "changeType": "MODIFIED",
+                      "viewerViewedState": "VIEWED"
+                    },
+                    {
+                      "path": "src/greeter/greet.py",
+                      "additions": 7,
+                      "deletions": 3,
+                      "changeType": "MODIFIED",
+                      "viewerViewedState": "UNVIEWED"
+                    },
+                    {
+                      "path": "tests/test_greet.py",
+                      "additions": 18,
+                      "deletions": 0,
+                      "changeType": "ADDED",
+                      "viewerViewedState": "UNVIEWED"
+                    }
+                  ]
+                }
+              }
+            },
+            "rateLimit": {
+              "cost": 1,
+              "remaining": 4998,
+              "resetAt": "2026-10-01T10:00:00Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "graphql",
+        "name": "queries/pull-request-threads.graphql",
+        "variables": {
+          "owner": "acme-example",
+          "name": "greeter",
+          "number": 7
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "X-RateLimit-Limit": "5000",
+          "X-RateLimit-Remaining": "4997",
+          "X-RateLimit-Reset": "1790848800",
+          "X-RateLimit-Used": "3",
+          "X-RateLimit-Resource": "graphql"
+        },
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "__typename": "PullRequest",
+                "id": "PR_kwDO8Dd5Ob7Ei0qgq0",
+                "reviewThreads": {
+                  "totalCount": 2,
+                  "pageInfo": {
+                    "hasNextPage": false,
+                    "endCursor": "Y3Vyc29yOnYyOjI="
+                  },
+                  "nodes": [
+                    {
+                      "__typename": "PullRequestReviewThread",
+                      "id": "PRRT_kwDOWqpJApSdWo6FGv",
+                      "path": "src/greeter/greet.py",
+                      "line": 2,
+                      "startLine": null,
+                      "originalLine": 2,
+                      "originalStartLine": null,
+                      "diffSide": "RIGHT",
+                      "startDiffSide": null,
+                      "subjectType": "LINE",
+                      "isResolved": false,
+                      "isOutdated": false,
+                      "resolvedBy": null,
+                      "viewerCanReply": true,
+                      "viewerCanResolve": false,
+                      "viewerCanUnresolve": false,
+                      "comments": {
+                        "totalCount": 2,
+                        "pageInfo": {
+                          "hasNextPage": false,
+                          "endCursor": "Y3Vyc29yOnYyOjI="
+                        },
+                        "nodes": [
+                          {
+                            "__typename": "PullRequestReviewComment",
+                            "id": "PRRC_kwDOJZiHrMkRKhX3E6",
+                            "url": "https://github.com/acme-example/greeter/pull/7#discussion_r3100000003",
+                            "author": {
+                              "__typename": "User",
+                              "id": "U_kgDOSBgazSKz7a68ik",
+                              "login": "bob-example",
+                              "url": "https://github.com/bob-example",
+                              "name": "Bob Example"
+                            },
+                            "authorAssociation": "COLLABORATOR",
+                            "body": "Should this handle an empty `name`?",
+                            "bodyHTML": "<p dir=\"auto\">Should this handle an empty <code class=\"notranslate\">name</code>?</p>",
+                            "createdAt": "2026-10-01T10:00:00Z",
+                            "lastEditedAt": null,
+                            "includesCreatedEdit": false,
+                            "isMinimized": false,
+                            "minimizedReason": null,
+                            "state": "SUBMITTED",
+                            "path": "src/greeter/greet.py",
+                            "line": 2,
+                            "startLine": null,
+                            "originalLine": 2,
+                            "originalStartLine": null,
+                            "outdated": false,
+                            "subjectType": "LINE",
+                            "replyTo": null,
+                            "pullRequestReview": {
+                              "__typename": "PullRequestReview",
+                              "id": "PRR_kwDOuWT3OzpBaxs5r9"
+                            },
+                            "viewerDidAuthor": false,
+                            "viewerCanUpdate": false,
+                            "viewerCanDelete": false,
+                            "viewerCanReact": true,
+                            "viewerCanMinimize": false,
+                            "viewerCanUnminimize": false,
+                            "reactionGroups": [
+                              {
+                                "content": "THUMBS_UP",
+                                "viewerHasReacted": true,
+                                "reactors": {
+                                  "totalCount": 2
+                                }
+                              },
+                              {
+                                "content": "THUMBS_DOWN",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "LAUGH",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "HOORAY",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "CONFUSED",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "HEART",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "ROCKET",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "EYES",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 1
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "__typename": "PullRequestReviewComment",
+                            "id": "PRRC_kwDONOBMWqlnwoiCNQ",
+                            "url": "https://github.com/acme-example/greeter/pull/7#discussion_r3100000006",
+                            "author": {
+                              "__typename": "User",
+                              "id": "U_kgDOUisnajVr3zkBPf",
+                              "login": "alice-example",
+                              "url": "https://github.com/alice-example",
+                              "name": "Alice Example"
+                            },
+                            "authorAssociation": "MEMBER",
+                            "body": "Good point, it falls back to `World` now.",
+                            "bodyHTML": "<p dir=\"auto\">Good point, it falls back to <code class=\"notranslate\">World</code> now.</p>",
+                            "createdAt": "2026-10-01T10:15:00Z",
+                            "lastEditedAt": null,
+                            "includesCreatedEdit": false,
+                            "isMinimized": false,
+                            "minimizedReason": null,
+                            "state": "SUBMITTED",
+                            "path": "src/greeter/greet.py",
+                            "line": 2,
+                            "startLine": null,
+                            "originalLine": 2,
+                            "originalStartLine": null,
+                            "outdated": false,
+                            "subjectType": "LINE",
+                            "replyTo": {
+                              "__typename": "PullRequestReviewComment",
+                              "id": "PRRC_kwDOJZiHrMkRKhX3E6"
+                            },
+                            "pullRequestReview": {
+                              "__typename": "PullRequestReview",
+                              "id": "PRR_kwDOJTYf2br-wg-zik"
+                            },
+                            "viewerDidAuthor": false,
+                            "viewerCanUpdate": false,
+                            "viewerCanDelete": false,
+                            "viewerCanReact": true,
+                            "viewerCanMinimize": false,
+                            "viewerCanUnminimize": false,
+                            "reactionGroups": [
+                              {
+                                "content": "THUMBS_UP",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "THUMBS_DOWN",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "LAUGH",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "HOORAY",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "CONFUSED",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "HEART",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "ROCKET",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "EYES",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "__typename": "PullRequestReviewThread",
+                      "id": "PRRT_kwDO-2o064tNj45ekp",
+                      "path": "tests/test_greet.py",
+                      "line": 5,
+                      "startLine": null,
+                      "originalLine": 5,
+                      "originalStartLine": null,
+                      "diffSide": "RIGHT",
+                      "startDiffSide": null,
+                      "subjectType": "LINE",
+                      "isResolved": false,
+                      "isOutdated": false,
+                      "resolvedBy": null,
+                      "viewerCanReply": true,
+                      "viewerCanResolve": false,
+                      "viewerCanUnresolve": false,
+                      "comments": {
+                        "totalCount": 1,
+                        "pageInfo": {
+                          "hasNextPage": false,
+                          "endCursor": "Y3Vyc29yOnYyOjE="
+                        },
+                        "nodes": [
+                          {
+                            "__typename": "PullRequestReviewComment",
+                            "id": "PRRC_kwDOnaKBhff_AXeUZv",
+                            "url": "https://github.com/acme-example/greeter/pull/7#discussion_r3100000008",
+                            "author": {
+                              "__typename": "User",
+                              "id": "U_kgDOSBgazSKz7a68ik",
+                              "login": "bob-example",
+                              "url": "https://github.com/bob-example",
+                              "name": "Bob Example"
+                            },
+                            "authorAssociation": "COLLABORATOR",
+                            "body": "Nit: the test name could say what it checks.",
+                            "bodyHTML": "<p dir=\"auto\">Nit: the test name could say what it checks.</p>",
+                            "createdAt": "2026-10-01T10:01:00Z",
+                            "lastEditedAt": null,
+                            "includesCreatedEdit": false,
+                            "isMinimized": false,
+                            "minimizedReason": null,
+                            "state": "SUBMITTED",
+                            "path": "tests/test_greet.py",
+                            "line": 5,
+                            "startLine": null,
+                            "originalLine": 5,
+                            "originalStartLine": null,
+                            "outdated": false,
+                            "subjectType": "LINE",
+                            "replyTo": null,
+                            "pullRequestReview": {
+                              "__typename": "PullRequestReview",
+                              "id": "PRR_kwDOuWT3OzpBaxs5r9"
+                            },
+                            "viewerDidAuthor": false,
+                            "viewerCanUpdate": false,
+                            "viewerCanDelete": false,
+                            "viewerCanReact": true,
+                            "viewerCanMinimize": false,
+                            "viewerCanUnminimize": false,
+                            "reactionGroups": [
+                              {
+                                "content": "THUMBS_UP",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "THUMBS_DOWN",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "LAUGH",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "HOORAY",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "CONFUSED",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "HEART",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "ROCKET",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              },
+                              {
+                                "content": "EYES",
+                                "viewerHasReacted": false,
+                                "reactors": {
+                                  "totalCount": 0
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "rateLimit": {
+              "cost": 1,
+              "remaining": 4997,
+              "resetAt": "2026-10-01T10:00:00Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "graphql",
+        "name": "queries/pull-request-timeline.graphql",
+        "variables": {
+          "owner": "acme-example",
+          "name": "greeter",
+          "number": 7
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "X-RateLimit-Limit": "5000",
+          "X-RateLimit-Remaining": "4996",
+          "X-RateLimit-Reset": "1790848800",
+          "X-RateLimit-Used": "4",
+          "X-RateLimit-Resource": "graphql"
+        },
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "__typename": "PullRequest",
+                "id": "PR_kwDO8Dd5Ob7Ei0qgq0",
+                "timelineItems": {
+                  "totalCount": 5,
+                  "pageInfo": {
+                    "hasNextPage": false,
+                    "endCursor": "Y3Vyc29yOnYyOjU="
+                  },
+                  "nodes": [
+                    {
+                      "__typename": "PullRequestCommit",
+                      "id": "PURC_kwDOBUVWEFiDlT2u7h",
+                      "commit": {
+                        "__typename": "Commit",
+                        "id": "C_kwDOxM8Kzx8sNcdpV2",
+                        "oid": "c4cf0acf1f2c35c7695768a130e8e6009666f51d",
+                        "abbreviatedOid": "c4cf0ac",
+                        "messageHeadline": "Greet by name",
+                        "committedDate": "2026-10-01T08:30:00Z",
+                        "url": "https://github.com/acme-example/greeter/commit/c4cf0acf1f2c35c7695768a130e8e6009666f51d",
+                        "author": {
+                          "name": "Alice Example",
+                          "email": "alice@example.com",
+                          "date": "2026-10-01T08:30:00+00:00",
+                          "user": {
+                            "__typename": "User",
+                            "id": "U_kgDOUisnajVr3zkBPf",
+                            "login": "alice-example",
+                            "name": "Alice Example",
+                            "url": "https://github.com/alice-example"
+                          }
+                        },
+                        "statusCheckRollup": {
+                          "__typename": "StatusCheckRollup",
+                          "id": "SCR_kwDOOAsU7ts9zBni7D",
+                          "state": "SUCCESS"
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "PullRequestReview",
+                      "id": "PRR_kwDOuWT3OzpBaxs5r9",
+                      "url": "https://github.com/acme-example/greeter/pull/7#pullrequestreview-3300000001",
+                      "author": {
+                        "__typename": "User",
+                        "id": "U_kgDOSBgazSKz7a68ik",
+                        "login": "bob-example",
+                        "url": "https://github.com/bob-example",
+                        "name": "Bob Example"
+                      },
+                      "authorAssociation": "COLLABORATOR",
+                      "state": "COMMENTED",
+                      "body": "A couple of small things.",
+                      "bodyHTML": "<p dir=\"auto\">A couple of small things.</p>",
+                      "createdAt": "2026-10-01T10:00:00Z",
+                      "submittedAt": "2026-10-01T10:00:00Z",
+                      "lastEditedAt": null,
+                      "includesCreatedEdit": false,
+                      "isMinimized": false,
+                      "minimizedReason": null,
+                      "commentCount": {
+                        "totalCount": 2
+                      },
+                      "viewerDidAuthor": false,
+                      "viewerCanUpdate": false,
+                      "viewerCanDelete": false,
+                      "viewerCanReact": true,
+                      "viewerCanMinimize": false,
+                      "viewerCanUnminimize": false,
+                      "reactionGroups": [
+                        {
+                          "content": "THUMBS_UP",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "THUMBS_DOWN",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "LAUGH",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "HOORAY",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "CONFUSED",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "HEART",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "ROCKET",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "EYES",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "__typename": "PullRequestReview",
+                      "id": "PRR_kwDOJTYf2br-wg-zik",
+                      "url": "https://github.com/acme-example/greeter/pull/7#pullrequestreview-3300000005",
+                      "author": {
+                        "__typename": "User",
+                        "id": "U_kgDOUisnajVr3zkBPf",
+                        "login": "alice-example",
+                        "url": "https://github.com/alice-example",
+                        "name": "Alice Example"
+                      },
+                      "authorAssociation": "MEMBER",
+                      "state": "COMMENTED",
+                      "body": "",
+                      "bodyHTML": "",
+                      "createdAt": "2026-10-01T10:15:00Z",
+                      "submittedAt": "2026-10-01T10:15:00Z",
+                      "lastEditedAt": null,
+                      "includesCreatedEdit": false,
+                      "isMinimized": false,
+                      "minimizedReason": null,
+                      "commentCount": {
+                        "totalCount": 1
+                      },
+                      "viewerDidAuthor": false,
+                      "viewerCanUpdate": false,
+                      "viewerCanDelete": false,
+                      "viewerCanReact": true,
+                      "viewerCanMinimize": false,
+                      "viewerCanUnminimize": false,
+                      "reactionGroups": [
+                        {
+                          "content": "THUMBS_UP",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "THUMBS_DOWN",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "LAUGH",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "HOORAY",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "CONFUSED",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "HEART",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "ROCKET",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "EYES",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "__typename": "PullRequestCommit",
+                      "id": "PURC_kwDOym0w2VlDFMzbAE",
+                      "commit": {
+                        "__typename": "Commit",
+                        "id": "C_kwDOcPYdE7dZJeJn6X",
+                        "oid": "70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                        "abbreviatedOid": "70f61d1",
+                        "messageHeadline": "Fall back to World",
+                        "committedDate": "2026-10-01T10:20:00Z",
+                        "url": "https://github.com/acme-example/greeter/commit/70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                        "author": {
+                          "name": "Alice Example",
+                          "email": "alice@example.com",
+                          "date": "2026-10-01T10:20:00+00:00",
+                          "user": {
+                            "__typename": "User",
+                            "id": "U_kgDOUisnajVr3zkBPf",
+                            "login": "alice-example",
+                            "name": "Alice Example",
+                            "url": "https://github.com/alice-example"
+                          }
+                        },
+                        "statusCheckRollup": {
+                          "__typename": "StatusCheckRollup",
+                          "id": "SCR_kwDOlcxtdg60qxZ63r",
+                          "state": "SUCCESS"
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "IssueComment",
+                      "id": "IC_kwDOThp3BakGidAy2w",
+                      "url": "https://github.com/acme-example/greeter/pull/7#issuecomment-2700000011",
+                      "author": {
+                        "__typename": "User",
+                        "id": "U_kgDOKLkrVu5kuS67ct",
+                        "login": "carol-example",
+                        "url": "https://github.com/carol-example",
+                        "name": "Carol Example"
+                      },
+                      "authorAssociation": "CONTRIBUTOR",
+                      "body": "Nice, this closes #3.",
+                      "bodyHTML": "<p dir=\"auto\">Nice, this closes #3.</p>",
+                      "createdAt": "2026-10-01T10:25:00Z",
+                      "lastEditedAt": null,
+                      "includesCreatedEdit": false,
+                      "isMinimized": false,
+                      "minimizedReason": null,
+                      "viewerDidAuthor": false,
+                      "viewerCanUpdate": false,
+                      "viewerCanDelete": false,
+                      "viewerCanReact": true,
+                      "viewerCanMinimize": false,
+                      "viewerCanUnminimize": false,
+                      "reactionGroups": [
+                        {
+                          "content": "THUMBS_UP",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "THUMBS_DOWN",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "LAUGH",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "HOORAY",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "CONFUSED",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "HEART",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 1
+                          }
+                        },
+                        {
+                          "content": "ROCKET",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        },
+                        {
+                          "content": "EYES",
+                          "viewerHasReacted": false,
+                          "reactors": {
+                            "totalCount": 0
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "rateLimit": {
+              "cost": 1,
+              "remaining": 4996,
+              "resetAt": "2026-10-01T10:00:00Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "graphql",
+        "name": "queries/pull-request-commits.graphql",
+        "variables": {
+          "owner": "acme-example",
+          "name": "greeter",
+          "number": 7
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "X-RateLimit-Limit": "5000",
+          "X-RateLimit-Remaining": "4995",
+          "X-RateLimit-Reset": "1790848800",
+          "X-RateLimit-Used": "5",
+          "X-RateLimit-Resource": "graphql"
+        },
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "__typename": "PullRequest",
+                "id": "PR_kwDO8Dd5Ob7Ei0qgq0",
+                "commits": {
+                  "totalCount": 2,
+                  "pageInfo": {
+                    "hasNextPage": false,
+                    "endCursor": "Y3Vyc29yOnYyOjI="
+                  },
+                  "nodes": [
+                    {
+                      "__typename": "PullRequestCommit",
+                      "id": "PURC_kwDOBUVWEFiDlT2u7h",
+                      "commit": {
+                        "__typename": "Commit",
+                        "id": "C_kwDOxM8Kzx8sNcdpV2",
+                        "oid": "c4cf0acf1f2c35c7695768a130e8e6009666f51d",
+                        "abbreviatedOid": "c4cf0ac",
+                        "messageHeadline": "Greet by name",
+                        "committedDate": "2026-10-01T08:30:00Z",
+                        "url": "https://github.com/acme-example/greeter/commit/c4cf0acf1f2c35c7695768a130e8e6009666f51d",
+                        "author": {
+                          "name": "Alice Example",
+                          "email": "alice@example.com",
+                          "date": "2026-10-01T08:30:00+00:00",
+                          "user": {
+                            "__typename": "User",
+                            "id": "U_kgDOUisnajVr3zkBPf",
+                            "login": "alice-example",
+                            "name": "Alice Example",
+                            "url": "https://github.com/alice-example"
+                          }
+                        },
+                        "statusCheckRollup": {
+                          "__typename": "StatusCheckRollup",
+                          "id": "SCR_kwDOOAsU7ts9zBni7D",
+                          "state": "SUCCESS"
+                        }
+                      }
+                    },
+                    {
+                      "__typename": "PullRequestCommit",
+                      "id": "PURC_kwDOym0w2VlDFMzbAE",
+                      "commit": {
+                        "__typename": "Commit",
+                        "id": "C_kwDOcPYdE7dZJeJn6X",
+                        "oid": "70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                        "abbreviatedOid": "70f61d1",
+                        "messageHeadline": "Fall back to World",
+                        "committedDate": "2026-10-01T10:20:00Z",
+                        "url": "https://github.com/acme-example/greeter/commit/70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                        "author": {
+                          "name": "Alice Example",
+                          "email": "alice@example.com",
+                          "date": "2026-10-01T10:20:00+00:00",
+                          "user": {
+                            "__typename": "User",
+                            "id": "U_kgDOUisnajVr3zkBPf",
+                            "login": "alice-example",
+                            "name": "Alice Example",
+                            "url": "https://github.com/alice-example"
+                          }
+                        },
+                        "statusCheckRollup": {
+                          "__typename": "StatusCheckRollup",
+                          "id": "SCR_kwDOlcxtdg60qxZ63r",
+                          "state": "SUCCESS"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "rateLimit": {
+              "cost": 1,
+              "remaining": 4995,
+              "resetAt": "2026-10-01T10:00:00Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "graphql",
+        "name": "queries/pull-request-checks.graphql",
+        "variables": {
+          "owner": "acme-example",
+          "name": "greeter",
+          "number": 7
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "X-RateLimit-Limit": "5000",
+          "X-RateLimit-Remaining": "4994",
+          "X-RateLimit-Reset": "1790848800",
+          "X-RateLimit-Used": "6",
+          "X-RateLimit-Resource": "graphql"
+        },
+        "body": {
+          "data": {
+            "repository": {
+              "pullRequest": {
+                "__typename": "PullRequest",
+                "id": "PR_kwDO8Dd5Ob7Ei0qgq0",
+                "statusCheckRollup": {
+                  "__typename": "StatusCheckRollup",
+                  "id": "SCR_kwDOlcxtdg60qxZ63r",
+                  "state": "SUCCESS",
+                  "contexts": {
+                    "totalCount": 2,
+                    "pageInfo": {
+                      "hasNextPage": false,
+                      "endCursor": "Mg=="
+                    },
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "id": "CR_kwDOIT2LKrjtL3tUQV",
+                        "name": "test (3.12)",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "title": "test (3.12): success",
+                        "isRequired": true,
+                        "detailsUrl": "https://github.com/acme-example/greeter/actions/runs/17000000007/job/52000000009",
+                        "url": "https://github.com/acme-example/greeter/runs/52000000009",
+                        "startedAt": "2026-10-01T10:21:00Z",
+                        "completedAt": "2026-10-01T10:25:00Z",
+                        "checkSuite": {
+                          "__typename": "CheckSuite",
+                          "id": "CS_kwDOg-v0Gs_1b7tjaq",
+                          "app": {
+                            "__typename": "App",
+                            "id": "A_kwDOViR1XfCSZJcsaA",
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "__typename": "WorkflowRun",
+                            "id": "WFR_kwDOygrJM02ZGKq1NI",
+                            "workflow": {
+                              "__typename": "Workflow",
+                              "id": "W_kwDOAQ0uC2cylcLbas",
+                              "name": "Tests"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "id": "CR_kwDOiLjRK2jInpuyk5",
+                        "name": "lint",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "title": "lint: success",
+                        "isRequired": false,
+                        "detailsUrl": "https://github.com/acme-example/greeter/actions/runs/17000000007/job/52000000010",
+                        "url": "https://github.com/acme-example/greeter/runs/52000000010",
+                        "startedAt": "2026-10-01T10:21:00Z",
+                        "completedAt": "2026-10-01T10:25:00Z",
+                        "checkSuite": {
+                          "__typename": "CheckSuite",
+                          "id": "CS_kwDOEt0BLQcsLZlMl5",
+                          "app": {
+                            "__typename": "App",
+                            "id": "A_kwDOViR1XfCSZJcsaA",
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "__typename": "WorkflowRun",
+                            "id": "WFR_kwDOFBaOOA0WIVh-Fz",
+                            "workflow": {
+                              "__typename": "Workflow",
+                              "id": "W_kwDOb3twjYhvEOC2aI",
+                              "name": "Lint"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "rateLimit": {
+              "cost": 1,
+              "remaining": 4994,
+              "resetAt": "2026-10-01T10:00:00Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "kind": "rest",
+        "method": "GET",
+        "resource": "/repos/acme-example/greeter/pulls/7/files",
+        "params": {
+          "per_page": 100,
+          "page": 1
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "X-RateLimit-Limit": "5000",
+          "X-RateLimit-Remaining": "4993",
+          "X-RateLimit-Reset": "1790848800",
+          "X-RateLimit-Used": "7",
+          "X-RateLimit-Resource": "core"
+        },
+        "body": [
+          {
+            "sha": "d0e985b3f567302156dd9666d5ae6fdd16db9ae1",
+            "filename": "README.md",
+            "status": "modified",
+            "additions": 2,
+            "deletions": 1,
+            "changes": 3,
+            "blob_url": "https://github.com/acme-example/greeter/blob/70f61d13b75925e267e976a8c023ae14a18f3c1a/README.md",
+            "raw_url": "https://github.com/acme-example/greeter/raw/70f61d13b75925e267e976a8c023ae14a18f3c1a/README.md",
+            "contents_url": "https://api.github.com/repos/acme-example/greeter/contents/README.md?ref=70f61d13b75925e267e976a8c023ae14a18f3c1a",
+            "patch": "@@ -1,4 +1,5 @@\n-- an old list item (1)\n+- a new list item (1)\n+New text of paragraph 2, rewritten.\n Paragraph 2 stays the same.\n \n Paragraph 4 stays the same."
+          },
+          {
+            "sha": "2c8e701a13f2357fe8d114fb309211587b2c2be3",
+            "filename": "src/greeter/greet.py",
+            "status": "modified",
+            "additions": 7,
+            "deletions": 3,
+            "changes": 10,
+            "blob_url": "https://github.com/acme-example/greeter/blob/70f61d13b75925e267e976a8c023ae14a18f3c1a/src%2Fgreeter%2Fgreet.py",
+            "raw_url": "https://github.com/acme-example/greeter/raw/70f61d13b75925e267e976a8c023ae14a18f3c1a/src%2Fgreeter%2Fgreet.py",
+            "contents_url": "https://api.github.com/repos/acme-example/greeter/contents/src%2Fgreeter%2Fgreet.py?ref=70f61d13b75925e267e976a8c023ae14a18f3c1a",
+            "patch": "@@ -1,5 +1,7 @@\n-    print(\"greeting 1\")\n-    pass\n+    logger.info(\"greeting 1\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 3\n+    logger.info(\"greeting 4\")\n def helper_3(name):\n     \"\"\"Line 4 stays.\"\"\"\n \n@@ -20,7 +22,9 @@\n \n def helper_21(name):\n     \"\"\"Line 22 stays.\"\"\"\n-    pass\n+    logger.info(\"greeting 25\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 27\n def helper_24(name):\n     \"\"\"Line 25 stays.\"\"\"\n "
+          },
+          {
+            "sha": "b7ce54bee538cfe28be30efb2a6a6e235acbf90c",
+            "filename": "tests/test_greet.py",
+            "status": "added",
+            "additions": 18,
+            "deletions": 0,
+            "changes": 18,
+            "blob_url": "https://github.com/acme-example/greeter/blob/70f61d13b75925e267e976a8c023ae14a18f3c1a/tests%2Ftest_greet.py",
+            "raw_url": "https://github.com/acme-example/greeter/raw/70f61d13b75925e267e976a8c023ae14a18f3c1a/tests%2Ftest_greet.py",
+            "contents_url": "https://api.github.com/repos/acme-example/greeter/contents/tests%2Ftest_greet.py?ref=70f61d13b75925e267e976a8c023ae14a18f3c1a",
+            "patch": "@@ -0,0 +1,18 @@\n+    logger.info(\"greeting 1\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 3\n+    logger.info(\"greeting 4\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 6\n+    logger.info(\"greeting 7\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 9\n+    logger.info(\"greeting 10\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 12\n+    logger.info(\"greeting 13\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 15\n+    logger.info(\"greeting 16\")\n+    return greeting\n+    return f\"Hello, {name}!\"  # 18"
+          }
+        ]
+      }
+    }
+  ]
+}

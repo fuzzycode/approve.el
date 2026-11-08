@@ -74,11 +74,46 @@ that failure.
 - =M-x approve-dev-offline-mode= :: replays every scenario in this
   directory; the request's owner, name and number pick the scenario.
 
+* The scenarios
+They are synthetic for now: hand-designed data in the exact shape of
+GitHub's responses to the queries in =graphql/queries/=, written in the
+format above, so recordings of real pull requests can replace them without
+touching the tests.  The viewer is =vera-example= in all three.
+
+| Scenario | Pull request                 | What it holds                                                    |
+|----------+------------------------------+------------------------------------------------------------------|
+| small    | =acme-example/greeter#7=     | 3 files, 2 threads (one with a reply), a conversation comment,   |
+|          |                              | no pending review, passing checks; the viewer cannot write       |
+| medium   | =acme-example/rocket#202=    | The speed budget's medium PR: 30 files, ~1 500 diff lines, 20    |
+|          |                              | threads with 37 comments (single lines and ranges, both sides,  |
+|          |                              | file level, suggestions, resolved, outdated, replies), the      |
+|          |                              | viewer's pending review (3 comments), reviews of every verdict, |
+|          |                              | every viewed state and change type, a renamed, a copied and a   |
+|          |                              | binary file, events, failing and pending checks                 |
+| large    | =acme-example/monorepo#3003= | 300 files, ~20 000 diff lines: 3 GraphQL pages of files, 4 REST |
+|          |                              | pages (the last empty), a file too large for a patch, a binary, |
+|          |                              | 5 threads                                                       |
+
+Threads of =internal/parser/parser.go= in medium cover every kind of
+thread, so tests of one file see them all.  Each list fits one page except
+the large scenario's files.
+
+** Regenerating
+=generate.el= builds the scenarios as data.  Change it, never the JSON,
+and run it from the repository root:
+#+begin_src sh
+cask exec emacs -Q --batch -L lisp -l tests/fixtures/generate.el -f approve-fixtures-generate
+#+end_src
+The output depends only on the generator: running it again gives the same
+files.  The tests in =tests/test-approve-dev.el= check every scenario: each
+answers the whole loading plan, every object with an =id= has a
+=__typename=, the files agree between the PR, GraphQL and REST, and every
+current thread sits on a line its patch shows.
+
 * Recording
 =M-x approve-dev-record= asks for a pull request URL and a scenario name.
-It runs the loading plan (the six queries in =graphql/queries/= with all
-pages, except the checks query's first page only, and the REST files list
-with all pages) through the installed transport, records every exchange,
+It runs the loading plan (the six queries in =graphql/queries/= and the
+REST files list, each with all its pages) through the installed transport, records every exchange,
 and writes =<name>.json= here.  Recordings keep no tokens or
 Authorization headers.  People's logins, names and emails become stable
 fakes (=user-1=, =Person 2=, …) unless the command gets a prefix argument;

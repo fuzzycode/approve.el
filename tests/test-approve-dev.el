@@ -350,4 +350,136 @@
               (expect (length requests) :to-equal 7)))
         (delete-directory directory t)))))
 
+;;; The committed fixtures
+
+(defun test-approve-dev--fixture (name)
+  "Return the committed scenario NAME."
+  (approve-dev-read-scenario name))
+
+(defun test-approve-dev--graphql-bodies (scenario &optional query)
+  "Return the GraphQL response bodies of SCENARIO, of QUERY if non-nil."
+  (cl-loop for exchange in (plist-get scenario :exchanges)
+           for key = (plist-get exchange :request)
+           when (and (eq (plist-get key :kind) 'graphql)
+                     (or (null query) (equal (plist-get key :name) query)))
+           collect (plist-get exchange :body)))
+
+(defun test-approve-dev--rest-files (scenario)
+  "Return the REST file entries of SCENARIO, every page."
+  (cl-loop for exchange in (plist-get scenario :exchanges)
+           when (eq (plist-get (plist-get exchange :request) :kind) 'rest)
+           append (plist-get exchange :body)))
+
+(defun test-approve-dev--walk (value function)
+  "Call FUNCTION with every JSON object in VALUE."
+  (cond ((approve-dev--json-object-p value)
+         (funcall function value)
+         (dolist (field value) (test-approve-dev--walk (cdr field) function)))
+        ((consp value)
+         (dolist (item value) (test-approve-dev--walk item function)))))
+
+(defun test-approve-dev--patch-lines (patch)
+  "Return the lines PATCH shows, as a list of (SIDE . LINE)."
+  (let (lines old new)
+    (dolist (text (split-string patch "\n" t))
+      (cond
+       ((string-match "\\`@@ -\\([0-9]+\\)\\(?:,[0-9]+\\)? \\+\\([0-9]+\\)" text)
+        (setq old (string-to-number (match-string 1 text))
+              new (string-to-number (match-string 2 text))))
+       ((string-prefix-p "-" text)
+        (push (cons "LEFT" old) lines) (setq old (1+ old)))
+       ((string-prefix-p "+" text)
+        (push (cons "RIGHT" new) lines) (setq new (1+ new)))
+       (t
+        (push (cons "LEFT" old) lines) (push (cons "RIGHT" new) lines)
+        (setq old (1+ old) new (1+ new)))))
+    lines))
+
+(defun test-approve-dev--threads (scenario)
+  "Return the review threads of SCENARIO, every page."
+  (cl-loop for body in (test-approve-dev--graphql-bodies
+                        scenario "queries/pull-request-threads.graphql")
+           append (let-alist body .data.repository.pullRequest.reviewThreads.nodes)))
+
+(describe "The fixture scenarios"
+  (it "are small, medium and large, and each answers the whole loading plan"
+    (expect (mapcar #'file-name-base (approve-dev-scenario-files))
+            :to-have-same-items-as '("large" "medium" "small"))
+    (dolist (name '("small" "medium" "large"))
+      (let ((scenario (test-approve-dev--fixture name)))
+        (expect (plist-get scenario :viewer) :to-equal "vera-example")
+        (expect (seq-uniq (mapcar (lambda (exchange)
+                                    (let ((key (plist-get exchange :request)))
+                                      (or (plist-get key :name) (plist-get key :resource))))
+                                  (plist-get scenario :exchanges)))
+                :to-equal
+                (list "queries/pull-request.graphql"
+                      "queries/pull-request-files.graphql"
+                      "queries/pull-request-threads.graphql"
+                      "queries/pull-request-timeline.graphql"
+                      "queries/pull-request-commits.graphql"
+                      "queries/pull-request-checks.graphql"
+                      (format "/repos/%s/%s/pulls/%d/files"
+                              (plist-get scenario :owner) (plist-get scenario :repo)
+                              (plist-get scenario :number)))))))
+
+  (it "select __typename with every id, and never give one id two types"
+    (dolist (name '("small" "medium" "large"))
+      (let ((types (make-hash-table :test #'equal))
+            (problems nil))
+        (dolist (body (test-approve-dev--graphql-bodies (test-approve-dev--fixture name)))
+          (test-approve-dev--walk
+           body
+           (lambda (object)
+             (when-let* ((id (alist-get 'id object)))
+               (let ((type (alist-get '__typename object)))
+                 (unless type (push (list name id "no __typename") problems))
+                 (unless (equal (gethash id types type) type)
+                   (push (list name id type (gethash id types)) problems))
+                 (puthash id type types))))))
+        (expect problems :to-equal nil))))
+
+  (it "agree on the files between the PR, the files query and REST"
+    (dolist (name '("small" "medium" "large"))
+      (let* ((scenario (test-approve-dev--fixture name))
+             (pr (let-alist (car (test-approve-dev--graphql-bodies
+                                  scenario "queries/pull-request.graphql"))
+                   .data.repository.pullRequest))
+             (nodes (cl-loop for body in (test-approve-dev--graphql-bodies
+                                          scenario "queries/pull-request-files.graphql")
+                             append (let-alist body .data.repository.pullRequest.files.nodes)))
+             (rest (test-approve-dev--rest-files scenario)))
+        (expect (length nodes) :to-equal (alist-get 'changedFiles pr))
+        (expect (mapcar (lambda (file) (alist-get 'filename file)) rest)
+                :to-equal (mapcar (lambda (file) (alist-get 'path file)) nodes))
+        (expect (apply #'+ (mapcar (lambda (file) (alist-get 'additions file)) nodes))
+                :to-equal (alist-get 'additions pr))
+        (expect (apply #'+ (mapcar (lambda (file) (alist-get 'deletions file)) rest))
+                :to-equal (alist-get 'deletions pr)))))
+
+  (it "place every current thread on a line its file's patch shows"
+    (dolist (name '("small" "medium" "large"))
+      (let* ((scenario (test-approve-dev--fixture name))
+             (patches (mapcar (lambda (file)
+                                (cons (alist-get 'filename file)
+                                      (test-approve-dev--patch-lines
+                                       (or (alist-get 'patch file) ""))))
+                              (test-approve-dev--rest-files scenario)))
+             (problems nil))
+        (dolist (thread (test-approve-dev--threads scenario))
+          (let-alist thread
+            (let ((lines (cdr (assoc .path patches))))
+              (unless (assoc .path patches)
+                (push (list name .id .path "no such file") problems))
+              (when (and (equal .subjectType "LINE") (not .isOutdated))
+                (unless (member (cons .diffSide .line) lines)
+                  (push (list name .id .path .diffSide .line) problems))
+                (when (and .startLine
+                           (not (member (cons .startDiffSide .startLine) lines)))
+                  (push (list name .id .path .startDiffSide .startLine) problems)))
+              (when .isOutdated
+                (unless (and (null .line) .originalLine)
+                  (push (list name .id "outdated with a line") problems))))))
+        (expect problems :to-equal nil)))))
+
 ;;; test-approve-dev.el ends here
