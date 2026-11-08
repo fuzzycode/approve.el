@@ -27,7 +27,7 @@ Nothing visible yet; everything after builds on this.
 - [X] =approve-graphql.el=: loader with includes, dedupe, cycle detection
       (port from git history: commit =9439945= and =487a5ef= in this repo, or
       approve-v2).
-- [ ] =approve-api.el=: async GraphQL/REST, timeout, progress, error classes,
+- [X] =approve-api.el=: async GraphQL/REST, timeout, progress, error classes,
       callbacks in the origin buffer, mutation queue (D15), pagination helper,
       =rateLimit= tracking (port from =5646d5e= / approve-v2).
 - [ ] =approve-model.el=: port approve-v2's store; add list edits and session

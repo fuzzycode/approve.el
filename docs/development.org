@@ -90,7 +90,7 @@ and what goes to GitHub.
 | Layer     | How                                                                              |
 |-----------+----------------------------------------------------------------------------------|
 | graphql   | Loader on temp files: includes, dedupe, cycles, missing files                    |
-| api       | Spy on =ghub-graphql= / =ghub-request=; callbacks, timeouts, errors, queue order |
+| api       | Fake =approve-api-transport=, spy on =ghub-request=; timeouts, errors, queue     |
 | model     | Load fixtures; selectors; patching; list edits; pagination                       |
 | renderers | Render a fixture into a temp buffer; assert sections exist, contain text,        |
 |           | carry the right context; no full-buffer string snapshots                         |

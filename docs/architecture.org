@@ -33,7 +33,7 @@ callbacks it was given.
  │   one function per .graphql file / REST call; load/patch the store       │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Transport                approve-api.el · approve-graphql.el ·           │
- │                          approve-log.el                                  │
+ │                          approve-api-queue.el · approve-log.el           │
  │   ghub wrapper: async, timeout, progress, errors, mutation queue         │
  └──────────────────────────────────────────────────────────────────────────┘
                                    │
@@ -57,7 +57,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve.el=               | Package header, =defgroup=, autoloads, =approve= (open by URL), URL parsing     |     0 |
 | =approve-log.el=           | Debug log buffer, levels, token redaction                                       |     0 |
 | =approve-graphql.el=       | Load =.graphql= files, resolve =${include:…}=, dedupe, detect cycles            |     0 |
-| =approve-api.el=           | =approve-api-graphql=, =approve-api-rest=, pagination helper, queue, errors     |     0 |
+| =approve-api.el=           | =approve-api-graphql=, =approve-api-rest=, paging helpers, errors, rate limits  |     0 |
+| =approve-api-queue.el=     | Mutation queue (=approve-api-mutate=): one at a time, pauses on rate limits     |     0 |
 | =approve-model.el=         | Store, refs, connections, selectors, patch, list edits, session state           |     0 |
 | =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, repo metadata        |   1–3 |
 | =approve-mutations.el=     | All mutations ([[*API map][API map]])                                                         |   2–5 |
