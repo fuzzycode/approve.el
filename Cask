@@ -4,6 +4,8 @@
 (package-file "lisp/approve.el")
 
 (depends-on "emacs" "29.1")
+(depends-on "eldoc" "1.14")
+(depends-on "transient" "0.7")
 (depends-on "magit-section" "4.0")
 (depends-on "magit" "4.0")
 (depends-on "markdown-mode" "2.5")
@@ -13,4 +15,5 @@
 
 (development
   (depends-on "undercover")
-  (depends-on "buttercup"))
+  (depends-on "buttercup")
+  (depends-on "package-lint"))

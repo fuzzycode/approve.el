@@ -38,8 +38,8 @@ predictable.
 | =make install= | =cask install=                                               | exists                                     |
 | =make build=   | byte-compile =lisp/*.el=                                     | exists                                     |
 | =make test=    | buttercup on =tests/=                                        | exists                                     |
-| =make lint=    | byte-compile with warnings as errors, package-lint, checkdoc | byte-compile only; add the rest in Phase 0 |
-| =make cover=   | tests with undercover (text report)                          | Phase 0                                    |
+| =make lint=    | byte-compile with warnings as errors, package-lint, checkdoc | exists                                     |
+| =make cover=   | tests with undercover (text report)                          | exists                                     |
 | =make clean=   | remove =.elc=                                                | exists                                     |
 | =make docs=    | rebuild the flow diagrams and =docs/html/flows.html=         | exists (needs graphviz)                    |
 
