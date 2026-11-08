@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Emacs ${{ matrix.emacs-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs-version:
+          - "29.1"
+          - "29.4"
+          - "30.2"
+          - "31.1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Emacs
+        uses: purcell/setup-emacs@v8.0
+        with:
+          version: ${{ matrix.emacs-version }}
+
+      - name: Set up Cask
+        uses: conao3/setup-cask@master
+        with:
+          version: snapshot
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Byte-compile
+        run: make build
+
+      - name: Test
+        run: make test
+
+      - name: Lint
+        run: make lint

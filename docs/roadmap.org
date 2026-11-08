@@ -40,7 +40,7 @@ Nothing visible yet; everything after builds on this.
       a fake API (=approve-dev-offline-mode=).
 - [ ] Fixtures: a small PR, a medium PR with threads/suggestions/outdated/
       resolved comments and a pending review, a large PR (300 files).
-- [ ] CI: GitHub Actions matrix 29.1, 29.4, 30.x, 31.x (port approve-v2's).
+- [X] CI: GitHub Actions matrix 29.1, 29.4, 30.x, 31.x (port approve-v2's).
 - Done when :: a buttercup test loads the medium fixture through the fake API
   into the store and the selectors return the threads of a file.
 
