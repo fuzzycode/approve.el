@@ -562,20 +562,24 @@ not changed."
              (plist-get scenario :exchanges)))))
 
 (defconst approve-dev--loading-plan
-  '("queries/pull-request.graphql"
-    "queries/pull-request-files.graphql"
-    "queries/pull-request-threads.graphql"
-    "queries/pull-request-timeline.graphql"
-    "queries/pull-request-commits.graphql"
-    "queries/pull-request-checks.graphql")
+  '(("queries/pull-request.graphql")
+    ("queries/pull-request-files.graphql" repository pullRequest files)
+    ("queries/pull-request-threads.graphql" repository pullRequest reviewThreads)
+    ("queries/pull-request-timeline.graphql" repository pullRequest timelineItems)
+    ("queries/pull-request-commits.graphql" repository pullRequest commits)
+    ("queries/pull-request-checks.graphql"
+     repository pullRequest statusCheckRollup contexts))
   "The queries `approve-dev-record' runs, in the order it writes them.
-The REST files list comes after them.")
+Each entry is (QUERY . PATH): PATH leads from the data to the list the
+query pages, nil for the core query.  The REST files list comes after
+them.")
 
 (defun approve-dev--plan-rank (exchange)
   "Return the position of EXCHANGE's request in the loading plan."
   (let ((key (plist-get exchange :request)))
     (or (and (eq (plist-get key :kind) 'graphql)
-             (seq-position approve-dev--loading-plan (plist-get key :name)))
+             (seq-position (mapcar #'car approve-dev--loading-plan)
+                           (plist-get key :name)))
         (length approve-dev--loading-plan))))
 
 ;;;###autoload
@@ -584,11 +588,11 @@ The REST files list comes after them.")
   "Record the pull request at URL as the scenario NAME.
 Run the loading plan through the installed transport, wrapped by
 `approve-dev-make-recording-transport': the queries in
-`approve-dev--loading-plan', each list with all its pages (the
-checks query only its first), and the REST files list with all its
-pages.  When every request has ended, write the scenario to NAME in
-DIRECTORY (`approve-dev-fixtures-directory' by default) and call
-CALLBACK, if non-nil, with the file name.
+`approve-dev--loading-plan', each list with all its pages, and the
+REST files list with all its pages.  When every request has ended,
+write the scenario to NAME in DIRECTORY, by default
+`approve-dev-fixtures-directory', and call CALLBACK, if non-nil, with
+the file name.
 
 The file never holds tokens: request keys have no headers and only
 rate-limit, Link and Retry-After response headers are kept.  SCRUB
@@ -652,24 +656,15 @@ Example:
             (approve-dev-make-recording-transport
              inner (lambda (exchange) (push exchange exchanges))))
       (with-current-buffer buffer
-        (approve-api-graphql (car approve-dev--loading-plan) variables
+        (approve-api-graphql (caar approve-dev--loading-plan) variables
                              :host host :errorback #'fail
                              :callback (lambda (data)
                                          (setq viewer (let-alist data .viewer.login))
                                          (finish)))
-        (dolist (query (seq-subseq approve-dev--loading-plan 1 5))
-          (approve-api-graphql-all
-           query variables :host host :errorback #'fail
-           :callback #'finish
-           :path (list 'repository 'pullRequest
-                       (pcase query
-                         ("queries/pull-request-files.graphql" 'files)
-                         ("queries/pull-request-threads.graphql" 'reviewThreads)
-                         ("queries/pull-request-timeline.graphql" 'timelineItems)
-                         (_ 'commits)))))
-        (approve-api-graphql (nth 5 approve-dev--loading-plan) variables
-                             :host host :errorback #'fail
-                             :callback (lambda (_data) (finish)))
+        (pcase-dolist (`(,query . ,path) (cdr approve-dev--loading-plan))
+          (approve-api-graphql-all query variables :path path
+                                   :host host :errorback #'fail
+                                   :callback #'finish))
         (approve-api-rest-all (format "/repos/%s/%s/pulls/%d/files" owner repo number)
                               :host host :errorback #'fail
                               :callback #'finish)))
