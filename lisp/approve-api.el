@@ -451,7 +451,8 @@ nothing if REQUEST has ended already."
 (defun approve-api--deliver (request function argument)
   "Call FUNCTION with ARGUMENT in the buffer of REQUEST.
 Skip it when the buffer has been killed.  Log an error it signals
-and say so briefly; never let it escape into the transport."
+and say so briefly; never let it escape into the transport.  With
+`debug-on-error', the debugger sees the error first."
   (let ((buffer (approve-api--request-buffer request))
         (label (approve-api--request-label request)))
     (cond
@@ -460,7 +461,7 @@ and say so briefly; never let it escape into the transport."
       (approve-log 'debug "%s: buffer killed, continuation skipped" label))
      (t
       (with-current-buffer buffer
-        (condition-case err
+        (condition-case-unless-debug err
             (funcall function argument)
           (error
            (approve-log-condition (format "Continuation of %s" label) err)
@@ -473,15 +474,29 @@ and say so briefly; never let it escape into the transport."
   "Return the value of header NAME in HEADERS, ignoring case."
   (cdr (assoc-string name headers t)))
 
+(defun approve-api--error-item-message (item)
+  "Return the text of ITEM, one of the errors in an error body."
+  (cond ((stringp item) item)
+        ((stringp (alist-get 'message item)) (alist-get 'message item))
+        ((consp item)
+         (mapconcat (lambda (part) (format "%s" part))
+                    (delq nil (list (alist-get 'field item)
+                                    (alist-get 'code item)))
+                    " "))
+        (t (format "%s" item))))
+
 (defun approve-api--payload-message (payload)
-  "Return the error message in PAYLOAD, a decoded body, or nil."
+  "Return the error message in PAYLOAD, a decoded body, or nil.
+The body's message comes first, then the messages of its errors, as
+in \"Validation Failed: must be part of the diff\"."
   (when (consp payload)
     (let ((text (alist-get 'message payload))
-          (errors (alist-get 'errors payload)))
-      (cond ((stringp text) text)
-            (errors (mapconcat (lambda (e)
-                                 (format "%s" (or (alist-get 'message e) e)))
-                               errors "; "))))))
+          (details (mapconcat #'approve-api--error-item-message
+                              (alist-get 'errors payload) "; ")))
+      (cond ((and (stringp text) (not (string-empty-p details)))
+             (concat text ": " details))
+            ((stringp text) text)
+            ((not (string-empty-p details)) details)))))
 
 (defun approve-api--rate-limit-reset (status headers payload)
   "Return the reset time if STATUS, HEADERS and PAYLOAD mean a rate limit.
@@ -519,6 +534,7 @@ ERR is a condition or url's error list.  For url's
          (payload (plist-get failure :payload))
          (text (or (approve-api--payload-message payload)
                    (format "HTTP status %s" status)))
+         (errors (and (consp payload) (alist-get 'errors payload)))
          (reset (and status
                      (approve-api--rate-limit-reset
                       status (plist-get failure :headers) payload))))
@@ -529,14 +545,17 @@ ERR is a condition or url's error list.  For url's
        (let ((message (approve-api--network-message (plist-get failure :error))))
          (if (string-empty-p message) "Network error" message))))
      ((= status 401)
-      (approve-api--condition 'approve-api-unauthorized text :status status))
+      (approve-api--condition 'approve-api-unauthorized text
+                              :status status :errors errors))
      (reset
       (approve-api--condition 'approve-api-rate-limited text
-                              :status status :reset reset))
+                              :status status :reset reset :errors errors))
      ((= status 404)
-      (approve-api--condition 'approve-api-not-found text :status status))
+      (approve-api--condition 'approve-api-not-found text
+                              :status status :errors errors))
      (t
-      (approve-api--condition 'approve-api-http-error text :status status)))))
+      (approve-api--condition 'approve-api-http-error text
+                              :status status :errors errors)))))
 
 (defun approve-api--graphql-outcome (request response)
   "Record the rate limit of RESPONSE to REQUEST; return (OK . RESULT).
@@ -578,22 +597,28 @@ field the token may not read) is a success; the errors are logged."
 (defvar approve-api--rate-limits (make-hash-table :test 'equal)
   "Rate limits by (HOST . KIND); see `approve-api-rate-limit'.")
 
+(defun approve-api--host-key (host)
+  "Return HOST as a rate-limit key; nil means \"api.github.com\"."
+  (or host "api.github.com"))
+
 (defun approve-api-rate-limit (&optional kind host)
   "Return what GitHub last said about the rate limit of KIND on HOST.
 KIND is `graphql' (the default) or `rest'; HOST defaults to
-`approve-api-host'.  The value is a plist with :limit, :remaining,
-:used, :reset (seconds since the epoch), :cost (of the last GraphQL
-query) and :updated (a time), or nil before the first response.
+`approve-api-host', and nil means \"api.github.com\".  The value is a
+plist with :limit, :remaining, :used, :reset (seconds since the
+epoch), :cost (of the last GraphQL query) and :updated (a time), or
+nil before the first response.
 
 Example:
   (plist-get (approve-api-rate-limit) :remaining) => 4990"
-  (gethash (cons (or host approve-api-host) (or kind 'graphql))
+  (gethash (cons (approve-api--host-key (or host approve-api-host))
+                 (or kind 'graphql))
            approve-api--rate-limits))
 
 (defun approve-api--update-rate-limit (request values)
   "Merge VALUES, a plist, into the rate limit of REQUEST's host and kind.
 Nil values are ignored; nothing changes when all are nil."
-  (let* ((key (cons (approve-api--spec request :host)
+  (let* ((key (cons (approve-api--host-key (approve-api--spec request :host))
                     (approve-api--spec request :kind)))
          (record (gethash key approve-api--rate-limits))
          (changed nil))

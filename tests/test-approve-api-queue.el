@@ -88,10 +88,11 @@
 
   (it "goes on with the next when a callback signals"
     (test-approve-api-queue--with-fake
-      (approve-api-mutate "m1" nil :callback (lambda (_) (error "Bug")))
-      (approve-api-mutate "m2" nil)
-      (test-approve-api-queue--answer)
-      (expect (test-approve-api-queue--names) :to-equal '("m1" "m2"))))
+      (let ((debug-on-error nil))
+        (approve-api-mutate "m1" nil :callback (lambda (_) (error "Bug")))
+        (approve-api-mutate "m2" nil)
+        (test-approve-api-queue--answer)
+        (expect (test-approve-api-queue--names) :to-equal '("m1" "m2")))))
 
   (it "pauses on a rate limit until the reset, then resumes"
     (test-approve-api-queue--with-fake

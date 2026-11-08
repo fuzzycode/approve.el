@@ -204,6 +204,16 @@
         (expect errored :to-be nil)
         (expect (test-approve-api--log) :to-match "Resource protected by SSO"))))
 
+  (it "keeps one rate limit for github.com, whether the host is nil or api.github.com"
+    (test-approve-api--with-fake
+      (approve-api-graphql "query { a }" nil :host "api.github.com")
+      (test-approve-api--succeed '((data . ((a . 1) (rateLimit . ((remaining . 10)))))))
+      (expect (plist-get (approve-api-rate-limit) :remaining) :to-equal 10)
+      (approve-api-graphql "query { a }" nil)
+      (test-approve-api--succeed '((data . ((a . 1) (rateLimit . ((remaining . 9)))))))
+      (expect (plist-get (approve-api-rate-limit 'graphql "api.github.com") :remaining)
+              :to-equal 9)))
+
   (it "records the rate limit of the response, and logs the cost"
     (test-approve-api--with-fake
       (let ((approve-log-level 'debug))
@@ -281,6 +291,19 @@
           (expect (car err) :to-be 'approve-api-rate-limited))
         (expect (approve-api-error-reset retry) :to-be-close-to (+ now 30) -1)
         (expect (approve-api-error-reset text) :to-be-close-to (+ now 60) -1))))
+
+  (it "includes the messages of a validation error and carries them"
+    (test-approve-api--with-fake
+      (let* ((errors '(((resource . "PullRequestReviewComment") (code . "custom")
+                        (field . "line") (message . "must be part of the diff"))
+                       ((resource . "Issue") (field . "title") (code . "missing_field"))))
+             (err (test-approve-api--error
+                   `(:status 422 :payload ((message . "Validation Failed")
+                                           (errors . ,errors))))))
+        (expect (car err) :to-be 'approve-api-http-error)
+        (expect (approve-api-error-message err)
+                :to-equal "Validation Failed: must be part of the diff; title missing_field")
+        (expect (plist-get (cddr err) :errors) :to-equal errors))))
 
   (it "classifies other statuses as approve-api-http-error"
     (test-approve-api--with-fake
@@ -382,7 +405,8 @@
 
   (it "logs an error in a callback, says so, and still settles"
     (test-approve-api--with-fake
-      (let ((approve-log-level 'error))
+      (let ((approve-log-level 'error)
+            (debug-on-error nil))
         (approve-api-rest "GET" "/x" :progress "Loading"
                           :callback (lambda (_) (error "Bug in callback")))
         (expect (approve-api-in-flight-count) :to-equal 1)
@@ -395,10 +419,21 @@
 
   (it "logs an error in an errorback too"
     (test-approve-api--with-fake
-      (let ((approve-log-level 'error))
+      (let ((approve-log-level 'error)
+            (debug-on-error nil))
         (approve-api-rest "GET" "/x" :errorback (lambda (_) (error "Bug in errorback")))
         (expect (test-approve-api--fail '(:status 500)) :not :to-throw)
         (expect (test-approve-api--log) :to-match "Bug in errorback")
+        (expect (approve-api-in-flight-count) :to-equal 0))))
+
+  (it "calls the debugger first when debug-on-error is set"
+    (test-approve-api--with-fake
+      (let* ((entered nil)
+             (debug-on-error t)
+             (debugger (lambda (&rest args) (push args entered) nil)))
+        (approve-api-rest "GET" "/x" :callback (lambda (_) (error "Bug in callback")))
+        (test-approve-api--succeed '((ok . t)))
+        (expect (car entered) :to-equal '(error (error "Bug in callback")))
         (expect (approve-api-in-flight-count) :to-equal 0)))))
 
 (describe "approve-api progress"
