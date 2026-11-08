@@ -239,11 +239,11 @@
   (it "classifies a network failure"
     (test-approve-api--with-fake
       (let ((err (test-approve-api--error
-                  '(:error (error connection-failed "failed with code 6"
+                  '(:error (error connection-failed "failed with code 6\n"
                                   :host "api.github.com" :service 443)))))
         (expect (car err) :to-be 'approve-api-network-error)
         (expect (approve-api-error-message err)
-                :to-equal "connection-failed failed with code 6")
+                :to-equal "connection-failed: failed with code 6")
         (expect (approve-api-error-status err) :to-be nil))))
 
   (it "classifies 401 as unauthorized with GitHub's message"
@@ -309,6 +309,35 @@
       (sleep-for 0.02)
       (expect (car received) :to-be 'approve-api-error)
       (expect (approve-api-error-message received) :to-match "token does not exist")))
+
+  (it "fails with approve-api-network-error when the connection cannot be made at once"
+    (let ((approve-api-timeout nil)
+          (received nil))
+      (dolist (condition '((file-error "make client process failed"
+                                       "nodename nor servname provided, or not known"
+                                       :name "api.github.com")
+                           (error "Could not create connection to api.github.com:443")))
+        (let ((approve-api-transport (lambda (_) (signal (car condition) (cdr condition)))))
+          (approve-api-rest "GET" "/x" :errorback (lambda (err) (push err received)))))
+      (sleep-for 0.02)
+      (expect (mapcar #'car received)
+              :to-equal '(approve-api-network-error approve-api-network-error))
+      (expect (approve-api-error-message (cadr received))
+              :to-equal "make client process failed: nodename nor servname provided, or not known")
+      (expect (approve-api-error-message (car received))
+              :to-equal "Could not create connection to api.github.com:443")))
+
+  (it "cancels the request and lets a quit through when the user quits in the transport"
+    (let ((approve-api-transport (lambda (_) (signal 'quit nil)))
+          (approve-api-timeout 30)
+          (approve-api--in-flight nil)
+          received)
+      (expect (condition-case nil
+                  (approve-api-rest "GET" "/x" :errorback (lambda (err) (setq received err)))
+                (quit 'quit))
+              :to-be 'quit)
+      (expect (car received) :to-be 'approve-api-cancelled)
+      (expect (approve-api-in-flight-count) :to-equal 0)))
 
   (it "shows the error in the echo area when there is no errorback"
     (test-approve-api--with-fake
@@ -448,7 +477,7 @@
         (funcall (plist-get keys :callback) '((data . ((a . 1)))) nil nil nil)
         (expect received :to-equal '((a . 1))))))
 
-  (it "turns ghub's HTTP and network errors into failures"
+  (it "turns ghub's HTTP errors into failures"
     (let ((failures nil))
       (spy-on 'ghub-request)
       (approve-api-ghub-transport
@@ -458,14 +487,68 @@
       (let ((errorback (plist-get (nthcdr 3 (spy-calls-args-for 'ghub-request 0))
                                   :errorback)))
         (funcall errorback '(error http 404 ((message . "Not Found")))
-                 '(("x-ratelimit-remaining" . "10")) nil nil)
-        (funcall errorback '(error connection-failed "failed" :host "h") nil nil nil))
-      (expect (cadr failures)
-              :to-equal '(:status 404 :payload ((message . "Not Found"))
-                          :headers (("x-ratelimit-remaining" . "10"))))
-      (expect (car failures)
-              :to-equal '(:error (error connection-failed "failed" :host "h")
-                          :headers nil))))
+                 '(("x-ratelimit-remaining" . "10")) nil nil))
+      (expect failures
+              :to-equal '((:status 404 :payload ((message . "Not Found"))
+                           :headers (("x-ratelimit-remaining" . "10")))))))
+
+  (it "reports a connection that fails while ghub handles it as a network error"
+    ;; url-http calls ghub from the process sentinel when the connection
+    ;; fails, and ghub signals there because no headers arrived.
+    (test-approve-api--with-fake
+      (let* ((approve-api-transport #'approve-api-ghub-transport)
+             (buffer (generate-new-buffer " *http api.github.com:443*"))
+             (process (make-pipe-process
+                       :name "approve-test" :buffer buffer :noquery t
+                       :sentinel (lambda (_process _event)
+                                   (error "BUG: Missing headers in response buffer"))))
+             (received nil))
+        (unwind-protect
+            (progn
+              (spy-on 'ghub-request :and-return-value buffer)
+              (approve-api-rest "GET" "/x" :progress nil
+                                :errorback (lambda (err) (push err received)))
+              (funcall (process-sentinel process) process "failed with code 6\n")
+              (expect (length received) :to-equal 1)
+              (expect (car (car received)) :to-be 'approve-api-network-error)
+              (expect (approve-api-error-message (car received))
+                      :to-equal "connection-failed: failed with code 6")
+              (expect (approve-api-in-flight-count) :to-equal 0))
+          (set-process-sentinel process #'ignore)
+          (delete-process process)
+          (kill-buffer buffer)))))
+
+  (it "lets a sentinel error through once the request has ended"
+    (let* ((buffer (generate-new-buffer " *http api.github.com:443*"))
+           (process (make-pipe-process
+                     :name "approve-test" :buffer buffer :noquery t
+                     :sentinel (lambda (_process _event) (error "Late trouble"))))
+           (failures 0))
+      (unwind-protect
+          (progn
+            (spy-on 'ghub-request :and-return-value buffer)
+            (approve-api-ghub-transport
+             (list :method "GET" :resource "/x"
+                   :on-success #'ignore
+                   :on-failure (lambda (_) (setq failures (1+ failures)))))
+            (funcall (plist-get (nthcdr 3 (spy-calls-args-for 'ghub-request 0))
+                                :callback)
+                     '((ok . t)) nil nil nil)
+            (expect (funcall (process-sentinel process) process "deleted\n")
+                    :to-throw 'error '("Late trouble"))
+            (expect failures :to-equal 0))
+        (set-process-sentinel process #'ignore)
+        (delete-process process)
+        (kill-buffer buffer))))
+
+  (it "asks ghub from the home directory, so only the global Git config counts"
+    (let ((directory nil))
+      (spy-on 'ghub-request :and-call-fake
+              (lambda (&rest _) (setq directory default-directory) nil))
+      (let ((default-directory temporary-file-directory))
+        (approve-api-ghub-transport
+         (list :method "GET" :resource "/x" :on-success #'ignore :on-failure #'ignore)))
+      (expect directory :to-equal (expand-file-name "~/"))))
 
   (it "returns a function that aborts the retrieval"
     (let ((buffer (generate-new-buffer " url")))

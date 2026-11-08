@@ -92,7 +92,9 @@ token of \"USER^approve\" in auth-source.  To use Forge's token:
 
 (defcustom approve-api-username nil
   "GitHub user to make requests as, or nil to let ghub find it.
-Ghub reads the Git variable `github.user' by default.  For example:
+Ghub then reads the Git variable `github.user' from the global Git
+config, running `git config' for every request; setting this avoids
+that.  For example:
 
   (setq approve-api-username \"octocat\")"
   :type '(choice (const :tag "From Git config" nil)
@@ -191,7 +193,10 @@ It is called with one plist describing the request:
 The transport calls exactly one of :on-success and :on-failure,
 once, after it has returned.  It may return a function of no
 arguments that aborts the exchange; a timeout calls it.  If the
-transport signals, the request fails with `approve-api-error'.")
+transport signals, the request fails: with `approve-api-network-error'
+for a connection that cannot be made (a `file-error', such as an
+unknown host), else with `approve-api-error'.  A quit cancels the
+request (`approve-api-cancelled') and goes on.")
 
 (defun approve-api--ghub-abort (buffer)
   "Abort the retrieval whose process buffer is BUFFER, quietly."
@@ -210,28 +215,57 @@ ERR is url's error with ghub's decoded payload appended, such as
       (list :status (nth 2 err) :payload (nth 3 err) :headers headers)
     (list :error err :headers headers)))
 
+(defun approve-api--ghub-catch-sentinel (process done on-failure)
+  "Turn an error in the sentinel of PROCESS into one ON-FAILURE call.
+When a connection fails, url-http calls ghub from the sentinel, and
+ghub signals because no headers arrived instead of calling its
+errorback.  DONE is a function returning non-nil once the request
+has ended; then the error is not ours and is signalled again."
+  (add-function :around (process-sentinel process)
+                (lambda (sentinel proc event)
+                  (condition-case err
+                      (funcall sentinel proc event)
+                    (error
+                     (if (funcall done)
+                         (signal (car err) (cdr err))
+                       (approve-log 'debug "Connection failed: %s (%s)"
+                                    (string-trim event)
+                                    (error-message-string err))
+                       (funcall on-failure
+                                (list :error (list 'error 'connection-failed
+                                                   (string-trim event))))))))))
+
 (defun approve-api-ghub-transport (request)
   "Perform REQUEST with `ghub-request'; the default `approve-api-transport'.
-REQUEST is the plist described there.  Return a function that aborts
-the retrieval."
-  (let* ((on-success (plist-get request :on-success))
-         (on-failure (plist-get request :on-failure))
-         (buffer (ghub-request (plist-get request :method)
-                               (plist-get request :resource)
-                               (plist-get request :params)
-                               :payload (plist-get request :payload)
-                               :host (plist-get request :host)
-                               :auth (plist-get request :auth)
-                               :username (plist-get request :username)
-                               :silent t
-                               :noerror t
-                               :callback (lambda (value headers _status _req)
-                                           (funcall on-success value headers))
-                               :errorback (lambda (err headers _status _req)
-                                            (funcall on-failure
-                                                     (approve-api--ghub-failure
-                                                      err headers))))))
+REQUEST is the plist described there.  The request is made from the
+home directory, so only the global Git config decides the host and
+user that ghub looks up.  Return a function that aborts the retrieval."
+  (let* ((done nil)
+         (on-success (lambda (value headers)
+                       (setq done t)
+                       (funcall (plist-get request :on-success) value headers)))
+         (on-failure (lambda (failure)
+                       (setq done t)
+                       (funcall (plist-get request :on-failure) failure)))
+         (buffer (let ((default-directory (expand-file-name "~/")))
+                   (ghub-request (plist-get request :method)
+                                 (plist-get request :resource)
+                                 (plist-get request :params)
+                                 :payload (plist-get request :payload)
+                                 :host (plist-get request :host)
+                                 :auth (plist-get request :auth)
+                                 :username (plist-get request :username)
+                                 :silent t
+                                 :noerror t
+                                 :callback (lambda (value headers _status _req)
+                                             (funcall on-success value headers))
+                                 :errorback (lambda (err headers _status _req)
+                                              (funcall on-failure
+                                                       (approve-api--ghub-failure
+                                                        err headers)))))))
     (when (bufferp buffer)
+      (when-let* ((process (get-buffer-process buffer)))
+        (approve-api--ghub-catch-sentinel process (lambda () done) on-failure))
       (lambda () (approve-api--ghub-abort buffer)))))
 
 ;;; Requests
@@ -320,11 +354,27 @@ signalled.  The transport is the current `approve-api-transport'."
                                              request failure)))))))
         (when (functionp abort)
           (setf (approve-api--request-abort request) abort)))
+    (quit
+     (approve-api--settle request nil
+                          (approve-api--condition 'approve-api-cancelled
+                                                  "Request cancelled"))
+     (signal 'quit nil))
     (error
      (run-at-time 0 nil #'approve-api--settle request nil
-                  (approve-api--condition 'approve-api-error
-                                          (error-message-string err)))))
+                  (approve-api--transport-condition err))))
   nil)
+
+(defun approve-api--transport-condition (err)
+  "Return the error condition for ERR, signalled by a transport.
+A connection that cannot be made is a network error: a `file-error'
+from `make-network-process' (an unknown host) or url's \"Could not
+create connection\"."
+  (if (or (memq 'file-error (get (car err) 'error-conditions))
+          (string-prefix-p "Could not create connection"
+                           (error-message-string err)))
+      (approve-api--condition 'approve-api-network-error
+                              (approve-api--network-message err))
+    (approve-api--condition 'approve-api-error (error-message-string err))))
 
 (defun approve-api--time-out (request)
   "Fail REQUEST, which took longer than its timeout, and abort it."
@@ -453,14 +503,15 @@ a Retry-After header or a message about a rate limit."
         (+ now 60))))))
 
 (defun approve-api--network-message (err)
-  "Return a short text for ERR, a network error from the transport.
-For url's (error connection-failed \"failed with code 6\" :host H),
-that is \"connection-failed failed with code 6\"."
-  (let ((parts (if (eq (car-safe err) 'error) (cdr err) (ensure-list err))))
-    (mapconcat (lambda (part) (format "%s" part))
+  "Return a short text for ERR, a network error.
+ERR is a condition or url's error list.  For url's
+\(error connection-failed \"failed with code 6\\n\" :host H), that is
+\"connection-failed: failed with code 6\"."
+  (let ((parts (if (symbolp (car-safe err)) (cdr err) (ensure-list err))))
+    (mapconcat (lambda (part) (string-trim (format "%s" part)))
                (seq-take-while (lambda (part) (not (keywordp part)))
                                (delq nil (copy-sequence parts)))
-               " ")))
+               ": ")))
 
 (defun approve-api--classify (failure)
   "Return the error condition for FAILURE, a plist from the transport."
