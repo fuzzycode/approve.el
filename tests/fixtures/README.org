@@ -73,6 +73,11 @@ that failure.
   with a 404 that says which request it was (also in =*approve-log*=).
 - =M-x approve-dev-offline-mode= :: replays every scenario in this
   directory; the request's owner, name and number pick the scenario.
+- In tests, =tests/helpers.el= (=(require 'approve-test-helpers "helpers")=)
+  wraps these: =approve-test-with-fixture= installs the replay transport
+  for a scenario, =approve-test-wait-for= waits (bounded) for the answers,
+  and =approve-test-fixture-data= gives a response's data directly.
+  =tests/test-loading.el= shows the whole path into the store.
 
 * The scenarios
 They are synthetic for now: hand-designed data in the exact shape of
