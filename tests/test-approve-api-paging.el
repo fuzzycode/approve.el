@@ -19,8 +19,11 @@
   nil)
 
 (defun test-approve-api-paging--succeed (value)
-  "Answer the newest request with VALUE."
-  (funcall (plist-get (car test-approve-api-paging--sent) :on-success) value nil))
+  "Answer the newest request with VALUE.
+Answer as a transport does, outside buttercup's `debug-on-error', so
+errors that the paging catches stay caught."
+  (let ((debug-on-error nil))
+    (funcall (plist-get (car test-approve-api-paging--sent) :on-success) value nil)))
 
 (defun test-approve-api-paging--fail (failure)
   "Fail the newest request with the FAILURE plist."
@@ -47,6 +50,15 @@
   `((repository . ((pullRequest . ((files . ((nodes . (((path . ,cursor))))
                                               (pageInfo . ((hasNextPage . ,more)
                                                            (endCursor . ,cursor)))))))))))
+
+(defun test-approve-api-paging--at (path value)
+  "Return data that holds VALUE at PATH; an integer step is a list position."
+  (if (null path)
+      value
+    (let ((inner (test-approve-api-paging--at (cdr path) value)))
+      (if (integerp (car path))
+          (append (make-list (car path) nil) (list inner))
+        (list (cons (car path) inner))))))
 
 (describe "approve-api-graphql-all"
   (before-each (test-approve-api-paging--quiet))
@@ -91,7 +103,63 @@
         (test-approve-api-paging--fail '(:status 502))
         (expect (car received) :to-be 'approve-api-http-error)
         (expect done :to-be nil)
-        (expect (length test-approve-api-paging--sent) :to-equal 2)))))
+        (expect (length test-approve-api-paging--sent) :to-equal 2))))
+
+  (it "follows a path with list positions"
+    (test-approve-api-paging--with-fake
+      (let* ((done nil)
+             (path '(repository pullRequest headCommit nodes 0 commit
+                                statusCheckRollup contexts))
+             (page (lambda (cursor more)
+                     (test-approve-api-paging--at
+                      path `((nodes) (pageInfo . ((hasNextPage . ,more)
+                                                  (endCursor . ,cursor))))))))
+        (approve-api-graphql-all "query { a }" nil :path path
+                                 :callback (lambda () (setq done t)))
+        (test-approve-api-paging--succeed `((data . ,(funcall page "c1" t))))
+        (expect (plist-get (car test-approve-api-paging--sent) :variables)
+                :to-equal '((after . "c1")))
+        (test-approve-api-paging--succeed `((data . ,(funcall page "c2" nil))))
+        (expect (length test-approve-api-paging--sent) :to-equal 2)
+        (expect done :to-be t))))
+
+  (it "fails through the errorback when the path does not reach a connection"
+    (test-approve-api-paging--with-fake
+      (let ((done nil) (received nil))
+        (approve-api-graphql-all "query { a }" nil
+                                 :path '(repository pullRequest filez)
+                                 :callback (lambda () (setq done t))
+                                 :errorback (lambda (err) (setq received err)))
+        (test-approve-api-paging--succeed `((data . ,(test-approve-api-paging--page "c1" t))))
+        (expect (car received) :to-be 'approve-api-error)
+        (expect (approve-api-error-message received)
+                :to-equal "No paged connection (with pageInfo) at (repository pullRequest filez)")
+        (expect done :to-be nil)
+        (expect (length test-approve-api-paging--sent) :to-equal 1))))
+
+  (it "ends through the errorback when ON-PAGE signals, and logs it"
+    (test-approve-api-paging--with-fake
+      (let ((approve-log-level 'error) (done nil) (received nil))
+        (approve-api-graphql-all "query { a }" nil
+                                 :path '(repository pullRequest files)
+                                 :on-page (lambda (_data _page) (error "Bug in on-page"))
+                                 :callback (lambda () (setq done t))
+                                 :errorback (lambda (err) (setq received err)))
+        (test-approve-api-paging--succeed `((data . ,(test-approve-api-paging--page "c1" t))))
+        (expect (car received) :to-be 'approve-api-error)
+        (expect (approve-api-error-message received) :to-equal "Bug in on-page")
+        (expect done :to-be nil)
+        (expect (length test-approve-api-paging--sent) :to-equal 1)
+        (expect (with-current-buffer approve-log-buffer-name (buffer-string))
+                :to-match "Bug in on-page"))))
+
+  (it "uses the default errorback when there is none"
+    (test-approve-api-paging--with-fake
+      (approve-api-graphql-all "query { a }" nil
+                               :path '(repository pullRequest files)
+                               :on-page (lambda (_data _page) (error "Bug in on-page")))
+      (test-approve-api-paging--succeed `((data . ,(test-approve-api-paging--page "c1" t))))
+      (expect 'message :to-have-been-called-with "Approve: %s" "Bug in on-page"))))
 
 (describe "approve-api-rest-all"
   (before-each (test-approve-api-paging--quiet))
@@ -120,7 +188,20 @@
                 :to-equal '((per_page . 100) (page . 1)))
         (test-approve-api-paging--succeed (make-list 100 'file))
         (expect (length test-approve-api-paging--sent) :to-equal 1)
-        (expect done :to-be t)))))
+        (expect done :to-be t))))
+
+  (it "ends through the errorback when ON-PAGE signals"
+    (test-approve-api-paging--with-fake
+      (let ((done nil) (received nil))
+        (approve-api-rest-all "/x" :per-page 1
+                              :on-page (lambda (_value _page) (error "Bug in on-page"))
+                              :callback (lambda () (setq done t))
+                              :errorback (lambda (err) (setq received err)))
+        (test-approve-api-paging--succeed '(a))
+        (expect (car received) :to-be 'approve-api-error)
+        (expect (approve-api-error-message received) :to-equal "Bug in on-page")
+        (expect done :to-be nil)
+        (expect (length test-approve-api-paging--sent) :to-equal 1)))))
 
 
 ;;; test-approve-api-paging.el ends here

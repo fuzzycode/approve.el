@@ -43,6 +43,28 @@
 
 ;;; Paging
 
+(defun approve-api-paging--connection (data path)
+  "Return the paged connection at PATH in DATA.
+PATH is a list of keys; an integer key is a position in a list.
+Signal `approve-api-error' unless PATH ends at an object with
+pageInfo, so that a wrong path never looks like the last page."
+  (let ((value data))
+    (dolist (key path)
+      (setq value (if (integerp key) (nth key value) (alist-get key value))))
+    (unless (and (consp value) (assq 'pageInfo value))
+      (signal 'approve-api-error
+              (list (format "No paged connection (with pageInfo) at %S" path))))
+    value))
+
+(defun approve-api-paging--stop (label errorback err)
+  "End the paging of LABEL after ERR, an error in its page handling.
+Log ERR and give it to ERRORBACK, or to `approve-api-default-errorback'
+when there is none, as an `approve-api-error'."
+  (approve-log-condition (format "Paging %s" label) err)
+  (funcall (or errorback #'approve-api-default-errorback)
+           (approve-api--condition 'approve-api-error
+                                   (approve-api-error-message err))))
+
 (cl-defun approve-api-graphql-all (query variables
                                          &key path on-page callback errorback
                                          (buffer (current-buffer))
@@ -51,15 +73,19 @@
                                          host max-pages)
   "Run the paged GraphQL QUERY with VARIABLES, page after page.
 PATH lists the keys from the data to the paged connection, such as
-\(repository pullRequest files); the connection selects
-pageInfo { hasNextPage endCursor }.  QUERY takes the cursor in its
-$after variable, which is left out for the first page.
+\(repository pullRequest files); an integer is a position in a list,
+as in (repository pullRequest commits nodes 0 commit ...).  The
+connection selects pageInfo { hasNextPage endCursor }.  QUERY takes
+the cursor in its $after variable, which is left out for the first
+page.
 
 ON-PAGE is called with each page's data and its number, from 1, as
 it arrives.  CALLBACK is called with no arguments after the last
 page: when hasNextPage is false or after MAX-PAGES pages (nil for no
-limit).  An error stops the paging and goes to ERRORBACK.  If ON-PAGE
-signals, the error is logged and the paging stops.  BUFFER, TIMEOUT,
+limit).  Otherwise ERRORBACK is called once, with the error: a failed
+request, a PATH that does not end at a connection with pageInfo, or
+an error signalled by ON-PAGE (which is logged too).  So the paging
+ends with exactly one of CALLBACK and ERRORBACK.  BUFFER, TIMEOUT,
 PROGRESS and HOST are as for `approve-api-graphql'.
 
 Example:
@@ -76,16 +102,27 @@ Example:
                  :progress progress :host host
                  :callback
                  (lambda (data)
-                   (when on-page
-                     (funcall on-page data page))
-                   (let-alist (let ((connection data))
-                                (dolist (key path connection)
-                                  (setq connection (alist-get key connection))))
-                     (if (and .pageInfo.hasNextPage .pageInfo.endCursor
-                              (not (and max-pages (>= page max-pages))))
-                         (funcall fetch (1+ page) .pageInfo.endCursor)
-                       (when callback
-                         (funcall callback)))))))))
+                   (let ((next
+                          (condition-case-unless-debug err
+                              (progn
+                                (when on-page
+                                  (funcall on-page data page))
+                                (let-alist (approve-api-paging--connection
+                                            data path)
+                                  (if (and .pageInfo.hasNextPage
+                                           .pageInfo.endCursor
+                                           (not (and max-pages
+                                                     (>= page max-pages))))
+                                      .pageInfo.endCursor
+                                    'last)))
+                            (error
+                             (approve-api-paging--stop query errorback err)
+                             nil))))
+                     (cond ((eq next 'last)
+                            (when callback
+                              (funcall callback)))
+                           (next
+                            (funcall fetch (1+ page) next)))))))))
       (funcall fetch 1 nil))))
 
 (cl-defun approve-api-rest-all (resource
@@ -101,8 +138,10 @@ and page (from 1) are added.  ON-PAGE is called with each page's
 list and its number as it arrives.  CALLBACK is called with no
 arguments after the last page: one shorter than PER-PAGE, or page
 MAX-PAGES.  The defaults fit the pull request files list: 100 per
-page and at most 30 pages (3000 files).  ERRORBACK, BUFFER, TIMEOUT,
-PROGRESS and HOST are as for `approve-api-graphql'.
+page and at most 30 pages (3000 files).  Otherwise ERRORBACK is
+called once, with the error of a failed request or one signalled by
+ON-PAGE (which is logged too).  BUFFER, TIMEOUT, PROGRESS and HOST
+are as for `approve-api-graphql'.
 
 Example:
   (approve-api-rest-all \"/repos/magit/magit/pulls/5000/files\"
@@ -116,15 +155,23 @@ Example:
                :progress progress :host host
                :callback
                (lambda (value)
-                 (when on-page
-                   (funcall on-page value page))
-                 (if (and (>= (length value) per-page)
-                          (not (and max-pages (>= page max-pages))))
-                     (funcall fetch (1+ page))
-                   (when callback
-                     (funcall callback))))))))
+                 (let ((more
+                        (condition-case-unless-debug err
+                            (progn
+                              (when on-page
+                                (funcall on-page value page))
+                              (if (and (>= (length value) per-page)
+                                       (not (and max-pages (>= page max-pages))))
+                                  'more
+                                'last))
+                          (error
+                           (approve-api-paging--stop resource errorback err)
+                           nil))))
+                   (cond ((eq more 'more) (funcall fetch (1+ page)))
+                         ((eq more 'last)
+                          (when callback
+                            (funcall callback))))))))))
     (funcall fetch 1)))
-
 
 (provide 'approve-api-paging)
 

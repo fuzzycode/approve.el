@@ -405,12 +405,12 @@
 
   (it "logs an error in a callback, says so, and still settles"
     (test-approve-api--with-fake
-      (let ((approve-log-level 'error)
-            (debug-on-error nil))
+      (let ((approve-log-level 'error))
         (approve-api-rest "GET" "/x" :progress "Loading"
                           :callback (lambda (_) (error "Bug in callback")))
         (expect (approve-api-in-flight-count) :to-equal 1)
-        (expect (test-approve-api--succeed '((ok . t))) :not :to-throw)
+        (expect (let ((debug-on-error nil)) (test-approve-api--succeed '((ok . t))))
+                :not :to-throw)
         (expect (approve-api-in-flight-count) :to-equal 0)
         (expect (test-approve-api--log) :to-match "Bug in callback")
         (expect 'message :to-have-been-called-with
@@ -419,10 +419,10 @@
 
   (it "logs an error in an errorback too"
     (test-approve-api--with-fake
-      (let ((approve-log-level 'error)
-            (debug-on-error nil))
+      (let ((approve-log-level 'error))
         (approve-api-rest "GET" "/x" :errorback (lambda (_) (error "Bug in errorback")))
-        (expect (test-approve-api--fail '(:status 500)) :not :to-throw)
+        (expect (let ((debug-on-error nil)) (test-approve-api--fail '(:status 500)))
+                :not :to-throw)
         (expect (test-approve-api--log) :to-match "Bug in errorback")
         (expect (approve-api-in-flight-count) :to-equal 0))))
 
