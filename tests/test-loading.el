@@ -15,6 +15,7 @@
 
 (require 'buttercup)
 (require 'approve-api)
+(require 'approve-api-paging)
 (require 'approve-model)
 (require 'approve-test-helpers "helpers")
 

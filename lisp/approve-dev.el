@@ -62,7 +62,9 @@
 (require 'approve-log)
 (require 'approve-graphql)
 (require 'approve-api)
+(require 'approve-api-paging)
 (require 'approve-model)
+(require 'approve-session)
 
 (defgroup approve-dev nil
   "Development tools for Approve."
