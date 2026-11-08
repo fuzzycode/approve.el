@@ -18,11 +18,8 @@ task only needs the files it touches.
   exact shape of GitHub's responses; replace them with recordings
   (=approve-dev-record=) when real PRs are chosen.
 - Next step: [[file:roadmap.org::*Phase 1 — Read a PR][Phase 1]] of the roadmap.
-- Open for Phase 1: the eldoc echo lines in [[file:ui.org::*Eldoc][ui.org]] show a user's email and
-  the names of reactors, which the store does not hold (the email needs a
-  token scope we don't ask for; reactor names made the threads query cost
-  51 points instead of 1).  Either they come from the lazy detail queries
-  ([[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]) or the mockups change.
+- Open for Phase 1: what the eldoc echo lines show for users and reactions
+  ([[file:decisions.org::*Open questions][Q7]]).
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

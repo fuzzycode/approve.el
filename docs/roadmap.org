@@ -66,7 +66,7 @@ Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], hea
 - [ ] =approve-eldoc.el= ([[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]], [[file:flows.org::*F20 Look up details][F20]]): =:echo= lines from the store
       for every context kind, full docs for the eldoc buffer, lazy detail
       queries (user, team, =#123=, commit, outdated thread code) with the
-      session cache, =K= (=approve-show-details=).
+      session cache, =K= (=approve-show-details=).  Settle [[file:decisions.org::*Open questions][Q7]] first.
 - [ ] Measure against the [[file:architecture.org::*Speed][speed budgets]] with the fixtures.
 - Done when :: the medium fixture and three real PRs (small, with
   suggestions, 100+ files) render like the mockups, =g= keeps point and

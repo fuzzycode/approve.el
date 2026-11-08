@@ -286,3 +286,9 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
   minutes) load reliably through shr?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]].
 - Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 7.
 - Q6 :: Should the dashboard show unread state from notifications?  → Phase 7.
+- Q7 :: The eldoc echo lines in [[file:ui.org::*Eldoc][ui.org]] show a user's email and the names
+  of reactors, but the store holds neither: the email needs a token scope
+  Approve doesn't ask for, and reactor names made the threads query cost 51
+  points instead of 1.  Echo lines are built from the store only ([[*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]).
+  Show them only in the eldoc buffer (lazy details), or change the mockups?
+  → Phase 1 (=approve-eldoc.el=).
