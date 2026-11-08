@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — the PR buffer</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html" aria-current="page">PR buffer</a>
+    <a href="review.html">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html">Managing &amp; more</a>
+    <a href="flows.html">Flows</a>
+    <a href="icons.html">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>The PR buffer</h1>
+<p class="lead">One pull request, top to bottom: what it is, what needs you, then the details.
+Mockups follow <a href="../ui.org">ui.org</a>; the org file is the source of truth.
+<span class="hint-click">Click any <b>▾/▸</b> heading to collapse or expand it, like <code>TAB</code>.</span></p>
+
+<ul class="toc">
+  <li><a href="#single">Single layout (default)</a></li>
+  <li><a href="#split">Split layout</a></li>
+  <li><a href="#header-line">Header line</a></li>
+  <li><a href="#states">Loading, empty and error states</a></li>
+</ul>
+
+<!-- ================================================================== -->
+<section class="shot" id="single">
+<h2>Single layout <span class="ref">ui.org › PR buffer — single layout · D05</span></h2>
+<p>Everything in one buffer. Diff bodies are inserted lazily, so collapsed files cost nothing.
+Point is on <span class="u">bob</span>, so eldoc shows who he is in the echo area; <code>K</code> would show
+everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).</p>
+
+<div class="emacs">
+<div class="tb">*approve: fuzzycode/approve#1234*</div>
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir">2 pending</span> <span class="d">·</span> <span class="wa">3 unresolved</span></div>
+<div class="buf">
+<p><span class="t">#1234 Add retry logic to the GraphQL client</span>                                 <span class="badge open"><i data-i="open">●</i> Open</span></p>
+<p><span class="d">fuzzycode/approve ·</span> <span class="u">alice</span> <span class="d">wants to merge 4 commits into</span> <span class="pi">main</span> <span class="d">from</span> <span class="pi">feature/retry</span></p>
+<p><span class="d">Opened 3 days ago · updated 2 hours ago</span></p>
+<p></p>
+<p><span class="m">Reviewers</span>   <span class="ok"><i data-i="approved">✓</i></span> <span class="u"><span class="cursor">b</span>ob</span>   <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>   <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span>   <span class="d"><i data-i="requested">○</i></span> <span class="u">@fuzzycode/core</span></p>
+<p><span class="m">Assignees</span>   <span class="u">alice</span></p>
+<p><span class="m">Labels</span>      <span class="lbl" style="background:#a2eeef;color:#1d1b2c">enhancement</span>  <span class="lbl" style="background:#5319e7;color:#fff">api</span></p>
+<p><span class="m">Milestone</span>   v0.3</p>
+<p><span class="m">Issues</span>      <span class="link">#1200</span> Retry failing requests</p>
+<p><span class="m">Status</span>      <span class="er"><i data-i="changes-requested">✗</i> Changes requested</span> <span class="d">·</span> <span class="ok"><i data-i="check-success">✓</i> No conflicts</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> 7 of 9 checks passed</span></p>
+<p></p>
+
+<div class="s">
+<p class="hd pend"><span class="tog"></span> <span class="h">Your pending review</span>                         <span class="ir">2 comments · 1 reply</span>     <span class="k">S</span> <span class="d">submit ·</span> <span class="k">X</span> <span class="d">discard</span></p>
+<div class="sb">
+<p class="pend">    <span class="pi">lisp/approve-api.el:42</span>        Should <span class="code">retries</span> be part of the defgroup?</p>
+<p class="pend">    <span class="pi">lisp/approve-api.el:87–91</span>     <span class="ir"><i data-i="pending-comment">✎</i> suggestion</span>: use <span class="code">cl-incf</span></p>
+<p class="pend">    <span class="d">↳ reply on</span> <span class="pi">lisp/approve-model.el:12</span></p>
+</div>
+</div>
+<p></p>
+
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Description</span>                                                                   <span class="k">e</span> <span class="d">edit</span></p>
+<div class="sb">
+<p>  Adds exponential back-off to <span class="code">approve-api-graphql</span>.  Requests are retried</p>
+<p>  on 5xx responses and on secondary rate limits.</p>
+<p></p>
+<p>    • Configurable through <span class="code">approve-api-retries</span></p>
+<p>    • Logs each retry to the debug buffer</p>
+<p></p>
+<p>  Fixes <span class="link">#1200</span></p>
+<p>  👍 3  🎉 1</p>
+</div>
+</div>
+<p></p>
+
+<div class="s closed">
+<p class="hd"><span class="tog"></span> <span class="h">Checks</span>          <span class="wa"><i data-i="check-pending">◐</i></span> <span class="ok">7 passed</span> <span class="d">·</span> <span class="er">1 failed</span> <span class="d">·</span> <span class="wa">1 running</span></p>
+<div class="sb">
+<p>    <span class="er"><i data-i="check-failure">✗</i></span> lint                                  32s      <span class="m">required</span>      <span class="k">RET</span> <span class="d">details</span> <i data-i="external">↗</i></p>
+<p>    <span class="wa"><i data-i="check-pending">◐</i></span> test (macos-latest, 30.2)             <span class="wa">running</span>  <span class="m">required</span></p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> test (ubuntu-latest, 29.4)            2m 10s   <span class="m">required</span></p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> build                                 1m 02s</p>
+<p>    <span class="d">…  5 more passed</span></p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd"><span class="tog"></span> <span class="h">Commits (4)</span>     <span class="ir">2 new since your review</span></p>
+<div class="sb">
+<p>    <span class="m">a1b2c3d</span>  Add retry option                   <span class="u">alice</span>   <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span></p>
+<p>    <span class="m">b2c3d4e</span>  Fix typo                           <span class="u">alice</span>   <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span>   <span class="d">← your review</span></p>
+<p>  <span class="ir">┃</span> <span class="m">d4e5f6a</span>  Handle 502 responses               <span class="u">alice</span>   <span class="d">1 day ago</span>      <span class="er"><i data-i="check-failure">✗</i></span>   <span class="ir">new</span></p>
+<p>  <span class="ir">┃</span> <span class="m">e5f6a7b</span>  Add tests                          <span class="u">alice</span>   <span class="d">5 hours ago</span>    <span class="wa"><i data-i="check-pending">◐</i></span>   <span class="ir">new</span></p>
+</div>
+</div>
+
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Conversation (6)</span></p>
+<div class="sb">
+<p>  <span class="u">alice</span> <span class="d">opened this 3 days ago</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <i data-i="commented">💬</i> <span class="u">bob</span> commented <span class="d">· 2 days ago</span>                                    <span class="k">r</span> <span class="d">quote ·</span> <span class="k">+</span> <span class="d">react</span></p>
+<p>  <span class="d">│</span>   Looks good overall, a few nits inline.</p>
+<p>  <span class="d">│</span>   👍 1</p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <span class="ok"><i data-i="approved">✓</i></span> <span class="u">bob</span> <span class="ok">approved</span> <span class="d">· 2 days ago · 3 comments on code</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <i data-i="push">↑</i> <span class="u">alice</span> pushed 2 commits <span class="d">· 1 day ago</span></p>
+<p>  <span class="d">│</span>     <span class="m">d4e5f6a</span>  Handle 502 responses</p>
+<p>  <span class="d">│</span>     <span class="m">e5f6a7b</span>  Add tests</p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span> <span class="er">requested changes</span> <span class="d">· 5 hours ago</span></p>
+<p>  <span class="d">│</span>   Please add a test for the retry limit.</p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <i data-i="label">🏷</i> <span class="u">alice</span> added <span class="lbl" style="background:#5319e7;color:#fff">api</span> <span class="d">· 5 hours ago</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">╰</span> <span class="k">C</span> <span class="d">comment on this pull request</span></p>
+</div>
+</div>
+<p></p>
+
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Files changed</span>   12 files  <span class="ok">+340</span> <span class="er">−56</span>                     4/12 viewed <span class="d">·</span> <span class="wa">3 unresolved threads</span></p>
+<div class="sb">
+<p>    <span class="d"><i data-i="viewed">✓</i> lisp/approve-api.el          +120  −30  ██████████▒▒▒</span>   <i data-i="comment">💬</i> 2</p>
+<p>    <span class="d"><i data-i="unviewed">·</i></span> lisp/approve-model.el         <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
+<p>    <span class="wa"><i data-i="dismissed">↻</i></span> lisp/approve-graphql.el       <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
+<p>    <span class="d"><i data-i="unviewed">·</i></span> tests/test-approve-api.el    <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
+<p>    <span class="d">…  8 more</span></p>
+</div>
+</div>
+<p></p>
+
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Diff</span></p>
+<div class="sb">
+
+<div class="s">
+<p class="hd">  <span class="tog"></span> <span class="fh">lisp/approve-api.el</span>                           <span class="m">modified</span>  <span class="ok">+120</span> <span class="er">−30</span>   <span class="ok"><i data-i="viewed">✓</i> viewed</span></p>
+<div class="sb">
+<div class="s">
+<p class="hd hunk">    <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
+<div class="sb">
+<p>       <span class="ln">40  40</span>      (let* ((request-id (approve-api--generate-request-id))</p>
+<p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
+<p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
+<p class="add">       <span class="ln">    42</span>  +          (retries approve-api-retries))</p>
+<div class="s">
+<p class="hd">                 <span class="d">╭─</span> <span class="tog"></span> <span class="u">bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────</span></p>
+<div class="sb">
+<p>                 <span class="d">│</span> Should this be configurable per call?</p>
+<p>                 <span class="d">│</span></p>
+<p>                 <span class="d">│</span> <span class="u">alice</span> <span class="d">· 1 day ago</span></p>
+<p>                 <span class="d">│</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
+<p>                 <span class="d">│</span> 👍 1</p>
+<p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────</span></p>
+</div>
+</div>
+<div class="s">
+<p class="hd pend">                 <span class="d">╭─</span> <span class="tog"></span> <span class="ir"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ─────────────────────────────────────────</span></p>
+<div class="sb">
+<p class="pend">                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup?</p>
+<p class="pend">                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ────────────────────────────────────────</span></p>
+</div>
+</div>
+<p>       <span class="ln">42  43</span>        (when progress-message</p>
+<p>       <span class="ln">43  44</span>          (make-progress-reporter progress-message))</p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd hunk">    <span class="tog"></span> @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id</p>
+<div class="sb">
+<p>       <span class="ln">87  92</span>    (approve-api--cleanup-request request-id)</p>
+<p class="add">       <span class="ln">    93</span>  +  (when (approve-api--retry-p request-id)</p>
+<p class="add">       <span class="ln">    94</span>  +    (cl-return-from approve-api--handle-timeout</p>
+<p class="add">       <span class="ln">    95</span>  +      (approve-api--retry request-id)))</p>
+<p>       <span class="ln">88  96</span>    (when error-callback</p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd">      <span class="tog"></span> <span class="d"><i data-i="comment">💬</i> 1 resolved thread on line 101</span></p>
+<div class="sb">
+<p>                 <span class="d">╭─ dave · 1 day ago · resolved by alice ───────────────────────</span></p>
+<p>                 <span class="d">│ Typo: "recieve".</span></p>
+<p>                 <span class="d">╰─</span> <span class="k">R</span> <span class="d">unresolve ──────────────────────────────────────────────</span></p>
+</div>
+</div>
+</div>
+</div>
+<p></p>
+
+<div class="s closed">
+<p class="hd">  <span class="tog"></span> <span class="fh">lisp/approve-model.el</span>                         <span class="m">modified</span>   <span class="ok">+40</span> <span class="er">−10</span>   <span class="d"><i data-i="unviewed">·</i> not viewed</span></p>
+<div class="sb">
+<div class="s">
+<p class="hd hunk">    <span class="tog"></span> @@ -12,6 +12,9 @@ (defvar-local approve-model--store nil</p>
+<div class="sb">
+<p>       <span class="ln">12  12</span>    "Buffer-local normalized data store."</p>
+<p class="add">       <span class="ln">    13</span>  +(defvar-local approve-model--extra nil</p>
+<p class="add">       <span class="ln">    14</span>  +  "Data without node ids, keyed by name.")</p>
+</div>
+</div>
+</div>
+</div>
+
+<div class="s closed">
+<p class="hd">  <span class="tog"></span> <span class="fh">lisp/approve-graphql.el</span>                       <span class="m">modified</span>   <span class="ok">+12</span>  <span class="er">−2</span>   <span class="wa"><i data-i="dismissed">↻</i> changed since viewed</span></p>
+<div class="sb">
+<div class="s">
+<p class="hd">    <span class="tog"></span> <span class="h">On this file (1)</span></p>
+<div class="sb">
+<p>        <span class="d">╭─</span> <span class="u">dave</span> <span class="d">· 1 day ago ─────────────────────────────────────────────</span></p>
+<p>        <span class="d">│</span> Could this file be split in two?</p>
+<p>        <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ───────────────────────────────────────────</span></p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd">    <span class="tog"></span> <span class="h">Outdated (2)</span>                         <span class="d">threads on lines no longer in the diff</span></p>
+<div class="sb">
+<p>        <span class="wa">outdated</span> <span class="d">·</span> <span class="u">carol</span> <span class="d">on line 33:</span> Why not use <span class="code">string-match-p</span>?</p>
+<p>        <span class="wa">outdated</span> <span class="d">·</span> <span class="u">bob</span> <span class="d">on line 58:</span> Nit: docstring.</p>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   Top  L5        <span class="pi">Approve-PR</span></div>
+</div>
+<div class="echo"><span class="u">@bob</span> — Bob Smith — bob@example.com</div>
+</div>
+
+<ul>
+  <li>Reviewer marks: <span class="ok"><i data-i="approved">✓</i></span> approved, <span class="er"><i data-i="changes-requested">✗</i></span> changes requested, <i data-i="commented">💬</i> commented, <i data-i="requested">○</i> requested.</li>
+  <li><b>Your pending review</b> only appears when one exists. It uses the pending background, as does every pending comment.</li>
+  <li>File list: <i data-i="viewed">✓</i> viewed (dimmed), <i data-i="unviewed">·</i> not viewed, <span class="wa"><i data-i="dismissed">↻</i></span> viewed but changed since (GitHub's <code>DISMISSED</code>).</li>
+  <li>Resolved threads and outdated threads start collapsed. Key hints (<code>r reply · R resolve</code>) can be turned off.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="split">
+<h2>Split layout <span class="ref">approve-layout = split · F18</span></h2>
+<p>The overview keeps everything but the diff; <code>RET</code> on a file opens the linked diff buffer at that file,
+<code>^</code> goes back. Both buffers share one store.</p>
+
+<div class="emacs">
+<div class="tb">Emacs — approve</div>
+<div class="split">
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed</div>
+<div class="buf">
+<p><span class="t">#1234 Add retry logic to the GraphQL…</span></p>
+<p><span class="d">fuzzycode/approve ·</span> <span class="u">alice</span> <span class="d">→</span> <span class="pi">main</span></p>
+<p></p>
+<p><span class="m">Reviewers</span>  <span class="ok"><i data-i="approved">✓</i></span> <span class="u">bob</span>  <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span></p>
+<p><span class="m">Status</span>     <span class="er"><i data-i="changes-requested">✗</i> Changes requested</span></p>
+<p></p>
+<p class="pend"><span class="tog"></span> <span class="h">Your pending review</span>  <span class="ir">2 · 1 reply</span></p>
+<p><span class="tog"></span> <span class="h">Description</span></p>
+<p>  Adds exponential back-off to</p>
+<p>  <span class="code">approve-api-graphql</span>. …</p>
+<p>▸ <span class="h">Checks</span>  <span class="wa"><i data-i="check-pending">◐</i> 7/9</span></p>
+<p>▸ <span class="h">Commits (4)</span></p>
+<p>▸ <span class="h">Conversation (6)</span></p>
+<p><span class="tog"></span> <span class="h">Files changed</span>  12  <span class="ok">+340</span> <span class="er">−56</span></p>
+<p class="cur">  <span class="d"><i data-i="viewed">✓</i> lisp/approve-api.el   +120 −30</span></p>
+<p>  <span class="d"><i data-i="unviewed">·</i></span> lisp/approve-model.el   <span class="ok">+40</span> <span class="er">−10</span></p>
+<p>  <span class="wa"><i data-i="dismissed">↻</i></span> lisp/approve-graphql.el <span class="ok">+12</span>  <span class="er">−2</span></p>
+</div>
+<div class="ml off"> <span class="b">*approve: …#1234*</span>   Top    Approve-PR</div>
+</div>
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="d">· all changes (main…e5f6a7b) ·</span> <span class="ir">2 pending</span></div>
+<div class="buf">
+<p><span class="tog"></span> <span class="fh">lisp/approve-api.el</span>     <span class="ok">+120</span> <span class="er">−30</span>  <span class="ok"><i data-i="viewed">✓</i></span></p>
+<p class="hunk">  <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun …</p>
+<p>    <span class="ln">40  40</span>   (let* ((request-id …</p>
+<p class="del">    <span class="ln">41    </span>-        (timeout approve-api-…</p>
+<p class="add">    <span class="ln">    41</span>+        (timeout approve-api-…</p>
+<p class="add">    <span class="ln">    42</span>+        (retries approve-api-…</p>
+<p>         <span class="d">╭─</span> <span class="u">bob</span> <span class="d">· 2 days ago ─────────</span></p>
+<p>         <span class="d">│</span> Should this be configurable</p>
+<p>         <span class="d">│</span> per call?</p>
+<p>         <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ──────</span></p>
+<p>    <span class="ln">42  43</span>     (when progress-message</p>
+<p class="hunk">  ▸ @@ -87,6 +92,22 @@ (defun …</p>
+<p></p>
+<p>▸ <span class="fh">lisp/approve-model.el</span>    <span class="ok">+40</span> <span class="er">−10</span>  <span class="d"><i data-i="unviewed">·</i></span></p>
+<p>▸ <span class="fh">lisp/approve-graphql.el</span>  <span class="ok">+12</span>  <span class="er">−2</span>  <span class="wa"><i data-i="dismissed">↻</i></span></p>
+<p>▸ <span class="fh">tests/test-approve-api.el</span> <span class="ok">+160</span>    <span class="d"><i data-i="unviewed">·</i></span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span> <span class="b">*approve-diff: …#1234*</span>  L4  <span class="pi">Approve-Diff</span></div>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="header-line">
+<h2>Header line <span class="ref">ui.org › Header line · D23</span></h2>
+<p>Always visible while scrolling. The last form appears when change detection sees new commits or comments on GitHub;
+the buffer never redraws by itself.</p>
+<div class="emacs">
+<div class="win stack">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir">2 pending</span> <span class="d">·</span> <span class="wa">3 unresolved</span></div>
+<div class="hl" style="border-top:1px solid var(--overlay)"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="m"><i data-i="loading">⟳</i> loading files, threads…</span></div>
+<div class="hl" style="border-top:1px solid var(--overlay)"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="ok"><i data-i="check-success">✓</i> checks</span> <span class="d">·</span> 12/12 viewed <span class="d">·</span> 0 unresolved <span class="d">·</span> <span class="ir"><i data-i="loading">⟳</i> updated on GitHub — <span class="k">g</span> to refresh · 2 new commits</span></div>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="states">
+<h2>Loading, empty and error states <span class="ref">F02 · architecture.org › Errors</span></h2>
+<p>The skeleton draws at once; each section fills in when its query returns. A failed query marks only its own
+section; huge and binary files get a heading and an explanation. Empty sections say so in dim text
+(“No description provided.”).</p>
+<div class="emacs">
+<div class="tb">*approve: fuzzycode/approve#1234*</div>
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="d">·</span> <span class="m"><i data-i="loading">⟳</i> loading description, conversation…</span></div>
+<div class="buf">
+<p><span class="t">#1234</span>  <span class="d">(from the URL; title loading)</span></p>
+<p></p>
+<p><span class="tog"></span> <span class="h">Description</span></p>
+<p>  <span class="m"><i data-i="loading">⟳</i> Loading…</span></p>
+<p><span class="tog"></span> <span class="h">Conversation</span></p>
+<p>  <span class="m"><i data-i="loading">⟳</i> Loading…</span></p>
+<p><span class="tog"></span> <span class="h">Files changed</span></p>
+<p>  <span class="er"><i data-i="error">✗</i> Could not load files: HTTP 502 Bad Gateway ·</span> <span class="k">g</span> <span class="er">to retry</span></p>
+<p></p>
+<p><span class="tog"></span> <span class="fh">lisp/huge-generated.json</span>                           <span class="m">modified</span>  <span class="ok">+48 213</span> <span class="er">−47 990</span></p>
+<p>    <span class="d">Diff not shown by GitHub (too large) ·</span> <span class="k">RET</span> <span class="d">load it anyway</span></p>
+<p><span class="tog"></span> <span class="fh">assets/logo.png</span>                                    <span class="m">modified</span>   <span class="d">binary</span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   All  L1        <span class="pi">Approve-PR</span></div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+</main>
+</body>
+</html>

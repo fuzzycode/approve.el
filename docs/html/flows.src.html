@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — flows</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+<!-- Generated from flows.src.html by build.sh — edit the template, not flows.html. -->
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html">PR buffer</a>
+    <a href="review.html">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html">Managing &amp; more</a>
+    <a href="flows.html" aria-current="page">Flows</a>
+    <a href="icons.html">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>Flows</h1>
+<p class="lead">Every user scenario from <a href="../flows.org">flows.org</a> as a diagram. Dashed boxes link to another
+flow. Write actions all run the same pipeline (<a href="#F00">F00</a>); their own diagrams show only what differs.</p>
+
+<p class="legend">
+  <span class="l-user">the user does</span>
+  <span class="l-act">Approve does</span>
+  <span class="l-dec">decision</span>
+  <span class="l-api">GitHub call</span>
+  <span class="l-err">user-error / failure</span>
+  <span class="l-ok">result</span>
+  <span class="l-goto">continue in another flow</span>
+</p>
+
+<ul class="toc">
+  <li><a href="#arch">How the pieces talk</a></li>
+  <li><a href="#F00">F00 The action pipeline</a></li>
+  <li><a href="#F01">F01 Find and open a PR</a></li>
+  <li><a href="#F02">F02 Load a PR</a></li>
+  <li><a href="#F03">F03 Read and navigate</a></li>
+  <li><a href="#F04">F04 Mark a file viewed</a></li>
+  <li><a href="#F05">F05 Comment on code</a></li>
+  <li><a href="#F05-life">F05 The pending review's life</a></li>
+  <li><a href="#F06">F06 Suggest a change</a></li>
+  <li><a href="#F07">F07 Reply; resolve or unresolve</a></li>
+  <li><a href="#F08">F08 Edit or delete own text</a></li>
+  <li><a href="#F09">F09 Submit or discard a review</a></li>
+  <li><a href="#F10">F10 Conversation comment</a></li>
+  <li><a href="#F11">F11 React</a></li>
+  <li><a href="#F12">F12 Edit PR metadata</a></li>
+  <li><a href="#F13">F13 Merge, close, draft, update</a></li>
+  <li><a href="#F14">F14 Re-review after new commits</a></li>
+  <li><a href="#F15">F15 View the whole file</a></li>
+  <li><a href="#F16">F16 Inspect checks</a></li>
+  <li><a href="#F17">F17 Refresh and detect changes</a></li>
+  <li><a href="#F18">F18 Switch layout</a></li>
+  <li><a href="#F19">F19 Notifications</a></li>
+  <li><a href="#F20">F20 Look up details (eldoc)</a></li>
+</ul>
+
+<section class="shot" id="arch">
+<h2>How the pieces talk <span class="ref">architecture.org › Layers</span></h2>
+<p>Code depends downwards only. Renderers are pure (store in, text out); only <code>approve-api</code> talks to ghub;
+callbacks run in the buffer that made the request.</p>
+<div class="flow">
+<!-- svg arch -->
+</div>
+</section>
+
+<section class="shot" id="F00">
+<h2>F00 The action pipeline <span class="ref">every write · Phase 2</span></h2>
+<p>Each command supplies only its checks, its input prompt, its mutation and its list edits. Nothing changes on
+screen until GitHub confirms (D14); mutations run one at a time (D15).</p>
+<div class="flow">
+<!-- svg F00 -->
+</div>
+</section>
+
+<section class="shot" id="F01">
+<h2>F01 Find and open a PR <span class="ref">Phases 1 and 3</span></h2>
+<p>All ways in end in the same parser. An existing buffer is reused without reloading.</p>
+<div class="flow">
+<!-- svg F01 -->
+</div>
+</section>
+
+<section class="shot" id="F02">
+<h2>F02 Load a PR <span class="ref">Phase 1</span></h2>
+<p>Several smaller queries in parallel instead of one big one: the header shows quickly, each section fills in when
+its data arrives, and one failure only marks its own section.</p>
+<div class="flow">
+<!-- svg F02 -->
+</div>
+</section>
+
+<section class="shot" id="F03">
+<h2>F03 Read and navigate <span class="ref">no network · Phase 1</span></h2>
+<div class="flow">
+<!-- svg F03 -->
+</div>
+</section>
+
+<section class="shot" id="F04">
+<h2>F04 Mark a file viewed <span class="ref">v · Phase 2</span></h2>
+<div class="flow">
+<!-- svg F04 -->
+</div>
+</section>
+
+<section class="shot" id="F05">
+<h2>F05 Comment on code <span class="ref">c · Phase 2</span></h2>
+<p>The heart of reviewing: one line, a range, or a whole file. Comments go into the pending review on GitHub,
+starting one if needed (D22).</p>
+<div class="flow">
+<!-- svg F05 -->
+</div>
+</section>
+
+<section class="shot" id="F05-life">
+<h2>F05 The pending review's life <span class="ref">D02</span></h2>
+<div class="flow">
+<!-- svg F05-life -->
+</div>
+</section>
+
+<section class="shot" id="F06">
+<h2>F06 Suggest a change <span class="ref">s · Phase 2</span></h2>
+<div class="flow">
+<!-- svg F06 -->
+</div>
+</section>
+
+<section class="shot" id="F07">
+<h2>F07 Reply to a thread; resolve or unresolve <span class="ref">r · R · Phase 2</span></h2>
+<div class="flow">
+<!-- svg F07 -->
+</div>
+</section>
+
+<section class="shot" id="F08">
+<h2>F08 Edit or delete own text <span class="ref">e · k · Phase 2</span></h2>
+<div class="flow">
+<!-- svg F08 -->
+</div>
+</section>
+
+<section class="shot" id="F09">
+<h2>F09 Submit or discard a review <span class="ref">S · X · Phase 2</span></h2>
+<div class="flow">
+<!-- svg F09 -->
+</div>
+</section>
+
+<section class="shot" id="F10">
+<h2>F10 Conversation comment, with quoting <span class="ref">C · Phase 2</span></h2>
+<div class="flow">
+<!-- svg F10 -->
+</div>
+</section>
+
+<section class="shot" id="F11">
+<h2>F11 React <span class="ref">+ · Phase 4</span></h2>
+<div class="flow">
+<!-- svg F11 -->
+</div>
+</section>
+
+<section class="shot" id="F12">
+<h2>F12 Edit PR metadata <span class="ref">l a A M · Phase 4</span></h2>
+<p>Labels shown; assignees, reviewers and milestone work the same way. Repository metadata is fetched on first use
+and cached (D24).</p>
+<div class="flow">
+<!-- svg F12 -->
+</div>
+</section>
+
+<section class="shot" id="F13">
+<h2>F13 Merge, close, reopen, draft, update branch <span class="ref">m · Phase 5</span></h2>
+<div class="flow">
+<!-- svg F13 -->
+</div>
+</section>
+
+<section class="shot" id="F14">
+<h2>F14 Re-review after new commits <span class="ref">V · Phase 6</span></h2>
+<p>GitHub knows the commit you last reviewed; Approve offers to show only what changed since.</p>
+<div class="flow">
+<!-- svg F14 -->
+</div>
+</section>
+
+<section class="shot" id="F15">
+<h2>F15 View the whole file <span class="ref">RET · F · Phase 6</span></h2>
+<p>API-only (D03): the blob comes from GraphQL and is cached by object id, which never changes.</p>
+<div class="flow">
+<!-- svg F15 -->
+</div>
+</section>
+
+<section class="shot" id="F16">
+<h2>F16 Inspect checks <span class="ref">Phases 1 and 5</span></h2>
+<div class="flow">
+<!-- svg F16 -->
+</div>
+</section>
+
+<section class="shot" id="F17">
+<h2>F17 Refresh and detect remote changes <span class="ref">g · D23 · Phases 1 and 2</span></h2>
+<div class="flow">
+<!-- svg F17 -->
+</div>
+</section>
+
+<section class="shot" id="F18">
+<h2>F18 Switch layout <span class="ref">L · D05 · Phase 2</span></h2>
+<div class="flow">
+<!-- svg F18 -->
+</div>
+</section>
+
+<section class="shot" id="F19">
+<h2>F19 Notifications <span class="ref">Phase 7</span></h2>
+<div class="flow">
+<!-- svg F19 -->
+</div>
+</section>
+
+<section class="shot" id="F20">
+<h2>F20 Look up details <span class="ref">K · eldoc · D27 · Phase 1</span></h2>
+<p>One line in the echo area as point rests on a thing; everything in the eldoc buffer with <code>K</code>.
+Moving point never touches the network: missing details are fetched only when wanted.</p>
+<div class="flow">
+<!-- svg F20 -->
+</div>
+</section>
+</main>
+</body>
+</html>

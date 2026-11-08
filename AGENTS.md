@@ -30,4 +30,6 @@ for each kind of task.
   `make build`, `make test` and `make lint` must pass before a commit.
 - Conventional commits, one logical change each, with its tests and doc
   updates. Tick the roadmap task in the same commit.
+- A changed mockup or flow is changed in its org file and in its HTML view
+  (`docs/html/`); `make docs` rebuilds the flow diagrams (graphviz).
 - The shell is fish: wrap loops and heredocs in `bash -c '…'`.

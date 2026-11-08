@@ -40,6 +40,7 @@ show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutation
 | F17 | Refresh and detect remote changes          |   1/2 |
 | F18 | Switch layout                              |     2 |
 | F19 | Notifications                              |     7 |
+| F20 | Look up details (eldoc)                    |     1 |
 
 * F00 The action pipeline
 Every command that changes something on GitHub runs this pipeline.  Code
@@ -635,3 +636,41 @@ Later idea: show a failing job's log in a buffer (REST Actions API).
  [user] u   ──▶ DELETE …/threads/{id}/subscription (unsubscribe)
  [user] f   ──▶ filter transient: unread only, participating, reason, repository
 #+end_example
+
+* F20 Look up details
+Extended information about the thing at point ([[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]): one line in the echo
+area as point rests on it, everything in the eldoc buffer with =K=.  Code
+lives in =approve-eldoc.el= ([[file:architecture.org::*Extended information (eldoc)][architecture]]).
+
+#+begin_example
+ point rests on a thing (eldoc idle delay)          [user] K
+        │                                                │
+        ▼                                                ▼
+ ctx = approve-context-at-point                   mark "details wanted"
+        │                                         for this ctx, run eldoc
+        ▼                                                │
+     ◇ a describer for ctx? ◇──no──▶ nil (other eldoc  │
+        │ yes                       functions run)       │
+        ▼                                                │
+ ┌────────────────────────────────────────┐                │
+ │ echo = one line from the store         │◀───────────────┘
+ │ doc  = store data + cached details     │
+ └────────────────────┬───────────────────┘
+                      ▼
+     ◇ details missing, and details wanted ◇──no──▶ echo area: the line
+     ◇ or the eldoc buffer visible?        ◇        eldoc buffer: doc as is
+                      │ yes
+                      ▼
+ echo area: the line now · eldoc buffer: doc + "⟳ loading details…"
+ query the details (user, team, #123, commit, original code)
+                      │
+                      ▼
+     ◇ ok? ◇──no──▶ cache the error (1 min) · buffer: "details unavailable (…)"
+                      │ yes
+                      ▼
+ cache for the session · eldoc buffer: full doc
+ (eldoc drops the answer if point has moved on)
+#+end_example
+
+Pressing =K= also shows the eldoc buffer (=eldoc-doc-buffer=) in a side
+window; =q= there closes it.  With the buffer open, details follow point.

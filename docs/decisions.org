@@ -88,7 +88,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Decision :: All faces live in =approve-faces.el= and inherit from Magit or
   built-in faces.  All icons go through =approve-icon= (semantic name →
   nerd-icons glyph, or a Unicode fallback when =approve-use-nerd-icons= is nil
-  or the font is missing).
+  or the font is missing).  Which glyphs: [[*D26 Icons come from Codicons][D26]].
 - Why :: Themes work out of the box; users can restyle everything; terminals
   and machines without the font still look right.
 
@@ -110,6 +110,36 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Why :: Batching comments into one review is how code review is meant to work
   and sends one notification.  Matches pr-review's habit, but on GitHub's side
   ([[*D02 Durable state lives on GitHub][D02]]).
+
+** D26 Icons come from Codicons
+- Status :: accepted (2026-11-08)
+- Decision :: =approve-icon= maps every semantic icon to the Codicons set in
+  nerd-icons (=nerd-icons-codicon=, names =nf-cod-*=).  The mapping is the
+  table in [[file:ui.org::*Icons][ui.org › Icons]].  It is a =defcustom= (=approve-icons=), so
+  users can swap any icon for another nerd-icons glyph.
+- Why :: Compared side by side with Material Design, Font Awesome and
+  Octicons ([[file:html/icons.html][html/icons.html]]); Codicons cover every pull request state
+  (open, draft, merged, closed, request changes, comment draft) with one
+  consistent outline style.  No extra dependency: nerd-icons ships them.
+
+** D27 Extended information through eldoc: one line, then the eldoc buffer
+- Status :: accepted (2026-11-08)
+- Decision :: =approve-eldoc.el= adds one function to
+  =eldoc-documentation-functions= in every Approve buffer.  For the thing at
+  point (user, team, label, commit, =#123= reference, check, file, thread,
+  reactions, date, milestone, branch) it returns:
+  - an =:echo= string: one line for the echo area, built only from data
+    already in the store, so it shows at once;
+  - the full documentation for the eldoc buffer (=eldoc-doc-buffer=, key
+    =K=): everything worth knowing about the thing, as text with faces.
+  Details the store lacks (a user's bio and status, an issue's title, a
+  commit's full message) are fetched when first asked for: the function
+  answers asynchronously, and the result is cached for the session.  The
+  echo line never waits for the network.
+- Why :: Rich context without cluttering the buffer, through a mechanism
+  every Emacs user knows (and that corfu-popupinfo, eldoc-box and similar
+  frontends can show too).  Fetching lazily keeps loading a PR fast
+  ([[*D24 Repository metadata is fetched lazily and cached per session][D24]]).  =:echo= needs eldoc 1.14 ([[*D25 Dependencies][D25]]).
 
 * Data and network
 ** D07 ghub, wrapped by approve-api
@@ -220,15 +250,21 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 ** D21 Docs in org; diagrams in plain Unicode/ASCII
 - Status :: accepted (2026-11-08)
 - Decision :: All planning docs are org files in =docs/=.  Mockups, flowcharts
-  and diagrams are Unicode/ASCII in =#+begin_example= blocks.
-- Why :: Readable in Emacs, on GitHub, and by agents, with no tooling.
+  and diagrams are Unicode/ASCII in =#+begin_example= blocks.  HTML views in
+  =docs/html/= illustrate them: hand-written HTML/CSS mockups in the author's
+  theme, and flow diagrams generated with graphviz from =html/flows/flows.gv=
+  (=make docs=).  The org files stay the source of truth.
+- Why :: Readable in Emacs, on GitHub, and by agents, with no tooling.  The
+  HTML views show colour, layout and flow shapes that text can't, and need
+  nothing but a browser to view (diagrams are inlined; no network).
 
 ** D25 Dependencies
 - Status :: accepted
-- Decision :: Required: emacs 29.1, magit-section, magit (for its faces and
-  helpers), transient, ghub, markdown-mode (input buffers), dash, nerd-icons.
-  Development: buttercup, undercover, package-lint.  Nothing else without a
-  new decision.
+- Decision :: Required: emacs 29.1, eldoc 1.14 (for =:echo=, [[*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]; a GNU
+  ELPA core package, so Emacs 29.1, which ships 1.13, upgrades it),
+  magit-section, magit (for its faces and helpers), transient, ghub,
+  markdown-mode (input buffers), dash, nerd-icons.  Development: buttercup,
+  undercover, package-lint.  Nothing else without a new decision.
 - Why :: Each one either is what we build on ([[*D04 Buffers are magit-section trees built from section hooks][D04]], [[*D06 Menus are transients; everything is reachable from =?=][D06]], [[*D07 ghub, wrapped by approve-api][D07]]) or saves
   real work.  The current =Cask= lists all of these except transient, which
   magit pulls in; list it explicitly in Phase 0.

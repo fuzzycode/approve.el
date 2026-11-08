@@ -1,4 +1,4 @@
-.PHONY: build test clean distclean install lint
+.PHONY: build test clean distclean install lint docs
 
 CASK ?= cask
 EMACS ?= emacs
@@ -24,6 +24,9 @@ lint: install
 
 clean:
 	rm -f $(OBJS)
+
+docs:
+	docs/html/build.sh
 
 distclean: clean
 	rm -rf .cask

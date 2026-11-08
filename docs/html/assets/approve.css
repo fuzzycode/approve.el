@@ -1,0 +1,282 @@
+/* Approve — HTML mockups.
+   Colours are the faces of doom-rose-pine-moon as the author's Emacs shows
+   them (default, magit-section-heading, magit-diff-*, shadow, success, …).
+   The "dawn" theme shows the same mockups with rose-pine's light palette:
+   every Approve face inherits from theme faces (D16), so both just work. */
+
+:root,
+[data-theme="moon"] {
+  --page: #191724;
+  --page-fg: #e0def4;
+  --page-muted: #908caa;
+  --bg: #232136;
+  --fg: #e0def4;
+  --surface: #2a273f;
+  --overlay: #393552;
+  --muted: #6e6a86;
+  --subtle: #908caa;
+  --shadow: #56526e;
+  --love: #eb6f92;
+  --gold: #f6c177;
+  --rose: #ea9a97;
+  --pine: #3e8fb0;
+  --foam: #9ccfd8;
+  --iris: #c4a7e7;
+  --hl-low: #2a283e;
+  --hl-med: #44415a;
+  --add-fg: #7ca5ac;
+  --add-bg: #2f3246;
+  --del-fg: #bc5874;
+  --del-bg: #4a3a58;
+  --hunk-fg: #232136;
+  --hunk-bg: #53496b;
+  --pending-bg: #322c4a;
+  --target-bg: #393552;
+  --fringe: #44415a;
+}
+
+[data-theme="dawn"] {
+  --page: #f2e9e1;
+  --page-fg: #575279;
+  --page-muted: #797593;
+  --bg: #faf4ed;
+  --fg: #575279;
+  --surface: #f2e9e1;
+  --overlay: #dfdad9;
+  --muted: #9893a5;
+  --subtle: #797593;
+  --shadow: #a8a3b3;
+  --love: #b4637a;
+  --gold: #ea9d34;
+  --rose: #d7827e;
+  --pine: #286983;
+  --foam: #56949f;
+  --iris: #907aa9;
+  --hl-low: #f4ede8;
+  --hl-med: #dfdad9;
+  --add-fg: #286983;
+  --add-bg: #e3ecec;
+  --del-fg: #b4637a;
+  --del-bg: #f3e0e0;
+  --hunk-fg: #faf4ed;
+  --hunk-bg: #9893a5;
+  --pending-bg: #efe6f3;
+  --target-bg: #dfdad9;
+  --fringe: #cecacd;
+}
+
+/* ---------- Page ---------- */
+
+* { box-sizing: border-box; }
+
+html { background: var(--page); color: var(--page-fg); }
+
+body {
+  margin: 0;
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+a { color: var(--pine); }
+
+.top {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap;
+  padding: .6rem 1.4rem;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--overlay);
+}
+.top .brand { font-weight: 700; color: var(--iris); text-decoration: none; }
+.top nav { display: flex; gap: .9rem; flex-wrap: wrap; }
+.top nav a { color: var(--page-muted); text-decoration: none; }
+.top nav a[aria-current="page"], .top nav a:hover { color: var(--page-fg); }
+.top .toggles { margin-left: auto; display: flex; gap: .5rem; }
+.top button, .top select {
+  font: inherit; font-size: 13px; cursor: pointer;
+  color: var(--page-fg); background: var(--surface);
+  border: 1px solid var(--overlay); border-radius: 6px; padding: .2rem .6rem;
+}
+
+main { max-width: 1180px; margin: 0 auto; padding: 1.5rem 1.4rem 4rem; }
+main > h1 { margin: .4rem 0 .2rem; }
+.lead { color: var(--page-muted); max-width: 60rem; }
+
+.toc { columns: 2; max-width: 52rem; color: var(--page-muted); }
+.toc a { color: var(--page-fg); }
+
+section.shot { margin: 3rem 0; scroll-margin-top: 4rem; }
+section.shot > h2 { margin: 0 0 .2rem; font-size: 1.25rem; }
+section.shot > h2 .ref { font-size: .8rem; font-weight: 400; color: var(--page-muted); margin-left: .6rem; }
+section.shot > p, section.shot > ul { max-width: 62rem; color: var(--page-muted); }
+section.shot > ul { padding-left: 1.2rem; }
+section.shot code, .lead code, .card code {
+  font-family: "JetBrainsMono Nerd Font Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: .9em; color: var(--page-fg);
+}
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card {
+  display: block; padding: 1rem 1.1rem; border-radius: 10px; text-decoration: none;
+  background: var(--bg); border: 1px solid var(--overlay); color: var(--page-fg);
+}
+.card:hover { border-color: var(--iris); }
+.card h3 { margin: 0 0 .3rem; color: var(--iris); }
+.card p { margin: 0; color: var(--page-muted); }
+
+.hint-click { font-size: .85rem; color: var(--page-muted); }
+
+/* ---------- Emacs frame ---------- */
+
+.emacs {
+  --mono: "JetBrainsMono Nerd Font Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  margin: .8rem 0 .4rem;
+  background: var(--bg); color: var(--fg);
+  font-family: var(--mono); font-size: 13px; line-height: 1.38;
+  border: 1px solid var(--overlay); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  overflow: hidden;
+}
+[data-theme="dawn"] .emacs { box-shadow: 0 8px 24px rgba(87, 82, 121, .18); }
+
+.emacs .tb {
+  position: relative; text-align: center;
+  font: 12px/26px system-ui, sans-serif; color: var(--subtle);
+  background: var(--surface); border-bottom: 1px solid var(--overlay);
+}
+.emacs .tb::before {
+  content: ""; position: absolute; left: 12px; top: 8px; width: 10px; height: 10px;
+  border-radius: 50%; background: #eb6f92;
+  box-shadow: 16px 0 0 #f6c177, 32px 0 0 #9ccfd8;
+}
+
+.win { display: flex; flex-direction: column; min-width: 0; }
+.split { display: flex; }
+.split > .win { flex: 1 1 0; min-width: 0; }
+.split > .win + .win { border-left: 1px solid var(--overlay); }
+.stack > .win + .win, .stack > .tr { border-top: 1px solid var(--overlay); }
+
+.hl, .ml, .echo, .buf p, .tr p, .mini p { white-space: pre; }
+
+.hl { background: var(--surface); padding: 1px 10px; }
+.ml { background: var(--surface); padding: 1px 10px; border-top: 1px solid var(--overlay); }
+.ml.off { background: var(--hl-low); color: var(--muted); }
+.echo { padding: 1px 10px; min-height: 1.38em; border-top: 1px solid var(--overlay); }
+
+.buf { padding: 6px 0 8px; overflow-x: auto; }
+.buf.short { max-height: 13.5em; overflow-y: hidden; }
+.buf p, .tr p, .mini p { margin: 0; padding: 0 10px; min-height: 1.38em; }
+.tr { padding: 4px 0 6px; background: var(--bg); }
+.mini { padding: 2px 0 4px; border-top: 1px solid var(--overlay); }
+
+/* Line-level faces (whole line, extended like :extend t) */
+.buf p.add { background: var(--add-bg); color: var(--add-fg); }
+.buf p.del { background: var(--del-bg); color: var(--del-fg); }
+.buf p.hunk { background: var(--hunk-bg); color: var(--hunk-fg); }
+.buf p.pend { background: var(--pending-bg); }
+.buf p.tgt { background: var(--target-bg); }
+.buf p.cur { background: var(--hl-low); }
+.mini p.sel { background: var(--overlay); }
+
+/* Text faces */
+.h { color: var(--pine); font-weight: 700; }          /* magit-section-heading */
+.t { color: var(--fg); font-weight: 700; }            /* approve-title */
+.fh { color: var(--fg); font-weight: 700; }           /* magit-diff-file-heading */
+.d { color: var(--shadow); }                          /* shadow / approve-dim */
+.m { color: var(--muted); }                           /* comments, hashes, dates */
+.u { color: var(--gold); }                            /* magit-log-author */
+.ok { color: var(--foam); }                           /* success */
+.er { color: var(--love); }                           /* error */
+.wa { color: var(--gold); }                           /* warning */
+.ir { color: var(--iris); }
+.ro { color: var(--rose); }
+.pi { color: var(--pine); }
+.b { font-weight: 700; }
+.it { font-style: italic; }
+.k { color: var(--pine); font-style: italic; }        /* transient-key */
+.kh { color: var(--pine); font-weight: 700; }         /* transient-heading */
+.ina { color: var(--shadow); }                        /* transient inapt */
+.ln { color: var(--muted); }                          /* line-number */
+.code { color: var(--rose); }                         /* inline code */
+.link { color: var(--pine); text-decoration: underline; }
+.lbl { border-radius: 3px; padding: 0 2px; font-weight: 600; }
+.badge { border-radius: 3px; padding: 0 3px; font-weight: 700; }
+.badge.open { background: var(--foam); color: var(--bg); }
+.badge.draft { background: var(--shadow); color: var(--bg); }
+.badge.merged { background: var(--iris); color: var(--bg); }
+.fr-add { color: var(--foam); }
+.fr-del { color: var(--love); }
+.cursor { background: var(--fg); color: var(--bg); }
+
+/* corfu popup under point */
+.buf p.anchor { position: relative; }
+.corfu {
+  position: absolute; top: 100%; z-index: 2;
+  background: var(--surface); border: 1px solid var(--overlay);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+}
+.corfu > span { display: block; padding: 0 6px; white-space: pre; }
+.corfu > span.sel { background: var(--overlay); }
+
+/* Syntax (font-lock-*) */
+.kw { color: var(--pine); font-weight: 700; }
+.fn { color: var(--rose); }
+.st { color: var(--gold); }
+.vr { color: var(--iris); }
+.cm { color: var(--muted); font-style: italic; }
+
+/* Icons: Unicode by default; approve.js swaps in nerd-icons glyphs. */
+i[data-i] { font-style: normal; }
+
+/* Collapsible magit sections */
+.s > p.hd { cursor: pointer; }
+.s > p.hd:hover { background: var(--hl-low); }
+.tog::before { content: "▾"; color: var(--muted); }
+.s.closed > p.hd .tog::before { content: "▸"; }
+.s.closed > .sb { display: none; }
+
+/* ---------- Flows ---------- */
+
+.flow {
+  margin: .8rem 0; padding: 1rem; overflow-x: auto;
+  background: var(--bg); border: 1px solid var(--overlay); border-radius: 10px;
+}
+.flow svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+.flow svg text { font-family: "JetBrainsMono Nerd Font Mono", "JetBrains Mono", ui-monospace, Menlo, monospace; fill: var(--fg); }
+.flow svg .graph > polygon { fill: transparent; stroke: none; }
+.flow svg .edge path { stroke: var(--subtle); }
+.flow svg .edge polygon { fill: var(--subtle); stroke: var(--subtle); }
+.flow svg .edge text { fill: var(--subtle); }
+.flow svg .edge.yes text { fill: var(--foam); }
+.flow svg .edge.no text { fill: var(--love); }
+.flow svg .node polygon, .flow svg .node path, .flow svg .node ellipse { fill: var(--surface); stroke: var(--overlay); }
+.flow svg .node.user polygon, .flow svg .node.user path { stroke: var(--gold); fill: var(--hl-low); }
+.flow svg .node.user text { fill: var(--gold); }
+.flow svg .node.dec polygon { stroke: var(--iris); fill: var(--hl-low); }
+.flow svg .node.dec text { fill: var(--iris); }
+.flow svg .node.api polygon, .flow svg .node.api path { stroke: var(--pine); }
+.flow svg .node.api text { fill: var(--foam); }
+.flow svg .node.err polygon, .flow svg .node.err path { stroke: var(--love); }
+.flow svg .node.err text { fill: var(--love); }
+.flow svg .node.ok polygon, .flow svg .node.ok path { stroke: var(--foam); }
+.flow svg .node.goto polygon, .flow svg .node.goto path { stroke: var(--iris); stroke-dasharray: 4 3; fill: transparent; }
+.flow svg .node.goto text { fill: var(--iris); }
+.flow svg .node.note polygon, .flow svg .node.note polyline { fill: transparent; stroke: var(--shadow); }
+.flow svg .node.note text { fill: var(--subtle); }
+.flow svg .node.state polygon, .flow svg .node.state path, .flow svg .node.state ellipse { stroke: var(--iris); fill: var(--hl-low); }
+.flow svg .cluster polygon { fill: transparent; stroke: var(--overlay); stroke-dasharray: 5 4; }
+.flow svg .cluster text { fill: var(--muted); }
+.flow svg a:hover text { text-decoration: underline; }
+
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; color: var(--page-muted); font-size: .9rem; }
+.legend span::before {
+  content: ""; display: inline-block; width: 22px; height: 12px; margin-right: .4rem;
+  vertical-align: -1px; border: 2px solid var(--c); border-radius: 3px; background: var(--hl-low);
+}
+.legend .l-user { --c: var(--gold); }
+.legend .l-act { --c: var(--overlay); }
+.legend .l-dec { --c: var(--iris); }
+.legend .l-api { --c: var(--pine); }
+.legend .l-err { --c: var(--love); }
+.legend .l-ok { --c: var(--foam); }
+.legend .l-goto { --c: var(--iris); }
+.legend .l-goto::before { border-style: dashed; background: transparent; }

@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — managing and more</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html">PR buffer</a>
+    <a href="review.html">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html" aria-current="page">Managing &amp; more</a>
+    <a href="flows.html">Flows</a>
+    <a href="icons.html">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>Managing the PR, and more</h1>
+<p class="lead">Metadata, merging, checks, re-reviewing after a push, the whole-file view, jumping around, and
+eldoc.</p>
+
+<ul class="toc">
+  <li><a href="#labels">Labels picker</a></li>
+  <li><a href="#title">Edit the title</a></li>
+  <li><a href="#react">React</a></li>
+  <li><a href="#merge">Merge / state menu</a></li>
+  <li><a href="#checks">Checks expanded</a></li>
+  <li><a href="#range">Re-review: review range</a></li>
+  <li><a href="#file">Whole-file view</a></li>
+  <li><a href="#jump">Jump menu</a></li>
+  <li><a href="#eldoc">Eldoc: echo area</a></li>
+  <li><a href="#eldoc-buffer">Eldoc: the eldoc buffer</a></li>
+  <li><a href="#eldoc-outdated">Eldoc: an outdated thread</a></li>
+  <li><a href="#eldoc-loading">Eldoc: details on their way</a></li>
+</ul>
+
+<!-- ================================================================== -->
+<section class="shot" id="labels">
+<h2>Labels picker <span class="ref">l · F12 · completing-read-multiple</span></h2>
+<p>Current labels are preselected; marginalia-style annotations show description and colour. On commit, Approve sends
+only the difference (add these, remove those).</p>
+<div class="emacs">
+<div class="win">
+<div class="buf short">
+<p class="cur"><span class="m">Labels</span>      <span class="lbl" style="background:#a2eeef;color:#1d1b2c">enhancement</span>  <span class="lbl" style="background:#5319e7;color:#fff">api</span></p>
+<p><span class="m">Milestone</span>   v0.3</p>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   Top  L7       Approve-PR</div>
+</div>
+<div class="mini">
+<p><span class="m">4/9</span>  <span class="pi">Labels:</span> enhancement,api,<span class="cursor"> </span></p>
+<p class="sel">  <span class="b">api</span> <span class="ok">✓</span>             <span class="m">Talking to GitHub                              </span> <span style="color:#5319e7">■</span></p>
+<p>  bug               <span class="m">Something isn't working                        </span> <span style="color:#d73a4a">■</span></p>
+<p>  documentation     <span class="m">Improvements or additions to documentation     </span> <span style="color:#0075ca">■</span></p>
+<p>  <span class="b">enhancement</span> <span class="ok">✓</span>     <span class="m">New feature or request                         </span> <span style="color:#a2eeef">■</span></p>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="title">
+<h2>Edit the title <span class="ref">t or e on the title · F08</span></h2>
+<p>Single-line input: only the first line is used.</p>
+<div class="emacs">
+<div class="win">
+<div class="hl"><span class="b">New title</span> <span class="d">· #1234 · single line</span>                                      <span class="k">C-c C-c</span> <span class="d">save ·</span> <span class="k">C-c C-k</span> <span class="d">abort</span></div>
+<div class="buf">
+<p>Add retry with exponential back-off to the GraphQL client<span class="cursor"> </span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;I&gt;</span>  <span class="b">*approve-input: title #1234*</span>   All  L1    <span class="pi">Approve-Input</span></div>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="react">
+<h2>React <span class="ref">+ · F11</span></h2>
+<p>Choosing a reaction you already gave removes it.</p>
+<div class="emacs">
+<div class="win">
+<div class="mini">
+<p><span class="pi">React to bob’s comment:</span> <span class="cursor"> </span></p>
+<p class="sel">  👍  +1                 <span class="ok">✓ you and 1 other</span></p>
+<p>  👎  -1</p>
+<p>  😄  laugh</p>
+<p>  🎉  hooray</p>
+<p>  😕  confused</p>
+<p>  ❤️  heart</p>
+<p>  🚀  rocket</p>
+<p>  👀  eyes</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="merge">
+<h2>Merge / state menu <span class="ref">m · F13</span></h2>
+<p>The title line says whether merging is possible and, when blocked, why. Only methods the repository allows are apt.</p>
+<div class="emacs">
+<div class="win stack">
+<div class="win">
+<div class="buf short">
+<p><span class="m">Status</span>      <span class="ok"><i data-i="approved">✓</i> Approved</span> <span class="d">·</span> <span class="ok"><i data-i="check-success">✓</i> No conflicts</span> <span class="d">·</span> <span class="ok"><i data-i="check-success">✓</i> 9 of 9 checks passed</span></p>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   Top  L10      Approve-PR</div>
+</div>
+<div class="tr">
+<p><span class="kh">Merge #1234 into main</span>          <span class="ok"><i data-i="check-success">✓</i> mergeable · <i data-i="check-success">✓</i> checks · <i data-i="approved">✓</i> 1 approval · 0 behind</span></p>
+<p><span class="kh">Method</span>                     <span class="kh">Options</span>                              <span class="kh">State</span></p>
+<p> <span class="k">m</span> Create merge commit      <span class="k">-d</span> Delete branch after merge <span class="vr">(on)</span>     <span class="k">D</span> Convert to draft</p>
+<p> <span class="k">s</span> Squash and merge         <span class="k">-t</span> Commit title… <span class="ina">(PR title)</span>        <span class="k">c</span> Close pull request</p>
+<p> <span class="ina">r Rebase and merge</span>        <span class="k">-b</span> Commit body…  <span class="ina">(commits)</span>         <span class="ina">u Update branch</span></p>
+<p><span class="kh">When blocked</span></p>
+<p> <span class="ina">a Enable auto-merge</span>       <span class="ina">x Disable auto-merge</span>                  <span class="ina">Q Add to merge queue</span></p>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+<p>Blocked, the title line reads instead:</p>
+<div class="emacs">
+<div class="tr">
+<p><span class="kh">Merge #1234 into main</span>          <span class="er"><i data-i="changes-requested">✗</i> 1 change requested</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> 2 checks running</span> <span class="d">·</span> <span class="wa">3 behind</span></p>
+<p> <span class="ina">m Create merge commit</span>     … <span class="d">(methods inapt)</span>                    <span class="k">u</span> Update branch</p>
+<p> <span class="k">a</span> Enable auto-merge       <span class="ina">x Disable auto-merge</span>                  <span class="k">Q</span> Add to merge queue</p>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="checks">
+<h2>Checks expanded <span class="ref">F16</span></h2>
+<p>Failing and running first, then required, then the rest. Contexts load lazily when the section opens.</p>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Checks</span>          <span class="wa"><i data-i="check-pending">◐</i></span> <span class="ok">7 passed</span> <span class="d">·</span> <span class="er">1 failed</span> <span class="d">·</span> <span class="wa">1 running</span>                     <span class="m">required: 3</span></p>
+<div class="sb">
+<p class="cur">    <span class="er"><i data-i="check-failure">✗</i></span> lint                                  32s      <span class="m">required</span>      <span class="k">RET</span> <span class="d">details</span> <i data-i="external">↗</i></p>
+<p>    <span class="wa"><i data-i="check-pending">◐</i></span> test (macos-latest, 30.2)             <span class="wa">running</span>  <span class="m">required</span></p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> test (ubuntu-latest, 29.4)            2m 10s   <span class="m">required</span></p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> build                                 1m 02s</p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> codecov/patch                         85.2% of diff hit (+0.4%)</p>
+<p>    <span class="d">…  4 more passed</span></p>
+</div>
+</div>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   18%  L31      <span class="pi">Approve-PR</span></div>
+</div>
+<div class="echo"><span class="b">lint</span> — <span class="er">failure</span> — “3 files would be reformatted” · required</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="range">
+<h2>Re-review: review range <span class="ref">V · F14</span></h2>
+<p>GitHub knows the commit you last reviewed. Approve marks newer commits and offers to show only their changes.
+Lines that can't take comments in a range view are dimmed.</p>
+<div class="emacs">
+<div class="win stack">
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="ir">2 new commits since your review — <span class="k">V l</span> to see only them</span></div>
+<div class="buf">
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Commits (4)</span>                             <span class="m">showing: all changes ·</span> <span class="k">V</span> <span class="d">change</span></p>
+<div class="sb">
+<p>    <span class="m">a1b2c3d</span>  Add retry option                   <span class="u">alice</span>   <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span></p>
+<p>    <span class="m">b2c3d4e</span>  Fix typo                           <span class="u">alice</span>   <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span>   <span class="d">← your review</span></p>
+<p>  <span class="ir">┃</span> <span class="m">d4e5f6a</span>  Handle 502 responses               <span class="u">alice</span>   <span class="d">1 day ago</span>      <span class="er"><i data-i="check-failure">✗</i></span>   <span class="ir">new</span></p>
+<p>  <span class="ir">┃</span> <span class="m">e5f6a7b</span>  Add tests                          <span class="u">alice</span>   <span class="d">5 hours ago</span>    <span class="wa"><i data-i="check-pending">◐</i></span>   <span class="ir">new</span></p>
+</div>
+</div>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   21%  L35      Approve-PR</div>
+</div>
+<div class="tr">
+<p><span class="kh">Review range</span>                                      <span class="m">now: all changes</span></p>
+<p> <span class="k">a</span> All changes                    <span class="m">main…e5f6a7b</span></p>
+<p> <span class="k">l</span> Since my last review           <span class="m">b2c3d4e…e5f6a7b   2 commits</span></p>
+<p> <span class="k">c</span> One commit…                    <span class="m">completing-read over commits</span></p>
+<p> <span class="k">r</span> Range…                         <span class="m">pick first and last commit</span></p>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+<p>After <code>V l</code>, the diff heading says what it shows:</p>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<p><span class="tog"></span> <span class="h">Diff</span> <span class="ir">· since your last review (2 commits)</span> <span class="d">·</span> <span class="k">V a</span> <span class="d">all changes</span></p>
+<p>  <span class="tog"></span> <span class="fh">lisp/approve-api.el</span>                           <span class="m">modified</span>   <span class="ok">+22</span>  <span class="er">−3</span>   <span class="wa"><i data-i="dismissed">↻</i> changed since viewed</span></p>
+<p class="hunk">    ▾ @@ -88,6 +88,12 @@ (defun approve-api--handle-timeout (request-id</p>
+<p class="add">       <span class="ln">    93</span>  +  (when (approve-api--retry-p request-id)</p>
+<p class="add">       <span class="ln">    94</span>  +    (cl-return-from approve-api--handle-timeout</p>
+<p class="del" style="opacity:.55">       <span class="ln">89    </span>  -  (message "timeout")                        <span class="d">← not commentable here</span></p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="file">
+<h2>Whole-file view <span class="ref">RET on a diff line · F15</span></h2>
+<p>The file at the PR head, fetched through the API (D03), in its own major mode. Fringe marks show changes; threads sit
+under their lines as one-line overlays (<code>TAB</code> expands). <code>b</code> toggles the base version.</p>
+<div class="emacs">
+<div class="tb">*approve-file: fuzzycode/approve lisp/approve-api.el @ e5f6a7b*</div>
+<div class="win">
+<div class="hl"><span class="b">head e5f6a7b</span> <span class="d">· 3 changes · 2 threads ·</span> <span class="ok"><i data-i="viewed">✓</i> viewed</span>          <span class="k">n/p</span> <span class="d">change ·</span> <span class="k">]t</span> <span class="d">thread ·</span> <span class="k">c</span> <span class="d">comment ·</span> <span class="k">q</span> <span class="d">back</span></div>
+<div class="buf">
+<p>  <span class="ln"> 38</span> (<span class="kw">cl-defun</span> <span class="fn">approve-api-graphql</span> (query variables</p>
+<p>  <span class="ln"> 39</span>                                 <span class="vr">&amp;key</span> callback error-callback</p>
+<p><span class="fr-add">▌</span> <span class="ln"> 40</span>   (<span class="kw">let*</span> ((request-id (approve-api--generate-request-id))</p>
+<p class="cur"><span class="fr-add">▌</span> <span class="ln"> 41</span>          (timeout approve-api-timeout)</p>
+<p><span class="fr-add">▌</span> <span class="ln"> 42</span>          (retries approve-api-retries))</p>
+<p>        <span class="d">│</span> <i data-i="comment">💬</i> <span class="u">bob</span>: Should this be configurable per call? <span class="d">(2)</span>     <span class="k">TAB</span> <span class="d">expand</span></p>
+<p class="pend">        <span class="d">│</span> <span class="ir"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you:</span> Should <span class="code">retries</span> be part of the defgroup?</p>
+<p>  <span class="ln"> 43</span>     (<span class="kw">when</span> progress-message</p>
+<p><span class="fr-del">▸</span> <span class="ln"> 44</span>       (make-progress-reporter progress-message))</p>
+<p>  <span class="ln"> 45</span>     <span class="cm">;; Remember the request so it can be cancelled.</span></p>
+<p>  <span class="ln"> 46</span>     (puthash request-id (list <span class="vr">:timer</span> timer <span class="vr">:buffer</span> buffer)</p>
+<p>  <span class="ln"> 47</span>              approve-api--pending-requests)</p>
+<p>  <span class="ln"> 48</span>     (<span class="fn">apply</span> #'ghub-graphql query variables <span class="st">"…"</span>)))</p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve-file: … approve-api.el @ e5f6a7b*</span>  9%  L41  <span class="pi">ELisp/l Approve-File</span></div>
+</div>
+<div class="echo"><span class="fn">approve-api-graphql</span> <span class="m">(which-function)</span></div>
+</div>
+<ul>
+  <li><span class="ok">▌</span> added or changed lines, <span class="er">▸</span> where lines were removed.</li>
+  <li><code>c</code> only works on lines that are part of the diff, as GitHub requires; elsewhere it says why.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="jump">
+<h2>Jump menu <span class="ref">j (evil: J) · F03</span></h2>
+<div class="emacs">
+<div class="tr">
+<p><span class="kh">Jump to</span></p>
+<p> <span class="k">d</span> Description   <span class="k">c</span> Conversation   <span class="k">k</span> Checks   <span class="k">m</span> Commits   <span class="k">f</span> Files   <span class="k">p</span> Pending review</p>
+<p> <span class="k">u</span> Next unviewed file             <span class="k">U</span> Previous unviewed file      <span class="m">(8 left)</span></p>
+<p> <span class="k">t</span> Next unresolved thread         <span class="k">T</span> Previous unresolved thread  <span class="m">(3 left)</span></p>
+<p> <span class="k">n</span> Next comment new since your last review                     <span class="m">(4)</span></p>
+<p> <span class="k">/</span> File…</p>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="eldoc">
+<h2>Eldoc: echo area <span class="ref">D27 · F20 · ui.org › Eldoc</span></h2>
+<p>Extended information comes in two tiers from one eldoc function. As point rests on a thing, the echo area shows
+one line built from data already loaded, so it never waits for the network. <code>K</code> shows everything in the
+eldoc buffer (next).</p>
+<div class="emacs">
+<div class="win">
+<div class="echo" style="border-top:none"><span class="u">@fuzzycode</span> — Björn Larsson — develop@bjornlarsson.nu</div>
+<div class="echo"><span class="u">@fuzzycode/core</span> — Core maintainers — 4 members</div>
+<div class="echo"><span class="lbl" style="background:#a2eeef;color:#1d1b2c">enhancement</span> — New feature or request</div>
+<div class="echo"><span class="m">d4e5f6a</span> — Handle 502 responses — <span class="u">alice</span> · 2026-11-07 14:02 · <span class="ok"><i data-i="check-success">✓</i> checks</span></div>
+<div class="echo"><span class="link">#1200</span> — Retry failing requests — <span class="ok"><i data-i="issue">◉</i> open issue</span></div>
+<div class="echo"><span class="b">lint</span> — <span class="er"><i data-i="check-failure">✗</i> failure</span> — “3 files would be reformatted” · required</div>
+<div class="echo"><span class="fh">lisp/approve-api.el</span> — modified <span class="ok">+120</span> <span class="er">−30</span> — <span class="ok"><i data-i="viewed">✓</i> viewed</span> · <i data-i="comment">💬</i> 2 threads</div>
+<div class="echo">thread — <span class="wa">outdated (was line 33)</span> — 2 comments · <span class="k">K</span> shows the original code</div>
+<div class="echo">👍 3 — <span class="u">bob</span>, <span class="u">carol</span>, you</div>
+<div class="echo"><span class="d">2 days ago</span> — 2026-11-06 09:12</div>
+</div>
+</div>
+<p>The email only appears when the user made it public on GitHub.</p>
+</section>
+
+<section class="shot" id="eldoc-buffer">
+<h2>Eldoc: the eldoc buffer <span class="ref">K · eldoc-doc-buffer</span></h2>
+<p>Point is on <span class="u">bob</span> in the Reviewers row; <code>K</code> fetched his details (once per session)
+and opened the eldoc buffer in a side window. While it stays open, it follows point. Links are buttons:
+<code>RET</code> follows, <code>o</code> opens in the browser, <code>q</code> closes.</p>
+<div class="emacs">
+<div class="tb">Emacs — approve</div>
+<div class="split">
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed</div>
+<div class="buf">
+<p><span class="t">#1234 Add retry logic to the GraphQL…</span></p>
+<p><span class="d">fuzzycode/approve ·</span> <span class="u">alice</span> <span class="d">→</span> <span class="pi">main</span></p>
+<p></p>
+<p class="cur"><span class="m">Reviewers</span>  <span class="ok"><i data-i="approved">✓</i></span> <span class="u"><span class="cursor">b</span>ob</span>  <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span></p>
+<p><span class="m">Assignees</span>  <span class="u">alice</span></p>
+<p><span class="m">Labels</span>     <span class="lbl" style="background:#a2eeef;color:#1d1b2c">enhancement</span>  <span class="lbl" style="background:#5319e7;color:#fff">api</span></p>
+<p></p>
+<p class="pend"><span class="tog"></span> <span class="h">Your pending review</span>  <span class="ir">2 · 1 reply</span></p>
+<p><span class="tog"></span> <span class="h">Description</span></p>
+<p>  Adds exponential back-off to</p>
+<p>  <span class="code">approve-api-graphql</span>. …</p>
+<p></p>
+<p></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: …#1234*</span>   Top  L4  <span class="pi">Approve-PR</span></div>
+</div>
+<div class="win">
+<div class="buf">
+<p><span class="u b">@bob</span> — <span class="b">Bob Smith</span> <span class="m">(he/him)</span></p>
+<p><span class="link">bob@example.com</span></p>
+<p></p>
+<p><span class="it">Tools, build systems and coffee.</span></p>
+<p><span class="m">Company </span>  <span class="u">@acme</span></p>
+<p><span class="m">Location</span>  Gothenburg</p>
+<p><span class="m">Status  </span>  🌴 On holiday until Monday <span class="wa">(busy)</span></p>
+<p></p>
+<p><span class="h">In this pull request</span></p>
+<p>  <span class="ok"><i data-i="approved">✓</i> approved</span> 2 days ago <span class="d">·</span> 3 comments on code</p>
+<p>  <span class="m">Member of</span> <span class="u">fuzzycode</span></p>
+<p></p>
+<p><span class="link">https://github.com/bob</span>         <span class="k">o</span> <span class="d">open</span></p>
+</div>
+<div class="ml off"> <span class="b">*eldoc*</span>   All  L1     Special</div>
+</div>
+</div>
+<div class="echo"><span class="u">@bob</span> — Bob Smith — bob@example.com</div>
+</div>
+</section>
+
+<section class="shot" id="eldoc-outdated">
+<h2>Eldoc: an outdated thread <span class="ref">diffHunk</span></h2>
+<p>GitHub keeps the code a comment was written on. For an outdated thread, the eldoc buffer shows it, so you can see
+what the reviewer saw even though the line is gone.</p>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<p><span class="h">Thread on lisp/approve-graphql.el</span> — <span class="wa">outdated</span></p>
+<p><span class="m">Written on line 33 at</span> <span class="m">a1b2c3d</span><span class="m">; that line is no longer in the diff.</span></p>
+<p></p>
+<p class="hunk">@@ -30,6 +30,6 @@ (defun approve-graphql--process-includes</p>
+<p>   (while (string-match approve-graphql--include-regexp result start)</p>
+<p class="del">-    (if (string-match "\\.graphql" path)</p>
+<p class="add">+    (if (string-suffix-p ".graphql" path)</p>
+<p></p>
+<p><span class="u">carol</span> <span class="d">· 3 days ago:</span> Why not use <span class="code">string-match-p</span>?</p>
+<p><span class="u">bob</span> <span class="d">· 2 days ago:</span>   It's gone in the next commit anyway.</p>
+</div>
+<div class="ml off"> <span class="b">*eldoc*</span>   All  L1     Special</div>
+</div>
+</div>
+</section>
+
+<section class="shot" id="eldoc-loading">
+<h2>Eldoc: details on their way <span class="ref">F20</span></h2>
+<p>The first <code>K</code> on a thing shows what is known at once and fetches the rest; a failed fetch says so and
+leaves the echo line alone.</p>
+<div class="emacs">
+<div class="split">
+<div class="win">
+<div class="buf">
+<p><span class="link b">#1200</span> — <span class="b">Retry failing requests</span></p>
+<p><span class="ok"><i data-i="issue">◉</i> open issue</span></p>
+<p></p>
+<p><span class="m"><i data-i="loading">⟳</i> loading details…</span></p>
+</div>
+<div class="ml off"> <span class="b">*eldoc*</span>   All  L1     Special</div>
+</div>
+<div class="win">
+<div class="buf">
+<p><span class="link b">#1200</span> — <span class="b">Retry failing requests</span></p>
+<p><span class="ok"><i data-i="issue">◉</i> open issue</span></p>
+<p></p>
+<p><span class="er"><i data-i="error">✗</i> details unavailable (HTTP 502)</span></p>
+</div>
+<div class="ml off"> <span class="b">*eldoc*</span>   All  L1     Special</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

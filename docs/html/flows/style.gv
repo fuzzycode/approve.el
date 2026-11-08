@@ -1,0 +1,9 @@
+// Shared graph, node and edge defaults for every flow (moon colours, so the
+// SVG files also look right on their own; flows.html restyles them by class).
+graph [rankdir=TB, bgcolor="transparent", fontname="JetBrains Mono", fontsize=11,
+       fontcolor="#6e6a86", nodesep=0.3, ranksep=0.38, pad=0.15, newrank=true];
+node  [fontname="JetBrains Mono", fontsize=11, shape=box, style="rounded,filled",
+       fillcolor="#2a273f", color="#393552", fontcolor="#e0def4", penwidth=1.4,
+       margin="0.14,0.06", height=0.3, class="act"];
+edge  [fontname="JetBrains Mono", fontsize=10, color="#908caa", fontcolor="#908caa",
+       arrowsize=0.7, penwidth=1.2];

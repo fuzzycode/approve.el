@@ -23,6 +23,7 @@ task only needs the files it touches.
 | [[file:roadmap.org][roadmap.org]]      | Phases, tasks, spikes, definition of done                      | To pick the next task            |
 | [[file:development.org][development.org]]  | Conventions, build, tests, fixtures, how agents should work    | Before the first commit          |
 | [[file:history.org][history.org]]      | What the earlier attempts and other packages taught us         | When a design feels familiar     |
+| [[file:html/index.html][html/]]            | HTML views: mockups in the author's theme, flows as diagrams   | To see the plan, not read it     |
 
 * How to keep these docs true
 - A decision that changes gets a new entry in [[file:decisions.org][decisions.org]] that supersedes
@@ -34,6 +35,9 @@ task only needs the files it touches.
 - Flowcharts and diagrams are plain Unicode/ASCII in =#+begin_example= blocks
   ([[file:decisions.org::*D21 Docs in org; diagrams in plain Unicode/ASCII][D21]]).  Lines inside blocks never start with =*= or =#+=, so org
   doesn't parse them.
+- The HTML views in =html/= illustrate [[file:ui.org][ui.org]] and [[file:flows.org][flows.org]].  When a mockup or
+  flow changes, change its HTML view in the same commit (=make docs= rebuilds
+  the diagrams).  Open =html/index.html= in a browser.
 
 * Glossary
 - PR buffer :: The buffer that shows one pull request (=approve-pr-mode=).

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — icon sets</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+<style>
+  table.icons { border-collapse: collapse; width: 100%; margin: 1rem 0; background: var(--bg);
+    border: 1px solid var(--overlay); border-radius: 10px; overflow: hidden; }
+  table.icons th, table.icons td { padding: .45rem .7rem; border-bottom: 1px solid var(--overlay); text-align: left; vertical-align: middle; }
+  table.icons th { font-size: .85rem; color: var(--page-muted); font-weight: 600; background: var(--surface); }
+  table.icons th.set { text-align: center; }
+  table.icons td.cell { text-align: center; }
+  table.icons td.cell i { display: block; font-size: 24px; line-height: 1.2;
+    font-family: "JetBrainsMono Nerd Font Mono", "JetBrains Mono", ui-monospace, monospace; }
+  table.icons td.cell small { display: block; font-size: 10.5px; color: var(--muted);
+    font-family: "JetBrainsMono Nerd Font Mono", ui-monospace, monospace; white-space: nowrap; }
+  table.icons td.name code { color: var(--fg); }
+  table.icons td.name span { display: block; font-size: .85rem; color: var(--page-muted); }
+  table.icons tr:hover td { background: var(--hl-low); }
+  table.icons .chosen { background: color-mix(in srgb, var(--iris) 10%, transparent); }
+  table.icons th.chosen { color: var(--iris); }
+  .previews { display: grid; grid-template-columns: repeat(auto-fill, minmax(540px, 1fr)); gap: 1rem; }
+  .previews h3 { margin: 0 0 -.3rem; font-size: 1rem; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html">PR buffer</a>
+    <a href="review.html">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html">Managing &amp; more</a>
+    <a href="flows.html">Flows</a>
+    <a href="icons.html" aria-current="page">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>Icon sets</h1>
+<p class="lead">Every icon in Approve goes through <code>approve-icon</code>: a semantic name mapped to a nerd-icons
+glyph, with a Unicode fallback (D16). Approve uses <b>Codicons</b> (D26), chosen from the four nerd-icons sets
+compared here. The picker at the top right still applies any set to every mockup page.</p>
+
+<section class="shot" id="context">
+<h2>In context</h2>
+<p>The same lines from the PR buffer, the conversation, checks and the dashboard, once per set.</p>
+<div class="previews" id="previews"></div>
+</section>
+
+<section class="shot" id="table">
+<h2>Side by side</h2>
+<p>Colours are the faces each icon is drawn with. Names are the nerd-icons names for <code>approve-icon</code>'s
+mapping.</p>
+<table class="icons" id="icon-table"></table>
+</section>
+
+<template id="preview-tpl">
+<div>
+<h3 class="set-title"></h3>
+<div class="emacs">
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open"></i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending"></i> checks</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir"><i data-i="pending-comment"></i> 2 pending</span></div>
+<div class="buf">
+<p><span class="m">Reviewers</span>  <span class="ok"><i data-i="approved"></i></span> <span class="u">bob</span>  <span class="er"><i data-i="changes-requested"></i></span> <span class="u">carol</span>  <span class="d"><i data-i="requested"></i></span> <span class="u">dave</span></p>
+<p><span class="m">Status</span>     <span class="er"><i data-i="changes-requested"></i> Changes requested</span> <span class="d">·</span> <span class="ok"><i data-i="check-success"></i> No conflicts</span></p>
+<p><span class="m">Issues</span>     <span class="ok"><i data-i="issue"></i></span> <span class="link">#1200</span> <span class="d">·</span> <span class="m">Milestone</span> <i data-i="milestone"></i> v0.3</p>
+<p></p>
+<p>  <span class="d"><i data-i="viewed"></i> lisp/approve-api.el     +120  −30</span>  <i data-i="comment"></i> 2</p>
+<p>  <span class="m"><i data-i="unviewed"></i></span> lisp/approve-model.el    <span class="ok">+40</span>  <span class="er">−10</span></p>
+<p>  <span class="wa"><i data-i="dismissed"></i></span> lisp/approve-graphql.el  <span class="ok">+12</span>   <span class="er">−2</span>  <i data-i="comment"></i> 1</p>
+<p></p>
+<p>  <i data-i="commented"></i> <span class="u">bob</span> commented  <span class="ok"><i data-i="approved"></i></span> <span class="u">bob</span> <span class="ok">approved</span></p>
+<p>  <i data-i="push"></i> <span class="u">alice</span> pushed 2 commits  <i data-i="label"></i> <span class="u">alice</span> added <span class="lbl" style="background:#5319e7;color:#fff">api</span></p>
+<p class="pend">  <span class="ir"><i data-i="pending-comment"></i> Pending</span> <span class="d">· you ·</span> <i data-i="lock"></i> <span class="d">locked ·</span> <i data-i="external"></i> <span class="d">details</span></p>
+<p></p>
+<p>  <span class="er"><i data-i="check-failure"></i></span> lint  <span class="wa"><i data-i="check-pending"></i></span> test  <span class="ok"><i data-i="check-success"></i></span> build   <span class="m"><i data-i="loading"></i> Loading…</span>  <span class="er"><i data-i="error"></i> 502</span></p>
+<p>  <span class="ir"><i data-i="bell"></i></span> <span class="m">#1234</span> Add retry logic  <span class="u"><i data-i="person"></i> alice</span>  <span class="d"><i data-i="draft"></i> draft</span>  <span class="ir"><i data-i="merged"></i> merged</span>  <span class="er"><i data-i="closed"></i> closed</span>  <span class="m"><i data-i="commit"></i> d4e5f6a</span></p>
+</div>
+</div>
+</div>
+</div>
+</template>
+</main>
+
+<script>
+window.approveBeforeIcons = function () {
+  var I = window.ApproveIcons;
+  var sets = I.ORDER;
+
+  var ROWS = [
+    ["open", "PR is open", "ok"], ["draft", "PR is a draft", "d"], ["merged", "PR is merged", "ir"],
+    ["closed", "PR is closed", "er"], ["approved", "Reviewer approved", "ok"],
+    ["changes-requested", "Reviewer requested changes", "er"], ["commented", "Reviewer commented", ""],
+    ["requested", "Review requested, not given yet", "d"], ["viewed", "File marked viewed", "ok"],
+    ["unviewed", "File not viewed", "m"], ["dismissed", "Viewed, but changed since", "wa"],
+    ["check-success", "Check passed", "ok"], ["check-failure", "Check failed", "er"],
+    ["check-pending", "Check running / queued", "wa"], ["pending-comment", "Your pending comment", "ir"],
+    ["comment", "Comment count / thread", ""], ["label", "Label event", ""], ["push", "Commits pushed", ""],
+    ["commit", "A commit", "m"], ["issue", "Linked issue", "ok"], ["milestone", "Milestone", ""],
+    ["person", "A user", "u"], ["bell", "Unread notification", "ir"], ["lock", "Conversation locked", "wa"],
+    ["external", "Opens in the browser", "pi"], ["loading", "Loading", "m"], ["error", "Error", "er"]
+  ];
+
+  // Table
+  var t = document.getElementById("icon-table");
+  var head = "<tr><th>Semantic name</th>" + sets.map(function (s) {
+    return "<th class=\"set" + (s === "codicons" ? " chosen" : "") + "\">" + I.LABELS[s] + "</th>";
+  }).join("") + "</tr>";
+  var body = ROWS.map(function (r) {
+    var cells = sets.map(function (s) {
+      var nm = s === "unicode" ? "fallback" : (I.SETS[s][r[0]] || ["—"])[0].replace(/^nf-\w+-/, "");
+      return "<td class=\"cell" + (s === "codicons" ? " chosen" : "") + "\" data-icon-set=\"" + s + "\"><i class=\"" + r[2] + "\" data-i=\"" + r[0] +
+             "\">" + I.UNICODE[r[0]] + "</i><small>" + nm + "</small></td>";
+    }).join("");
+    return "<tr><td class=\"name\"><code>" + r[0] + "</code><span>" + r[1] + "</span></td>" + cells + "</tr>";
+  }).join("");
+  t.innerHTML = head + body;
+
+  // Previews: one per nerd-icons set, plus Unicode
+  var tpl = document.getElementById("preview-tpl");
+  var box = document.getElementById("previews");
+  sets.forEach(function (s) {
+    var node = tpl.content.firstElementChild.cloneNode(true);
+    node.setAttribute("data-icon-set", s);
+    node.querySelector(".set-title").textContent = I.LABELS[s];
+    node.querySelectorAll("i[data-i]").forEach(function (el) {
+      el.textContent = I.UNICODE[el.dataset.i] || "?";
+    });
+    box.appendChild(node);
+  });
+};
+</script>
+</body>
+</html>

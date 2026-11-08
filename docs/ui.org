@@ -314,7 +314,7 @@ The header-line text names the action: "Comment on…", "Reply to bob on…",
   S Submit review…           k Delete at point        a Assignees           j Jump…
   X Discard pending review   + React                  A Request reviewers   L Layout
   V Review range…            C Conversation comment   M Milestone           ! Doctor
-                                                      D Draft / ready
+                                                      D Draft / ready       K Details (eldoc)
                                                       w Subscription
                                                       m Merge / close…
 #+end_example
@@ -448,14 +448,89 @@ Failing and running checks come first.  =RET= opens the details URL.
 marks it read; =x= marks read, =u= unsubscribes.
 
 * Eldoc
-Shown in the echo area for the thing at point:
+Extended information about the thing at point comes in two tiers, from one
+eldoc function ([[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]):
+
+- Echo area :: automatic when point rests on something; one line built from
+  data already loaded, so it appears at once.
+- Eldoc buffer :: on demand with =K= (=eldoc-doc-buffer=); everything worth
+  knowing.  Details that aren't loaded yet are fetched then, shown as
+  "⟳ loading details…" until they arrive, and cached for the session.  Users
+  who want it always visible set =eldoc-echo-area-prefer-doc-buffer=, or use
+  eldoc-box and similar frontends.
+
+** Echo area
 #+begin_example
- @bob — Bob Smith · Member · approved 2 days ago
+ @fuzzycode — Björn Larsson — develop@bjornlarsson.nu
+ @fuzzycode/core — Core maintainers — 4 members
  enhancement — New feature or request
- d4e5f6a — Handle 502 responses · alice · 2026-11-07 14:02 · ✓ checks
+ d4e5f6a — Handle 502 responses — alice · 2026-11-07 14:02 · ✓ checks
+ #1200 — Retry failing requests — open issue
+ lint — failure — "3 files would be reformatted" · required
+ lisp/approve-api.el — modified +120 −30 — ✓ viewed · 2 threads
+ thread — outdated (was line 33) — 2 comments · K shows the original code
+ 👍 3 — bob, carol, you
  2 days ago — 2026-11-06 09:12
- lint — failure · "3 files would be reformatted" · required
 #+end_example
+
+The email appears only when the user made it public on GitHub.
+
+** Eldoc buffer
+Point is on =@bob= in the Reviewers row; =K= opened the eldoc buffer in a
+side window.  The echo area keeps the one-line version.
+
+#+begin_example
+ ┌ *approve: fuzzycode/approve#1234* ─────┬ *eldoc* ───────────────────────────────────────┐
+ │ #1234 Add retry logic to the Graph…    │ @bob — Bob Smith (he/him)                      │
+ │                                        │ bob@example.com                                │
+ │ Reviewers  ✓ bob ← point  ✗ carol      │                                                │
+ │            ○ dave  ○ @fuzzycode/core   │ Tools, build systems and coffee.               │
+ │ Assignees  alice                       │ Company   @acme                                │
+ │ Labels     enhancement  api            │ Location  Gothenburg                           │
+ │                                        │ Status    🌴 On holiday until Monday (busy)    │
+ │ ▾ Your pending review  2 · 1 reply     │                                                │
+ │ ▾ Description                          │ In this pull request                           │
+ │   Adds exponential back-off to …       │   ✓ approved 2 days ago · 3 comments on code   │
+ │                                        │   Member of fuzzycode                          │
+ │                                        │                                                │
+ │                                        │ https://github.com/bob            o open       │
+ ├─ *approve: …#1234*  Top  L3 ───────────┴─ *eldoc*  All ─────────────────────────────────┤
+ │ @bob — Bob Smith — bob@example.com                                                      │
+ └─────────────────────────────────────────────────────────────────────────────────────────┘
+#+end_example
+
+For an outdated thread, the eldoc buffer shows the code the comment was
+written on (GitHub keeps it as the comment's =diffHunk=):
+
+#+begin_example
+ Thread on lisp/approve-graphql.el — outdated
+ Written on line 33 at a1b2c3d; that line is no longer in the diff.
+
+ @@ -30,6 +30,6 @@ (defun approve-graphql--process-includes
+    (while (string-match approve-graphql--include-regexp result start)
+ -    (if (string-match "\\.graphql" path)
+ +    (if (string-suffix-p ".graphql" path)
+
+ carol · 3 days ago: Why not use string-match-p?
+ bob · 2 days ago:   It's gone in the next commit anyway.
+#+end_example
+
+** What gets extended information
+| Thing at point            | Echo area                                | Eldoc buffer adds                                                      |
+|---------------------------+------------------------------------------+------------------------------------------------------------------------|
+| =@user=, author, reviewer | login — name — public email              | pronouns, bio, company, location, status, role in this PR, association |
+|                           |                                          | (Member, Contributor, First-time contributor), profile link            |
+| =@org/team=               | slug — name — member count               | description, members                                                   |
+| Label                     | name — description                       | colour                                                                 |
+| Commit sha                | sha — subject — author · date · checks   | full message, author vs committer, signature, checks, files changed    |
+| =#123= reference          | #123 — title — state                     | author, labels, start of the body                                      |
+| Check                     | name — result — summary · required       | duration, details link                                                 |
+| File                      | path — status +a −d — viewed · threads   | rename source, its threads                                             |
+| Thread                    | state (resolved by, outdated) — comments | for outdated threads: the original code (=diffHunk=)                   |
+| Reactions                 | emoji count — who                        | everyone, per reaction                                                 |
+| Date                      | relative — absolute                      | —                                                                      |
+| Milestone                 | title — due date — progress              | description                                                            |
+| Branch ref                | owner:branch — fork or not               | ahead/behind the base                                                  |
 
 * Keys
 Keys are a draft to check in Phases 1–2.  Principles:
@@ -496,6 +571,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Merge / state…                | =m=           | =gm=                  | any                       |
 | Metadata (title… milestone)   | =t d l a A M= | via =?=               | any                       |
 | Layout single/split           | =L=           | =gL=                  | any                       |
+| Show details (eldoc buffer)   | =K=           | =K=                   | any                       |
 
 Input buffers: =C-c C-c= send, =C-c C-k= abort, =C-c C-s= suggestion, =C-c C-p=
 preview, =C-c @= mention (same in every state).
@@ -525,27 +601,37 @@ inherit:
 | =approve-check-success/failure/pending=          | =success= / =error= / =warning=              | Checks                    |
 
 * Icons
-=approve-icon= maps a semantic name to a nerd-icons glyph, or to a Unicode
-fallback when =approve-use-nerd-icons= is nil or the font is missing.
+=approve-icon= maps a semantic name to a nerd-icons glyph from the Codicons
+set (=nerd-icons-codicon=, [[file:decisions.org::*D26 Icons come from Codicons][D26]]), or to a Unicode fallback when
+=approve-use-nerd-icons= is nil or the font is missing.  The other sets
+that were compared are on [[file:html/icons.html][html/icons.html]].
 
-| Name                | nerd-icons (suggested)           | Fallback |
+| Name                | Codicons                         | Fallback |
 |---------------------+----------------------------------+----------|
-| =open=              | =nf-oct-git_pull_request=        | ●        |
-| =draft=             | =nf-oct-git_pull_request_draft=  | ◌        |
-| =merged=            | =nf-oct-git_merge=               | ⮌        |
-| =closed=            | =nf-oct-git_pull_request_closed= | ⊘        |
-| =approved=          | =nf-oct-check=                   | ✓        |
-| =changes-requested= | =nf-oct-file_diff=               | ✗        |
-| =commented=         | =nf-oct-comment=                 | 💬       |
-| =requested=         | =nf-oct-dot=                     | ○        |
-| =viewed=            | =nf-oct-check_circle=            | ✓        |
-| =unviewed=          | =nf-oct-circle=                  | ·        |
-| =dismissed=         | =nf-oct-sync=                    | ↻        |
-| =check-success=     | =nf-oct-check_circle_fill=       | ✓        |
-| =check-failure=     | =nf-oct-x_circle_fill=           | ✗        |
-| =check-pending=     | =nf-oct-dot_fill=                | ◐        |
-| =pending-comment=   | =nf-oct-pencil=                  | ✎        |
-| =label=             | =nf-oct-tag=                     | 🏷        |
-| =push=              | =nf-oct-repo_push=               | ↑        |
-| =loading=           | =nf-oct-sync=                    | ⟳        |
-| =error=             | =nf-oct-alert=                   | ✗        |
+| =open=              | =nf-cod-git_pull_request=        | ●        |
+| =draft=             | =nf-cod-git_pull_request_draft=  | ◌        |
+| =merged=            | =nf-cod-git_merge=               | ⮌        |
+| =closed=            | =nf-cod-git_pull_request_closed= | ⊘        |
+| =approved=          | =nf-cod-pass=                    | ✓        |
+| =changes-requested= | =nf-cod-request_changes=         | ✗        |
+| =commented=         | =nf-cod-comment=                 | 💬       |
+| =requested=         | =nf-cod-watch=                   | ○        |
+| =viewed=            | =nf-cod-eye=                     | ✓        |
+| =unviewed=          | =nf-cod-eye_closed=              | ·        |
+| =dismissed=         | =nf-cod-history=                 | ↻        |
+| =check-success=     | =nf-cod-pass_filled=             | ✓        |
+| =check-failure=     | =nf-cod-error=                   | ✗        |
+| =check-pending=     | =nf-cod-loading=                 | ◐        |
+| =pending-comment=   | =nf-cod-comment_draft=           | ✎        |
+| =comment=           | =nf-cod-comment_discussion=      | 💬       |
+| =label=             | =nf-cod-tag=                     | 🏷        |
+| =push=              | =nf-cod-repo_push=               | ↑        |
+| =commit=            | =nf-cod-git_commit=              | ●        |
+| =issue=             | =nf-cod-issues=                  | ◉        |
+| =milestone=         | =nf-cod-milestone=               | ⚑       |
+| =person=            | =nf-cod-account=                 | 👤       |
+| =bell=              | =nf-cod-bell=                    | ●        |
+| =lock=              | =nf-cod-lock=                    | 🔒       |
+| =external=          | =nf-cod-link_external=           | ↗        |
+| =loading=           | =nf-cod-sync=                    | ⟳        |
+| =error=             | =nf-cod-warning=                 | ✗        |

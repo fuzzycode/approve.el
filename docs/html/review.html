@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — reviewing</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html">PR buffer</a>
+    <a href="review.html" aria-current="page">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html">Managing &amp; more</a>
+    <a href="flows.html">Flows</a>
+    <a href="icons.html">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>Reviewing</h1>
+<p class="lead">Comment on code, suggest changes, reply, resolve, and submit the review. Every comment goes
+into your pending review on GitHub (D02, D22), so the browser always shows the same state.</p>
+
+<ul class="toc">
+  <li><a href="#comment">Comment on a range of lines</a></li>
+  <li><a href="#suggest">Suggest a change</a></li>
+  <li><a href="#after">After sending: the pending comment</a></li>
+  <li><a href="#reply">Reply with a quote</a></li>
+  <li><a href="#suggestion-thread">A suggestion from someone else</a></li>
+  <li><a href="#dispatch">Dispatch menu (?)</a></li>
+  <li><a href="#submit">Submit review (S)</a></li>
+  <li><a href="#body">Review body</a></li>
+  <li><a href="#confirm">Confirmations and messages</a></li>
+</ul>
+
+<!-- ================================================================== -->
+<section class="shot" id="comment">
+<h2>Comment on a range of lines <span class="ref">F05 · ui.org › Comment input buffer</span></h2>
+<p>Select lines (region, or <code>V</code> in evil) and press <code>c</code>. The input opens below; the target lines stay
+highlighted above until you send (<code>C-c C-c</code>) or abort (<code>C-c C-k</code>, the text is kept as a draft).</p>
+
+<div class="emacs">
+<div class="tb">Emacs — approve</div>
+<div class="win stack">
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir">1 pending</span> <span class="d">·</span> <span class="wa">3 unresolved</span></div>
+<div class="buf">
+<p class="hunk">    ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
+<p>       <span class="ln">40  40</span>      (let* ((request-id (approve-api--generate-request-id))</p>
+<p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
+<p class="tgt">       <span class="ln">    41</span>  <span class="ok">+          (timeout approve-api-timeout)</span>                     <span class="d">░░ target</span></p>
+<p class="tgt">       <span class="ln">    42</span>  <span class="ok">+          (retries approve-api-retries))</span>                     <span class="d">░░ target</span></p>
+<p>       <span class="ln">42  43</span>        (when progress-message</p>
+<p>       <span class="ln">43  44</span>          (make-progress-reporter progress-message))</p>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   12%  L42      Approve-PR</div>
+</div>
+<div class="win">
+<div class="hl"><span class="b">Comment on approve-api.el:41–42</span> <span class="d">·</span> <span class="ir">pending review</span>          <span class="k">C-c C-c</span> <span class="d">send ·</span> <span class="k">C-c C-k</span> <span class="d">abort ·</span> <span class="k">C-c C-s</span> <span class="d">suggest</span></div>
+<div class="buf">
+<p>Should <span class="code">`retries`</span> be part of the defgroup? A per-call <span class="code">`:retries`</span> keyword</p>
+<p>would make the tests simpler too.<span class="cursor"> </span></p>
+<p></p>
+<p></p>
+</div>
+<div class="ml"> <span class="ir">&lt;I&gt;</span>  <span class="b">*approve-input: comment approve-api.el:41-42*</span>   All  L2    <span class="pi">Approve-Input</span></div>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+<ul>
+  <li>The header line names the action and the target, and says where the comment goes: <em>pending review</em>,
+      or <em>single comment</em> with <code>C-u c</code> when no review is pending.</li>
+  <li><code>M-TAB</code> completes <code>@user</code>, <code>#123</code> and <code>:emoji:</code>; <code>C-c C-p</code> previews the rendered markdown.</li>
+  <li>Evil users start in insert state.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="suggest">
+<h2>Suggest a change <span class="ref">F06</span></h2>
+<p><code>s</code> on new-side lines opens the same input, prefilled with a <code>suggestion</code> block holding those lines.
+Edit them into what they should be.</p>
+<div class="emacs">
+<div class="win">
+<div class="hl"><span class="b">Suggest on approve-api.el:41–42</span> <span class="d">·</span> <span class="ir">pending review</span>             <span class="k">C-c C-c</span> <span class="d">send ·</span> <span class="k">C-c C-k</span> <span class="d">abort ·</span> <span class="k">C-c C-p</span> <span class="d">preview</span></div>
+<div class="buf">
+<p>Let callers override it:</p>
+<p></p>
+<p><span class="m">```</span><span class="ir">suggestion</span></p>
+<p><span class="ro">         (timeout approve-api-timeout)</span></p>
+<p><span class="ro">         (retries (or retries approve-api-retries)))<span class="cursor"> </span></span></p>
+<p><span class="m">```</span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;I&gt;</span>  <span class="b">*approve-input: suggest approve-api.el:41-42*</span>   All  L5    <span class="pi">Approve-Input</span></div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="after">
+<h2>After sending: the pending comment <span class="ref">F00 · F05</span></h2>
+<p>While GitHub works, the target shows <span class="m it"><i data-i="loading">⟳</i> saving…</span> (no optimistic updates, D14). Then the
+thread appears under the last line of the range, in the pending colour, and the counts update.</p>
+<div class="emacs">
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir">2 pending</span> <span class="d">·</span> <span class="wa">3 unresolved</span></div>
+<div class="buf">
+<p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
+<p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
+<p class="add">       <span class="ln">    42</span>  +          (retries approve-api-retries))</p>
+<p class="pend">                 <span class="d">╭─</span> <span class="ir"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you · lines 41–42 ────────────────────────────────</span></p>
+<p class="pend">                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup? A per-call <span class="code">:retries</span></p>
+<p class="pend">                 <span class="d">│</span> keyword would make the tests simpler too.</p>
+<p class="pend">                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ─────────────────────────────────────────────</span></p>
+<p>       <span class="ln">42  43</span>        (when progress-message</p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   12%  L45      <span class="pi">Approve-PR</span></div>
+</div>
+<div class="echo">Added to your pending review (2 comments) · <span class="k">S</span> to submit</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="reply">
+<h2>Reply with a quote <span class="ref">F07 · F10</span></h2>
+<p><code>r</code> on a thread replies; with <code>C-u</code> (or a region) the comment is quoted. While a review is
+pending, the reply joins it.</p>
+<div class="emacs">
+<div class="win">
+<div class="hl"><span class="b">Reply to bob on approve-api.el:42</span> <span class="d">·</span> <span class="ir">pending review</span>                    <span class="k">C-c C-c</span> <span class="d">send ·</span> <span class="k">C-c C-k</span> <span class="d">abort</span></div>
+<div class="buf">
+<p><span class="m">&gt;</span> <span class="it m">Should this be configurable per call?</span></p>
+<p></p>
+<p class="anchor">Yes, see the suggestion below. <span class="u">@al</span><span class="cursor"> </span><span class="corfu" style="left:calc(10px + 31ch)"><span class="sel"><span class="u">@alice</span>     <span class="m">Alice Andersson · author</span></span><span><span class="u">@alex-bot</span>  <span class="m">bot</span></span><span><span class="u">@alan</span>      <span class="m">Alan Turing</span></span></span></p>
+<p></p>
+<p></p>
+<p></p>
+</div>
+<div class="ml"> <span class="ir">&lt;I&gt;</span>  <span class="b">*approve-input: reply PRRT_kwDO…*</span>   All  L3    <span class="pi">Approve-Input</span></div>
+</div>
+</div>
+<p>Typing <code>@al</code>: corfu shows the mentionable users from the completion-at-point function, the PR's participants first.</p>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="suggestion-thread">
+<h2>A suggestion from someone else <span class="ref">ui.org › Threads</span></h2>
+<p>GitHub's <code>bodyHTML</code> renders suggestion blocks as a small diff, which Approve draws in place (D11).</p>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<p>       <span class="ln">91  96</span>      (setq count (1+ count))</p>
+<p>                 <span class="d">╭─</span> <span class="u">carol</span> <span class="d">· 5 hours ago ───────────────────────────────────────────</span></p>
+<p>                 <span class="d">│</span> Use <span class="code">cl-incf</span> here:</p>
+<p>                 <span class="d">│ ┌</span> <span class="m">Suggested change</span> <span class="d">──────────────────────────────────────────</span></p>
+<p>                 <span class="d">│ │</span> <span style="background:var(--del-bg);color:var(--del-fg)">-      (setq count (1+ count))                           </span></p>
+<p>                 <span class="d">│ │</span> <span style="background:var(--add-bg);color:var(--add-fg)">+      (cl-incf count)                                   </span></p>
+<p>                 <span class="d">│ └────────────────────────────────────────────────────────────</span></p>
+<p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────────</span></p>
+<p>       <span class="ln">92  97</span>      (when (&gt; count approve-api-retries)</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="dispatch">
+<h2>Dispatch menu <span class="ref">? · D06</span></h2>
+<p>Every command, grouped. Point is on a file heading, so thread commands are dimmed (inapt) instead of hidden,
+and the menu never jumps around.</p>
+<div class="emacs">
+<div class="win stack">
+<div class="win">
+<div class="buf short">
+<p class="cur"><span class="tog"></span> <span class="fh">lisp/approve-model.el</span>                         <span class="m">modified</span>   <span class="ok">+40</span> <span class="er">−10</span>   <span class="d"><i data-i="unviewed">·</i> not viewed</span></p>
+<p class="hunk">    ▸ @@ -12,6 +12,9 @@ (defvar-local approve-model--store nil</p>
+<p>▸ <span class="fh">lisp/approve-graphql.el</span>                       <span class="m">modified</span>   <span class="ok">+12</span>  <span class="er">−2</span>   <span class="wa"><i data-i="dismissed">↻</i> changed since viewed</span></p>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   58%  L210     Approve-PR</div>
+</div>
+<div class="tr">
+<p><span class="kh">Approve</span>  <span class="t">#1234 Add retry logic to the GraphQL client</span></p>
+<p><span class="kh">Review</span>                     <span class="kh">Comments</span>                 <span class="kh">Pull request</span>          <span class="kh">Buffer</span></p>
+<p> <span class="k">c</span> Comment at point         <span class="ina">r Reply</span>                  <span class="k">t</span> Title               <span class="k">g</span> Refresh</p>
+<p> <span class="ina">s Suggest change</span>           <span class="ina">R Resolve / unresolve</span>    <span class="k">d</span> Description         <span class="k">o</span> Open in browser</p>
+<p> <span class="k">v</span> Toggle viewed            <span class="ina">e Edit at point</span>           <span class="k">l</span> Labels              <span class="k">y</span> Copy URL / sha</p>
+<p> <span class="k">S</span> Submit review…           <span class="ina">k Delete at point</span>         <span class="k">a</span> Assignees           <span class="k">j</span> Jump…</p>
+<p> <span class="k">X</span> Discard pending review   <span class="ina">+ React</span>                  <span class="k">A</span> Request reviewers   <span class="k">L</span> Layout</p>
+<p> <span class="k">V</span> Review range…            <span class="k">C</span> Conversation comment   <span class="k">M</span> Milestone           <span class="k">!</span> Doctor</p>
+<p>                                                     <span class="k">D</span> Draft / ready       <span class="k">K</span> Details (eldoc)</p>
+<p>                                                     <span class="k">w</span> Subscription</p>
+<p>                                                     <span class="k">m</span> Merge / close…</p>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="submit">
+<h2>Submit review <span class="ref">S · F09</span></h2>
+<p>The title line shows what is pending. A verdict opens the body input; <code>C-u a</code> approves at once with no body.
+With no pending review, the same keys create and submit a review in one call.</p>
+<div class="emacs">
+<div class="win stack">
+<div class="win">
+<div class="buf short">
+<p class="pend"><span class="tog"></span> <span class="h">Your pending review</span>                         <span class="ir">2 comments · 1 reply</span>     <span class="k">S</span> <span class="d">submit ·</span> <span class="k">X</span> <span class="d">discard</span></p>
+<p class="pend">    <span class="pi">lisp/approve-api.el:41–42</span>     Should <span class="code">retries</span> be part of the defgroup? …</p>
+<p class="pend">    <span class="pi">lisp/approve-api.el:87–91</span>     <span class="ir"><i data-i="pending-comment">✎</i> suggestion</span>: use <span class="code">cl-incf</span></p>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   Top  L14      Approve-PR</div>
+</div>
+<div class="tr">
+<p><span class="kh">Submit review</span>  <span class="t">#1234</span>                                <span class="ir">pending: 2 comments · 1 reply</span></p>
+<p><span class="kh">Verdict</span>                        <span class="kh">Body</span></p>
+<p> <span class="k">a</span> Approve                      <span class="k">e</span> Edit body…     <span class="st">"Thanks! Two nits inline."</span></p>
+<p> <span class="k">r</span> Request changes</p>
+<p> <span class="k">c</span> Comment</p>
+<p><span class="kh">Other</span></p>
+<p> <span class="k">X</span> Discard pending review       <span class="k">q</span> Quit</p>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="body">
+<h2>Review body <span class="ref">F09</span></h2>
+<p>The body is optional for an approval. <em>Request changes</em> needs one when there are no comments (to check in SP1).</p>
+<div class="emacs">
+<div class="win">
+<div class="hl"><span class="b">Review body — </span><span class="ok b">Approve</span> <span class="d">· #1234 · 2 comments, 1 reply will be published</span>     <span class="k">C-c C-c</span> <span class="d">submit ·</span> <span class="k">C-c C-k</span> <span class="d">abort</span></div>
+<div class="buf">
+<p>Thanks! Two nits inline, nothing blocking.<span class="cursor"> </span></p>
+<p></p>
+</div>
+<div class="ml"> <span class="ir">&lt;I&gt;</span>  <span class="b">*approve-input: review #1234*</span>   All  L1    <span class="pi">Approve-Input</span></div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="confirm">
+<h2>Confirmations and messages <span class="ref">F08 · F09</span></h2>
+<p>Destructive actions ask first. Results and errors go to the echo area; errors keep any typed text as a draft.</p>
+<div class="emacs">
+<div class="win">
+<div class="echo" style="border-top:none">Delete your comment on approve-api.el:41–42? (y or n) <span class="cursor"> </span></div>
+<div class="echo">Discard your pending review with 2 comments and 1 reply? (yes or no) <span class="cursor"> </span></div>
+<div class="echo"><span class="ok"><i data-i="approved">✓</i> You approved #1234</span> · 2 comments and 1 reply published</div>
+<div class="echo"><span class="er"><i data-i="error">✗</i> GitHub: “Can not approve your own pull request”</span></div>
+<div class="echo"><span class="wa">Secondary rate limit: waiting 42 s before the next change</span> · 1 queued</div>
+<div class="echo"><span class="er">You can’t resolve this thread</span> <span class="d">(viewerCanResolve is false)</span></div>
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

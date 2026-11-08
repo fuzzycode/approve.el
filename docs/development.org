@@ -28,6 +28,7 @@ predictable.
  │   ├── helpers.el        fake API, fixture loading, buffer helpers
  │   └── test-<module>.el  one per lisp module
  ├── docs/                 these docs
+ │   └── html/             HTML views: mockups (hand-written) and flows (graphviz)
  ├── Cask  Makefile  LICENSE  CODE_OF_CONDUCT.md
 #+end_example
 
@@ -40,6 +41,7 @@ predictable.
 | =make lint=    | byte-compile with warnings as errors, package-lint, checkdoc | byte-compile only; add the rest in Phase 0 |
 | =make cover=   | tests with undercover (text report)                          | Phase 0                                    |
 | =make clean=   | remove =.elc=                                                | exists                                     |
+| =make docs=    | rebuild the flow diagrams and =docs/html/flows.html=         | exists (needs graphviz)                    |
 
 The shell is fish: wrap loops in =bash -c '…'=.
 

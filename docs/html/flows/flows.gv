@@ -1,0 +1,431 @@
+// Approve — flow diagrams.  One graph per "%% NAME" section; build.sh wraps
+// each in a digraph with style.gv and expands the @kinds from macros.sed.
+// Keep in step with ../../flows.org (the source of truth).
+
+%% arch
+ranksep=0.45; nodesep=0.5;
+user    [label="[user]  keys · menus · M-x" @user];
+cmds    [label="Entry points & menus\napprove.el · approve-menus.el"];
+bufs    [label="Buffers\nPR · diff · dashboard · search · file · notifications"];
+actions [label="Actions\ncontext → validate → (input) → mutation → patch → redraw"];
+input   [label="Input buffers\ngfm · drafts · completion"];
+render  [label="Renderers (pure)\nsections · diff · threads · html"];
+ops     [label="Operations\nqueries · mutations" @api];
+store   [label="Store (buffer-local)\nnormalized by __typename + id"];
+api     [label="approve-api\nasync · timeout · mutation queue · errors" @api];
+gh      [label="ghub → GitHub   GraphQL · REST" @ok];
+{ rank=same; cmds; bufs; }
+{ rank=same; actions; input; render; }
+{ rank=same; ops; store; }
+user -> cmds;
+bufs -> user [style=dashed, label=" sees"];
+cmds -> actions;
+actions -> input [label=" needs text"];
+input -> actions [label=" C-c C-c", style=dashed, constraint=false];
+actions -> ops;
+cmds -> ops [label=" open / refresh"];
+ops -> api -> gh;
+gh -> api [style=dashed, label=" callback in\n origin buffer"];
+ops -> store [label=" load / patch", constraint=false];
+store -> render [label=" selectors"];
+render -> bufs [label=" redraw · restore point"];
+
+%% F00
+start  [label="[user] key or menu suffix" @user];
+ctx    [label="ctx = approve-context-at-point"];
+apply  [label="command applies\nto ctx?" @dec];
+uerr1  [label="user-error: what it needs\n\"Put point on a thread\"" @err];
+allow  [label="viewerCan… ·\nnot locked?" @dec];
+uerr2  [label="user-error: why not" @err];
+text   [label="needs text?" @dec];
+input  [label="open input buffer\n(draft prefilled)"];
+abort  [label="C-c C-k: keep draft,\nrestore windows, stop" @note];
+mark   [label="mark target in flight ⟳\nenqueue mutation(s) — serial" @api];
+okq    [label="success?" @dec];
+fail   [label="clear mark · show GitHub's message\nkeep draft · rate limit: queue pauses" @err];
+patch  [label="patch store with the returned fragment\nlist edits (append / remove refs)\nclear draft and mark\nredraw every buffer of this PR · restore point" @ok];
+start -> ctx -> apply;
+apply -> uerr1 [@no]; apply -> allow [@yes];
+allow -> uerr2 [@no]; allow -> text [@yes];
+text -> input [@yes]; text -> mark [@no];
+input -> abort [label=" C-c C-k"]; input -> mark [label=" C-c C-c"];
+mark -> okq; okq -> fail [@no]; okq -> patch [@yes];
+
+%% F01
+dash   [label="RET in dashboard" @user];
+search [label="RET in search" @user];
+url    [label="M-x approve URL" @user];
+atpt   [label="approve-at-point\nMagit/Forge · mail · org" @user];
+burl   [label="browse-url handler\n(opt-in)" @user];
+notif  [label="RET on notification" @user];
+{ rank=same; dash; search; url; atpt; burl; notif; }
+parse  [label="parse → host · owner · repo · number"];
+valid  [label="a pull request\nURL?" @dec];
+err    [label="user-error\n\"Not a pull request URL: …\"" @err];
+exists [label="buffer for it\nexists?" @dec];
+switch [label="switch to it — no reload\n(header line says if stale)" @ok];
+create [label="create buffer · approve-pr-mode\nremember in \"Recently opened\""];
+load   [label="F02  Load a PR" @goto, href="#F02"];
+dash -> parse; search -> parse; url -> parse; atpt -> parse; burl -> parse; notif -> parse;
+parse -> valid; valid -> err [@no]; valid -> exists [@yes];
+exists -> switch [@yes]; exists -> create [@no]; create -> load;
+
+%% F02
+skel   [label="draw skeleton: \"#1234\" and every\nsection heading with \"⟳ Loading…\""];
+q1 [label="Q core" @api]; q2 [label="Q files" @api]; q3 [label="Q threads" @api];
+q4 [label="Q timeline" @api]; q5 [label="Q commits" @api]; q6 [label="R patches\n(REST)" @api];
+{ rank=same; q1; q2; q3; q4; q5; q6; }
+arrive [label="a response arrives"];
+okq    [label="ok?" @dec];
+serr   [label="that section: \"✗ … · g to retry\"\n401/404 on core: whole-buffer error" @err];
+norm   [label="normalize into the store\nmore pages? request the next one\nschedule redraw (coalesced ≈50 ms)"];
+done   [label="all settled?" @dec];
+fin    [label="header line: final counts\nstart change detection (F17)" @ok];
+skel -> q1; skel -> q2; skel -> q3; skel -> q4; skel -> q5; skel -> q6;
+q1 -> arrive; q2 -> arrive; q3 -> arrive; q4 -> arrive; q5 -> arrive; q6 -> arrive;
+arrive -> okq; okq -> serr [@no]; okq -> norm [@yes];
+norm -> done; serr -> done;
+done -> arrive [label=" no — wait", style=dashed, constraint=false];
+done -> fin [@yes];
+
+%% F03
+rankdir=LR;
+u      [label="[user] wants to…" @user];
+mv     [label="n/p (gj/gk) · TAB · ^ parent · M-n/M-p sibling"];
+jump   [label="j … jump menu: description, conversation,\nchecks, commits, files, pending review, a file"];
+work   [label="]u next unviewed file · ]t next unresolved thread\nj n next comment new since my last review"];
+learn  [label="eldoc in the echo area\nuser · label · sha · check · date"];
+follow [label="RET: file → its diff · commit → commit diff\nPR link → open in Approve · check → details URL"];
+web    [label="o: thing at point in the browser"];
+copy   [label="y: copy URL · sha · path:line"];
+u -> mv [label="move"]; u -> jump [label="go somewhere"]; u -> work [label="find the next work"];
+u -> learn [label="learn about a thing"]; u -> follow [label="follow it"];
+u -> web [label="see it on GitHub"]; u -> copy [label="copy it"];
+
+%% F04
+u      [label="[user] v on a file heading, file entry,\nor any line inside a file's diff" @user];
+st     [label="viewerViewedState?" @dec];
+unmark [label="unmarkFileAsViewed" @api];
+mark   [label="markFileAsViewed" @api];
+pipe   [label="via F00 (no text)" @goto, href="#F00"];
+patch  [label="patch viewerViewedState · redraw"];
+adv    [label="just marked viewed?" @dec];
+next   [label="collapse the file · if approve-viewed-advance:\npoint to the next unviewed file" @ok];
+stay   [label="file shows · not viewed" @ok];
+note   [label="DISMISSED = GitHub saw new changes\nsince you viewed it (↻)" @note];
+u -> st; st -> unmark [label=" VIEWED"]; st -> mark [label=" UNVIEWED /\n DISMISSED"];
+unmark -> pipe; mark -> pipe; pipe -> patch -> adv;
+adv -> next [@yes]; adv -> stay [@no];
+note -> st [style=dotted, arrowhead=none];
+
+%% F05
+u      [label="[user] c   (C-u c: single comment)" @user];
+reg    [label="region active?" @dec];
+range  [label="start / end = first / last\ndiff line in the region"];
+rvalid [label="same file and hunk,\nall lines in the diff?" @dec];
+rerr   [label="user-error\n\"A range must stay in one hunk\"" @err];
+line   [label="on a diff line?" @dec];
+file   [label="on a file heading?" @dec];
+tline  [label="target LINE\npath · side · line (· startLine · startSide)"];
+tfile  [label="target FILE\nsubjectType: FILE"];
+conv   [label="F10  Conversation comment" @goto, href="#F10"];
+input  [label="highlight target lines · open input\n\"Comment on approve-api.el:41–42 · pending review\""];
+send   [label="[user] C-c C-c" @user];
+pend   [label="viewer has a\npending review?" @dec];
+add    [label="addPullRequestReviewThread\n(pullRequestReviewId, target, body)" @api];
+single [label="single comment?\n(C-u, or default = single)" @dec];
+now    [label="addPullRequestReview\n(event: COMMENT, threads: [target])\n→ published now" @api];
+start  [label="addPullRequestReview\n(threads: [target], no event)\n→ new PENDING review" @api];
+patch  [label="patch thread · comment · review\nappend to PR.reviewThreads · set pending ref\nredraw: thread under its line, counts" @ok];
+u -> reg; reg -> range [@yes]; reg -> line [@no];
+range -> rvalid; rvalid -> rerr [@no]; rvalid -> tline [@yes];
+line -> tline [@yes]; line -> file [@no];
+file -> tfile [@yes]; file -> conv [@no];
+tline -> input; tfile -> input; input -> send -> pend;
+pend -> add [@yes]; pend -> single [@no];
+single -> now [@yes]; single -> start [@no];
+add -> patch; now -> patch; start -> patch;
+
+%% F05-life
+rankdir=LR;
+none    [label="no pending review" @state];
+pending [label="PENDING\nonly you can see it" @state];
+done    [label="submitted review\nAPPROVED · CHANGES_REQUESTED · COMMENTED\nvisible to everyone" @ok];
+browser [label="a pending review started in the browser\nis found on load and continued here —\nand the other way round" @note];
+none -> pending [label="first code comment\nor reply (not single)"];
+pending -> pending [label="add · edit · delete\ncomments"];
+pending -> none [label="discard\ndeletePullRequestReview"];
+pending -> done [label="submit\nsubmitPullRequestReview"];
+none -> done [label="verdict with nothing pending\naddPullRequestReview(event)", style=dashed];
+browser -> pending [style=dotted, arrowhead=none];
+
+%% F06
+u     [label="[user] s on new-side line(s)\n(or C-c C-s inside a comment input)" @user];
+side  [label="target on the\nnew side?" @dec];
+err   [label="user-error\n\"Suggestions apply to the new version\"" @err];
+pre   [label="input prefilled with a\n```suggestion block holding the target lines\n(without +/space prefix) · point inside it"];
+f05   [label="F05  from \"C-c C-c\"" @goto, href="#F05"];
+show  [label="GitHub's bodyHTML renders it as\n\"Suggested change\" — drawn as a small diff" @note];
+u -> side; side -> err [@no]; side -> pre [@yes]; pre -> f05; f05 -> show [style=dotted, arrowhead=none];
+
+%% F07
+subgraph cluster_r { label="r — reply";
+  r     [label="[user] r on a thread\n(C-u or region: quote)" @user];
+  can   [label="viewerCanReply?" @dec];
+  rerr  [label="user-error" @err];
+  in    [label="input \"Reply to bob on approve-api.el:42\""];
+  pend  [label="pending review?" @dec];
+  rp    [label="addPullRequestReviewThreadReply\n(threadId, body, reviewId)\n→ pending reply" @api];
+  rn    [label="addPullRequestReviewThreadReply\n(threadId, body)\n→ published now" @api];
+  rdone [label="append comment to the thread · redraw" @ok];
+  r -> can; can -> rerr [@no]; can -> in [@yes]; in -> pend [label=" C-c C-c"];
+  pend -> rp [@yes]; pend -> rn [@no]; rp -> rdone; rn -> rdone;
+}
+subgraph cluster_R { label="R — resolve / unresolve";
+  R     [label="[user] R on a thread" @user];
+  res   [label="resolved?" @dec];
+  cu    [label="viewerCanUnresolve?" @dec];
+  cr    [label="viewerCanResolve?" @dec];
+  un    [label="unresolveReviewThread" @api];
+  re    [label="resolveReviewThread" @api];
+  Rerr  [label="user-error" @err];
+  Rdone [label="patch isResolved · redraw\nresolved threads collapse" @ok];
+  R -> res; res -> cu [@yes]; res -> cr [@no];
+  cu -> un [@yes]; cr -> re [@yes]; cu -> Rerr [@no]; cr -> Rerr [@no];
+  un -> Rdone; re -> Rdone;
+}
+
+%% F08
+subgraph cluster_e { label="e — edit own text";
+  e     [label="[user] e on title, description,\nor one of your comments" @user];
+  eok   [label="viewerCanUpdate?" @dec];
+  eerr  [label="user-error" @err];
+  ein   [label="input prefilled with the raw markdown\n(fetch body if only bodyHTML is loaded)"];
+  same  [label="text unchanged?" @dec];
+  estop [label="stop — no request" @note];
+  emut  [label="by context:\nupdatePullRequest (title, body)\nupdateIssueComment\nupdatePullRequestReviewComment\nupdatePullRequestReview" @api];
+  edone [label="patch · redraw" @ok];
+  e -> eok; eok -> eerr [@no]; eok -> ein [@yes]; ein -> same [label=" C-c C-c"];
+  same -> estop [@yes]; same -> emut [@no]; emut -> edone;
+}
+subgraph cluster_k { label="k — delete own comment";
+  k     [label="[user] k on one of your comments" @user];
+  kok   [label="viewerCanDelete?" @dec];
+  kerr  [label="user-error" @err];
+  conf  [label="y-or-n-p\n\"Delete your comment on …?\"" @dec];
+  kstop [label="stop" @note];
+  kmut  [label="by context:\ndeleteIssueComment\ndeletePullRequestReviewComment" @api];
+  kdone [label="remove its ref from the list · redraw" @ok];
+  k -> kok; kok -> kerr [@no]; kok -> conf [@yes];
+  conf -> kstop [label=" n"]; conf -> kmut [label=" y"]; kmut -> kdone;
+}
+
+%% F09
+subgraph cluster_s { label="S — submit";
+  S     [label="[user] S" @user];
+  menu  [label="transient: a Approve · r Request changes · c Comment\n(title line: pending counts)"];
+  cua   [label="C-u a?" @dec];
+  body  [label="input \"Review body — Approve\"\n(draft body prefilled)"];
+  need  [label="body empty and\nverdict needs one?" @dec];
+  berr  [label="user-error" @err];
+  pend  [label="pending review?" @dec];
+  sub   [label="submitPullRequestReview\n(reviewId, event, body)" @api];
+  addr  [label="addPullRequestReview\n(event, body)" @api];
+  sdone [label="patch review state · clear pending ref\nreviewer row and header: \"✓ You approved\"" @ok];
+  S -> menu -> cua; cua -> pend [@yes]; cua -> body [@no];
+  body -> need [label=" C-c C-c"]; need -> berr [@yes]; need -> pend [@no];
+  pend -> sub [@yes]; pend -> addr [@no]; sub -> sdone; addr -> sdone;
+}
+subgraph cluster_x { label="X — discard";
+  X     [label="[user] X" @user];
+  xp    [label="pending review?" @dec];
+  xerr  [label="user-error\n\"No pending review\"" @err];
+  xc    [label="yes-or-no-p \"Discard pending\nreview with 3 comments?\"" @dec];
+  xstop [label="stop" @note];
+  del   [label="deletePullRequestReview" @api];
+  xdone [label="remove its threads and comments\nfrom the store · redraw" @ok];
+  X -> xp; xp -> xerr [@no]; xp -> xc [@yes];
+  xc -> xstop [@no]; xc -> del [@yes]; del -> xdone;
+}
+
+%% F10
+u      [label="[user] C anywhere,\nor c with no code context" @user];
+lock   [label="locked, and viewer\nnot a collaborator?" @dec];
+lerr   [label="user-error\n\"Conversation is locked\"" @err];
+reg    [label="region active?" @dec];
+qr     [label="quote = region as \"> \" lines"];
+cu     [label="C-u on a comment?" @dec];
+qc     [label="quote = that comment's markdown"];
+input  [label="input \"Comment on #1234\"\n(quote, blank line, point after it)"];
+add    [label="addComment(subjectId: PR, body)" @api];
+done   [label="append to the timeline · redraw\npoint on the new comment" @ok];
+u -> lock; lock -> lerr [@yes]; lock -> reg [@no];
+reg -> qr [@yes]; reg -> cu [@no];
+cu -> qc [@yes]; cu -> input [@no];
+qr -> input; qc -> input; input -> add [label=" C-c C-c"]; add -> done;
+
+%% F11
+u     [label="[user] + on a comment, review body,\nor the description" @user];
+pick  [label="completing-read over 👍 👎 😄 🎉 😕 ❤️ 🚀 👀\nyour own reactions marked ✓"];
+had   [label="already reacted\nwith it?" @dec];
+rm    [label="removeReaction" @api];
+add   [label="addReaction" @api];
+done  [label="patch reactionGroups · redraw" @ok];
+u -> pick -> had; had -> rm [@yes]; had -> add [@no]; rm -> done; add -> done;
+
+%% F12
+u      [label="[user] l (or ? l, or RET on the Labels row)" @user];
+can    [label="viewerCanLabel?" @dec];
+err    [label="user-error" @err];
+cached [label="repo labels cached?" @dec];
+fetch  [label="repository.labels (all pages)\ncache per repo for the session (D24)" @api];
+crm    [label="completing-read-multiple\ncurrent labels preselected, annotated"];
+diff   [label="to-add = chosen − current\nto-remove = current − chosen"];
+none   [label="nothing changed?" @dec];
+stop   [label="stop" @note];
+muts   [label="addLabelsToLabelable\nremoveLabelsFromLabelable\n(queued, in order)" @api];
+done   [label="patch PR.labels · redraw" @ok];
+same   [label="same shape for assignees, reviewers (requestReviews),\nmilestone (updatePullRequest)" @note];
+u -> can; can -> err [@no]; can -> cached [@yes];
+cached -> fetch [@no]; cached -> crm [@yes]; fetch -> crm;
+crm -> diff -> none; none -> stop [@yes]; none -> muts [@no]; muts -> done;
+done -> same [style=dotted, arrowhead=none];
+
+%% F13
+u      [label="[user] m" @user];
+menu   [label="transient — title line from mergeable, mergeStateStatus,\nreviewDecision, checks · only methods the repo allows"];
+meth   [label="m / s / r\nmerge method" @user];
+auto   [label="a  auto-merge" @user];
+queue  [label="Q  merge queue" @user];
+upd    [label="u  update branch" @user];
+draft  [label="D  draft" @user];
+close  [label="c  close / reopen" @user];
+{ rank=same; meth; auto; queue; upd; draft; close; }
+clean  [label="mergeStateStatus\nCLEAN or UNSTABLE?" @dec];
+berr   [label="user-error with the reason\n(BLOCKED, BEHIND, DIRTY, DRAFT…)\nsuggest a · Q · u" @err];
+conf   [label="yes-or-no-p\n\"Squash and merge #1234 into main?\"" @dec];
+stop   [label="stop" @note];
+merge  [label="mergePullRequest\n(method, title, body)" @api];
+delb   [label="-d and\nviewerCanDeleteHeadRef?" @dec];
+delref [label="REST DELETE git/refs/heads/…" @api];
+refr   [label="full refresh (g)" @ok];
+am     [label="enablePullRequestAutoMerge" @api];
+eq     [label="enqueuePullRequest" @api];
+ub     [label="updatePullRequestBranch" @api];
+cd     [label="convertPullRequestToDraft" @api];
+cr     [label="closePullRequest /\nreopenPullRequest\n(after yes-or-no-p)" @api];
+patch  [label="patch · redraw" @ok];
+u -> menu; menu -> meth; menu -> auto; menu -> queue; menu -> upd; menu -> draft; menu -> close;
+meth -> clean; clean -> berr [@no]; clean -> conf [@yes];
+conf -> stop [@no]; conf -> merge [@yes]; merge -> delb;
+delb -> delref [@yes]; delb -> refr [@no]; delref -> refr;
+auto -> am -> patch; queue -> eq -> patch; upd -> ub -> refr; draft -> cd -> patch; close -> cr -> patch;
+
+%% F14
+load   [label="F02  Load a PR" @goto, href="#F02"];
+newc   [label="viewerLatestReview.commit\n≠ headRefOid?" @dec];
+same   [label="nothing extra" @note];
+mark   [label="Commits: \"2 new since your review\" (new marked ┃)\nheader: \"V l to see only them\""];
+u      [label="[user] V l · V c · V r · V a" @user];
+cmp    [label="REST compare base…head\npatches stored under :range" @api];
+draw   [label="Diff heading: \"since your last review (2 commits)\"\nthreads still come from the PR"];
+c      [label="[user] c on a line in this view" @user];
+okl    [label="new side, and inside\nthe PR's own diff?" @dec];
+err    [label="user-error\n\"Comment from the full diff:\nthis line isn't in the PR's diff\"" @err];
+f05    [label="F05  with the PR-diff line\n(same file at head ⇒ same number)" @goto, href="#F05"];
+force  [label="after a force push compare may fail:\nsay so, fall back to all changes" @note];
+load -> newc; newc -> same [@no]; newc -> mark [@yes];
+mark -> u -> cmp -> draw -> c -> okl;
+okl -> err [@no]; okl -> f05 [@yes];
+cmp -> force [style=dotted, arrowhead=none];
+
+%% F15
+u      [label="[user] RET on a diff line\n(or F on a file)" @user];
+side   [label="line on the\nLEFT side?" @dec];
+base   [label="base: baseRefOid + old path"];
+head   [label="head: headRefOid + path"];
+cached [label="blob cached?\n(oid:path)" @dec];
+fetch  [label="repository.object(expression: \"OID:path\")\n{ ... on Blob { text isBinary byteSize } }" @api];
+big    [label="binary or\ntoo big?" @dec];
+err    [label="user-error · offer to open on GitHub" @err];
+buf    [label="*approve-file: …* read-only, file's major mode\nfringe marks from the patch · threads as overlays\npoint on the same line as in the diff" @ok];
+keys   [label="n/p change · ]t thread · b base/head · v viewed\nc comment (diff lines only) · q back" @note];
+u -> side; side -> base [@yes]; side -> head [@no];
+base -> cached; head -> cached;
+cached -> buf [@yes]; cached -> fetch [@no]; fetch -> big;
+big -> err [@yes]; big -> buf [@no]; buf -> keys [style=dotted, arrowhead=none];
+
+%% F16
+roll   [label="Checks heading shows the rollup\n(statusCheckRollup.state from Q core)"];
+u      [label="[user] TAB on Checks" @user];
+have   [label="contexts loaded?" @dec];
+fetch  [label="statusCheckRollup.contexts\nfor the head commit (lazy)" @api];
+list   [label="failing and running first,\nthen required, then the rest\n\"… 4 more passed\""];
+ret    [label="[user] RET on a check" @user];
+open   [label="browse-url detailsUrl / targetUrl" @ok];
+g      [label="[user] g on Checks" @user];
+refetch[label="refetch rollup and contexts only" @api];
+roll -> u -> have; have -> fetch [@no]; have -> list [@yes]; fetch -> list;
+list -> ret -> open; list -> g -> refetch -> list;
+
+%% F17
+subgraph cluster_g { label="g — refresh";
+  g     [label="[user] g\n(C-u g: also clear caches)" @user];
+  keep  [label="keep the text on screen\nheader: \"⟳ refreshing…\""];
+  rerun [label="run F02's queries again" @api];
+  repl  [label="replace store contents\nredraw · restore point" @ok];
+  failg [label="failed sections keep old content\n+ \"✗ refresh failed\"" @err];
+  g -> keep -> rerun; rerun -> repl [label=" ok"]; rerun -> failg [label=" error"];
+}
+subgraph cluster_d { label="change detection (D23)";
+  trig  [label="buffer gets focus (≤ once a minute)\nor approve-poll-interval timer"];
+  q     [label="pullRequest { updatedAt headRefOid }" @api];
+  diff  [label="different from\nthe store?" @dec];
+  same  [label="nothing" @note];
+  tell  [label="header: \"⟳ updated on GitHub — g to refresh\"\n(+ \"new commits\" if headRefOid moved)\nnever redraws by itself" @ok];
+  trig -> q -> diff; diff -> same [@no]; diff -> tell [@yes];
+}
+
+%% F18
+u      [label="[user] L" @user];
+single [label="layout is single?" @dec];
+split  [label="create *approve-diff: …* sharing the store\nremove Diff from the PR buffer · show the diff buffer\npoint on the same file and line" @ok];
+merge  [label="kill the diff buffer · insert Diff into the PR buffer\npoint on the same file and line" @ok];
+u -> single; single -> split [@yes]; single -> merge [@no];
+
+%% F19
+cmd    [label="[user] M-x approve-notifications" @user];
+get    [label="REST GET /notifications\n(participating or all, per filter)" @api];
+list   [label="list grouped by repository\npull requests first"];
+ret    [label="[user] RET" @user];
+x      [label="[user] x" @user];
+un     [label="[user] u" @user];
+f      [label="[user] f" @user];
+{ rank=same; ret; x; un; f; }
+open   [label="F01  open the PR, jump to\nthe subject's latest comment" @goto, href="#F01"];
+read   [label="PATCH /notifications/threads/{id}\n(mark read)" @api];
+unsub  [label="DELETE …/threads/{id}/subscription" @api];
+filt   [label="filter transient: unread · participating\nreason · repository"];
+cmd -> get -> list; list -> ret; list -> x; list -> un; list -> f;
+ret -> open -> read; x -> read; un -> unsub; f -> filt -> get;
+
+%% F20
+idle   [label="point rests on a thing\n(eldoc idle delay)" @user];
+K      [label="[user] K" @user];
+want   [label="mark \"details wanted\" for this ctx\nrun eldoc · show the eldoc buffer"];
+{ rank=same; idle; K; }
+ctx    [label="ctx = approve-context-at-point"];
+desc   [label="a describer\nfor ctx?" @dec];
+none   [label="nil — other eldoc\nfunctions run" @note];
+build  [label="echo = one line from the store\ndoc = store data + cached details"];
+need   [label="details missing, and wanted\nor eldoc buffer visible?" @dec];
+show   [label="echo area: the line\neldoc buffer: doc as is" @ok];
+load   [label="echo area: the line now\neldoc buffer: doc + \"⟳ loading details…\""];
+q      [label="query details: user · team · #123 ·\ncommit · original code of a thread" @api];
+okq    [label="ok?" @dec];
+fail   [label="cache the error (1 min)\nbuffer: \"details unavailable (…)\"" @err];
+full   [label="cache for the session\neldoc buffer: full doc\n(dropped if point has moved on)" @ok];
+idle -> ctx; K -> want -> ctx;
+ctx -> desc; desc -> none [@no]; desc -> build [@yes];
+build -> need; need -> show [@no]; need -> load [@yes];
+load -> q -> okq; okq -> fail [@no]; okq -> full [@yes];

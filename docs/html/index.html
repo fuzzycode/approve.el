@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — what it could look like</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html">PR buffer</a>
+    <a href="review.html">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html">Managing &amp; more</a>
+    <a href="flows.html">Flows</a>
+    <a href="icons.html">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>Approve — what it could look like</h1>
+<p class="lead">Review GitHub pull requests without leaving Emacs. These pages are illustrations of the plan in
+<a href="../index.org">docs/</a>: mockups of every buffer and menu, and every user scenario as a flowchart.
+The org files stay the source of truth (D21); when they change, these pages follow.</p>
+
+<div class="emacs" style="max-width:820px">
+<div class="tb">*approve: fuzzycode/approve#1234*</div>
+<div class="win">
+<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir">2 pending</span> <span class="d">·</span> <span class="wa">3 unresolved</span></div>
+<div class="buf">
+<p><span class="t">#1234 Add retry logic to the GraphQL client</span>                 <span class="badge open"><i data-i="open">●</i> Open</span></p>
+<p><span class="d">fuzzycode/approve ·</span> <span class="u">alice</span> <span class="d">wants to merge 4 commits into</span> <span class="pi">main</span></p>
+<p></p>
+<p><span class="m">Reviewers</span>   <span class="ok"><i data-i="approved">✓</i></span> <span class="u">bob</span>   <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>   <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span></p>
+<p></p>
+<p class="pend"><span class="tog"></span> <span class="h">Your pending review</span>         <span class="ir">2 comments · 1 reply</span>   <span class="k">S</span> <span class="d">submit</span></p>
+<p class="hunk">    ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
+<p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
+<p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
+<p class="add">       <span class="ln">    42</span>  +          (retries approve-api-retries))</p>
+<p>                 <span class="d">╭─</span> <span class="u">bob</span> <span class="d">· 2 days ago ──────────────────────────────</span></p>
+<p>                 <span class="d">│</span> Should this be configurable per call?</p>
+<p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ──────────────────────────</span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   Top  L9      <span class="pi">Approve-PR</span></div>
+</div>
+</div>
+
+<div class="cards">
+  <a class="card" href="pr.html"><h3>The PR buffer</h3>
+    <p>Header, pending review, description, checks, commits, conversation, files and the diff with inline threads.
+    Single and split layout, header line, loading and error states. Sections collapse on click.</p></a>
+  <a class="card" href="review.html"><h3>Reviewing</h3>
+    <p>Commenting on a range, suggestions, replies with quotes, the dispatch menu, submitting a review,
+    confirmations.</p></a>
+  <a class="card" href="find.html"><h3>Finding PRs</h3>
+    <p>Dashboard, search and its filter menu, opening by URL from anywhere, notifications.</p></a>
+  <a class="card" href="manage.html"><h3>Managing &amp; more</h3>
+    <p>Labels and other metadata, reactions, merging, checks, re-reviewing after a push, the whole-file view,
+    jumping, eldoc.</p></a>
+  <a class="card" href="flows.html"><h3>Flows</h3>
+    <p>How the pieces talk, the shared action pipeline, and all scenarios F01–F19 as diagrams.</p></a>
+  <a class="card" href="icons.html"><h3>Icons</h3>
+    <p>Four nerd-icons sets compared (Material Design, Codicons, Font Awesome, Octicons), side by side and in
+    context. The picker at the top right applies a set to every page.</p></a>
+</div>
+
+<section class="shot">
+<h2>About these pages</h2>
+<ul>
+  <li>Colours are the faces of the author's theme, <b>doom-rose-pine-moon</b>, read from the running Emacs. The theme
+      button switches to rose-pine <b>dawn</b>: every Approve face inherits from theme faces (D16), so any theme works.</li>
+  <li>Icons are Approve's chosen nerd-icons set, <b>Codicons</b> (D26); they need a Nerd Font, such as
+      JetBrainsMono Nerd Font, installed locally. The picker at the top right switches to the Unicode fallbacks
+      (the other form of <code>approve-icon</code>) or to the other sets compared on <a href="icons.html">Icons</a>.</li>
+  <li>Keys shown are the Emacs ones from the draft key table in <a href="../ui.org">ui.org</a>; the mode line shows
+      evil's state (<code>&lt;N&gt;</code>, <code>&lt;I&gt;</code>) because the author uses evil.</li>
+  <li>Mockups are plain HTML and CSS (<code>assets/</code>). The flow diagrams are generated: edit
+      <code>flows/flows.gv</code> or <code>flows.src.html</code> and run <code>make docs</code> (graphviz).</li>
+</ul>
+</section>
+</main>
+</body>
+</html>

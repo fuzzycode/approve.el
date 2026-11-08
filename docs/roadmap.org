@@ -17,10 +17,11 @@ links, do it in small commits ([[file:development.org][development.org]]), tick 
   comes from GitHub.
 - Works with and without evil loaded.
 - Docs updated: a changed decision, flow or mockup is changed in the same
-  commit.
+  commit, in the org file and in its HTML view (=docs/html/=, =make docs=).
 
 * Phase 0 — Foundation
 Nothing visible yet; everything after builds on this.
+- [ ] =Cask= and =Package-Requires=: add transient and eldoc 1.14 ([[file:decisions.org::*D25 Dependencies][D25]]).
 - [ ] =approve.el= package header, =defgroup=, autoload stubs.
 - [ ] =approve-log.el=: =*approve-log*= buffer, levels, redaction.
 - [ ] =approve-graphql.el=: loader with includes, dedupe, cycle detection
@@ -45,8 +46,8 @@ Nothing visible yet; everything after builds on this.
 
 * Phase 1 — Read a PR
 Open any PR by URL and read all of it.  No writes.
-Implements F01 (URL only), F02, F03, F16 (summary + expand), F17 (=g=).
-Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], header line, loading/error states, eldoc.
+Implements F01 (URL only), F02, F03, F16 (summary + expand), F17 (=g=), F20.
+Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], header line, loading/error states, [[file:ui.org::*Eldoc][eldoc]].
 - [ ] =approve-faces.el=, =approve-icons.el= (with fallback).
 - [ ] =approve-html.el=: port approve-v2's shr renderer (code, pre with
       syntax classes, suggestion tables, tables, lists, blockquote, details,
@@ -62,7 +63,10 @@ Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], hea
       pending styling, reactions, edited marker.
 - [ ] =approve-context.el= with all the read-only contexts.
 - [ ] Navigation: =j= transient, =]u= =[u= =]t= =[t=, =RET=, =o=, =y=.
-- [ ] =approve-eldoc.el=.
+- [ ] =approve-eldoc.el= ([[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]], [[file:flows.org::*F20 Look up details][F20]]): =:echo= lines from the store
+      for every context kind, full docs for the eldoc buffer, lazy detail
+      queries (user, team, =#123=, commit, outdated thread code) with the
+      session cache, =K= (=approve-show-details=).
 - [ ] Measure against the [[file:architecture.org::*Speed][speed budgets]] with the fixtures.
 - Done when :: the medium fixture and three real PRs (small, with
   suggestions, 100+ files) render like the mockups, =g= keeps point and

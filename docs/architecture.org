@@ -69,7 +69,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-thread.el=        | Thread and comment sections (also used in the conversation)                     |     1 |
 | =approve-context.el=       | =approve-context-at-point=: what is under point or in the region                |     1 |
 | =approve-pr.el=            | =approve-pr-mode=, open/refresh, layouts, redraw, point restore, header line    |     1 |
-| =approve-eldoc.el=         | Eldoc for users, labels, commits, timestamps, checks                            |     1 |
+| =approve-eldoc.el=         | Eldoc: one-line =:echo= from the store, full details for the eldoc buffer,      |     1 |
+|                            | lazy detail queries, session cache, =approve-show-details= (=K=)                |       |
 | =approve-input.el=         | Input buffers: =gfm-mode= derived, commit/abort, drafts, completion, preview    |     2 |
 | =approve-review.el=        | Pending review lifecycle: find, start, add, submit, discard                     |     2 |
 | =approve-actions.el=       | Commands: comment, reply, resolve, edit, delete, react, viewed, metadata, merge |   2–5 |
@@ -128,6 +129,10 @@ The store from approve-v2 (D10), with a few additions.
   points to its PR buffer and reads the store there.
 - The dashboard and search lists do not normalize; they keep the raw search
   result (it is shown once and thrown away).
+- Extended details for eldoc (a user's bio, an issue's title, a commit's full
+  message) live in one global cache, =approve-eldoc--details=, keyed by host,
+  type and id, for the Emacs session.  They are shared by every Approve
+  buffer; =C-u g= clears them.
 
 * API map
 What each feature uses.  GraphQL unless marked REST.  Check names against the
@@ -154,6 +159,11 @@ schema on 2026-11-08.
 | Search                 | =search(type: ISSUE, query: "is:pr …", first:)=                                                              |
 | Repo metadata (lazy)   | =repository.labels / assignableUsers / mentionableUsers / milestones=                                        |
 | Change detection       | =pullRequest { updatedAt headRefOid }=                                                                       |
+| User details (eldoc)   | =node(id) { ... on User { pronouns email bio company location websiteUrl status { emoji message } } }=       |
+| Team details (eldoc)   | =organization(login).team(slug) { name description members { totalCount } }=                                 |
+| =#123= details (eldoc) | =repository.issueOrPullRequest(number) { title state author labels bodyText }=                               |
+| Commit details (eldoc) | =repository.object(oid) { ... on Commit { message author committer signature statusCheckRollup } }=          |
+| Outdated thread code   | =PullRequestReviewComment { diffHunk originalLine originalCommit }= (first comment of the thread)            |
 | Rate limit             | =rateLimit { cost remaining resetAt }= in every query                                                        |
 | Notifications          | REST =GET /notifications=, =PATCH /notifications/threads/{id}=                                               |
 | Markdown preview       | REST =POST /markdown= (=mode: gfm=, =context: owner/repo=)                                                   |
@@ -305,6 +315,47 @@ Every context also carries =:url= when one exists (for =o= and copying).
   =approve-html=.
 - =C-c C-s= inserts a ```suggestion``` block, prefilled with the target lines
   (new side) when the target is code.
+
+* Extended information (eldoc)
+[[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]; mockups in [[file:ui.org::*Eldoc][ui.org › Eldoc]]; flow in [[file:flows.org::*F20 Look up details][F20]].
+
+#+begin_example
+ eldoc (idle, or K)
+   │
+   ▼
+ approve-eldoc-function (callback)
+   │  ctx = approve-context-at-point            no ctx → nil (other eldoc functions run)
+   ▼
+ describer for ctx :kind  (user, team, label, commit, ref, check, file, thread, …)
+   │  echo  = one line from the store            ── never waits
+   │  doc   = store data + cached details
+   ▼
+ details missing  and  (K was pressed  or  the eldoc buffer is visible)?
+   │ no                                       │ yes
+   ▼                                          ▼
+ (callback doc :echo echo :thing …)         return t; query the details (async)
+                                              │  cache result (or the error)
+                                              ▼
+                                            (callback doc+details :echo echo …)
+                                            eldoc drops it if point has moved on
+#+end_example
+
+- One function, =approve-eldoc-function=, on the buffer-local
+  =eldoc-documentation-functions= of every Approve buffer (PR, diff, file,
+  dashboard, search, notifications).  It returns nil where it has nothing, so
+  other eldoc sources (flymake, etc.) still work.
+- Describers are small functions per context kind, in a table
+  (=approve-eldoc-describers=), so a new kind is one entry.  Each returns
+  =(:echo STRING :doc STRING :details QUERY-SPEC)=.
+- Moving point around never touches the network: missing details are fetched
+  only when the user presses =K= (=approve-show-details=, which fetches, then
+  shows the eldoc buffer) or while the eldoc buffer is visible.  Eldoc
+  itself ignores answers to requests that point has moved past.
+- A failed detail query is cached as an error for a minute, and the eldoc
+  buffer says "details unavailable (…)".  The echo line is unaffected.
+- The eldoc buffer text uses Approve's faces, and links (URLs, =#123=, commit
+  shas) are buttons: =RET= follows them, =o= opens the thing in the browser.
+- Needs eldoc 1.14 for =:echo= ([[file:decisions.org::*D25 Dependencies][D25]]).
 
 * Errors
 | Class                                | Where it shows                                | User can          |
