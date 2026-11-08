@@ -127,7 +127,8 @@ The store from approve-v2 (D10), with a few additions.
   =(approve-model-append-ref OWNER-REF FIELD REF)=,
   =(approve-model-remove-ref OWNER-REF FIELD REF)=.
 - The PR buffer and the split diff buffer share one store: the diff buffer
-  points to its PR buffer and reads the store there.
+  points to its PR buffer (=approve-model-store-buffer=), and every model
+  function reads and writes the store and session there.
 - The dashboard and search lists do not normalize; they keep the raw search
   result (it is shown once and thrown away).
 - Extended details for eldoc (a user's bio, an issue's title, a commit's full
