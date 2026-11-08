@@ -1,9 +1,0 @@
-fragment MilestoneFields on Milestone {
-  __typename
-  description
-  id
-  number
-  progressPercentage
-  title
-  url
-}
