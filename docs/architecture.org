@@ -26,8 +26,9 @@ callbacks it was given.
  │  approve-sections.el · approve-diff.el · approve-thread.el               │
  │  approve-html.el · approve-faces.el · approve-icons.el · approve-eldoc.el│
  ├──────────────────────────────────────────────────────────────────────────┤
- │ Model                    approve-model.el · approve-context.el           │
- │   normalized store, selectors, list edits, context at point              │
+ │ Model                    approve-model.el · approve-session.el ·         │
+ │                          approve-context.el                              │
+ │   normalized store, selectors, list edits, session, context at point     │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Operations               approve-queries.el · approve-mutations.el       │
  │   one function per .graphql file / REST call; load/patch the store       │
@@ -61,7 +62,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-api.el=           | =approve-api-graphql=, =approve-api-rest=, transport, errors, rate limits       |     0 |
 | =approve-api-paging.el=    | =approve-api-graphql-all=, =approve-api-rest-all=: lists page by page           |     0 |
 | =approve-api-queue.el=     | Mutation queue (=approve-api-mutate=): one at a time, pauses on rate limits     |     0 |
-| =approve-model.el=         | Store, refs, connections, selectors, patch, list edits, session state           |     0 |
+| =approve-model.el=         | Store, refs, connections, selectors, patch, list edits, shared store            |     0 |
+| =approve-session.el=       | Session state: loading, errors, in-flight, drafts, layout (never sent anywhere) |     0 |
 | =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, repo metadata        |   1–3 |
 | =approve-mutations.el=     | All mutations ([[*API map][API map]])                                                         |   2–5 |
 | =approve-faces.el=         | Every face, inheriting from magit/built-in                                      |     1 |

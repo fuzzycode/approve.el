@@ -2,10 +2,10 @@
 
 ;;; Commentary:
 
-;; The store: normalization, refs, pages, list edits, selectors, the
-;; shared store of the split layout and the session state.  The data
-;; is hand-made but shaped as GitHub returns it (the store contract):
-;; objects are alists, arrays are lists, null and false are nil.
+;; The store: normalization, refs, pages, list edits, selectors and
+;; the shared store of the split layout.  The data is hand-made but
+;; shaped as GitHub returns it (the store contract): objects are
+;; alists, arrays are lists, null and false are nil.
 
 ;;; Code:
 
@@ -176,12 +176,10 @@ The check list carries HAS-NEXT and CURSOR."
     (it "starts afresh on approve-model-init"
       (test-approve-model--load-pr)
       (approve-model-set-extra :range '("a" . "b"))
-      (approve-session-put :layout 'split)
       (approve-model-init '(:owner "x"))
       (expect (approve-pr) :to-be nil)
       (expect (approve-model-has-entity-p "User" "U_alice") :to-be nil)
       (expect (approve-model-extra :range) :to-be nil)
-      (expect (approve-session-get :layout) :to-be nil)
       (expect (approve-model-meta :owner) :to-equal "x")))
 
   (describe "refs"
@@ -642,49 +640,6 @@ The check list carries HAS-NEXT and CURSOR."
                 :to-be nil)
         (expect (approve-model-truncated-p '(1 2)) :to-be nil))))
 
-  (describe "session state"
-    (it "gets and puts values"
-      (approve-session-put :layout 'split)
-      (expect (approve-session-get :layout) :to-be 'split))
-
-    (it "keeps sets without duplicates"
-      (approve-session-add :loading 'files)
-      (approve-session-add :loading 'threads)
-      (approve-session-add :loading 'files)
-      (expect (approve-session-member-p :loading 'files) :to-be t)
-      (expect (length (approve-session-get :loading)) :to-equal 2)
-      (approve-session-remove :loading 'files)
-      (expect (approve-session-member-p :loading 'files) :to-be nil)
-      (expect (approve-session-member-p :loading 'threads) :to-be t))
-
-    (it "compares set items with equal"
-      (approve-session-add :inflight (list 'thread "PRRT_1"))
-      (expect (approve-session-member-p :inflight (list 'thread "PRRT_1"))
-              :to-be t)
-      (approve-session-remove :inflight (list 'thread "PRRT_1"))
-      (expect (approve-session-get :inflight) :to-be nil))
-
-    (it "keeps maps by key"
-      (approve-session-map-put :drafts '(reply "PRRT_1") "draft")
-      (approve-session-map-put :errors 'files '(error "timeout"))
-      (expect (approve-session-map-get :drafts (list 'reply "PRRT_1"))
-              :to-equal "draft")
-      (approve-session-map-put :drafts '(reply "PRRT_1") "longer draft")
-      (expect (approve-session-map-get :drafts '(reply "PRRT_1"))
-              :to-equal "longer draft")
-      (expect (length (approve-session-get :drafts)) :to-equal 1)
-      (approve-session-map-remove :drafts '(reply "PRRT_1"))
-      (expect (approve-session-map-get :drafts '(reply "PRRT_1")) :to-be nil)
-      (expect (approve-session-map-get :errors 'files)
-              :to-equal '(error "timeout")))
-
-    (it "is not shared between buffers"
-      (approve-session-put :layout 'single)
-      (with-temp-buffer
-        (expect (approve-session-get :layout) :to-be nil)
-        (approve-session-put :layout 'split))
-      (expect (approve-session-get :layout) :to-be 'single)))
-
   (describe "approve-model-store-buffer"
     (let (pr-buffer diff-buffer)
       (before-each
@@ -709,19 +664,22 @@ The check list carries HAS-NEXT and CURSOR."
                   :to-equal '("PRRT_2"))
           (expect (approve-model-meta :owner) :to-equal "o")))
 
-      (it "writes to the owner's store and session"
+      (it "writes to the owner's store"
         (with-current-buffer diff-buffer
           (approve-model-patch '((__typename . "PullRequest") (id . "PR_1")
                                  (title . "From the diff buffer")))
-          (approve-session-map-put :drafts 'x "text")
           (approve-model-set-extra :range '("a" . "b")))
         (with-current-buffer pr-buffer
           (expect (approve-pr-field 'title) :to-equal "From the diff buffer")
-          (expect (approve-session-map-get :drafts 'x) :to-equal "text")
           (expect (approve-model-extra :range) :to-equal '("a" . "b")))
         (with-current-buffer diff-buffer
-          (expect approve-model--store :to-be nil)
-          (expect approve-session :to-be nil)))
+          (expect approve-model--store :to-be nil)))
+
+      (it "is named by approve-model-owner-buffer"
+        (with-current-buffer diff-buffer
+          (expect (approve-model-owner-buffer) :to-be pr-buffer))
+        (with-current-buffer pr-buffer
+          (expect (approve-model-owner-buffer) :to-be pr-buffer)))
 
       (it "signals approve-model-error when the owner was killed"
         (kill-buffer pr-buffer)

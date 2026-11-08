@@ -41,8 +41,9 @@
 ;; list edits (`approve-model-append-ref', `approve-model-remove-ref').
 ;;
 ;; Next to the store live the PR's meta data (host, owner, repo,
-;; number, viewer), data without node ids (patches, the commit range)
-;; and `approve-session', the UI state that is never sent anywhere.
+;; number, viewer) and data without node ids (patches, the commit
+;; range).  The UI state that is never sent anywhere is in
+;; approve-session.el, in the same buffer.
 ;;
 ;; Selectors (`approve-pr', `approve-pr-threads-for-file', ...) are
 ;; the only way renderers read data; they hide the store layout and
@@ -89,15 +90,6 @@
 :patches maps a path to its parsed patch (from REST); :range is the
 commit range under review (nil means all changes).")
 
-(defvar-local approve-session nil
-  "Plist of UI state that is never sent anywhere.
-:loading   list of section keys still loading (a set)
-:errors    alist of section key → error
-:inflight  list of target idents with a mutation in flight (a set)
-:drafts    alist of target → unsent text
-:layout    `single' or `split'
-Read and change it with `approve-session-get' and friends.")
-
 (defvar-local approve-model-store-buffer nil
   "Buffer whose store this buffer uses, or nil for its own.
 The diff buffer of the split layout sets it to its PR buffer, so
@@ -106,10 +98,10 @@ both buffers read and write one store and one session.")
 (defvar approve-model--append-pages nil
   "Non-nil while `approve-model-load-page' normalizes the outer level.")
 
-(defun approve-model--owner ()
-  "Return the buffer that owns the state of the current buffer.
-Signal `approve-model-error' if `approve-model-store-buffer' names a
-killed buffer."
+(defun approve-model-owner-buffer ()
+  "Return the buffer that owns the store of the current buffer.
+That is `approve-model-store-buffer', or the current buffer when it
+is nil.  Signal `approve-model-error' if it names a killed buffer."
   (let ((owner approve-model-store-buffer))
     (cond ((null owner) (current-buffer))
           ((buffer-live-p owner) owner)
@@ -119,15 +111,15 @@ killed buffer."
 (defmacro approve-model--with-store (&rest body)
   "Run BODY in the buffer that owns the store of the current buffer."
   (declare (indent 0) (debug t))
-  `(with-current-buffer (approve-model--owner)
+  `(with-current-buffer (approve-model-owner-buffer)
      ,@body))
 
 (defun approve-model-init (&optional meta)
   "Start an empty store for the current buffer, with META.
 META is a plist with :host :owner :repo :number and :viewer.  The
-root, the extra data and `approve-session' are reset too.  Call it
-once when a PR buffer is set up; refreshing reloads data into the
-existing store instead.
+root, the extra data and the session (`approve-session', from
+approve-session.el) are reset too.  Call it once when a PR buffer is
+set up; refreshing reloads data into the existing store instead.
 
 Example:
   (approve-model-init \\='(:host \"github.com\" :owner \"magit\"
@@ -136,8 +128,8 @@ Example:
     (setq approve-model--store (make-hash-table :test #'equal)
           approve-model--root nil
           approve-model--meta meta
-          approve-model--extra nil
-          approve-session nil)))
+          approve-model--extra nil)
+    (kill-local-variable 'approve-session)))
 
 (defun approve-model-meta (&optional key)
   "Return the value of KEY in the meta plist, or the whole plist.
@@ -588,58 +580,6 @@ Refs to it elsewhere stay; remove them from their lists with
                 ((gethash (approve-model-ref-id ref) table)))
       (remhash (approve-model-ref-id ref) table)
       t)))
-
-;;; Session state
-
-(defun approve-session-get (key)
-  "Return the session value under KEY, such as :layout."
-  (approve-model--with-store
-    (plist-get approve-session key)))
-
-(defun approve-session-put (key value)
-  "Set the session value under KEY to VALUE and return VALUE.
-Example: (approve-session-put :layout \\='split)."
-  (approve-model--with-store
-    (setq approve-session (plist-put approve-session key value))
-    value))
-
-(defun approve-session-add (key item)
-  "Add ITEM to the set under KEY, such as :loading or :inflight.
-Items are compared with `equal'; an item is kept once.
-Example: (approve-session-add :inflight \\='(thread \"PRRT_1\"))."
-  (let ((items (approve-session-get key)))
-    (unless (member item items)
-      (approve-session-put key (cons item items)))
-    nil))
-
-(defun approve-session-remove (key item)
-  "Remove ITEM from the set under KEY."
-  (approve-session-put key (remove item (approve-session-get key)))
-  nil)
-
-(defun approve-session-member-p (key item)
-  "Return non-nil if ITEM is in the set under KEY."
-  (and (member item (approve-session-get key)) t))
-
-(defun approve-session-map-get (key map-key)
-  "Return the value of MAP-KEY in the map under KEY, or nil.
-Maps are :errors (section key → error) and :drafts (target → text).
-Example: (approve-session-map-get :drafts \\='(reply \"PRRT_1\"))."
-  (cdr (assoc map-key (approve-session-get key))))
-
-(defun approve-session-map-put (key map-key value)
-  "Set MAP-KEY to VALUE in the map under KEY and return VALUE."
-  (approve-session-put key (cons (cons map-key value)
-                                 (assoc-delete-all
-                                  map-key (copy-sequence
-                                           (approve-session-get key)))))
-  value)
-
-(defun approve-session-map-remove (key map-key)
-  "Remove MAP-KEY from the map under KEY."
-  (approve-session-put key (assoc-delete-all
-                            map-key (copy-sequence (approve-session-get key))))
-  nil)
 
 ;;; Selectors
 
