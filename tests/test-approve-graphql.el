@@ -35,16 +35,21 @@
   "Run BODY and return the error it signals, or nil."
   `(condition-case err (progn ,@body nil) (error err)))
 
-(describe "approve-graphql-load"
-  :var (approve-graphql-directory)
+(defvar test-approve-graphql--saved-directory nil
+  "The value of `approve-graphql-directory' before the current test.")
 
+(describe "approve-graphql-load"
+  ;; Each test points `approve-graphql-directory' at its own temporary
+  ;; directory; after-each restores the real one for later tests.
   (before-each
+    (setq test-approve-graphql--saved-directory approve-graphql-directory)
     (setq test-approve-graphql--directory
           (file-name-as-directory (make-temp-file "approve-graphql-" t)))
     (setq approve-graphql-directory test-approve-graphql--directory)
     (approve-graphql-clear-cache))
 
   (after-each
+    (setq approve-graphql-directory test-approve-graphql--saved-directory)
     (delete-directory test-approve-graphql--directory t)
     (approve-graphql-clear-cache))
 
@@ -175,6 +180,10 @@
     (expect 'insert-file-contents :to-have-been-called)))
 
 (describe "approve-graphql-directory"
+  (it "still holds the real queries after the loader tests"
+    (expect (file-exists-p (expand-file-name "queries/pull-request.graphql"
+                                             approve-graphql-directory))
+            :to-be-truthy))
   ;; The default is computed when the library loads, so test the rule
   ;; that computes it on both layouts.
   (it "defaults to graphql/ beside the library when it exists, else ../graphql"
