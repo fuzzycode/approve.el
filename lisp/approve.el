@@ -33,8 +33,59 @@
 
 ;; Approve reviews GitHub pull requests from Emacs: find them, read them,
 ;; comment on code and submit reviews.  All durable state lives on GitHub.
+;;
+;; This file is the entry point: the `approve' customization group, the
+;; autoloaded commands, and parsing of pull request URLs.  It sits in the
+;; top layer (docs/architecture.org, "Layers") and may require any other
+;; module; no other module may require it.
 
 ;;; Code:
+
+(defgroup approve nil
+  "Review GitHub pull requests."
+  :group 'tools
+  :prefix "approve-"
+  :link '(url-link :tag "Homepage" "https://github.com/fuzzycode/approve.el"))
+
+(declare-function magit-add-section-hook "magit-section")
+
+;;;###autoload
+(defalias 'approve-add-section-hook #'magit-add-section-hook
+  "Add a section inserter to an Approve section hook.
+Takes the same arguments as `magit-add-section-hook'; use it to add,
+remove or reorder the sections of Approve buffers.")
+
+;;; Pull request URLs
+
+(defconst approve--pr-url-regexp
+  (rx string-start
+      "http" (? "s") "://"
+      (group (+ (not (in "/"))))         ; host
+      "/" (group (+ (not (in "/"))))     ; owner
+      "/" (group (+ (not (in "/"))))     ; repository
+      "/pull/" (group (+ digit))          ; number
+      (? (in "/?#") (* anything))
+      string-end)
+  "Regexp matching a pull request URL.
+Groups: 1 host, 2 owner, 3 repository, 4 number.")
+
+(defun approve-parse-url (url)
+  "Parse URL of a GitHub pull request.
+Return a plist (:host HOST :owner OWNER :repo REPO :number NUMBER),
+or nil when URL is not a pull request URL.  HOST is the web host as
+written in URL, such as \"github.com\" or a GitHub Enterprise host.
+Anything after the number (\"/files\", a query, an anchor) is ignored.
+
+Example:
+  (approve-parse-url \"https://github.com/magit/magit/pull/5000/files\")
+  => (:host \"github.com\" :owner \"magit\" :repo \"magit\" :number 5000)"
+  (when (stringp url)
+    (let ((url (string-trim url)))
+      (when (string-match approve--pr-url-regexp url)
+        (list :host (downcase (match-string 1 url))
+              :owner (match-string 2 url)
+              :repo (match-string 3 url)
+              :number (string-to-number (match-string 4 url)))))))
 
 (provide 'approve)
 

@@ -22,7 +22,7 @@ links, do it in small commits ([[file:development.org][development.org]]), tick 
 * Phase 0 — Foundation
 Nothing visible yet; everything after builds on this.
 - [X] =Cask= and =Package-Requires=: add transient and eldoc 1.14 ([[file:decisions.org::*D25 Dependencies][D25]]).
-- [ ] =approve.el= package header, =defgroup=, autoload stubs.
+- [X] =approve.el= package header, =defgroup=, autoload stubs.
 - [ ] =approve-log.el=: =*approve-log*= buffer, levels, redaction.
 - [ ] =approve-graphql.el=: loader with includes, dedupe, cycle detection
       (port from git history: commit =9439945= and =487a5ef= in this repo, or
