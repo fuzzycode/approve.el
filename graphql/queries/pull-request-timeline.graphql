@@ -1,0 +1,323 @@
+${include:fragments/actor.graphql}
+${include:fragments/label.graphql}
+${include:fragments/commit.graphql}
+${include:fragments/issue-comment.graphql}
+${include:fragments/pull-request-review.graphql}
+
+# Q timeline of the loading plan: the conversation, 100 items per page.
+# itemTypes lists what the conversation can show; the user option
+# approve-timeline-event-types filters further when rendering.  Events get
+# small inline selections: who, when, and what their line says.
+# MergedEvent's commit is aliased (mergeCommit): PullRequestCommit.commit is
+# non-null and MergedEvent.commit is nullable, and GraphQL rejects one
+# response name with two shapes.
+query PullRequestTimeline($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      __typename
+      id
+      timelineItems(
+        first: 100
+        after: $after
+        itemTypes: [
+          ISSUE_COMMENT
+          PULL_REQUEST_REVIEW
+          PULL_REQUEST_COMMIT
+          HEAD_REF_FORCE_PUSHED_EVENT
+          BASE_REF_FORCE_PUSHED_EVENT
+          LABELED_EVENT
+          UNLABELED_EVENT
+          ASSIGNED_EVENT
+          UNASSIGNED_EVENT
+          RENAMED_TITLE_EVENT
+          MILESTONED_EVENT
+          DEMILESTONED_EVENT
+          READY_FOR_REVIEW_EVENT
+          CONVERT_TO_DRAFT_EVENT
+          REVIEW_REQUESTED_EVENT
+          REVIEW_REQUEST_REMOVED_EVENT
+          REVIEW_DISMISSED_EVENT
+          BASE_REF_CHANGED_EVENT
+          HEAD_REF_DELETED_EVENT
+          HEAD_REF_RESTORED_EVENT
+          MERGED_EVENT
+          CLOSED_EVENT
+          REOPENED_EVENT
+          CROSS_REFERENCED_EVENT
+        ]
+      ) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          __typename
+          ... on Node {
+            id
+          }
+          ... on IssueComment {
+            ...IssueCommentFields
+          }
+          ... on PullRequestReview {
+            ...PullRequestReviewFields
+          }
+          ... on PullRequestCommit {
+            commit {
+              ...CommitFields
+            }
+          }
+          ... on HeadRefForcePushedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            beforeCommit {
+              __typename
+              id
+              oid
+              abbreviatedOid
+            }
+            afterCommit {
+              __typename
+              id
+              oid
+              abbreviatedOid
+            }
+          }
+          ... on BaseRefForcePushedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            beforeCommit {
+              __typename
+              id
+              oid
+              abbreviatedOid
+            }
+            afterCommit {
+              __typename
+              id
+              oid
+              abbreviatedOid
+            }
+          }
+          ... on LabeledEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            label {
+              ...LabelFields
+            }
+          }
+          ... on UnlabeledEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            label {
+              ...LabelFields
+            }
+          }
+          ... on AssignedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            assignee {
+              ...ActorFields
+            }
+          }
+          ... on UnassignedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            assignee {
+              ...ActorFields
+            }
+          }
+          ... on RenamedTitleEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            previousTitle
+            currentTitle
+          }
+          ... on MilestonedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            milestoneTitle
+          }
+          ... on DemilestonedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            milestoneTitle
+          }
+          ... on ReadyForReviewEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+          }
+          ... on ConvertToDraftEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+          }
+          ... on ReviewRequestedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            requestedReviewer {
+              __typename
+              ... on Node {
+                id
+              }
+              ...ActorFields
+              ... on Team {
+                slug
+                combinedSlug
+                url
+              }
+              ... on EnterpriseTeam {
+                slug
+                combinedSlug
+              }
+            }
+          }
+          ... on ReviewRequestRemovedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            requestedReviewer {
+              __typename
+              ... on Node {
+                id
+              }
+              ...ActorFields
+              ... on Team {
+                slug
+                combinedSlug
+                url
+              }
+              ... on EnterpriseTeam {
+                slug
+                combinedSlug
+              }
+            }
+          }
+          ... on ReviewDismissedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            dismissalMessage
+            previousReviewState
+            review {
+              __typename
+              id
+            }
+          }
+          ... on BaseRefChangedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            previousRefName
+            currentRefName
+          }
+          ... on HeadRefDeletedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            headRefName
+          }
+          ... on HeadRefRestoredEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+          }
+          ... on MergedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            mergeRefName
+            mergeCommit: commit {
+              __typename
+              id
+              oid
+              abbreviatedOid
+            }
+          }
+          ... on ClosedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+          }
+          ... on ReopenedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+          }
+          ... on CrossReferencedEvent {
+            actor {
+              ...ActorFields
+            }
+            createdAt
+            isCrossRepository
+            willCloseTarget
+            source {
+              __typename
+              ... on Issue {
+                id
+                number
+                title
+                url
+                closed
+                repository {
+                  __typename
+                  id
+                  nameWithOwner
+                }
+              }
+              ... on PullRequest {
+                id
+                number
+                title
+                url
+                closed
+                merged
+                repository {
+                  __typename
+                  id
+                  nameWithOwner
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

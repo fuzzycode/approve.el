@@ -1,0 +1,27 @@
+${include:fragments/pull-request-review-thread.graphql}
+
+# Q threads of the loading plan: review threads with their first comments,
+# 100 threads per page.
+query PullRequestThreads($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      __typename
+      id
+      reviewThreads(first: 100, after: $after) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          ...PullRequestReviewThreadFields
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

@@ -1,0 +1,30 @@
+${include:fragments/commit.graphql}
+
+# Q commits of the loading plan: the PR's commits, 100 per page.
+query PullRequestCommits($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      __typename
+      id
+      commits(first: 100, after: $after) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          __typename
+          id
+          commit {
+            ...CommitFields
+          }
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

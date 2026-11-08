@@ -1,0 +1,74 @@
+#+title: GraphQL files
+
+The queries Approve sends to GitHub, as plain =.graphql= files ([[file:../docs/decisions.org::*D08 GraphQL files with fragment includes][D08]]).
+=approve-graphql.el= loads them; the model normalizes every response into
+the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-local store][D10]]).
+
+* Layout
+- =fragments/<type>.graphql= :: one fragment per type, named =<Type>Fields=
+  (=user.graphql= → =UserFields=).
+- =queries/= :: one operation per file.  The PR loads through several
+  queries in parallel ([[file:../docs/architecture.org::*Loading a PR][Loading a PR]]):
+  | File                            | Loads                                          |
+  |---------------------------------+------------------------------------------------|
+  | =pull-request.graphql=          | PR core (incl. =pendingReviews=) and =viewer=  |
+  | =pull-request-files.graphql=    | =files=, pages of 100                          |
+  | =pull-request-threads.graphql=  | =reviewThreads=, pages of 100                  |
+  | =pull-request-timeline.graphql= | =timelineItems= (the conversation), pages      |
+  | =pull-request-commits.graphql=  | =commits=, pages of 100                        |
+  | =pull-request-checks.graphql=   | head commit's check runs and statuses, pages   |
+  All take =$owner=, =$name=, =$number=; the paged ones also =$after=.
+
+* Includes
+=${include:fragments/user.graphql}= is replaced by that file, relative to
+this directory and expanded recursively.  A file is included at most once
+per query; later includes of it expand to nothing.  So every file includes
+the fragments it uses, at the top, and is complete on its own.
+
+GitHub rejects a query that defines a fragment it doesn't use, so a query
+includes only fragments it spreads (directly or through another fragment).
+
+=CheckRunFields= and =StatusContextFields= use the operation's =$number=
+(for =isRequired=); only a query that declares =$number: Int!= can use them.
+
+* Rules for every file
+The store depends on these (store contract):
+1. Every object that selects =id= also selects =__typename=.  On interfaces
+   and unions write =__typename= and =... on Node { id }= (=Actor= has no
+   =id=).
+2. Connections use =nodes { … }=, never =edges=.  A paged connection also
+   selects =totalCount= and =pageInfo { hasNextPage endCursor }=.
+3. The store keys fields by response name.  A field selected with
+   different arguments or shapes in different places gets an alias:
+   - =pendingReviews: reviews(states: PENDING, first: 1)= on PullRequest.
+   - The PR's paged lists (=files=, =reviewThreads=, =timelineItems=,
+     =commits=) keep their plain names only in their own query; elsewhere
+     they are aliased (=commitCount: commits { totalCount }=,
+     =headCommit: commits(last: 1)=).
+   - =commentCount: comments { totalCount }= on reviews, because the
+     pending review selects the plain =comments= list.
+   - =contextCounts: contexts { … }= on the core's =statusCheckRollup=,
+     because the checks query pages the plain =contexts=.
+   - =mergeCommit: commit= on =MergedEvent= in the timeline: GraphQL
+     rejects one response name with two types there
+     (=PullRequestCommit.commit= is non-null).
+4. Field names otherwise stay as GitHub spells them.
+5. Every query selects =rateLimit { cost remaining resetAt }=.
+
+Keep selections to what the buffers show ([[file:../docs/ui.org][ui.org]]): every field costs
+time on every load.  Nested connections multiply GitHub's rate-limit cost:
+=reactors(first: 3)= under thread comments raised the threads query from 1
+to 51 points, so reactions select only =totalCount=.
+
+* Trying a query by hand
+Expand the includes, then run the result with the GitHub CLI (read-only
+queries only; never paste a mutation into a test run):
+#+begin_src sh
+perl -e 'sub x{my$f=shift;return""if$s{$f}++;open my$h,"<","graphql/$f"or die"$f: $!\n";local$/;my$t=<$h>;$t=~s/\$\{include:([^}]+)\}/x($1)/ge;$t}print x(shift)' \
+  queries/pull-request-threads.graphql > /tmp/query.graphql
+gh api graphql -F query=@/tmp/query.graphql \
+  -F owner=cli -F name=cli -F number=13251   # add -f after=CURSOR for page 2
+#+end_src
+Run it from the repository root.  =-F query=@FILE= reads the file (=-f=
+would send the literal text).  The expanded file also works in GraphQL
+clients such as Altair or =verb=.

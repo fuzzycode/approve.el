@@ -1,0 +1,29 @@
+# Q files of the loading plan: changed files and their viewed state, 100 per
+# page.  Files have no id; they stay inline in the PR's files connection.
+query PullRequestFiles($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      __typename
+      id
+      files(first: 100, after: $after) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          path
+          additions
+          deletions
+          changeType
+          viewerViewedState
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

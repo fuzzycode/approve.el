@@ -1,0 +1,19 @@
+${include:fragments/pull-request.graphql}
+${include:fragments/user.graphql}
+
+# Q core of the loading plan: the PR without its long lists, and the viewer.
+query PullRequest($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      ...PullRequestFields
+    }
+  }
+  viewer {
+    ...UserFields
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}
