@@ -1,0 +1,35 @@
+# A check run (GitHub Actions job or app check) on the head commit: the
+# checks section and F16.  isRequired needs the PR, so this fragment uses the
+# operation's $number variable; only queries that declare $number: Int! can
+# include it.
+fragment CheckRunFields on CheckRun {
+  __typename
+  id
+  name
+  status
+  conclusion
+  title
+  isRequired(pullRequestNumber: $number)
+  detailsUrl
+  url
+  startedAt
+  completedAt
+  checkSuite {
+    __typename
+    id
+    app {
+      __typename
+      id
+      name
+    }
+    workflowRun {
+      __typename
+      id
+      workflow {
+        __typename
+        id
+        name
+      }
+    }
+  }
+}

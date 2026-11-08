@@ -1,0 +1,36 @@
+${include:fragments/user.graphql}
+${include:fragments/pull-request-review-comment.graphql}
+
+# A review thread: where it sits in the diff, its state, what the viewer may
+# do, and its first 50 comments (more are loaded on demand with $after on
+# the comments connection).
+fragment PullRequestReviewThreadFields on PullRequestReviewThread {
+  __typename
+  id
+  path
+  line
+  startLine
+  originalLine
+  originalStartLine
+  diffSide
+  startDiffSide
+  subjectType
+  isResolved
+  isOutdated
+  resolvedBy {
+    ...UserFields
+  }
+  viewerCanReply
+  viewerCanResolve
+  viewerCanUnresolve
+  comments(first: 50) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      ...PullRequestReviewCommentFields
+    }
+  }
+}

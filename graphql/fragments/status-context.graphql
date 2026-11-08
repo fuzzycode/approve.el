@@ -1,0 +1,14 @@
+# A commit status (the older statuses API, e.g. codecov/patch): the checks
+# section and F16.  isRequired needs the PR, so this fragment uses the
+# operation's $number variable; only queries that declare $number: Int! can
+# include it.
+fragment StatusContextFields on StatusContext {
+  __typename
+  id
+  context
+  state
+  description
+  isRequired(pullRequestNumber: $number)
+  targetUrl
+  createdAt
+}

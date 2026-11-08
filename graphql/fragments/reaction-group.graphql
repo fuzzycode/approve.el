@@ -1,0 +1,11 @@
+# One reaction under a comment, review or the description: how many, and
+# whether the viewer reacted.  Who reacted is not selected: reactors(first:
+# N) under thread comments multiplies the query cost (threads page: 51
+# points instead of 1), so names are for a lazy eldoc query.
+fragment ReactionGroupFields on ReactionGroup {
+  content
+  viewerHasReacted
+  reactors {
+    totalCount
+  }
+}

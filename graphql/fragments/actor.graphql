@@ -1,0 +1,14 @@
+${include:fragments/user.graphql}
+
+# Anyone who can act: User, Bot, Organization, Mannequin.  Actor has no id
+# field itself, so the id comes through Node.  Spread it on unions whose
+# members are actors, too (Assignee, Reactor, RequestedReviewer).
+fragment ActorFields on Actor {
+  __typename
+  ... on Node {
+    id
+  }
+  login
+  url
+  ...UserFields
+}

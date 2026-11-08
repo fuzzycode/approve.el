@@ -1,0 +1,9 @@
+# A GitHub user: the viewer, assignees, authors, reviewers.  No email: it
+# needs the user:email scope; eldoc's lazy user-details query fetches it.
+fragment UserFields on User {
+  __typename
+  id
+  login
+  name
+  url
+}

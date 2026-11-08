@@ -1,0 +1,28 @@
+${include:fragments/user.graphql}
+
+# A commit: the Commits section and pushes in the conversation (sha, subject,
+# author, date, check state).  The full message and the check contexts are
+# fetched lazily (eldoc, the checks query).  The author is a GitActor (no id);
+# its user is linked when GitHub knows the email.
+fragment CommitFields on Commit {
+  __typename
+  id
+  oid
+  abbreviatedOid
+  messageHeadline
+  committedDate
+  url
+  author {
+    name
+    email
+    date
+    user {
+      ...UserFields
+    }
+  }
+  statusCheckRollup {
+    __typename
+    id
+    state
+  }
+}

@@ -1,0 +1,9 @@
+# A label: the Labels row draws name and colour; eldoc shows the description.
+fragment LabelFields on Label {
+  __typename
+  id
+  name
+  color
+  description
+  url
+}

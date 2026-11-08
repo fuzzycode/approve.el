@@ -1,0 +1,47 @@
+${include:fragments/actor.graphql}
+${include:fragments/reaction-group.graphql}
+
+# A comment in a review thread (also a pending one: state PENDING).  Its
+# review and the comment it replies to are refs; they load elsewhere.
+# diffHunk is not selected: outdated code is fetched lazily (eldoc).
+fragment PullRequestReviewCommentFields on PullRequestReviewComment {
+  __typename
+  id
+  url
+  author {
+    ...ActorFields
+  }
+  authorAssociation
+  body
+  bodyHTML
+  createdAt
+  lastEditedAt
+  includesCreatedEdit
+  isMinimized
+  minimizedReason
+  state
+  path
+  line
+  startLine
+  originalLine
+  originalStartLine
+  outdated
+  subjectType
+  replyTo {
+    __typename
+    id
+  }
+  pullRequestReview {
+    __typename
+    id
+  }
+  viewerDidAuthor
+  viewerCanUpdate
+  viewerCanDelete
+  viewerCanReact
+  viewerCanMinimize
+  viewerCanUnminimize
+  reactionGroups {
+    ...ReactionGroupFields
+  }
+}

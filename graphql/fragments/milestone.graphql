@@ -1,0 +1,12 @@
+# A milestone: the Milestone row and its eldoc (due date, progress, description).
+fragment MilestoneFields on Milestone {
+  __typename
+  id
+  number
+  title
+  state
+  dueOn
+  progressPercentage
+  description
+  url
+}

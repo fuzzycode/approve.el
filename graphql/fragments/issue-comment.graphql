@@ -1,0 +1,30 @@
+${include:fragments/actor.graphql}
+${include:fragments/reaction-group.graphql}
+
+# A conversation comment on the PR.  body is the markdown for editing,
+# bodyHTML is what we display (D11).
+fragment IssueCommentFields on IssueComment {
+  __typename
+  id
+  url
+  author {
+    ...ActorFields
+  }
+  authorAssociation
+  body
+  bodyHTML
+  createdAt
+  lastEditedAt
+  includesCreatedEdit
+  isMinimized
+  minimizedReason
+  viewerDidAuthor
+  viewerCanUpdate
+  viewerCanDelete
+  viewerCanReact
+  viewerCanMinimize
+  viewerCanUnminimize
+  reactionGroups {
+    ...ReactionGroupFields
+  }
+}

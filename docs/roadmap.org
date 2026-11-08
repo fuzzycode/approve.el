@@ -32,7 +32,7 @@ Nothing visible yet; everything after builds on this.
       =rateLimit= tracking (port from =5646d5e= / approve-v2).
 - [X] =approve-model.el=: port approve-v2's store; add list edits and session
       state ([[file:architecture.org::*Data model][data model]]).
-- [ ] Fragments for every type in the [[file:architecture.org::*API map][API map]] reads: User, Actor, Label,
+- [X] Fragments for every type in the [[file:architecture.org::*API map][API map]] reads: User, Actor, Label,
       Milestone, Ref, Commit, ReactionGroup, IssueComment,
       PullRequestReviewComment, PullRequestReview, PullRequestReviewThread,
       PullRequest (core), CheckRun, StatusContext.

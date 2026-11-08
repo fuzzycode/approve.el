@@ -1,0 +1,21 @@
+${include:fragments/actor.graphql}
+
+# A branch (the PR's base and head refs).  The PR itself carries the ref
+# names and oids, which survive a deleted branch; this adds where the branch
+# lives (owner, fork or not) for the header link and eldoc.
+fragment RefFields on Ref {
+  __typename
+  id
+  name
+  prefix
+  repository {
+    __typename
+    id
+    nameWithOwner
+    url
+    isFork
+    owner {
+      ...ActorFields
+    }
+  }
+}
