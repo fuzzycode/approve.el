@@ -1,0 +1,86 @@
+#+title: Test fixtures
+
+Pull requests as GitHub serves them, for tests and for
+=approve-dev-offline-mode=.  No test touches the network
+([[file:../../docs/decisions.org::*D19 Tests: buttercup, undercover, fixtures, no network][D19]]); the tests answer Approve's requests from these files instead.
+
+* Scenarios
+One scenario is one JSON file, =<name>.json=: one pull request, and every
+request that loads it with GitHub's response.
+
+#+begin_src json
+{
+  "approveFixture": 1,
+  "name": "medium",
+  "description": "What the scenario is for",
+  "pullRequest": {
+    "host": "github.com",
+    "owner": "acme-example",
+    "repo": "rocket",
+    "number": 202,
+    "viewer": "vera-example"
+  },
+  "exchanges": [
+    {
+      "request": {
+        "kind": "graphql",
+        "name": "queries/pull-request-files.graphql",
+        "variables": {"owner": "acme-example", "name": "rocket", "number": 202}
+      },
+      "response": {
+        "status": 200,
+        "headers": {"X-RateLimit-Remaining": "4998"},
+        "body": {"data": {"repository": {"pullRequest": {"...": "..."}}}}
+      }
+    },
+    {
+      "request": {
+        "kind": "rest",
+        "method": "GET",
+        "resource": "/repos/acme-example/rocket/pulls/202/files",
+        "params": {"per_page": 100, "page": 1}
+      },
+      "response": {"status": 200, "headers": {"Link": "..."}, "body": ["..."]}
+    }
+  ]
+}
+#+end_src
+
+- =approveFixture= :: the format version (=approve-dev-fixture-format=).
+- =pullRequest= :: the pull request (web host, owner, repository, number)
+  and the login of the viewer the responses were made for.  Tests give it
+  to =approve-model-init= (=approve-dev-scenario-meta=).
+- =request= :: what identifies a request (=approve-dev-request-key=).
+  GraphQL: the query file under =graphql/= and its variables; a later
+  page adds =after=.  REST: method, resource and parameters.  Variables
+  and parameters match in any order, and numbers match their strings.
+- =response= :: the HTTP status, the headers that matter (rate limit,
+  =Link=, =Retry-After=; nothing else is kept) and the body, the whole
+  JSON document as GitHub sends it: for GraphQL that is ={"data": …}=.
+
+A body reads back as ghub decodes it (=json-parse-buffer= with
+=:object-type alist :array-type list :null-object nil :false-object nil=):
+objects are alists with symbol keys, arrays are lists, and =null=,
+=false= and =[]= are all nil.  A status outside 200–299 is replayed as
+that failure.
+
+* Reading and replaying
+- =(approve-dev-read-scenario "medium")= :: the scenario as a plist
+  (=:owner=, =:repo=, =:number=, =:viewer=, =:exchanges=, …).
+- =(approve-dev-make-replay-transport SCENARIOS LATENCY)= :: a function to
+  put in =approve-api-transport=.  It answers each request from the
+  matching exchange on a timer, and fails one it has no exchange for
+  with a 404 that says which request it was (also in =*approve-log*=).
+- =M-x approve-dev-offline-mode= :: replays every scenario in this
+  directory; the request's owner, name and number pick the scenario.
+
+* Recording
+=M-x approve-dev-record= asks for a pull request URL and a scenario name.
+It runs the loading plan (the six queries in =graphql/queries/= with all
+pages, except the checks query's first page only, and the REST files list
+with all pages) through the installed transport, records every exchange,
+and writes =<name>.json= here.  Recordings keep no tokens or
+Authorization headers.  People's logins, names and emails become stable
+fakes (=user-1=, =Person 2=, …) unless the command gets a prefix argument;
+mentions inside comment text are not changed, so read a recording before
+committing it.

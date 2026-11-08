@@ -36,7 +36,7 @@ Nothing visible yet; everything after builds on this.
       Milestone, Ref, Commit, ReactionGroup, IssueComment,
       PullRequestReviewComment, PullRequestReview, PullRequestReviewThread,
       PullRequest (core), CheckRun, StatusContext.
-- [ ] =approve-dev.el=: record a PR's responses as fixtures; replay fixtures as
+- [X] =approve-dev.el=: record a PR's responses as fixtures; replay fixtures as
       a fake API (=approve-dev-offline-mode=).
 - [ ] Fixtures: a small PR, a medium PR with threads/suggestions/outdated/
       resolved comments and a pending review, a large PR (300 files).
