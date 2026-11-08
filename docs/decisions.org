@@ -1,0 +1,252 @@
+#+title: Decisions
+
+Each decision has an ID, a status, the decision, and why.  Statuses:
+- accepted :: decided; build on it.
+- proposed :: our current best answer; confirm or replace when it comes up.
+- superseded :: replaced by a later entry (link to it).
+
+Open questions sit at the end.  Decisions that come from [[file:project.org][project.org]] say so.
+
+* Scope
+** D01 GitHub only
+- Status :: accepted (project.org)
+- Decision :: Support github.com and GitHub Enterprise.  No GitLab, Bitbucket, etc.
+- Why :: Doing one forge well beats doing several badly.  code-review tried
+  several forges and became hard to change ([[file:history.org][history]]).
+
+** D02 Durable state lives on GitHub
+- Status :: accepted (project.org)
+- Decision :: Everything that matters is stored on GitHub as soon as the user
+  commits it: comments, pending reviews, viewed files, resolved threads.  A
+  pending review is a real GitHub pending review, not a local draft.  Closing
+  Emacs only loses text the user is still typing.
+- Why :: Switching between Emacs and the browser is seamless.  pr-review keeps
+  pending threads in a buffer-local list, so they are lost when the buffer is
+  killed.  code-review kept a local database that had to be synced.
+
+** D03 API-only, never a local clone
+- Status :: accepted (2026-11-08)
+- Decision :: Approve never needs a local clone or worktree.  Diffs come from
+  the REST API, and file contents come from GraphQL blobs (or REST contents).
+  A local =diff= program may be used on fetched blobs, but never git on a
+  checkout.
+- Why :: Works for any PR from anywhere, with no setup and no repo state to
+  manage.  The cost is no LSP or xref in review buffers; the file view
+  ([[file:flows.org::*F15 View the whole file][F15]]) gives syntax highlighting through the file's major mode.
+
+* UI
+** D04 Buffers are magit-section trees built from section hooks
+- Status :: accepted (project.org)
+- Decision :: Every Approve buffer derives from =magit-section-mode=.  Its
+  content is a hook of section inserters, named =approve-insert-<name>-section=.
+  Users add, remove and reorder sections with =approve-add-section-hook=
+  (an alias of =magit-add-section-hook=).
+- Why :: Familiar to every Magit user; collapsing, navigation and visibility
+  caching come for free; flexible per user.
+
+** D05 One PR buffer by default; split layout optional
+- Status :: accepted (2026-11-08)
+- Decision :: By default, one PR buffer holds the overview, conversation,
+  commits, checks, the file list and the diff.  Diff bodies are collapsed and
+  inserted lazily.  =approve-layout= set to =split= moves the diff into a
+  linked diff buffer, leaving the file list in the overview.  Both layouts are
+  just different section hooks over the same store.
+- Why :: One buffer is simplest to navigate and search.  The split layout
+  mirrors GitHub's tabs and Magit's status/diff split, and keeps huge PRs fast.
+  Making it a hook choice costs almost nothing.
+
+** D06 Menus are transients; everything is reachable from =?=
+- Status :: accepted (project.org)
+- Decision :: Every command is reachable from the dispatch transient (=?=).
+  Bigger tasks have their own transients: submit review, merge, metadata,
+  jump, review range, search filters.  Suffixes that don't apply are shown
+  but inapt (=:inapt-if=), based on context and =viewerCan*= fields.
+- Why :: Discoverability, Magit consistency, and one place to learn the keys.
+
+** D11 Show bodyHTML; edit markdown
+- Status :: accepted
+- Decision :: Descriptions and comments are displayed from GitHub's
+  =bodyHTML=, rendered with =shr= and custom tag handlers (code blocks with
+  syntax classes, suggestion blocks, tables, task lists, blockquotes, details,
+  images).  Editing uses the raw markdown =body= in a =gfm-mode=-derived input
+  buffer.
+- Why :: GitHub's HTML already resolves mentions, issue links, emoji, and
+  suggestion diffs, so we render exactly what the browser shows.  approve-v2
+  proved the shr approach works (=approve-ui-html.el=).
+
+** D12 Own diff parser and renderer
+- Status :: accepted
+- Decision :: Parse unified patches ourselves and insert file, hunk and line
+  sections directly.  Don't wash diffs through =magit-diff-wash-diff= with
+  =cl-letf= overrides.
+- Why :: approve-mvp and approve-old overrode Magit internals, which was
+  fragile and fought Magit's section painting.  approve-v2's own renderer was
+  simpler and let threads live inside the diff.
+
+** D16 Own faces and one icon abstraction
+- Status :: accepted (project.org)
+- Decision :: All faces live in =approve-faces.el= and inherit from Magit or
+  built-in faces.  All icons go through =approve-icon= (semantic name →
+  nerd-icons glyph, or a Unicode fallback when =approve-use-nerd-icons= is nil
+  or the font is missing).
+- Why :: Themes work out of the box; users can restyle everything; terminals
+  and machines without the font still look right.
+
+** D17 Evil is supported, never required
+- Status :: accepted (project.org)
+- Decision :: Evil bindings are defined in =approve-evil.el=, loaded with
+  =with-eval-after-load 'evil=.  In normal state we never shadow motions or
+  visual selection ([[file:ui.org::*Keys][keys]]).
+- Why :: The author uses evil; many users don't.  Visual line selection is how
+  evil users pick a range of lines to comment on.
+
+** D22 Comments go into the pending review by default
+- Status :: proposed
+- Decision :: =c= on code adds to the pending review, starting one if needed
+  (GitHub's "Start a review").  =C-u c= posts a single comment right away
+  (GitHub's "Add single comment") when no review is pending.  When a review is
+  pending, every code comment and reply joins it, as on GitHub.
+  =approve-comment-default= (=review= or =single=) flips the default.
+- Why :: Batching comments into one review is how code review is meant to work
+  and sends one notification.  Matches pr-review's habit, but on GitHub's side
+  ([[*D02 Durable state lives on GitHub][D02]]).
+
+* Data and network
+** D07 ghub, wrapped by approve-api
+- Status :: accepted (project.org)
+- Decision :: All network calls go through =approve-api.el=, which wraps
+  =ghub-graphql= and =ghub-request=.  Calls are async only, with a timeout, a
+  progress reporter, error classification, and callbacks run in the
+  originating buffer (skipped if it has died).
+- Why :: ghub handles auth (auth-source), hosts, and Enterprise.  One wrapper
+  gives one place for timeouts, logging and tests to mock.
+
+** D08 GraphQL files with fragment includes
+- Status :: accepted
+- Decision :: Queries, mutations and fragments live in =graphql/= as
+  =.graphql= files.  =${include:fragments/x.graphql}= pulls in a fragment;
+  includes are resolved recursively, deduplicated, and checked for cycles.
+  Every selected object with an =id= also selects =__typename=.  Mutations
+  return the changed object through the same fragments the queries use.
+- Why :: One shape per type, so the store can patch any response.  The files
+  are reusable in GraphQL tools (Altair, =verb=) during development.
+
+** D09 REST only where GraphQL can't do it
+- Status :: accepted
+- Decision :: Use REST for patch text (=GET /repos/{o}/{r}/pulls/{n}/files=,
+  paginated, at most 3000 files), commit-range compares
+  (=GET /repos/{o}/{r}/compare/{a}...{b}=), notifications (=/notifications=),
+  and markdown preview (=POST /markdown=).  Everything else uses GraphQL.
+- Why :: GraphQL has no patch text and no notifications.  Per-file patches
+  page well and let large PRs render progressively.
+
+** D10 Normalized, buffer-local store
+- Status :: accepted
+- Decision :: Responses are normalized into a buffer-local store keyed by
+  =__typename= and =id=, with refs between entities.  GraphQL connections are
+  unwrapped, but their =totalCount= and =pageInfo= are kept.  Mutation
+  responses are patched in through the same normalizer.  Creations and
+  deletions also need explicit list edits (append or remove a ref).
+- Why :: Partial mutation responses update every place an entity appears.
+  approve-v2's =approve-model.el= proved it, and it can be reused with small
+  additions.
+
+** D14 No optimistic updates
+- Status :: accepted
+- Decision :: The UI changes after GitHub confirms.  While waiting, the target
+  shows an in-flight mark (face and spinner text).  On failure the mark clears,
+  the error is shown, and any typed text is kept for a retry.
+- Why :: Simple, always true to GitHub ([[*D02 Durable state lives on GitHub][D02]]), no rollback code.  Network
+  latency is acceptable (project.org, "Fast").
+
+** D15 Mutations are serialized; queries run in parallel
+- Status :: accepted
+- Decision :: Mutations go through a FIFO queue, one at a time.  Queries run
+  concurrently.
+- Why :: GitHub's secondary rate limits punish bursts of mutations, and order
+  matters (create the review, then add threads).  approve-old had a queue for
+  the same reason.
+
+** D23 Remote changes are announced, never auto-applied
+- Status :: proposed
+- Decision :: A cheap query (=updatedAt=, =headRefOid=) runs when the PR buffer
+  gets focus (throttled) and on an optional timer.  If something changed, the
+  header line says so and =g= refreshes.  The buffer never redraws by itself.
+- Why :: Content must not move under the reader's cursor.
+
+** D24 Repository metadata is fetched lazily and cached per session
+- Status :: proposed
+- Decision :: Labels, assignable users, mentionable users and milestones are
+  fetched the first time a command needs them (completion, metadata edits),
+  then cached per repository for the Emacs session.  =g= with a prefix clears
+  the cache.
+- Why :: approve-v2 fetched them with every PR load, which made the main query
+  slow and big.
+
+* Rendering
+** D13 Full redraw, point restored by section ident
+- Status :: accepted (revisit if measurements say so)
+- Decision :: After data changes, the buffer is erased and the section hook
+  re-run.  Point is restored to the same section (by =magit-section-ident=)
+  and the same line offset within it.  Collapsed/expanded state is kept by
+  magit-section's visibility cache, so every section needs a stable value
+  (never =(random)=, which approve-v2 used for diff lines).  Redraws are
+  coalesced (≈50 ms) while several responses arrive.
+- Why :: Partial redraws in magit-section are hard and bug-prone.  With lazy
+  diff bodies, full redraws stay cheap.  Measure in Phase 1; optimize only if
+  needed.
+
+* Platform and tooling
+** D18 Emacs 29.1 or newer
+- Status :: accepted
+- Decision :: Minimum Emacs 29.1.  CI tests 29.x, 30.x and 31.x.
+- Why :: approve-v2 dropped 28.1 for good reasons (=seq=/=map= features,
+  =defvar-keymap=, transient versions).  The author runs 31.1.
+
+** D19 Tests: buttercup, undercover, fixtures, no network
+- Status :: accepted (project.org)
+- Decision :: Unit and behaviour tests are written with buttercup; coverage
+  comes from undercover.  Tests never touch the network: they use JSON
+  fixtures recorded from real PRs (scrubbed) and spies on the API layer.
+- Why :: Fast, deterministic, CI-safe.  See [[file:development.org][development.org]].
+
+** D20 Build with Cask and make
+- Status :: accepted
+- Decision :: Keep the existing =Cask= and =Makefile= targets: install,
+  build, test, lint, clean.  Add =checkdoc= and =package-lint= to =lint=.
+- Why :: Already in place and known.  Eask is the maintained alternative; we
+  switch only if Cask breaks on new Emacs versions.
+
+** D21 Docs in org; diagrams in plain Unicode/ASCII
+- Status :: accepted (2026-11-08)
+- Decision :: All planning docs are org files in =docs/=.  Mockups, flowcharts
+  and diagrams are Unicode/ASCII in =#+begin_example= blocks.
+- Why :: Readable in Emacs, on GitHub, and by agents, with no tooling.
+
+** D25 Dependencies
+- Status :: accepted
+- Decision :: Required: emacs 29.1, magit-section, magit (for its faces and
+  helpers), transient, ghub, markdown-mode (input buffers), dash, nerd-icons.
+  Development: buttercup, undercover, package-lint.  Nothing else without a
+  new decision.
+- Why :: Each one either is what we build on ([[*D04 Buffers are magit-section trees built from section hooks][D04]], [[*D06 Menus are transients; everything is reachable from =?=][D06]], [[*D07 ghub, wrapped by approve-api][D07]]) or saves
+  real work.  The current =Cask= lists all of these except transient, which
+  magit pulls in; list it explicitly in Phase 0.
+
+* Open questions
+Each one names the spike or phase that will answer it ([[file:roadmap.org][roadmap]]).
+
+- Q1 :: Diff line numbers: as text in the line, or in the margin
+  (=display '((margin left-margin) …)=)?  The margin keeps copied code clean.
+  → Phase 1.
+- Q2 :: Syntax highlighting inside diff hunks: reuse the idea of diff-mode's
+  =diff-font-lock-syntax= (fontify reconstructed old/new text in a temp
+  buffer)?  Cost on large diffs?  → [[file:roadmap.org::*SP4 Syntax highlighting in hunks][SP4]].
+- Q3 :: GitHub edge cases for review comments: a single comment while a
+  review is pending, a multi-line range across hunks, comments on context
+  lines outside hunks, and comments in a commit-range view.  → [[file:roadmap.org::*SP1 Review API behaviour][SP1]].
+- Q4 :: Do private images in =bodyHTML= (signed
+  =private-user-images.githubusercontent.com= URLs that expire after a few
+  minutes) load reliably through shr?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]].
+- Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 7.
+- Q6 :: Should the dashboard show unread state from notifications?  → Phase 7.

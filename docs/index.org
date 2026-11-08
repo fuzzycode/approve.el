@@ -1,0 +1,52 @@
+#+title: Approve — documentation map
+
+Approve is an Emacs package for reviewing GitHub pull requests: find them, read
+them, comment on code, and submit reviews, all without leaving Emacs.
+
+These documents are the plan we work from.  They are written for humans and
+for the AI agents that do most of the coding: each file covers one topic, so a
+task only needs the files it touches.
+
+* Status
+- Branch =feature/revamp= was reset on 2026-11-08.  No code exists yet; only
+  the build skeleton (Cask, Makefile) and these docs.
+- Next step: [[file:roadmap.org::*Phase 0 — Foundation][Phase 0]] of the roadmap.
+
+* Reading order
+| File             | What it holds                                                  | Read it when                     |
+|------------------+----------------------------------------------------------------+----------------------------------|
+| [[file:project.org][project.org]]      | Goals, non-goals, design principles, inspiration               | Always, first                    |
+| [[file:decisions.org][decisions.org]]    | Every technical and design decision, with reasons (D01…)       | Before changing anything general |
+| [[file:architecture.org][architecture.org]] | Layers, modules, data model, API map, rendering, errors, speed | Before writing code              |
+| [[file:ui.org][ui.org]]           | Mockups of every buffer and menu, keys, faces, icons           | Before writing UI                |
+| [[file:flows.org][flows.org]]        | Each user scenario as a flowchart (F01…)                       | Before writing a command         |
+| [[file:roadmap.org][roadmap.org]]      | Phases, tasks, spikes, definition of done                      | To pick the next task            |
+| [[file:development.org][development.org]]  | Conventions, build, tests, fixtures, how agents should work    | Before the first commit          |
+| [[file:history.org][history.org]]      | What the earlier attempts and other packages taught us         | When a design feels familiar     |
+
+* How to keep these docs true
+- A decision that changes gets a new entry in [[file:decisions.org][decisions.org]] that supersedes
+  the old one.  Don't silently edit the old one.
+- When code and docs disagree, the code is what runs, but the docs say what we
+  meant.  Fix whichever is wrong in the same commit.
+- Mockups show intent, not pixels.  When the real UI settles, update the
+  mockup to match it.
+- Flowcharts and diagrams are plain Unicode/ASCII in =#+begin_example= blocks
+  ([[file:decisions.org::*D21 Docs in org; diagrams in plain Unicode/ASCII][D21]]).  Lines inside blocks never start with =*= or =#+=, so org
+  doesn't parse them.
+
+* Glossary
+- PR buffer :: The buffer that shows one pull request (=approve-pr-mode=).
+- Diff buffer :: The optional separate buffer that holds the diff when the
+  split layout is chosen ([[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]]).
+- Pending review :: A review the viewer has started on GitHub but not submitted.
+  Its comments are visible only to the viewer.  GitHub allows one per user per PR.
+- Thread :: A review thread: one or more comments on a line, a range of lines,
+  or a file.  It can be resolved and can become outdated.
+- Conversation comment :: A comment on the PR itself (GraphQL =IssueComment=),
+  not attached to code.
+- Context :: What is at point (a diff line, a region, a thread, a comment, a
+  file, a label…), resolved by =approve-context-at-point=.  Every DWIM command
+  dispatches on it.
+- Store :: The buffer-local normalized data store ([[file:architecture.org::*Data model][architecture]]).
+- Viewer :: The GitHub user running Approve.

@@ -1,0 +1,116 @@
+#+title: Development
+
+How we write, build and test Approve.  Most code is written by AI agents and
+read by humans ([[file:project.org][project.org]]), so the code must be plain, local and
+predictable.
+
+* Working as an agent
+1. Read [[file:index.org][index.org]], then the docs the task links (decision, flow, mockup).
+2. Check the code: the truth is in the code, not in an earlier conversation.
+   Use absolute paths.
+3. If the docs don't answer a question, ask.  Don't guess a design decision;
+   propose one and record it in [[file:decisions.org][decisions.org]] once agreed.
+4. Do one task in small steps, one commit each.  Compile and test after every
+   change.
+5. Tick the task in [[file:roadmap.org][roadmap.org]], and update any doc the change affects, in
+   the same commit.
+
+* Repository layout
+#+begin_example
+ approve/
+ ├── lisp/                 package sources (approve*.el)
+ ├── graphql/
+ │   ├── fragments/        one fragment per type: user.graphql, label.graphql, …
+ │   ├── queries/          pull-request-core.graphql, pull-request-files.graphql, …
+ │   └── mutations/        add-pull-request-review-thread.graphql, …
+ ├── tests/
+ │   ├── fixtures/         recorded JSON responses (scrubbed), per scenario
+ │   ├── helpers.el        fake API, fixture loading, buffer helpers
+ │   └── test-<module>.el  one per lisp module
+ ├── docs/                 these docs
+ ├── Cask  Makefile  LICENSE  CODE_OF_CONDUCT.md
+#+end_example
+
+* Commands
+| Command        | Does                                                         | Today                                      |
+|----------------+--------------------------------------------------------------+--------------------------------------------|
+| =make install= | =cask install=                                               | exists                                     |
+| =make build=   | byte-compile =lisp/*.el=                                     | exists                                     |
+| =make test=    | buttercup on =tests/=                                        | exists                                     |
+| =make lint=    | byte-compile with warnings as errors, package-lint, checkdoc | byte-compile only; add the rest in Phase 0 |
+| =make cover=   | tests with undercover (text report)                          | Phase 0                                    |
+| =make clean=   | remove =.elc=                                                | exists                                     |
+
+The shell is fish: wrap loops in =bash -c '…'=.
+
+* Emacs Lisp conventions
+- =lexical-binding: t= in every file.  Full package headers; a Commentary that
+  says what the module is for and what it must not do (its layer rules,
+  [[file:architecture.org::*Layers][architecture]]).
+- Names: public =approve-…=, private =approve--…=, per module
+  =approve-<module>-…= where it helps.  Section inserters are
+  =approve-insert-<name>-section=; section classes =approve-<name>-section=.
+- Style: the [[https://github.com/bbatsov/emacs-lisp-style-guide][Emacs Lisp style guide]].  Small functions with docstrings;
+  =cl-defun= with keyword arguments for anything with more than three
+  parameters or optional callbacks.
+- =magit-insert-heading= takes a child count as its first argument; use it.
+- Libraries: =dash=, =seq=, =map=, =subr-x=, =cl-lib= are fine.  Prefer
+  built-ins when they read as well.
+- No =cl-letf= on other packages' functions, and no advice on them, in
+  package code (lesson from approve-mvp/old).
+- Errors: =user-error= for things the user can fix, explaining how; =define-error=
+  types under =approve-error= for the rest.
+- Evil: never =require= evil.  Bindings live in =approve-evil.el=, loaded by
+  =with-eval-after-load 'evil=.
+- Faces only from =approve-faces.el=; icons only through =approve-icon=.
+- Every =defcustom= has =:type=, =:group= and a docstring with an example.
+- Async: callbacks never assume the buffer is alive or point unchanged.
+  Capture what you need before the request.
+
+* GraphQL conventions
+- One fragment per type, named =<Type>Fields=, in
+  =graphql/fragments/<type>.graphql=.  Include fragments with
+  =${include:fragments/<type>.graphql}=; the loader dedupes.
+- Every object with an =id= selects =__typename= (the store needs both and
+  signals an error without them).
+- Mutations return the changed object through its fragment, so the store
+  patches it.
+- Queries take variables named in camelCase as GitHub does
+  (=$owner=, =$name=, =$number=, =$after=).
+- Every query selects =rateLimit { cost remaining resetAt }=.
+- Try new queries in a GraphQL client first; the =.graphql= files load
+  unchanged except for the include lines.
+
+* Tests
+Buttercup.  Test behaviour, not implementation details: what the user sees
+and what goes to GitHub.
+
+| Layer     | How                                                                              |
+|-----------+----------------------------------------------------------------------------------|
+| graphql   | Loader on temp files: includes, dedupe, cycles, missing files                    |
+| api       | Spy on =ghub-graphql= / =ghub-request=; callbacks, timeouts, errors, queue order |
+| model     | Load fixtures; selectors; patching; list edits; pagination                       |
+| renderers | Render a fixture into a temp buffer; assert sections exist, contain text,        |
+|           | carry the right context; no full-buffer string snapshots                         |
+| context   | Put point on lines of a rendered fixture; assert the context plist               |
+| actions   | Fake API: assert the mutation and variables sent, and the store afterwards       |
+| input     | Commit/abort callbacks, drafts kept on abort                                     |
+
+- Fixtures are recorded with =approve-dev-record= from real PRs, then scrubbed:
+  no tokens, and personal data replaced where possible.
+- No test touches the network or the user's config (=emacs -Q= in batch).
+- Development helpers (=approve-dev.el=) are not tested and not packaged.
+
+* Commits and branches
+- Conventional commits (=feat(diff): …=, =fix(api): …=, =docs: …=,
+  =test: …=, =build: …=, =refactor: …=), as this repository's history does.
+- One logical change per commit, with its tests and doc updates.
+- Work on =feature/…= branches; =main= always builds and passes tests.
+
+* Debugging
+- =M-x approve-dev-offline-mode= serves fixtures instead of GitHub.
+- =approve-log-level= =debug= logs every request with its cost and timing to
+  =*approve-log*=.
+- =approve-dev-inspect-query= shows a query with includes expanded.
+- =approve-dev-model-dump= shows the store of the current PR buffer.
+- Altair or =verb= (see approve-old's =graphql.org=) for trying queries by hand.

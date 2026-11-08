@@ -1,0 +1,92 @@
+#+title: History and inspiration
+
+What earlier attempts and other packages taught us.  Read this when a design
+feels familiar: we may have tried it.
+
+* Earlier attempts (sibling folders)
+** approve-mvp — May–June 2025
+- Where :: =~/workspace/approve-mvp= (36 commits, flat files, no tests)
+- Built :: Open by URL; header (author, refs, draft, status, reviewers,
+  assignees, labels, milestone, issues, participants, subscription,
+  mergeable); description; comments; checks; commits with "load more";
+  files; diff with inline comments; edit title; search; a request queue;
+  timeouts.
+- Worked :: Section hooks for the header (=approve-header-sections-hook=) gave
+  per-user layouts cheaply.
+- Didn't :: =approve-ui.el= grew to 1 500 lines.  Every inserter took the raw
+  =pr-data= response.  The diff reused =magit-diff-wash-diff= with
+  =cl-letf= overrides, which was fragile.
+- Keep :: The header rows as separate sections; the list of what a PR header
+  should show.
+
+** approve-old — June–July 2025
+- Where :: =~/workspace/approve-old= (61 commits; remote fuzzycode/Approve.el)
+- Built :: EIEIO section classes with slots (=can-update?=, =thread-id=, …) and
+  per-class keymaps; timeline with configurable event types; checks; HTML
+  rendering (quotes, code, diffs in comments, reactions); add/edit/delete
+  comments; reply to and resolve threads; reviews (approve, request changes,
+  comment); lock/unlock; labels; draft toggle; edit title and description;
+  a transient menu; buttercup tests; GraphQL fragments in files.
+- Worked :: Section classes with keymaps gave context-specific keys.  The
+  fragments-in-files idea started here.  Prefix-argument variants (=C-u= to
+  approve without a message) felt right.
+- Didn't :: Commenting on code was retrofitted late ("WIP: Comment re-work",
+  stopped there).  Review comments, pending reviews, file comments and replies
+  touch everything, so they must be designed first.  The diff still used
+  Magit washing with overrides.
+- Keep :: The comment-type taxonomy (issue comment, review, review comment,
+  commit comment); =approve-ui-timeline.el='s event table; the GraphQL
+  mutation files; the per-section classes idea.
+
+** approve-v2 — December 2025–January 2026
+- Where :: =~/workspace/approve-v2= (77 commits; remote fuzzycode/approve.el;
+  its =graphql/= is deleted in the working tree but present in =HEAD=)
+- Built :: Clean layers (=approve-api=, =approve-graphql=, =approve-model=,
+  =approve-ui-*=); a normalized store keyed by =__typename= and =id=; include
+  directives with dedupe and cycle checks; async API with timeouts, progress
+  and request tracking; dashboard and search; header, description, commits,
+  conversation, files with diffstat and viewed state, its own diff renderer
+  with inline threads; full-file view with fringe marks and a blob cache; an
+  shr-based HTML renderer (tables, lists, quotes, diffs, images, details);
+  eldoc; input buffer; evil bindings; CI matrix; tests per module.
+- Worked :: Almost everything in the foundation.  This is the code to port.
+- Didn't :: It stopped before review actions (only edit title and viewed
+  toggle).  One big query fetched repository labels, users and milestones on
+  every load (slow; now D24).  Diff lines with threads used =(random)= in
+  their section value, which breaks the visibility cache and point restore
+  (now D13).  It fetched the diff with the compare API (300-file limit; now
+  =pulls/files=, D09).
+- Keep :: =approve-model.el=, =approve-graphql.el=, =approve-api.el=,
+  =approve-ui-html.el=, =approve-input.el=, =approve-dashboard.el=,
+  =approve-file-view.el= (patch parsing, fringe), =approve-ui-files.el=
+  (diffstat), its fragments and its CI workflow.
+
+** approve (this repository) — March 2026
+- Built :: Cask, Makefile, a fragment loader with include dedupe, a debug log,
+  queries and fragments, and an API layer with progress, timeout and
+  configurable host/user/auth, with tests and conventional commits.
+- Then :: Reset on 2026-11-08 to plan first.  The commits before the reset
+  (=5646d5e= and earlier) hold code worth porting in Phase 0.
+
+* Other packages
+| Package             | Approach                                                                                                                                                                  | Take                                                                                                                            | Avoid                                                                            |
+|---------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------|
+| [[https://github.com/blahgeek/emacs-pr-review][emacs-pr-review]]     | One buffer with everything; =C-c C-c= / =C-c C-s= / =C-c C-e= do the context-sensitive thing; notifications buffer; the author's fork is in =~/workspace/emacs-pr-review= | Context DWIM keys; suggestions rendered as diffs; select commits to review; notification workflow; =browse-url= handler         | Pending threads kept in a buffer-local list (lost on kill); hard-to-change looks |
+| [[https://github.com/wandersoncferreira/code-review][code-review]]         | Magit-like buffer; GitHub, GitLab, Bitbucket; local SQLite state                                                                                                          | Header layout (title, state, refs, milestone, labels as a table); "Your review feedback" section                                | Several forges; local state to sync; unmaintained                                |
+| [[https://github.com/Daskeladden/shipit][shipit]]              | magit-section + transient; GitHub first; notifications, Actions logs, issues, Jira                                                                                        | Comment pagination ("load more", head and tail); notification jump to the exact comment; check logs; SVG icons; =shipit-doctor= | Scope creep (issues, Jira, canvases) — we only review PRs                        |
+| [[https://github.com/travitch/lgtm.el][lgtm.el]]             | Changesets checked out on disk; ediff per file; comments in posframes                                                                                                     | Mark files reviewed; side-by-side reading as an idea for the file view                                                          | Needs local checkouts (D03 says API-only)                                        |
+| [[https://github.com/charignon/github-review][github-review]]       | The diff as a plain text buffer; comments written as =#= lines, then submitted                                                                                            | Speed of writing many comments in one go                                                                                        | No threads, no state on GitHub until submit, no rich rendering                   |
+| [[https://git.sr.ht/~niklaseklund/git-review][git-review]]          | Review git patches with ediff; review notes kept locally (lgtm builds on it)                                                                                              | Reviewing patch by patch                                                                                                        | Local state and checkouts                                                        |
+| [[https://kitallis.in/p/hutch-a-local-code-review-interface-for-magit/][Hutch]] ([[https://github.com/adjaecent/magit-hutch][magit-hutch]]) | AI review of local changes inside Magit; findings with patches, queued and applied                                                                                        | Findings as suggestions you queue and apply; transient UI; verified patches                                                     | Local-only scope; we'd use the idea for pending comments only ([[file:roadmap.org::*Ideas][Ideas]])            |
+
+* Lessons, in one list
+1. Design commenting and the pending review first; everything else hangs off it.
+2. Keep durable state on GitHub, including pending reviews.
+3. Own the diff renderer; don't override Magit internals.
+4. Normalize data; give renderers selectors, not raw responses.
+5. Stable section values, or visibility and point restore break.
+6. Several small queries beat one huge one; fetch rarely-used data lazily.
+7. Split files by concern before they pass ~600 lines.
+8. Measure speed with fixtures from the start.
+9. Record fixtures early; offline development is faster and safer.
+10. Restarting has cost four attempts; port what works instead of rewriting it.

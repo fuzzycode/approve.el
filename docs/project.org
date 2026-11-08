@@ -1,0 +1,61 @@
+#+title: Project
+
+* Goals
+- Functional: It should allow as much of the features as the GitHub code review UI offers
+- Flexible: It should be flexible enough to tailor the review experience to fit the user
+- Fast: The code should work fast and smooth. It involves network IO and that takes time, that is fine.
+  But the code should not be the bottleneck.
+- Beautiful: Looks matter and a nice UX is what sets good and excellent software apart. We aim for excellence.
+- Stable: It should be tested to the extent possible but we will be pragmatic where it is difficult.
+- Supported: We aim to support older versions of emacs but if justified we are not afraid to limit support for older emacsen.
+* Non-goals
+Things that we do not have to cover in this project.
+- Support for other source repositories. Only GitHub will be supported.
+* Dependencies
+We are OK adding dependencies if they make the code easier to read or add new functionality that we want to have.
+- Magit
+- Transient
+- GHub
+
+* Design
+- We use magit headings and magit sections to structure the main buffer for the PR. This allows flexibility to add/remove
+  sections to fit individual users.
+- Any menus are done using transient where possible.
+- We support composing graphql fragments to make them easier to manage and to compose. Making sure that we keep
+  a consistent shape of things.
+- AI will do most of the coding, we optimize for that but understand that humans will read and modify the code too.
+- Important state is on Github and not local. When adding comments etc. this is pushed to github so that switching between
+  the two is as seamless as possible.
+- We provide our own faces for all the things we use, but we try to derive them either from builtin or dependency faces
+  so that any themes will have a good support out of the box.
+- evil support
+* Inspiration
+These are projects that solve similar or the same problem. They all have good and bad features but none of the are perfect
+for our needs. We will use them as inspiration and use the ideas that are good but we are not aiming to copy or mimic any
+one specific project.
+
+** Github-review
+URL: https://github.com/charignon/github-review
+
+** Code-review
+URL: https://github.com/wandersoncferreira/code-review
+
+** Shipit
+URL: https://github.com/Daskeladden/shipit
+
+** LGTM
+URL: https://github.com/travitch/lgtm.el
+
+** git-review
+URL: https://git.sr.ht/~niklaseklund/git-review
+
+** Emacs Pr Review
+URL: https://github.com/blahgeek/emacs-pr-review
+
+** Hutch
+URL: https://kitallis.in/p/hutch-a-local-code-review-interface-for-magit/
+
+
+* Ideas
+These are ideas that we are thinking about but we are not yet sure if they will make it into the project or not.
+They will need exploration and experimentation before we commit to a solution.

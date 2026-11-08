@@ -1,0 +1,551 @@
+#+title: UI — mockups, keys, faces, icons
+
+Mockups show layout and intent.  Glyphs like ✓ ✗ ● ◐ 💬 stand in for
+nerd-icons; each one is a semantic icon ([[*Icons][Icons]]) with a Unicode fallback.
+Colours are described, not shown: every face inherits from Magit or built-in
+faces ([[file:decisions.org::*D16 Own faces and one icon abstraction][D16]]).  =▾= and =▸= are magit-section's expanded/collapsed markers.
+
+Design rules for every buffer:
+- Read top-down like GitHub: what it is, its state, what needs me, then details.
+- The first screen answers "what do I need to do here?": review state,
+  pending comments, unviewed files, unresolved threads.
+- Dim what is done (viewed files, resolved threads, outdated comments); keep
+  what needs attention at normal weight.
+- Every actionable thing shows its key the first time it appears, as a dim
+  hint (=r reply · R resolve=).  =approve-show-hints= turns hints off.
+- No line exceeds =fill-column= + the indent; long text is wrapped (=shr=
+  fills to =approve-fill-column=, default 80).
+
+* PR buffer — single layout (default)
+Buffer name: =*approve: fuzzycode/approve#1234*=.  The header line is in
+[[*Header line][Header line]].
+
+** Top: header, metadata, pending review, description
+#+begin_example
+ #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
+ fuzzycode/approve · alice wants to merge 4 commits into main from feature/retry
+ Opened 3 days ago · updated 2 hours ago
+
+ Reviewers   ✓ bob   ✗ carol   ○ dave   ○ @fuzzycode/core
+ Assignees   alice
+ Labels      enhancement  api
+ Milestone   v0.3
+ Issues      #1200 Retry failing requests
+ Status      ✗ Changes requested · ✓ No conflicts · ◐ 7 of 9 checks passed
+
+ ▾ Your pending review                        2 comments · 1 reply    S submit · X discard
+     lisp/approve-api.el:42        Should `retries` be part of the defgroup?
+     lisp/approve-api.el:87–91     ✎ suggestion
+     ↳ reply on lisp/approve-model.el:12
+
+ ▾ Description                                                                    e edit
+   Adds exponential back-off to `approve-api-graphql`.  Requests are retried
+   on 5xx responses and on secondary rate limits.
+
+     • Configurable through `approve-api-retries`
+     • Logs each retry to the debug buffer
+
+   Fixes #1200
+   👍 3  🎉 1
+#+end_example
+
+Notes:
+- Line 1: title (bold, larger with =approve-title-height=), then state badges:
+  Open/Closed/Merged and Draft, coloured by face.
+- Line 2: where and what.  The head branch is a link (=RET= copies it, =o=
+  opens it).
+- Metadata rows are one section each (=approve-meta-*=), so each has its own
+  keys (=l= on Labels edits labels) and eldoc (label descriptions, user names).
+- Reviewer marks: ✓ approved, ✗ changes requested, 💬 commented, ○ requested
+  but not reviewed yet.
+- "Your pending review" appears only when one exists.  It lists the pending
+  comments; =RET= jumps to one in the diff.
+- An empty description shows a dim "No description provided."
+
+** Middle: checks, commits, conversation
+#+begin_example
+ ▸ Checks          ◐ 7 passed · 1 failed · 1 running
+ ▸ Commits (4)     2 new since your review
+ ▾ Conversation (6)
+   alice opened this 3 days ago
+   │
+   ├ 💬 bob commented · 2 days ago                                       r quote · + react
+   │   Looks good overall, a few nits inline.
+   │   👍 1
+   │
+   ├ ✓ bob approved · 2 days ago · 3 comments on code
+   │
+   ├ ↑ alice pushed 2 commits · 1 day ago
+   │     d4e5f6a  Handle 502 responses
+   │     e5f6a7b  Add tests
+   │
+   ├ ✗ carol requested changes · 5 hours ago
+   │   Please add a test for the retry limit.
+   │
+   ├ 🏷 alice added api · 5 hours ago
+   │
+   ╰ C comment on this pull request
+#+end_example
+
+Notes:
+- The timeline shows conversation comments, reviews (with their body and a
+  count of code comments; =RET= jumps to them), pushes, label/assignee/title
+  changes, force pushes, ready-for-review, merges and closes.
+  =approve-timeline-event-types= picks which.
+- Events by bots, and runs of small events, can be folded into one line
+  ("github-actions added 3 labels").
+- Minimized (hidden) comments show as one dim line with the reason.
+
+** Bottom: files and diff
+#+begin_example
+ ▾ Files changed   12 files  +340 −56                 4/12 viewed · 3 unresolved threads
+     ✓ lisp/approve-api.el          +120  −30  ██████████▒▒▒   💬 2
+     · lisp/approve-model.el         +40  −10  ███▒
+     ↻ lisp/approve-graphql.el       +12   −2  █               💬 1
+     · tests/test-approve-api.el    +160   −0  █████████████
+     …
+
+ ▾ Diff
+   ▾ lisp/approve-api.el                           modified  +120 −30   ✓ viewed
+     ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables
+        40  40      (let* ((request-id (approve-api--generate-request-id))
+        41      -          (timeout approve-api-timeout))
+            41  +          (timeout approve-api-timeout)
+            42  +          (retries approve-api-retries))
+                  ╭─ bob · 2 days ago ─────────────────────────────────────────
+                  │ Should this be configurable per call?
+                  │
+                  │ alice · 1 day ago
+                  │ Good idea, done in d4e5f6a.
+                  │ 👍 1
+                  ╰─ r reply · R resolve ───────────────────────────────────────
+                  ╭─ ✎ Pending · you ──────────────────────────────────────────
+                  │ Should `retries` be part of the defgroup?
+                  ╰─ e edit · k delete ─────────────────────────────────────────
+        42  43        (when progress-message
+        43  44          (make-progress-reporter progress-message))
+     ▸ @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id
+       ▸ 💬 1 resolved thread on line 101
+
+   ▸ lisp/approve-model.el                         modified   +40 −10   · not viewed
+   ▸ lisp/approve-graphql.el                       modified   +12  −2   ↻ changed since viewed
+#+end_example
+
+Notes:
+- File list marks: ✓ viewed (dim), · not viewed, ↻ viewed but changed since
+  (GitHub's =DISMISSED=, highlighted).  The bar is a diffstat scaled to the
+  largest file (=approve-diffstat-width=).  =RET= jumps to the file's diff
+  (single layout) or opens the diff buffer there (split layout).
+- Diff file headings repeat the viewed state; =v= toggles it.  Viewed files
+  start collapsed.
+- Line numbers (old, new) are drawn in the margin or as text ([[file:decisions.org::*Open questions][Q1]]).  Added
+  lines use =magit-diff-added=, removed =magit-diff-removed=, context
+  =magit-diff-context=; word-level refinement follows
+  =approve-diff-refine-hunk= (like Magit's).
+- Threads sit right under the line they belong to (the last line of a
+  range).  For a multi-line thread the covered lines get a thin bar in the
+  fringe while point is on the thread.
+- Resolved threads start collapsed as a single line.  Outdated threads (line
+  gone from the diff) are collected under the file: "▸ Outdated (2)".
+- Pending comments use =approve-pending-face= (an accent background) and say
+  "Pending", so they can't be mistaken for published ones.
+
+** Threads: suggestions, file-level, outdated
+#+begin_example
+                  ╭─ carol · 5 hours ago ──────────────────────────────────────
+                  │ Use `cl-incf` here:
+                  │ ┌ Suggested change ─────────────────────────────────────────
+                  │ │ -      (setq count (1+ count))
+                  │ │ +      (cl-incf count)
+                  │ └───────────────────────────────────────────────────────────
+                  ╰─ r reply · R resolve ───────────────────────────────────────
+
+   ▾ lisp/approve-graphql.el                       modified   +12  −2   ↻ changed since viewed
+     ▾ On this file (1)
+         ╭─ dave · 1 day ago ─────────────────────────────────────────────────
+         │ Could this file be split in two?
+         ╰─ r reply · R resolve ───────────────────────────────────────────────
+     ▸ Outdated (2)                         threads on lines no longer in the diff
+#+end_example
+
+* PR buffer — split layout
+=approve-layout= = =split=.  The overview keeps everything except the =Diff=
+section.  =RET= on a file (or =d=) opens the linked diff buffer at that file.
+Both buffers share one store; a change in one redraws both.
+
+#+begin_example
+ *approve: fuzzycode/approve#1234*            *approve-diff: fuzzycode/approve#1234*
+ ┌──────────────────────────────────────┐     ┌─────────────────────────────────────────┐
+ │ #1234 Add retry logic …    ● Open    │     │ #1234 · all changes (main…e5f6a7b)      │
+ │ …metadata…                           │     │ 4/12 viewed · 2 pending · 3 unresolved  │
+ │ ▸ Checks  ◐ 7/9                      │ RET │                                         │
+ │ ▸ Commits (4)                        │────▶│ ▾ lisp/approve-api.el      ✓ viewed     │
+ │ ▸ Conversation (6)                   │     │   ▾ @@ -40,7 +40,12 @@ …              │
+ │ ▾ Files changed  12 files +340 −56   │     │      40  40   (let* ((request-id …      │
+ │   ✓ lisp/approve-api.el  +120 −30    │◀────│   …                                     │
+ │   · lisp/approve-model.el  +40 −10   │  ^  │ ▸ lisp/approve-model.el    · not viewed │
+ └──────────────────────────────────────┘     └─────────────────────────────────────────┘
+#+end_example
+
+=^= (or =q=) in the diff buffer goes back to the overview at the same file.
+
+* Header line
+Shown in the PR buffer and the diff buffer; it stays visible while scrolling.
+
+#+begin_example
+ #1234 ● Open · ◐ checks · 4/12 viewed · 2 pending · 3 unresolved
+ #1234 ● Open · ✓ checks · 12/12 viewed · 0 unresolved · ⟳ updated on GitHub — g to refresh
+ #1234 ● Open · loading files, threads…
+#+end_example
+
+The second form appears when change detection ([[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]) finds new commits or
+comments.
+
+* Loading, empty and error states
+#+begin_example
+ #1234 …                                                           (from the URL)
+ ▾ Description
+   ⟳ Loading…
+ ▾ Conversation
+   ⟳ Loading…
+ ▾ Files changed
+   ✗ Could not load files: HTTP 502 Bad Gateway · g to retry
+
+ ▾ lisp/huge-generated.json                           modified  +48 213 −47 990
+     Diff not shown by GitHub (too large) · RET load it anyway
+ ▾ assets/logo.png                                    modified   binary
+#+end_example
+
+* Dashboard
+=M-x approve-dashboard=.  Sections come from =approve-dashboard-sections=
+(title, search filter or function, limit), as in approve-v2.
+
+#+begin_example
+ Approve — pull requests                                  @bjornlarsson · 10:42 · g refresh
+
+ ▾ Needs my review (3)
+   ● #1234  Add retry logic to the GraphQL client      fuzzycode/approve  alice  2h  ◐  ✗
+   ● #88    Fix crash when opening empty files          org/editor         erin   1d  ✓  ·
+     #87    Draft: new theme                            org/editor         frank  3d  ·  ◌
+ ▾ My pull requests (2)
+     #1230  Normalize GraphQL connections              fuzzycode/approve  me     5h  ✓  ✓
+     #1229  Docs: architecture                          fuzzycode/approve  me     1d  ✗  💬
+ ▸ Involved (5)
+ ▸ Recently opened (10)
+#+end_example
+
+Columns: unread (●, when notifications are on), number, title (draft titles
+dim), repository, author, updated, checks (✓ ✗ ◐ ·), review decision (✓
+approved, ✗ changes requested, 💬 commented, · none, ◌ draft).  Widths are
+=defcustom=s; the title takes what's left.  =RET= opens the PR, =o= opens it
+in the browser, =G= refreshes only the section at point, =s= opens search
+with this section's filter.
+
+* Search
+=M-x approve-search= prompts for a query (with history), or =s= in the
+dashboard opens the filter transient.  Results use the dashboard's list
+renderer in one section.
+
+#+begin_example
+ Search: is:pr is:open review-requested:@me repo:org/editor      12 results · s refine
+
+   ● #88    Fix crash when opening empty files          org/editor   erin   1d  ✓  ·
+     #87    Draft: new theme                            org/editor   frank  3d  ·  ◌
+     …
+   ▸ Load 20 more
+#+end_example
+
+#+begin_example
+ Search pull requests
+ Filters                                   Sort
+  -s State        open|closed|merged|all    -o Order   updated|created|comments
+  -r Repository   org/editor                Do
+  -a Author       @erin                     RET Search
+  -R Review       requested:@me|approved…   q   Quit
+  -l Label        bug
+  -d Draft        exclude
+  -t Text         "crash"
+#+end_example
+
+* Comment input buffer
+Opened below the PR buffer.  The target lines stay highlighted in the PR
+buffer until the input is committed or aborted.
+
+#+begin_example
+ ┌──────────────────────────────────────────────────────────────────────────────┐
+ │ *approve: fuzzycode/approve#1234*                                            │
+ │        41      -          (timeout approve-api-timeout))                     │
+ │            41  +          (timeout approve-api-timeout)            ░░ target │
+ │            42  +          (retries approve-api-retries))           ░░ target │
+ │        42  43        (when progress-message                                  │
+ ├──────────────────────────────────────────────────────────────────────────────┤
+ │ Comment on approve-api.el:41–42 · pending review    C-c C-c send · C-c C-k ✗ │ header
+ │ Should `retries` be part of the defgroup?                                    │
+ │                                                                              │
+ │ ```suggestion                                                                │
+ │          (timeout approve-api-timeout)                                       │
+ │          (retries (or retries approve-api-retries)))                         │
+ │ ```                                                                          │
+ │ -:**- *approve-input: comment approve-api.el:41-42*   Approve-Input  C-c C-s │
+ └──────────────────────────────────────────────────────────────────────────────┘
+#+end_example
+
+| Key       | Does                                                           |
+|-----------+----------------------------------------------------------------|
+| =C-c C-c= | Send (commit)                                                  |
+| =C-c C-k= | Abort; the text is kept as a draft for this target             |
+| =C-c C-s= | Insert a suggestion block prefilled with the target lines      |
+| =C-c C-p= | Preview rendered markdown (GitHub renders it) in a side window |
+| =C-c @=   | Insert a mention (completing-read over mentionable users)      |
+| =M-TAB=   | Complete =@user=, =#123=, =:emoji:= at point                   |
+
+The header-line text names the action: "Comment on…", "Reply to bob on…",
+"Edit comment", "Edit description", "Review body — Approve", "New title"
+(single line).  Evil users start in insert state.
+
+* Transients
+** Dispatch (=?=)
+#+begin_example
+ Approve  #1234 Add retry logic to the GraphQL client
+ Review                     Comments                 Pull request          Buffer
+  c Comment at point         r Reply                  t Title               g Refresh
+  s Suggest change           R Resolve / unresolve    d Description         o Open in browser
+  v Toggle viewed            e Edit at point          l Labels              y Copy URL / sha
+  S Submit review…           k Delete at point        a Assignees           j Jump…
+  X Discard pending review   + React                  A Request reviewers   L Layout
+  V Review range…            C Conversation comment   M Milestone           ! Doctor
+                                                      D Draft / ready
+                                                      w Subscription
+                                                      m Merge / close…
+#+end_example
+
+Suffixes that don't apply to the context, or that the viewer may not use
+(=viewerCan*=), are shown dimmed (=:inapt-if=) instead of hidden, so the menu
+doesn't jump around.
+
+** Submit review (=S=)
+#+begin_example
+ Submit review  #1234                              pending: 2 comments · 1 reply
+ Verdict                        Body
+  a Approve                      e Edit body…     "Thanks! Two nits inline."
+  r Request changes
+  c Comment
+ Other
+  X Discard pending review       q Quit
+#+end_example
+
+Choosing a verdict opens the body input (prefilled with the draft body).
+=C-c C-c= submits it.  =C-u a= approves with no body and no input buffer.
+With no pending review, =a=/=r=/=c= create and submit a review in one call.
+
+** Merge / state (=m=)
+#+begin_example
+ Merge #1234 into main               ✓ mergeable · ✓ checks · ✓ 1 approval · 0 behind
+ Method                     Options                         State
+  m Create merge commit      -d Delete branch after merge    D Convert to draft
+  s Squash and merge         -t Commit title…                c Close pull request
+  r Rebase and merge         -b Commit body…                 u Update branch
+ When blocked
+  a Enable auto-merge        x Disable auto-merge            Q Add to merge queue
+#+end_example
+
+The title line shows why merging is blocked when it is ("✗ 1 change
+requested · ◐ 2 checks running").  Only methods the repository allows are apt.
+
+** Jump (=j=)
+#+begin_example
+ Jump to
+  d Description   c Conversation   k Checks   m Commits   f Files   p Pending review
+  u Next unviewed file             U Previous unviewed file
+  t Next unresolved thread         T Previous unresolved thread
+  n Next new comment (since your last review)
+  /  File…  (completing-read over changed files)
+#+end_example
+
+** Review range (=V=)
+#+begin_example
+ Review range                                      now: all changes
+  a All changes                    main…e5f6a7b
+  l Since my last review           b2c3d4e…e5f6a7b   2 commits
+  c One commit…                    completing-read over commits
+  r Range…                         pick first and last commit
+#+end_example
+
+** Metadata pickers
+Labels, assignees, reviewers and milestone use =completing-read-multiple= (or
+=completing-read= for one value).  Current values are preselected, and
+candidates are annotated:
+
+#+begin_example
+ Labels: enhancement,api,█
+   bug            Something isn't working                       ■ red
+   documentation  Improvements or additions to documentation    ■ blue
+   enhancement ✓  New feature or request                        ■ teal
+#+end_example
+
+* Commits section with a range
+#+begin_example
+ ▾ Commits (4)                             showing: since your last review · V change
+     a1b2c3d  Add retry option                   alice   3 days ago     ✓
+     b2c3d4e  Fix typo                           alice   3 days ago     ✓   ← your review
+   ┃ d4e5f6a  Handle 502 responses               alice   1 day ago      ✗   new
+   ┃ e5f6a7b  Add tests                          alice   5 hours ago    ◐   new
+#+end_example
+
+When a range is active, the Diff section heading says so ("Diff · since your
+last review (2 commits)") and lines that can't take comments in this view
+are dimmer ([[file:flows.org::*F14 Re-review after new commits][F14]]).
+
+* Checks section expanded
+#+begin_example
+ ▾ Checks          ◐ 7 passed · 1 failed · 1 running                       required: 3
+     ✗ lint                                  32s      required      RET details ↗
+     ◐ test (macos-latest, 30.2)             running  required
+     ✓ test (ubuntu-latest, 29.4)            2m 10s   required
+     ✓ build                                 1m 02s
+     ✓ codecov/patch                         85.2% of diff hit (+0.4%)
+     …  4 more passed
+#+end_example
+
+Failing and running checks come first.  =RET= opens the details URL.
+
+* File view
+=RET= on a diff line (or =F= on a file) opens the whole file at the PR head
+(=b= toggles the base version), fetched through the API ([[file:flows.org::*F15 View the whole file][F15]]).
+
+#+begin_example
+ *approve-file: fuzzycode/approve lisp/approve-api.el @ e5f6a7b*
+ head e5f6a7b · 3 changes · 2 threads              n/p change · ]t thread · c comment · q back
+   38   (cl-defun approve-api-graphql (query variables
+   39                                    &key callback
+ ▌ 40     (let* ((request-id (approve-api--generate-request-id))
+ ▌ 41            (timeout approve-api-timeout)
+ ▌ 42            (retries approve-api-retries))
+          │ 💬 bob: Should this be configurable per call?  (2)     TAB expand
+   43       (when progress-message
+ ▸ 44         (make-progress-reporter progress-message))
+#+end_example
+
+- The buffer uses the file's major mode (font-lock, imenu, which-function).
+- Fringe: =▌= added or changed lines, =▸= where lines were removed.
+- Threads are overlays (=after-string=) under their lines, one line each until
+  expanded.
+- =c= works only on lines that are in the diff, as GitHub requires; on other
+  lines it says why.
+
+* Notifications (later)
+#+begin_example
+ Notifications                              unread 5 · all repos · f filter · g refresh
+ ▾ fuzzycode/approve
+   ● review requested  #1234 Add retry logic to the GraphQL client         2h
+   ● mention           #1229 Docs: architecture                            5h
+ ▾ org/editor
+   ● comment           #88   Fix crash when opening empty files            1d
+     state change      #80   Remove legacy renderer (merged)               3d
+#+end_example
+
+=RET= opens the PR at the comment or review that caused the notification and
+marks it read; =x= marks read, =u= unsubscribes.
+
+* Eldoc
+Shown in the echo area for the thing at point:
+#+begin_example
+ @bob — Bob Smith · Member · approved 2 days ago
+ enhancement — New feature or request
+ d4e5f6a — Handle 502 responses · alice · 2026-11-07 14:02 · ✓ checks
+ 2 days ago — 2026-11-06 09:12
+ lint — failure · "3 files would be reformatted" · required
+#+end_example
+
+* Keys
+Keys are a draft to check in Phases 1–2.  Principles:
+- Emacs: single letters as in Magit; the same letter in every Approve buffer
+  means the same thing.
+- Evil normal state: never shadow motions (h j k l w b e W B E 0 ^ $ gg G
+  f t % { } H M L), search (/ n N), visual (v V C-v) or yank (y).  Visual
+  line selection (=V=) picks a range to comment on.  =?= opens dispatch, as in
+  evil-collection's Magit.
+- Every command is also in the dispatch transient, so a missing key is never
+  a missing feature.
+
+| Command                       | Emacs         | Evil normal           | Context                   |
+|-------------------------------+---------------+-----------------------+---------------------------|
+| Dispatch                      | =?=           | =?=                   | any                       |
+| Refresh (=C-u=: clear caches) | =g=           | =gr=                  | any                       |
+| Bury / back                   | =q=           | =q=                   | any                       |
+| Toggle section                | =TAB=         | =TAB= =za=            | section                   |
+| Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k= | any                       |
+| Visit thing at point          | =RET=         | =RET=                 | file, line, link, commit… |
+| Open in browser               | =o=           | =go=                  | any (thing or PR)         |
+| Copy URL / sha / value        | =y=           | =yu=                  | any                       |
+| Comment at point (DWIM)       | =c=           | =c=                   | line, region, file, PR    |
+| Suggest change                | =s=           | =s=                   | line, region (new side)   |
+| Reply / quote                 | =r=           | =r=                   | thread, comment           |
+| Resolve / unresolve           | =R=           | =R=                   | thread                    |
+| Edit at point                 | =e=           | =i=                   | own comment, title, body  |
+| Delete at point               | =k=           | =D=                   | own comment               |
+| React                         | =+=           | =+=                   | comment, description      |
+| Toggle viewed                 | =v=           | =x=                   | file                      |
+| Submit review…                | =S=           | =S=                   | any                       |
+| Discard pending review        | =X=           | =X=                   | any                       |
+| Conversation comment          | =C=           | =C=                   | any                       |
+| Jump…                         | =j=           | =J=                   | any                       |
+| Next / previous unviewed file | =]u= =[u=     | =]u= =[u=             | any                       |
+| Next / previous thread        | =]t= =[t=     | =]t= =[t=             | any                       |
+| Review range…                 | =V=           | =gV=                  | any                       |
+| Merge / state…                | =m=           | =gm=                  | any                       |
+| Metadata (title… milestone)   | =t d l a A M= | via =?=               | any                       |
+| Layout single/split           | =L=           | =gL=                  | any                       |
+
+Input buffers: =C-c C-c= send, =C-c C-k= abort, =C-c C-s= suggestion, =C-c C-p=
+preview, =C-c @= mention (same in every state).
+
+* Faces
+All in =approve-faces.el=, group =approve-faces=.  Main ones and what they
+inherit:
+
+| Face                                             | Inherits                                     | Used for                  |
+|--------------------------------------------------+----------------------------------------------+---------------------------|
+| =approve-title=                                  | =magit-section-heading=, bold                | PR title                  |
+| =approve-heading=                                | =magit-section-heading=                      | Section headings          |
+| =approve-dim=                                    | =shadow=                                     | Hints, dates, done things |
+| =approve-user=                                   | =magit-log-author=                           | Logins                    |
+| =approve-label=                                  | (colour from GitHub, readable fg)            | Labels as boxes           |
+| =approve-state-open/closed/merged/draft=         | =success= / =error= / =magit-tag= / =shadow= | State badges              |
+| =approve-approved= / =approve-changes-requested= | =success= / =error=                          | Review marks              |
+| =approve-pending=                                | =magit-diff-our-highlight= bg                | Pending comments          |
+| =approve-thread-border=                          | =shadow=                                     | Thread box lines          |
+| =approve-resolved= / =approve-outdated=          | =shadow= / =warning=                         | Thread states             |
+| =approve-diff-added/removed/context=             | =magit-diff-added/removed/context=           | Diff lines                |
+| =approve-diff-hunk-heading=                      | =magit-diff-hunk-heading=                    | =@@= lines                |
+| =approve-diff-file-heading=                      | =magit-diff-file-heading=                    | File headings             |
+| =approve-line-number=                            | =line-number=                                | Diff line numbers         |
+| =approve-target=                                 | =region=                                     | Lines being commented on  |
+| =approve-inflight=                               | =shadow=, italic                             | Things waiting for GitHub |
+| =approve-check-success/failure/pending=          | =success= / =error= / =warning=              | Checks                    |
+
+* Icons
+=approve-icon= maps a semantic name to a nerd-icons glyph, or to a Unicode
+fallback when =approve-use-nerd-icons= is nil or the font is missing.
+
+| Name                | nerd-icons (suggested)           | Fallback |
+|---------------------+----------------------------------+----------|
+| =open=              | =nf-oct-git_pull_request=        | ●        |
+| =draft=             | =nf-oct-git_pull_request_draft=  | ◌        |
+| =merged=            | =nf-oct-git_merge=               | ⮌        |
+| =closed=            | =nf-oct-git_pull_request_closed= | ⊘        |
+| =approved=          | =nf-oct-check=                   | ✓        |
+| =changes-requested= | =nf-oct-file_diff=               | ✗        |
+| =commented=         | =nf-oct-comment=                 | 💬       |
+| =requested=         | =nf-oct-dot=                     | ○        |
+| =viewed=            | =nf-oct-check_circle=            | ✓        |
+| =unviewed=          | =nf-oct-circle=                  | ·        |
+| =dismissed=         | =nf-oct-sync=                    | ↻        |
+| =check-success=     | =nf-oct-check_circle_fill=       | ✓        |
+| =check-failure=     | =nf-oct-x_circle_fill=           | ✗        |
+| =check-pending=     | =nf-oct-dot_fill=                | ◐        |
+| =pending-comment=   | =nf-oct-pencil=                  | ✎        |
+| =label=             | =nf-oct-tag=                     | 🏷        |
+| =push=              | =nf-oct-repo_push=               | ↑        |
+| =loading=           | =nf-oct-sync=                    | ⟳        |
+| =error=             | =nf-oct-alert=                   | ✗        |

@@ -1,0 +1,190 @@
+#+title: Roadmap
+
+Phases are ordered so that each one ends with something usable and builds
+only on finished layers.  Each phase has tasks, a definition of done, and the
+flows ([[file:flows.org][F..]]) and mockups ([[file:ui.org][ui.org]]) it implements.  Spikes (SP..) are
+short experiments that answer an open question before the phase that needs
+it; write the answer into [[file:decisions.org][decisions.org]].
+
+Agents: pick the first unchecked task of the current phase, read the docs it
+links, do it in small commits ([[file:development.org][development.org]]), tick it here.
+
+* Definition of done (every task)
+- Byte-compiles with no warnings; =make lint= is clean (package-lint, checkdoc).
+- Behaviour tests exist and pass (=make test=); no network in tests.
+- Every new face is in =approve-faces.el= and inherits; every icon goes
+  through =approve-icon=; every user-visible string can be customized or
+  comes from GitHub.
+- Works with and without evil loaded.
+- Docs updated: a changed decision, flow or mockup is changed in the same
+  commit.
+
+* Phase 0 — Foundation
+Nothing visible yet; everything after builds on this.
+- [ ] =approve.el= package header, =defgroup=, autoload stubs.
+- [ ] =approve-log.el=: =*approve-log*= buffer, levels, redaction.
+- [ ] =approve-graphql.el=: loader with includes, dedupe, cycle detection
+      (port from git history: commit =9439945= and =487a5ef= in this repo, or
+      approve-v2).
+- [ ] =approve-api.el=: async GraphQL/REST, timeout, progress, error classes,
+      callbacks in the origin buffer, mutation queue (D15), pagination helper,
+      =rateLimit= tracking (port from =5646d5e= / approve-v2).
+- [ ] =approve-model.el=: port approve-v2's store; add list edits and session
+      state ([[file:architecture.org::*Data model][data model]]).
+- [ ] Fragments for every type in the [[file:architecture.org::*API map][API map]] reads: User, Actor, Label,
+      Milestone, Ref, Commit, ReactionGroup, IssueComment,
+      PullRequestReviewComment, PullRequestReview, PullRequestReviewThread,
+      PullRequest (core), CheckRun, StatusContext.
+- [ ] =approve-dev.el=: record a PR's responses as fixtures; replay fixtures as
+      a fake API (=approve-dev-offline-mode=).
+- [ ] Fixtures: a small PR, a medium PR with threads/suggestions/outdated/
+      resolved comments and a pending review, a large PR (300 files).
+- [ ] CI: GitHub Actions matrix 29.1, 29.4, 30.x, 31.x (port approve-v2's).
+- Done when :: a buttercup test loads the medium fixture through the fake API
+  into the store and the selectors return the threads of a file.
+
+* Phase 1 — Read a PR
+Open any PR by URL and read all of it.  No writes.
+Implements F01 (URL only), F02, F03, F16 (summary + expand), F17 (=g=).
+Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], header line, loading/error states, eldoc.
+- [ ] =approve-faces.el=, =approve-icons.el= (with fallback).
+- [ ] =approve-html.el=: port approve-v2's shr renderer (code, pre with
+      syntax classes, suggestion tables, tables, lists, blockquote, details,
+      images, links).
+- [ ] =approve-pr.el=: mode, buffer naming, skeleton, the F02 loading plan,
+      coalesced redraw, point restore, header line.
+- [ ] Sections: header + metadata rows, description, checks (summary,
+      expandable), commits, conversation timeline.
+- [ ] =approve-diff.el=: patch parsing (port approve-v2's), file list,
+      lazy file bodies, hunks, line numbers ([[file:decisions.org::*Open questions][Q1]]), thread index, inline
+      threads, outdated and file-level threads, large/binary files.
+- [ ] =approve-thread.el=: thread and comment rendering, resolved collapsed,
+      pending styling, reactions, edited marker.
+- [ ] =approve-context.el= with all the read-only contexts.
+- [ ] Navigation: =j= transient, =]u= =[u= =]t= =[t=, =RET=, =o=, =y=.
+- [ ] =approve-eldoc.el=.
+- [ ] Measure against the [[file:architecture.org::*Speed][speed budgets]] with the fixtures.
+- Done when :: the medium fixture and three real PRs (small, with
+  suggestions, 100+ files) render like the mockups, =g= keeps point and
+  collapsed state, and the budgets hold.
+
+** SP4 Syntax highlighting in hunks
+Before the diff task: try fontifying the reconstructed old and new texts of
+each hunk with the file's major mode (like =diff-font-lock-syntax=), applied
+only when a file is expanded.  Measure on the large fixture.  Decide: on by
+default, off by default, or dropped.
+
+** SP5 Images in bodyHTML
+Check that private repository images (signed URLs) and public camo images load
+through shr asynchronously, and what happens when a signed URL has expired
+(refresh the PR? placeholder with =o= to open?).
+
+* Phase 2 — Review
+The core of the tool: everything needed to do a full review.
+Implements F00, F04–F10, F17 (change detection), F18.
+Mockups: input buffer, dispatch, submit review, pending review section, keys.
+- [ ] =approve-input.el=: port approve-v2's, add targets/drafts, header-line
+      context, target highlight, completion (=@=, =#=, =:emoji:=), =C-c C-s=
+      suggestion, =C-c C-p= preview.
+- [ ] Action pipeline (F00) as one macro or function the commands share.
+- [ ] Mutations: viewed, review (add/thread/reply/submit/delete/update),
+      comment edits and deletes, resolve, conversation comment.
+- [ ] =approve-review.el=: find and track the pending review; start, add,
+      submit, discard (F05, F09).
+- [ ] Commands: =v c s r R e k C S X= with evil equivalents (=approve-evil.el=).
+- [ ] =approve-menus.el=: dispatch and submit transients.
+- [ ] "Your pending review" section; header line counts.
+- [ ] Change detection (D23).
+- [ ] Split layout and =L= (F18).
+- Done when :: a whole review can be done on a real PR from Emacs: mark files
+  viewed, comment on a line, a range and a file, suggest, reply, resolve,
+  edit, delete, and submit approve / request changes / comment.  The browser
+  shows exactly the same state at each step, and a pending review started in
+  the browser can be finished in Emacs.
+
+** SP1 Review API behaviour
+Before =approve-review.el=, on a scratch repository, find out and note in
+[[file:decisions.org][decisions.org]]:
+- Can a single comment (=addPullRequestReview= with =event=) be posted while
+  the viewer has a pending review?  (Expected: no.  Then =C-u c= says so.)
+- Does a reply without =pullRequestReviewId= publish at once while a review
+  is pending?
+- Multi-line ranges: may they span hunks?  Mix LEFT and RIGHT?
+- Can context lines outside hunks (expanded context) take comments?
+- Deleting the last comment of a pending review: does the review remain?
+- Does the =REQUEST_CHANGES= / =COMMENT= verdict need a body when there are
+  no comments?  Does it need one on the viewer's own PR (where approve and
+  request changes are not allowed)?
+
+** SP6 Evil keys
+Check the key table against evil-collection's magit-section bindings and
+=evil-collection-magit= habits; make sure =V= range selection gives the right
+region to =c=.
+
+* Phase 3 — Find PRs
+Implements F01 in full.
+Mockups: dashboard, search, search filter transient.
+- [ ] =approve-list.el=: shared list rendering (port approve-v2's dashboard
+      formatting).
+- [ ] =approve-dashboard.el= with =approve-dashboard-sections= (filters as
+      strings or functions), per-section refresh, "Recently opened".
+- [ ] =approve-search.el= and its filter transient; "Load more".
+- [ ] =approve-at-point=: PR URLs in any buffer; Magit/Forge PR at point
+      (soft dependency, no =require=).
+- [ ] =approve-browse-url-handler= (opt-in) for =browse-url-handlers=.
+- Done when :: the author's daily lists (review requested, mine, involved) open
+  from one command, and any PR link in Emacs opens in Approve with one key.
+
+* Phase 4 — Manage the PR
+Implements F08 (title, description), F11, F12.
+- [ ] Repository metadata fetch and cache (D24).
+- [ ] Title, description, labels, assignees, reviewers (users and teams),
+      milestone, draft/ready, subscription, lock, reactions, minimize
+      comments.
+- [ ] Metadata keys on the metadata rows (=RET= on Labels edits labels).
+- Done when :: everything in GitHub's PR sidebar can be changed from Emacs.
+
+* Phase 5 — Merge and checks
+Implements F13, F16 in full.
+- [ ] Merge transient: methods allowed by the repository, commit title/body,
+      delete branch, auto-merge, merge queue, update branch, close/reopen.
+- [ ] Checks: lazy contexts, required marks, ordering, details URL.
+- Done when :: a PR can be taken from "review requested" to merged without
+  the browser.
+
+* Phase 6 — Iterative review and the file view
+Implements F14, F15.
+Mockups: commits with range, review range transient, file view.
+- [ ] Review range: since my last review, one commit, a range (REST compare).
+- [ ] Commentability rules for a range view (SP1 results).
+- [ ] =approve-file.el=: blob fetch and cache, major mode, fringe, threads as
+      overlays, base/head toggle, comment on diff lines.
+- [ ] "New since your last review" marks on comments and commits; =j n=.
+- Done when :: re-reviewing after a push shows only the new changes, and any
+  changed file can be read whole with syntax highlighting.
+
+* Phase 7 — Notifications, polish, release
+Implements F19.
+- [ ] =approve-notifications.el= and the filter transient.
+- [ ] Dashboard unread marks ([[file:decisions.org::*Open questions][Q6]]).
+- [ ] =approve-doctor=.
+- [ ] Performance pass on the large fixture and on real huge PRs.
+- [ ] User manual ([[file:decisions.org::*Open questions][Q5]]), README with screenshots, customization docs.
+- [ ] MELPA recipe and release.
+- Done when :: a new user can install from MELPA, set a token, run
+  =approve-dashboard= and review, following only the README.
+
+* Ideas
+Not planned yet.  Each needs a decision before it enters a phase.
+- Apply suggestions from Emacs with =createCommitOnBranch= (needs the
+  full file contents, API-only).
+- AI-assisted review in the spirit of Hutch: a gptel-backed command that reads
+  the PR diff through the API and proposes comments and suggestions as
+  *pending* review comments, which the user edits or deletes before
+  submitting.  Nothing is ever posted without the user's submit.
+- A failing check's log in a buffer (Actions REST API), with timestamps.
+- Create a PR from Magit (=createPullRequest=), with a template.
+- Org links to PRs, threads and comments (=approve:owner/repo#123=).
+- A "review queue" mode: walk unviewed files one by one, full-screen, with
+  =v= advancing to the next.
+- Avatars (shr images, cached) next to authors, behind a defcustom.

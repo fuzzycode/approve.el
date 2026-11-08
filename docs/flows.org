@@ -1,0 +1,637 @@
+#+title: Flows — user scenarios
+
+Each scenario (F01…) says who does what, then shows it as a flowchart.  The
+notation is the same throughout:
+
+#+begin_example
+ ┌──────────┐
+ │ action   │   something Approve does
+ └──────────┘
+ ◇ test? ◇      a decision; branches are labelled
+ [user]         something the user does
+ ──▶            flow
+ ⇢ F07          continue in another flow
+#+end_example
+
+Most write actions follow the same pipeline ([[*F00 The action pipeline][F00]]); their own flowcharts
+show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutations are named in
+[[file:architecture.org::*API map][architecture.org]].
+
+* Scenario index
+| ID  | Scenario                                   | Phase |
+|-----+--------------------------------------------+-------|
+| F00 | The action pipeline (every write)          |     2 |
+| F01 | Find and open a PR                         |   1/3 |
+| F02 | Load a PR                                  |     1 |
+| F03 | Read and navigate                          |     1 |
+| F04 | Mark a file viewed                         |     2 |
+| F05 | Comment on code (line, range, file)        |     2 |
+| F06 | Suggest a change                           |     2 |
+| F07 | Reply to a thread; resolve or unresolve    |     2 |
+| F08 | Edit or delete own text                    |     2 |
+| F09 | Submit or discard a review                 |     2 |
+| F10 | Conversation comment, with quoting         |     2 |
+| F11 | React                                      |     4 |
+| F12 | Edit PR metadata                           |     4 |
+| F13 | Merge, close, reopen, draft, update branch |     5 |
+| F14 | Re-review after new commits                |     6 |
+| F15 | View the whole file                        |     6 |
+| F16 | Inspect checks                             |   1/5 |
+| F17 | Refresh and detect remote changes          |   1/2 |
+| F18 | Switch layout                              |     2 |
+| F19 | Notifications                              |     7 |
+
+* F00 The action pipeline
+Every command that changes something on GitHub runs this pipeline.  Code
+lives in =approve-actions.el=; each command supplies the parts marked ✱.
+
+#+begin_example
+ [user] key or menu suffix
+        │
+        ▼
+ ┌─────────────────────────────────────┐
+ │ ctx = approve-context-at-point      │
+ └──────────────────┬──────────────────┘
+                    ▼
+        ◇ ✱ does the command apply to ctx? ◇──no──▶ user-error saying what it needs
+                    │ yes                           ("Put point on a thread")
+                    ▼
+        ◇ ✱ viewerCan… / not locked? ◇────────no──▶ user-error saying why not
+                    │ yes
+                    ▼
+        ◇ ✱ needs text? ◇──yes──▶ open input buffer (draft prefilled)
+                    │ no                    │
+                    │            [user] C-c C-k ──▶ keep draft, restore windows, stop
+                    │                       │
+                    │            [user] C-c C-c
+                    ◀───────────────────────┘
+                    ▼
+ ┌─────────────────────────────────────┐
+ │ mark target in flight (face, ⟳)     │
+ │ ✱ enqueue mutation(s)  (serial)     │
+ └──────────────────┬──────────────────┘
+                    ▼
+        ◇ success? ◇──no──▶ clear mark · show GitHub's message · keep draft
+                    │ yes                 (rate limit: queue pauses until reset)
+                    ▼
+ ┌─────────────────────────────────────┐
+ │ patch store with returned fragment  │
+ │ ✱ list edits (append/remove refs)   │
+ │ clear draft · clear mark            │
+ │ redraw (all buffers of this PR),    │
+ │ restore point                       │
+ └─────────────────────────────────────┘
+#+end_example
+
+* F01 Find and open a PR
+Ways in: the dashboard, a search, a URL, the PR at point in Magit/Forge, a
+GitHub URL opened through =browse-url=, a notification.
+
+#+begin_example
+ [user] RET in dashboard ────┐
+ [user] RET in search ───────┤
+ [user] M-x approve URL ─────┤    (prompt defaults to a PR URL at point or
+ [user] approve-at-point ────┤     in the kill ring)
+        (Magit/Forge, text)  │
+ browse-url handler ─────────┤    (approve-browse-url-handler, opt-in)
+ [user] RET on notification ─┘
+        │
+        ▼
+ ┌───────────────────────────────┐
+ │ parse → host owner repo number│
+ └──────────────┬────────────────┘
+                ▼
+     ◇ valid PR? ◇──no──▶ user-error "Not a pull request URL: …"
+                │ yes
+                ▼
+     ◇ buffer for it exists? ◇──yes──▶ switch to it (no reload; header says if stale)
+                │ no
+                ▼
+ ┌───────────────────────────────┐
+ │ create buffer, approve-pr-mode│
+ │ remember in "recently opened" │
+ └──────────────┬────────────────┘
+                ▼
+                ⇢ F02
+#+end_example
+
+Opening from a notification also moves point to the thing that caused it
+(comment, review, commit) once it is loaded.
+
+* F02 Load a PR
+#+begin_example
+ ┌──────────────────────────────────────────┐
+ │ draw skeleton: "#1234" + every section   │
+ │ heading with "⟳ Loading…"                │
+ └────────────────────┬─────────────────────┘
+                      ▼
+ ┌──────────────────────────────────────────┐
+ │ start in parallel:                       │
+ │  Q core · Q files · Q threads ·          │
+ │  Q timeline · Q commits · R patches      │
+ └────────────────────┬─────────────────────┘
+                      ▼
+          ◇ a response arrives ◇◀────────────────────────────┐
+                      │                                      │
+          ◇ ok? ◇──no──▶ section error: "✗ … · g to retry"   │
+                      │ yes            (401/404 from Q core: │
+                      ▼                 whole buffer error)  │
+ ┌──────────────────────────────────────────┐                │
+ │ normalize into store                     │                │
+ │ more pages? request next page            │                │
+ │ schedule redraw (coalesce ≈50 ms)        │                │
+ └────────────────────┬─────────────────────┘                │
+                      ▼                                      │
+          ◇ all queries settled? ◇──no───────────────────────┘
+                      │ yes
+                      ▼
+ ┌──────────────────────────────────────────┐
+ │ header line: final counts                │
+ │ start change detection (F17)             │
+ └──────────────────────────────────────────┘
+#+end_example
+
+First view: sections are expanded to level 2 (headings and summaries), viewed
+files collapsed, unviewed files collapsed too, but listed.  After that, the
+visibility cache remembers what the user opened.
+
+* F03 Read and navigate
+No network.  This is mostly magit-section plus jumps.
+
+#+begin_example
+ [user] wants to…
+   │
+   ├─ move around ───────────▶ n/p (gj/gk), TAB, ^ (parent), M-n/M-p (sibling)
+   ├─ go somewhere ──────────▶ j … transient: description, conversation, checks,
+   │                            commits, files, pending review, a file by name
+   ├─ find the next work ────▶ ]u next unviewed file · ]t next unresolved thread
+   │                            j n next comment new since my last review
+   ├─ learn about a thing ───▶ eldoc in the echo area (user, label, sha, check)
+   ├─ follow a thing ────────▶ RET: file → its diff · commit → commit diff
+   │                            issue/PR link → open (PR in Approve) · check → URL
+   ├─ see it on GitHub ──────▶ o (thing at point, else the PR)
+   └─ copy it ───────────────▶ y (URL, sha, path:line)
+#+end_example
+
+* F04 Mark a file viewed
+#+begin_example
+ [user] v on a file heading, file entry, or any line inside a file's diff
+        │
+        ▼
+     ◇ state? ◇
+        ├─ VIEWED ──────────────▶ unmarkFileAsViewed
+        └─ UNVIEWED/DISMISSED ──▶ markFileAsViewed
+        │
+        ▼
+ F00 pipeline (no text) ─▶ patch file's viewerViewedState
+        │
+        ▼
+ ┌──────────────────────────────────────────┐
+ │ marking viewed collapses the file and,   │
+ │ when approve-viewed-advance is t, moves  │
+ │ point to the next unviewed file          │
+ └──────────────────────────────────────────┘
+#+end_example
+
+=DISMISSED= ("changed since viewed") is set by GitHub when new commits touch a
+viewed file.  It shows as ↻ and counts as not viewed.
+
+* F05 Comment on code
+The heart of reviewing.  It works on one line, a range (region or visual
+line selection), or a whole file.
+
+#+begin_example
+ [user] c  (C-u c = single comment)
+        │
+        ▼
+     ◇ region active? ◇──yes──▶ start = first diff line in region
+        │ no                     end   = last diff line in region
+        │                              │
+        │                   ◇ same file and hunk, ◇──no──▶ user-error
+        │                   ◇ all lines in diff?  ◇        "A range must stay in one hunk"
+        │                              │ yes
+        ▼                              │
+     ◇ on a diff line? ◇──yes──▶ target LINE (path, side, line)
+        │ no                           │
+        ▼                              │
+     ◇ on a file heading? ◇──yes──▶ target FILE (subjectType FILE)
+        │ no                           │
+        ▼                              │
+        ⇢ F10 (conversation comment)   │
+                                       ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ highlight target lines · open input buffer             │
+ │ header: "Comment on approve-api.el:41–42 · pending…"   │
+ └───────────────────────────┬────────────────────────────┘
+                             │ [user] C-c C-c
+                             ▼
+     ◇ viewer has a pending review? ◇──yes──▶ addPullRequestReviewThread
+        │ no                                   (pullRequestReviewId, target, body)
+        ▼
+     ◇ single comment (C-u, or default single)? ◇──yes──▶ addPullRequestReview
+        │ no                                              (event COMMENT, threads [target])
+        ▼                                                 → published now
+ addPullRequestReview (no event, threads [target])
+ → a new PENDING review holding the thread
+        │
+        ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ patch store: thread, comment, review                   │
+ │ append thread ref to PR.reviewThreads                  │
+ │ set pending review ref (if new)                        │
+ │ redraw: thread under its line, "Your pending review"   │
+ │ section, header counts                                 │
+ └────────────────────────────────────────────────────────┘
+#+end_example
+
+Side and line rules:
+- Added and context lines take =side RIGHT= and the new line number.  Removed
+  lines take =side LEFT= and the old line number.
+- A range spanning removed and added lines uses =startSide=/=side= for each
+  end.
+- The thread is drawn under the =line= (the end of the range).
+- Open details for [[file:roadmap.org::*SP1 Review API behaviour][SP1]]: ranges across hunks, and lines outside hunks.
+
+The pending review over its life:
+#+begin_example
+                first code comment or reply (not single)
+   ┌───────┐ ─────────────────────────────────────────▶ ┌─────────┐
+   │ none  │                                            │ PENDING │◀─┐ add · edit ·
+   └───────┘ ◀─── discard: deletePullRequestReview ──── └────┬────┘──┘ delete comments
+       ▲                                                     │
+       │          submit: submitPullRequestReview            │
+       └──────────── (APPROVE · REQUEST_CHANGES · COMMENT) ◀─┘
+                     review becomes visible to everyone
+
+ A pending review started in the browser is found on load (Q core)
+ and continued here, and the other way round.
+#+end_example
+
+* F06 Suggest a change
+#+begin_example
+ [user] s on added/context line(s)    (or C-c C-s inside a comment input)
+        │
+        ▼
+     ◇ target on the new side? ◇──no──▶ user-error "Suggestions apply to the new version"
+        │ yes
+        ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ same as F05, but the input is prefilled with:          │
+ │   ```suggestion                                        │
+ │   <the target lines, new side, without +/space prefix> │
+ │   ```                                                  │
+ │ point placed inside the block                          │
+ └───────────────────────────┬────────────────────────────┘
+                             ▼
+                          ⇢ F05 from "C-c C-c"
+#+end_example
+
+Rendering: GitHub's =bodyHTML= turns the block into a small diff, which
+=approve-html= draws as "Suggested change" ([[file:ui.org::*Threads: suggestions, file-level, outdated][mockup]]).  Applying suggestions
+is a later idea ([[file:roadmap.org::*Ideas][roadmap]]).
+
+* F07 Reply to a thread; resolve or unresolve
+#+begin_example
+ [user] r on a thread or one of its comments
+        │
+        ▼
+     ◇ viewerCanReply? ◇──no──▶ user-error
+        │ yes
+        ▼
+ input buffer "Reply to bob on approve-api.el:42"
+ (C-u r: quote the comment at point; region: quote the region)
+        │ C-c C-c
+        ▼
+     ◇ pending review? ◇──yes──▶ addPullRequestReviewThreadReply(threadId, body, reviewId)
+        │ no                     → reply is pending, listed in "Your pending review"
+        ▼
+ addPullRequestReviewThreadReply(threadId, body) → published now
+        │
+        ▼
+ append comment ref to thread.comments → redraw
+
+
+ [user] R on a thread
+        │
+        ▼
+     ◇ resolved? ◇──yes──▶ viewerCanUnresolve? ──▶ unresolveReviewThread ─┐
+        │ no                                                              │
+        ▼                                                                 │
+ viewerCanResolve? ──▶ resolveReviewThread ───────────────────────────────┤
+                                                                          ▼
+                                     patch isResolved → redraw (resolved threads collapse)
+#+end_example
+
+* F08 Edit or delete own text
+=e= edits and =k= deletes whatever own text is at point.  The context decides
+the mutation:
+
+| Context         | Edit (=e=)                                    | Delete (=k=)                             |
+|-----------------+-----------------------------------------------+------------------------------------------|
+| title           | =updatePullRequest(title)=, single-line input | —                                        |
+| description     | =updatePullRequest(body)=                     | —                                        |
+| issue-comment   | =updateIssueComment=                          | =deleteIssueComment=                     |
+| review-comment  | =updatePullRequestReviewComment=              | =deletePullRequestReviewComment=         |
+| review (body)   | =updatePullRequestReview=                     | — (dismiss is a separate command)        |
+| pending comment | =updatePullRequestReviewComment=              | =deletePullRequestReviewComment= (an     |
+|                 |                                               | emptied pending review stays; check SP1) |
+
+#+begin_example
+ [user] e                                   [user] k
+   │                                          │
+   ▼                                          ▼
+ ◇ viewerCanUpdate? ◇──no──▶ user-error     ◇ viewerCanDelete? ◇──no──▶ user-error
+   │ yes                                      │ yes
+   ▼                                          ▼
+ input prefilled with the raw markdown      ◇ y-or-n-p "Delete bob's… comment?" ◇──n──▶ stop
+ (fetch `body' if only bodyHTML is loaded)    │ y
+   │ C-c C-c                                  ▼
+   ▼                                        mutation → remove ref from its list
+ ◇ text unchanged? ◇──yes──▶ stop, no request   │      → redraw
+   │ no                                       │
+   ▼                                          │
+ mutation → patch → redraw ◀──────────────────┘
+#+end_example
+
+* F09 Submit or discard a review
+#+begin_example
+ [user] S
+   │
+   ▼
+ transient: Approve · Request changes · Comment   (header: pending counts)
+   │
+   ├─ C-u a ───────────────────────────────────────────────────┐ (no body)
+   │                                                           │
+   ▼                                                           │
+ input buffer "Review body — Request changes" (draft prefilled)│
+   │ C-c C-c                                                   │
+   ▼                                                           │
+ ◇ body empty and verdict needs one? ◇──yes──▶ user-error      │
+   │ no            (Request changes / Comment with no comments)│
+   ◀───────────────────────────────────────────────────────────┘
+   ▼
+ ◇ pending review? ◇──yes──▶ submitPullRequestReview(reviewId, event, body)
+   │ no
+   ▼
+ addPullRequestReview(event, body)
+   │
+   ▼
+ patch review (state APPROVED/…) · clear pending ref · redraw
+ header: "✓ You approved"; reviewer row updates; pending section disappears
+
+
+ [user] X (or x in the submit transient)
+   │
+   ▼
+ ◇ pending review? ◇──no──▶ user-error "No pending review"
+   │ yes
+   ▼
+ ◇ yes-or-no-p "Discard pending review with 3 comments?" ◇──no──▶ stop
+   │ yes
+   ▼
+ deletePullRequestReview → remove its threads and comments from the store → redraw
+#+end_example
+
+* F10 Conversation comment, with quoting
+#+begin_example
+ [user] C anywhere, or c where there is no code context
+   │
+   ▼
+ ◇ region active? ◇──yes──▶ quote = region text, as "> " lines
+   │ no
+   ▼
+ ◇ C-u and on a comment? ◇──yes──▶ quote = that comment's markdown
+   │ no
+   ▼
+ input buffer "Comment on #1234" (quote, then an empty line, point after it)
+   │ C-c C-c
+   ▼
+ ◇ PR locked and viewer not a collaborator? ◇──yes──▶ user-error (checked before input)
+   │ no
+   ▼
+ addComment(subjectId = PR, body) → append to timeline → redraw, point on the new comment
+#+end_example
+
+=r= on a conversation comment is the same flow with =C-u= implied: it quotes
+that comment.
+
+* F11 React
+#+begin_example
+ [user] + on a comment, review body, or the description
+   │
+   ▼
+ completing-read over 👍 👎 😄 🎉 😕 ❤️ 🚀 👀, own reactions marked ✓
+   │
+   ▼
+ ◇ viewer already reacted with it? ◇──yes──▶ removeReaction
+   │ no
+   ▼
+ addReaction → patch reactionGroups → redraw
+#+end_example
+
+* F12 Edit PR metadata
+Labels shown; assignees, reviewers and milestone work the same way.
+
+#+begin_example
+ [user] l (or ? l, or RET on the Labels row)
+   │
+   ▼
+ ◇ viewerCanLabel? ◇──no──▶ user-error
+   │ yes
+   ▼
+ ◇ repo labels cached? ◇──no──▶ fetch repository.labels (all pages), cache (D24)
+   │ yes                              │
+   ◀──────────────────────────────────┘
+   ▼
+ completing-read-multiple, current labels preselected, annotated
+   │
+   ▼
+ to-add = chosen − current     to-remove = current − chosen
+   │
+   ▼
+ ◇ nothing changed? ◇──yes──▶ stop
+   │ no
+   ▼
+ addLabelsToLabelable(to-add) then removeLabelsFromLabelable(to-remove)  (queued)
+   │
+   ▼
+ patch PR.labels → redraw
+#+end_example
+
+| Field              | Candidates                                         | Mutation(s)                                                                 |
+|--------------------+----------------------------------------------------+-----------------------------------------------------------------------------|
+| Title, description | —                                                  | =updatePullRequest= (F08)                                                   |
+| Labels             | =repository.labels=                                | =addLabelsToLabelable= / =removeLabelsFromLabelable=                        |
+| Assignees          | =repository.assignableUsers=                       | =addAssigneesToAssignable= / =removeAssigneesFromAssignable=                |
+| Reviewers          | assignable users + teams; suggestedReviewers first | =requestReviews= (=union: false= sends the whole set, so removal works too) |
+| Milestone          | =repository.milestones(states: OPEN)=              | =updatePullRequest(milestoneId)=                                            |
+| Draft / ready      | —                                                  | =convertPullRequestToDraft= / =markPullRequestReadyForReview=               |
+| Subscription       | subscribed / ignored / unsubscribed                | =updateSubscription=                                                        |
+
+* F13 Merge, close, reopen, draft, update branch
+#+begin_example
+ [user] m
+   │
+   ▼
+ transient; title line from mergeable, mergeStateStatus, reviewDecision,
+ statusCheckRollup; methods limited to what the repository allows
+   │
+   ├── m / s / r (merge method) ──▶ ◇ mergeStateStatus CLEAN or UNSTABLE? ◇
+   │                                   │ no (BLOCKED, BEHIND, DIRTY, DRAFT…)
+   │                                   ├──▶ user-error with the reason,
+   │                                   │    suggest a / Q / u
+   │                                   │ yes
+   │                                   ▼
+   │                         ◇ yes-or-no-p "Squash and merge #1234 into main?" ◇──no──▶ stop
+   │                                   │ yes
+   │                                   ▼
+   │                         mergePullRequest(method, title, body)
+   │                                   ▼
+   │                         ◇ -d delete branch? ◇──yes──▶ REST DELETE git/refs/heads/…
+   │                                   │                   (only if viewerCanDeleteHeadRef)
+   │                                   ▼
+   │                         full refresh (F17 "g")
+   │
+   ├── a auto-merge ──────────▶ enablePullRequestAutoMerge(method) → patch → redraw
+   ├── Q merge queue ─────────▶ enqueuePullRequest → patch → redraw
+   ├── u update branch ───────▶ updatePullRequestBranch → refresh
+   ├── D draft ───────────────▶ convertPullRequestToDraft → patch
+   └── c close / reopen ──────▶ yes-or-no-p → closePullRequest / reopenPullRequest → patch
+#+end_example
+
+* F14 Re-review after new commits
+GitHub knows which commit the viewer last reviewed (=viewerLatestReview=), and
+it sets new changes on viewed files to =DISMISSED=.
+
+#+begin_example
+ load (F02)
+   │
+   ▼
+ ◇ viewerLatestReview.commit ≠ headRefOid? ◇──no──▶ nothing extra
+   │ yes
+   ▼
+ Commits heading: "2 new since your review"; new commits marked ┃
+ header line: "2 new commits since your review — V l to see only them"
+   │
+ [user] V l   (or V c one commit, V r a range, V a all)
+   │
+   ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ REST compare base…head (e.g. lastReviewed…headRefOid)  │
+ │ store patches under :range; redraw Diff section from   │
+ │ them; threads still come from the PR                   │
+ └───────────────────────────┬────────────────────────────┘
+                             ▼
+ Diff heading: "Diff · since your last review (2 commits) · V a all changes"
+                             │
+ [user] c on a line in this view
+                             │
+                             ▼
+ ◇ new-side line and inside the PR's own diff? ◇──no──▶ user-error
+   │ yes                                                "Comment from the full diff:
+   ▼                                                     this line isn't in the PR's diff"
+ ⇢ F05 with the PR-diff line number (same file at head ⇒ same number)
+#+end_example
+
+"Since your last review" works only if the reviewed commit still exists in
+history.  After a force push, compare may fail: say so and fall back to all
+changes.
+
+* F15 View the whole file
+#+begin_example
+ [user] RET on a diff line (or F on a file)
+   │
+   ▼
+ side = LEFT? → base oid (baseRefOid) and old path : head oid (headRefOid) and path
+   │
+   ▼
+ ◇ blob cached (by oid:path)? ◇──no──▶ repository.object(expression: "OID:path") { text }
+   │ yes                                     │ binary or too big ──▶ user-error / open on GitHub
+   ◀─────────────────────────────────────────┘
+   ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ buffer *approve-file: …*, read-only, file's major mode │
+ │ fringe marks from the parsed patch                     │
+ │ threads as overlays under their lines                  │
+ │ point on the same line as in the diff                  │
+ └───────────────────────────┬────────────────────────────┘
+                             ▼
+ n/p next change · ]t thread · b base/head · v viewed · c comment (diff lines only) · q back
+#+end_example
+
+* F16 Inspect checks
+#+begin_example
+ Checks heading shows the rollup (from Q core)
+   │
+ [user] TAB on Checks
+   │
+   ▼
+ ◇ contexts loaded? ◇──no──▶ fetch statusCheckRollup.contexts for head commit (lazy)
+   │ yes                       │
+   ◀───────────────────────────┘
+   ▼
+ failing and running first, then required, then the rest ("… 4 more passed")
+   │
+ [user] RET on a check ──▶ browse-url detailsUrl/targetUrl
+ [user] g on Checks    ──▶ refetch only the rollup and contexts
+#+end_example
+
+Later idea: show a failing job's log in a buffer (REST Actions API).
+
+* F17 Refresh and detect remote changes
+#+begin_example
+ [user] g               (C-u g: also clear repo metadata and blob caches)
+   │
+   ▼
+ keep current text on screen; header line "⟳ refreshing…"
+ run F02's queries again; on arrival replace store contents; redraw, restore point
+   │
+   ▼
+ sections that failed keep their old content plus "✗ refresh failed"
+
+
+ change detection (D23)
+   │
+   ▼
+ buffer gets focus (at most once a minute) · or approve-poll-interval timer
+   │
+   ▼
+ query { pullRequest { updatedAt headRefOid } }
+   │
+   ▼
+ ◇ different from the store? ◇──no──▶ nothing
+   │ yes
+   ▼
+ header line: "⟳ updated on GitHub — g to refresh"  (+ "new commits" when headRefOid moved)
+ never redraw by itself
+#+end_example
+
+* F18 Switch layout
+#+begin_example
+ [user] L
+   │
+   ▼
+ ◇ layout single? ◇──yes──▶ create *approve-diff: …* sharing the store,
+   │ no                      remove Diff from the PR buffer, show the diff buffer,
+   │                         point on the same file and line
+   ▼
+ kill the diff buffer, insert Diff into the PR buffer, point on the same file and line
+#+end_example
+
+=approve-layout= sets the default for new PR buffers.
+
+* F19 Notifications
+#+begin_example
+ [user] M-x approve-notifications
+   │
+   ▼
+ REST GET /notifications (participating or all, per filter), PR subjects first
+   │
+   ▼
+ list grouped by repository (ui.org mockup)
+   │
+ [user] RET ──▶ F01 (open PR, jump to the subject's latest comment) ──▶ mark thread read
+ [user] x   ──▶ PATCH /notifications/threads/{id} (read)
+ [user] u   ──▶ DELETE …/threads/{id}/subscription (unsubscribe)
+ [user] f   ──▶ filter transient: unread only, participating, reason, repository
+#+end_example
