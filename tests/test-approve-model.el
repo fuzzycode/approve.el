@@ -64,14 +64,18 @@
                (pageInfo . ((hasNextPage . ,has-next) (endCursor . ,cursor)))
                (nodes . ,files))))))
 
-(defun test-approve-model--comment (id review-id body)
-  "Return a review comment ID in review REVIEW-ID with BODY."
+(defun test-approve-model--comment (id review-id body &optional reply-to)
+  "Return a review comment ID in review REVIEW-ID with BODY.
+With REPLY-TO, the comment replies to the comment with that id."
   `((__typename . "PullRequestReviewComment")
     (id . ,id)
     (body . ,body)
     (author . ,(test-approve-model--user "U_bob" "bob"))
     (pullRequestReview . ((__typename . "PullRequestReview")
-                          (id . ,review-id)))))
+                          (id . ,review-id)))
+    (replyTo . ,(and reply-to
+                     `((__typename . "PullRequestReviewComment")
+                       (id . ,reply-to))))))
 
 (defun test-approve-model--thread (id path line resolved comments)
   "Return thread ID on PATH at LINE, RESOLVED or not, with COMMENTS."
@@ -91,15 +95,36 @@
                  (pageInfo . ((hasNextPage . nil) (endCursor . "C")))
                  (nodes . ,comments)))))
 
-(defun test-approve-model--threads-page (threads has-next cursor)
-  "Return a threads response with THREADS, HAS-NEXT and CURSOR."
+(defun test-approve-model--threads-page (threads total has-next cursor)
+  "Return a threads response with THREADS of TOTAL, HAS-NEXT and CURSOR."
   (test-approve-model--response
    `((__typename . "PullRequest")
      (id . "PR_1")
-     (reviewThreads . ((totalCount . 3)
+     (reviewThreads . ((totalCount . ,total)
                        (pageInfo . ((hasNextPage . ,has-next)
                                     (endCursor . ,cursor)))
                        (nodes . ,threads))))))
+
+(defun test-approve-model--checks-page (ids has-next cursor)
+  "Return a PR whose check runs IDS sit under a list without pageInfo.
+The check list carries HAS-NEXT and CURSOR."
+  `((__typename . "PullRequest")
+    (id . "PR_1")
+    (headCommit
+     . ((nodes
+         . (((__typename . "Commit")
+             (id . "C_1")
+             (statusCheckRollup
+              . ((__typename . "StatusCheckRollup")
+                 (id . "SCR_1")
+                 (contexts
+                  . ((totalCount . 3)
+                     (pageInfo . ((hasNextPage . ,has-next)
+                                  (endCursor . ,cursor)))
+                     (nodes . ,(mapcar (lambda (id)
+                                         `((__typename . "CheckRun")
+                                           (id . ,id)))
+                                       ids)))))))))))))
 
 (defun test-approve-model--load-pr ()
   "Load the hand-made PR: core, two files and three threads."
@@ -115,14 +140,14 @@
            "PRRT_1" "lisp/a.el" 5 nil
            (list (test-approve-model--comment "PRRC_1" "PRR_done" "Why?")
                  (test-approve-model--comment "PRRC_2" "PRR_pending"
-                                              "Because.")))
+                                              "Because." "PRRC_1")))
           (test-approve-model--thread
            "PRRT_2" "lisp/b.el" 3 nil
            (list (test-approve-model--comment "PRRC_3" "PRR_done" "Typo")))
           (test-approve-model--thread
            "PRRT_3" "lisp/a.el" 20 t
            (list (test-approve-model--comment "PRRC_4" "PRR_done" "Done"))))
-    nil "T3")))
+    3 nil "T3")))
 
 (defun test-approve-model--ids (entities)
   "Return the ids of ENTITIES."
@@ -284,29 +309,39 @@
       (approve-model-load
        (test-approve-model--threads-page
         (list (test-approve-model--thread "PRRT_1" "a.el" 1 nil nil))
-        t "T1"))
+        3 t "T1"))
       (approve-model-load-page
        (test-approve-model--threads-page
         (list (test-approve-model--thread "PRRT_2" "b.el" 2 nil nil))
-        nil "T2"))
+        4 nil "T2"))
       (let ((threads (approve-pr-field 'reviewThreads)))
         (expect (test-approve-model--ids (approve-model-nodes threads))
                 :to-equal '("PRRT_1" "PRRT_2"))
         (expect (approve-model-page-info threads)
                 :to-equal '((hasNextPage . nil) (endCursor . "T2")))
-        (expect (approve-model-total-count threads) :to-equal 3)))
+        (expect (approve-model-total-count threads) :to-equal 4)))
+
+    (it "appends a paged list nested under a list without pageInfo"
+      (approve-model-load
+       (test-approve-model--checks-page '("CR_1" "CR_2") t "c2") t)
+      (approve-model-load-page
+       (test-approve-model--checks-page '("CR_3") nil "c3"))
+      (expect (test-approve-model--ids
+               (approve-model-nodes
+                (approve-model-get "StatusCheckRollup" "SCR_1" 'contexts)))
+              :to-equal '("CR_1" "CR_2" "CR_3")))
 
     (it "skips refs that are already in the list"
       (approve-model-load (test-approve-model--core) t)
       (approve-model-load
        (test-approve-model--threads-page
         (list (test-approve-model--thread "PRRT_1" "a.el" 1 nil nil))
-        t "T1"))
+        3 t "T1"))
       (approve-model-load-page
        (test-approve-model--threads-page
         (list (test-approve-model--thread "PRRT_1" "a.el" 1 t nil)
               (test-approve-model--thread "PRRT_2" "b.el" 2 nil nil))
-        nil "T2"))
+        3 nil "T2"))
       (expect (test-approve-model--ids (approve-pr-threads))
               :to-equal '("PRRT_1" "PRRT_2"))
       (expect (alist-get 'isResolved (car (approve-pr-threads))) :to-be t))
@@ -329,13 +364,13 @@
         (list (test-approve-model--thread
                "PRRT_1" "a.el" 1 nil
                (list (test-approve-model--comment "PRRC_1" "PRR_done" "a"))))
-        t "T1"))
+        3 t "T1"))
       (approve-model-load-page
        (test-approve-model--threads-page
         (list (test-approve-model--thread
                "PRRT_1" "a.el" 1 nil
                (list (test-approve-model--comment "PRRC_2" "PRR_done" "b"))))
-        nil "T2"))
+        3 nil "T2"))
       (let ((thread (car (approve-pr-threads))))
         (expect (test-approve-model--ids
                  (approve-model-nodes (alist-get 'comments thread)))
@@ -530,6 +565,29 @@
                           comments)
                   :to-equal '("APPROVED" "PENDING"))))
 
+      (it "resolves back-pointers one level: their own refs stay refs"
+        (approve-model-patch
+         `((__typename . "PullRequestReview")
+           (id . "PRR_pending")
+           (comments . ((totalCount . 1)
+                        (nodes . (((__typename . "PullRequestReviewComment")
+                                   (id . "PRRC_2"))))))))
+        (let* ((thread (car (approve-pr-threads-for-file "lisp/a.el")))
+               (reply (cadr (approve-model-nodes (alist-get 'comments thread))))
+               (review (alist-get 'pullRequestReview reply))
+               (reply-to (alist-get 'replyTo reply)))
+          (expect (alist-get 'author reply) :to-equal
+                  (approve-model-get "User" "U_bob"))
+          (expect (alist-get 'state review) :to-equal "PENDING")
+          (expect (alist-get 'author review)
+                  :to-equal '(:approve-ref "User" "U_bob"))
+          (expect (approve-model-nodes (alist-get 'comments review))
+                  :to-equal '((:approve-ref "PullRequestReviewComment"
+                                            "PRRC_2")))
+          (expect (alist-get 'body reply-to) :to-equal "Why?")
+          (expect (alist-get 'author reply-to)
+                  :to-equal '(:approve-ref "User" "U_bob"))))
+
       (it "approve-pr-pending-review returns the viewer's pending review"
         (let ((review (approve-pr-pending-review)))
           (expect (alist-get 'id review) :to-equal "PRR_pending")
@@ -623,8 +681,9 @@
     (it "is not shared between buffers"
       (approve-session-put :layout 'single)
       (with-temp-buffer
-        (approve-model-init)
-        (expect (approve-session-get :layout) :to-be nil))))
+        (expect (approve-session-get :layout) :to-be nil)
+        (approve-session-put :layout 'split))
+      (expect (approve-session-get :layout) :to-be 'single)))
 
   (describe "approve-model-store-buffer"
     (let (pr-buffer diff-buffer)

@@ -46,7 +46,9 @@
 ;;
 ;; Selectors (`approve-pr', `approve-pr-threads-for-file', ...) are
 ;; the only way renderers read data; they hide the store layout and
-;; resolve refs only for what they return.
+;; resolve refs only for what they return.  They read through the
+;; root, so every PR-level query loads its pullRequest with SET-ROOT
+;; (see `approve-model-load'): any of them may arrive first or alone.
 ;;
 ;; The split layout's diff buffer sets `approve-model-store-buffer' to
 ;; its PR buffer; every function here then reads and writes the state
@@ -268,9 +270,13 @@ are the (KEY . VALUE) pairs of the original, or nil."
 
 (defun approve-model--normalize-connection (connection)
   "Return CONNECTION unwrapped to its nodes, keeping its paging data.
-Only the outermost connections of a page are appended, so the nodes
-are normalized as a first page."
-  (let ((nodes (let ((approve-model--append-pages nil))
+Only the outermost paged connections of a page are appended: below a
+connection that carries `pageInfo', the nodes are normalized as a
+first page.  A connection without `pageInfo' (such as `headCommit:
+commits(last: 1)') passes the page on to its nodes."
+  (let ((nodes (let ((approve-model--append-pages
+                      (and approve-model--append-pages
+                           (not (assq 'pageInfo connection)))))
                  (approve-model--normalize (alist-get 'nodes connection)))))
     (approve-model--make-connection nodes
                                     (assq 'totalCount connection)
@@ -352,6 +358,15 @@ old one (a first page).  If DATA itself is an entity, the result is
 its ref.  With SET-ROOT, make that ref the root; signal
 `approve-model-invalid-data' if DATA is not an entity.
 
+Selectors read through the root, and any query of the PR may arrive
+first or alone (another may fail).  So load the pullRequest of every
+PR-level query (core, files, threads, timeline, commits, checks)
+with SET-ROOT t; it is the same ref each time.
+
+An object with an `id' but no `__typename' signals
+`approve-model-invalid-data'; the store may then hold the part of
+DATA that was normalized before it.
+
 Example:
   (approve-model-load (let-alist response .data.repository.pullRequest) t)"
   (approve-model--with-store
@@ -386,26 +401,49 @@ the stored ones.  Creations and deletions also need a list edit
 
 ;;; Reading
 
+(defconst approve-model--back-pointer-fields '(pullRequestReview replyTo)
+  "Fields that point back up the graph, resolved one level only.
+A comment's `pullRequestReview' leads to the review and from there
+to all its comments; resolving that fully for every comment shown
+would cost the size of the review per comment.  So a back-pointer
+resolves to its entity's own fields, with the entity's refs left as
+refs; read further with `approve-model-get-ref'.")
+
 (defun approve-model--resolve (value path)
   "Return VALUE with its refs replaced by their entities, resolved.
 PATH is the list of refs being resolved on the way to VALUE; a ref
 on it stays a ref, which ends cycles.  A ref to an entity that is
-not in the store also stays a ref."
+not in the store also stays a ref.  Fields in
+`approve-model--back-pointer-fields' resolve one level only."
   (cond
    ((approve-model-ref-p value)
-    (let ((entity (and (not (member value path))
-                       (approve-model--entity (approve-model-ref-type value)
-                                              (approve-model-ref-id value)))))
+    (let ((entity (approve-model--resolvable value path)))
       (if entity
           (approve-model--resolve entity (cons value path))
         value)))
    ((approve-model--object-p value)
     (mapcar (lambda (field)
-              (cons (car field) (approve-model--resolve (cdr field) path)))
+              (cons (car field)
+                    (if (and (memq (car field)
+                                   approve-model--back-pointer-fields)
+                             (approve-model-ref-p (cdr field)))
+                        (or (copy-alist
+                             (approve-model--resolvable (cdr field) path))
+                            (cdr field))
+                      (approve-model--resolve (cdr field) path))))
             value))
    ((consp value)
     (mapcar (lambda (item) (approve-model--resolve item path)) value))
    (t value)))
+
+(defun approve-model--resolvable (value path)
+  "Return the stored entity of VALUE if it should be resolved, else nil.
+That is when VALUE is a ref that is not on PATH and whose entity is
+in the store."
+  (and (approve-model-ref-p value)
+       (not (member value path))
+       (approve-model--entity (approve-model-ref-type value)
+                              (approve-model-ref-id value))))
 
 (defun approve-model--raw (node)
   "Return the stored alist of NODE if it is a ref, else NODE."
@@ -422,7 +460,10 @@ a list of symbols, return an alist of those fields.  Signal
 
 Refs are resolved through the store, except a ref to an entity that
 is being resolved on the same path (a cycle, such as a review's
-comment pointing back to the review): it stays a ref.
+comment pointing back to the review): it stays a ref.  Back-pointers
+\(`approve-model--back-pointer-fields', such as a comment's
+`pullRequestReview') resolve one level: the entity's own fields,
+with its refs left as refs.
 
 Example:
   (approve-model-get \"User\" \"U_kgDO\" \\='login) => \"octocat\""
