@@ -364,17 +364,35 @@ signalled.  The transport is the current `approve-api-transport'."
                   (approve-api--transport-condition err))))
   nil)
 
+(defconst approve-api--network-error-regexp
+  (rx (or "Could not create connection"
+          "nodename nor servname provided"        ; macOS resolver
+          "Name or service not known"             ; glibc resolver
+          "Temporary failure in name resolution"
+          "No address associated with hostname"
+          "Connection refused" "Network is unreachable" "No route to host"))
+  "Regexp matching the message of an error that means \"no connection\".
+url signals these as plain `error's, not `file-error's, when it opens
+a connection synchronously (an unknown host, for example).")
+
 (defun approve-api--transport-condition (err)
   "Return the error condition for ERR, signalled by a transport.
 A connection that cannot be made is a network error: a `file-error'
-from `make-network-process' (an unknown host) or url's \"Could not
-create connection\"."
-  (if (or (memq 'file-error (get (car err) 'error-conditions))
-          (string-prefix-p "Could not create connection"
-                           (error-message-string err)))
+from `make-network-process', or a plain error whose message matches
+`approve-api--network-error-regexp'.  ghub's \"Required Github token
+... does not exist\" is `approve-api-unauthorized': like a 401, the
+user fixes it in auth-source."
+  (let ((message (error-message-string err)))
+    (cond
+     ((or (memq 'file-error (get (car err) 'error-conditions))
+          (string-match-p approve-api--network-error-regexp message))
       (approve-api--condition 'approve-api-network-error
-                              (approve-api--network-message err))
-    (approve-api--condition 'approve-api-error (error-message-string err))))
+                              (approve-api--network-message err)))
+     ((string-match-p (rx bos "Required " (+ nonl) " token " (+ nonl)
+                          "does not exist")
+                      message)
+      (approve-api--condition 'approve-api-unauthorized message))
+     (t (approve-api--condition 'approve-api-error message)))))
 
 (defun approve-api--time-out (request)
   "Fail REQUEST, which took longer than its timeout, and abort it."

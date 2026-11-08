@@ -324,14 +324,25 @@
         (expect (signal (car err) (cdr err)) :to-throw 'approve-error))))
 
   (it "fails with approve-api-error, later, when the transport signals"
-    (let ((approve-api-transport (lambda (_) (error "Required Github token does not exist")))
+    (let ((approve-api-transport (lambda (_) (error "Wrong type argument: listp, 3")))
           (approve-api-timeout nil)
           received)
       (approve-api-rest "GET" "/x" :errorback (lambda (err) (setq received err)))
       (expect received :to-be nil)
       (sleep-for 0.02)
       (expect (car received) :to-be 'approve-api-error)
-      (expect (approve-api-error-message received) :to-match "token does not exist")))
+      (expect (approve-api-error-message received) :to-match "Wrong type argument")))
+
+  (it "fails with approve-api-unauthorized when ghub has no token"
+    (let ((approve-api-transport
+           (lambda (_) (error "Required Github token (\"bob^approve\" for \"api.github.com\") does not exist.
+See https://docs.magit.vc/ghub/Getting-Started.html")))
+          (approve-api-timeout nil)
+          received)
+      (approve-api-rest "GET" "/x" :errorback (lambda (err) (setq received err)))
+      (sleep-for 0.02)
+      (expect (car received) :to-be 'approve-api-unauthorized)
+      (expect (approve-api-error-message received) :to-match "token .* does not exist")))
 
   (it "fails with approve-api-network-error when the connection cannot be made at once"
     (let ((approve-api-timeout nil)
@@ -339,15 +350,17 @@
       (dolist (condition '((file-error "make client process failed"
                                        "nodename nor servname provided, or not known"
                                        :name "api.github.com")
-                           (error "Could not create connection to api.github.com:443")))
+                           (error "Could not create connection to api.github.com:443")
+                           (error "no-such-host.invalid/443 nodename nor servname provided, or not known")))
         (let ((approve-api-transport (lambda (_) (signal (car condition) (cdr condition)))))
           (approve-api-rest "GET" "/x" :errorback (lambda (err) (push err received)))))
       (sleep-for 0.02)
       (expect (mapcar #'car received)
-              :to-equal '(approve-api-network-error approve-api-network-error))
-      (expect (approve-api-error-message (cadr received))
+              :to-equal '(approve-api-network-error approve-api-network-error
+                          approve-api-network-error))
+      (expect (approve-api-error-message (nth 2 received))
               :to-equal "make client process failed: nodename nor servname provided, or not known")
-      (expect (approve-api-error-message (car received))
+      (expect (approve-api-error-message (nth 1 received))
               :to-equal "Could not create connection to api.github.com:443")))
 
   (it "cancels the request and lets a quit through when the user quits in the transport"
