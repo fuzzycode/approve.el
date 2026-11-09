@@ -425,6 +425,63 @@ off restores the transport it replaced."
     (setq approve-dev--offline-transport nil
           approve-dev--transport-before-offline nil)))
 
+;;; Trying Approve on the fixtures
+
+(defconst approve-dev-try-buffer-name "*Approve fixtures*"
+  "Name of the start page of `approve-dev-try'.")
+
+(defun approve-dev-scenario-url (scenario)
+  "Return the pull request URL of SCENARIO."
+  (format "https://%s/%s/%s/pull/%s" (or (plist-get scenario :host) "github.com")
+          (plist-get scenario :owner) (plist-get scenario :repo)
+          (plist-get scenario :number)))
+
+(defun approve-dev--try-open (button)
+  "Open the pull request of BUTTON, a start page entry."
+  (approve (button-get button 'approve-url)))
+
+;;;###autoload
+(defun approve-dev-try ()
+  "Try Approve on the fixtures: replay them and list their pull requests.
+Turn `approve-dev-offline-mode' on and show a start page with a
+button for each scenario in `approve-dev-fixtures-directory';
+\\`RET' on one opens it.  Return the start page."
+  (interactive)
+  (approve-dev-offline-mode 1)
+  (let ((buffer (get-buffer-create approve-dev-try-buffer-name)))
+    (with-current-buffer buffer
+      (special-mode)
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert (propertize "Approve on the fixtures" 'face 'approve-title) "\n\n")
+        (insert "Requests are answered from tests/fixtures/, so no token or\n"
+                "network is needed (images in comments still load from the web).\n"
+                "RET on a pull request opens it.\n\n")
+        (dolist (scenario (mapcar #'approve-dev-read-scenario
+                                  (approve-dev-scenario-files)))
+          (let ((url (approve-dev-scenario-url scenario)))
+            (insert "  ")
+            (insert-text-button (format "%-8s %s/%s#%s" (plist-get scenario :name)
+                                        (plist-get scenario :owner)
+                                        (plist-get scenario :repo)
+                                        (plist-get scenario :number))
+                                'action #'approve-dev--try-open
+                                'approve-url url
+                                'help-echo url)
+            (insert "\n    " (propertize (or (plist-get scenario :description) "")
+                                       'face 'approve-dim)
+                    "\n\n")))
+        (insert (propertize "In a pull request" 'face 'approve-heading) "\n"
+                "  TAB    expand or collapse        RET  follow the thing at point\n"
+                "  ] u    next unviewed file        ] t  next unresolved thread\n"
+                "  j      jump menu                 K    details (eldoc buffer)\n"
+                "  o      open on GitHub            y    copy path:line, sha, login\n"
+                "  g      refresh                   q    bury\n"))
+      (goto-char (point-min))
+      (forward-button 1))
+    (pop-to-buffer-same-window buffer)
+    buffer))
+
 ;;; Recording
 
 (defconst approve-dev--recorded-header-regexp

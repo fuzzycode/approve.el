@@ -1,4 +1,4 @@
-.PHONY: install build test cover lint clean distclean docs
+.PHONY: install build test cover lint clean distclean docs try
 
 CASK ?= cask
 EMACS ?= emacs
@@ -61,3 +61,7 @@ docs:
 
 distclean: clean
 	rm -rf .cask
+
+# A fresh Emacs (-Q, Cask dependencies only) replaying the fixtures.
+try: build
+	$(CASK) emacs -Q -L lisp -l dev/try.el

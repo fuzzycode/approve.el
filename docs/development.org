@@ -27,6 +27,8 @@ predictable.
  │   ├── fixtures/         recorded JSON responses (scrubbed), per scenario
  │   ├── helpers.el        fake API, fixture loading, buffer helpers
  │   └── test-<module>.el  one per lisp module
+ ├── dev/
+ │   └── try.el            init file of =make try= (not packaged)
  ├── docs/                 these docs
  │   └── html/             HTML views: mockups (hand-written) and flows (graphviz)
  ├── Cask  Makefile  LICENSE  CODE_OF_CONDUCT.md
@@ -42,6 +44,8 @@ predictable.
 | =make cover=   | tests with undercover (text report)                          | exists                                     |
 | =make clean=   | remove =.elc=                                                | exists                                     |
 | =make docs=    | rebuild the flow diagrams and =docs/html/flows.html=         | exists (needs graphviz)                    |
+| =make try=     | a fresh Emacs (=-Q=, Cask dependencies only) that replays    | exists; =M-x approve-dev-try= does the     |
+|                | the fixtures and lists their PRs (=dev/try.el=)              | same in any Emacs with Approve loaded      |
 
 The shell is fish: wrap loops in =bash -c '…'=.
 

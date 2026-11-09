@@ -497,4 +497,26 @@
                   (push (list name .id "outdated with a line") problems))))))
         (expect problems :to-equal nil)))))
 
+(describe "approve-dev-try"
+  :var (saved)
+  (before-each
+    (setq saved approve-api-transport))
+  (after-each
+    (approve-dev-offline-mode -1)
+    (setq approve-api-transport saved)
+    (when (get-buffer approve-dev-try-buffer-name)
+      (kill-buffer approve-dev-try-buffer-name)))
+
+  (it "replays the fixtures and lists their pull requests as buttons"
+    (spy-on 'approve)
+    (let ((inhibit-message t))
+      (with-current-buffer (approve-dev-try)
+        (expect approve-dev-offline-mode :to-be t)
+        (expect (buffer-string) :to-match "medium   acme-example/rocket#202")
+        (goto-char (point-min))
+        (search-forward "medium")
+        (push-button (match-beginning 0))
+        (expect 'approve :to-have-been-called-with
+                "https://github.com/acme-example/rocket/pull/202")))))
+
 ;;; test-approve-dev.el ends here
