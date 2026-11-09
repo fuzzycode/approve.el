@@ -562,9 +562,9 @@ The checks themselves load when the section is first expanded."
 (defun approve-sections--new-commits (commits)
   "Return how many of COMMITS came after the viewer's last review, or nil."
   (when-let* ((oid (approve-sections--reviewed-oid))
-              (position (seq-position commits oid
-                                      (lambda (commit oid)
-                                        (equal (let-alist commit .commit.oid) oid)))))
+              (position (seq-position (mapcar (lambda (commit) (alist-get 'oid commit))
+                                              commits)
+                                      oid)))
     (- (length commits) position 1)))
 
 (defun approve-sections--commit-author (commit)

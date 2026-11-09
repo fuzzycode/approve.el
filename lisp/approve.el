@@ -52,6 +52,7 @@
 
 (require 'approve-pr)
 (require 'approve-sections)
+(require 'approve-conversation)
 
 (declare-function magit-add-section-hook "magit-section")
 

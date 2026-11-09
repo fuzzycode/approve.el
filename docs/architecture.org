@@ -71,6 +71,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-icons.el=         | =approve-icon=: semantic name → nerd-icons or Unicode                           |     1 |
 | =approve-html.el=          | =bodyHTML= → text with shr and custom tag handlers                              |     1 |
 | =approve-sections.el=      | Header, metadata, pending review, description, checks, commits, files list      |     1 |
+| =approve-conversation.el=  | The conversation: comments, reviews, pushes and events, folded into runs        |     1 |
 | =approve-render.el=        | Shared renderer helpers: people, dates, reactions, hints, alignment, prefixes   |     1 |
 | =approve-diff.el=          | Patch parsing, line model, thread index, file/hunk/line sections                |     1 |
 | =approve-thread.el=        | Thread and comment sections (also used in the conversation)                     |     1 |

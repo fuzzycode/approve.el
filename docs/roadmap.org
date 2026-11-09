@@ -54,12 +54,12 @@ Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], hea
       images, links).
 - [X] =approve-pr.el=: mode, buffer naming, skeleton, the F02 loading plan,
       coalesced redraw, point restore, header line.
-- [ ] Sections: header + metadata rows, description, checks (summary,
+- [X] Sections: header + metadata rows, description, checks (summary,
       expandable), commits, conversation timeline.
 - [ ] =approve-diff.el=: patch parsing (port approve-v2's), file list,
       lazy file bodies, hunks, line numbers ([[file:decisions.org::*Open questions][Q1]]), thread index, inline
       threads, outdated and file-level threads, large/binary files.
-- [ ] =approve-thread.el=: thread and comment rendering, resolved collapsed,
+- [X] =approve-thread.el=: thread and comment rendering, resolved collapsed,
       pending styling, reactions, edited marker.
 - [ ] =approve-context.el= with all the read-only contexts.
 - [ ] Navigation: =j= transient, =]u= =[u= =]t= =[t=, =RET=, =o=, =y=.
