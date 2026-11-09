@@ -304,6 +304,37 @@
             (approve-dev-offline-mode -1)
             (expect approve-api-transport :to-be before))
         (approve-dev-offline-mode -1)
+        (delete-directory directory t))))
+
+  (it "sends requests no fixture answers to GitHub with approve-dev-offline-fallback"
+    (let* ((directory (make-temp-file "approve-dev-fixtures-" t))
+           (approve-dev-fixtures-directory directory)
+           (approve-dev-offline-latency 0)
+           (approve-api-timeout nil)
+           (seen nil)
+           (before (lambda (request)
+                     (push (plist-get request :variables) seen)
+                     (run-at-time 0 nil (plist-get request :on-failure)
+                                  (list :status 404 :payload '((message . "Not here"))))
+                     nil))
+           (approve-api-transport before)
+           received)
+      (spy-on 'message)
+      (unwind-protect
+          (progn
+            (approve-dev-write-scenario test-approve-dev--scenario
+                                        (approve-dev-scenario-file "tiny" directory))
+            (let ((approve-dev-offline-fallback t))
+              (approve-dev-offline-mode 1))
+            (approve-api-graphql "queries/pull-request.graphql"
+                                 '((owner . "acme") (name . "rocket") (number . 7))
+                                 :callback (lambda (data) (setq received data)))
+            (approve-api-graphql "queries/pull-request.graphql"
+                                 '((owner . "someone") (name . "else") (number . 1))
+                                 :callback #'ignore :errorback #'ignore)
+            (test-approve-dev--wait (lambda () received))
+            (expect seen :to-equal '(((owner . "someone") (name . "else") (number . 1)))))
+        (approve-dev-offline-mode -1)
         (delete-directory directory t)))))
 
 (describe "approve-dev-record"

@@ -350,7 +350,7 @@ whether a number was given as a string."
                    :payload (copy-tree (plist-get exchange :body))
                    :headers (copy-tree (plist-get exchange :headers)))))))
 
-(defun approve-dev-make-replay-transport (scenarios &optional latency)
+(defun approve-dev-make-replay-transport (scenarios &optional latency fallback)
   "Return an `approve-api-transport' that answers from SCENARIOS.
 SCENARIOS is a list of plists from `approve-dev-read-scenario'.  A
 request is answered with the first exchange whose key matches its
@@ -361,6 +361,7 @@ scenario.  The same request can be answered any number of times.
 
 The answer comes from a timer after LATENCY seconds (default 0),
 never before the transport returns.  A request no exchange matches
+goes to FALLBACK, another transport, when it is non-nil; else it
 fails with status 404, and the log says which request it was.  The
 returned abort function cancels the answer.
 
@@ -377,12 +378,25 @@ Example:
             (puthash key exchange table)))))
     (lambda (request)
       (let* ((key (approve-dev-request-key request))
-             (exchange (gethash (approve-dev--canonical-key key) table))
-             (timer (run-at-time (or latency 0) nil #'approve-dev--replay-answer
-                                 request key exchange)))
-        (lambda () (cancel-timer timer))))))
+             (exchange (gethash (approve-dev--canonical-key key) table)))
+        (if (and fallback (null exchange))
+            (funcall fallback request)
+          (let ((timer (run-at-time (or latency 0) nil #'approve-dev--replay-answer
+                                    request key exchange)))
+            (lambda () (cancel-timer timer))))))))
 
 ;;; Offline mode
+
+(defcustom approve-dev-offline-fallback nil
+  "Whether `approve-dev-offline-mode' sends unknown requests to GitHub.
+When nil, a request no fixture answers fails as not found.  When
+non-nil, it goes to the transport offline mode replaced, so the
+fixture PRs and real ones open side by side.  Set it before turning
+the mode on:
+
+  (setq approve-dev-offline-fallback t)"
+  :type 'boolean
+  :group 'approve-dev)
 
 (defvar approve-dev--offline-transport nil
   "The replay transport `approve-dev-offline-mode' installed, or nil.")
@@ -396,7 +410,8 @@ Example:
 When on, `approve-api-transport' answers from every scenario in
 `approve-dev-fixtures-directory', after `approve-dev-offline-latency'
 seconds; the owner, name and number of a request pick the scenario.
-A request no fixture answers fails as not found.  Turning the mode
+A request no fixture answers fails as not found, or goes to GitHub
+when `approve-dev-offline-fallback' is non-nil.  Turning the mode
 off restores the transport it replaced."
   :global t
   :group 'approve-dev
@@ -408,8 +423,11 @@ off restores the transport it replaced."
                      (eq approve-api-transport approve-dev--offline-transport))
           (setq approve-dev--transport-before-offline approve-api-transport))
         (setq approve-dev--offline-transport
-              (approve-dev-make-replay-transport scenarios
-                                                 approve-dev-offline-latency)
+              (approve-dev-make-replay-transport
+               scenarios approve-dev-offline-latency
+               (and approve-dev-offline-fallback
+                    (or approve-dev--transport-before-offline
+                        #'approve-api-ghub-transport)))
               approve-api-transport approve-dev--offline-transport)
         (message "Approve offline: %s"
                  (mapconcat (lambda (scenario)
