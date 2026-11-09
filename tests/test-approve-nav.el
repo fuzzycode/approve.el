@@ -183,9 +183,13 @@
               :to-equal (list 'normal approve-pr-mode-map "g r" 'approve-pr-refresh))
       (expect (seq-find (lambda (b) (equal (nth 2 b) "g y")) bound)
               :to-equal (list 'normal approve-pr-mode-map "g y" 'approve-copy))
-      ;; No key, or first key of a sequence, may be an evil motion or operator.
-      (dolist (key '("h" "j" "k" "l" "w" "b" "e" "v" "V" "y" "d" "c" "n" "N" "/"))
+      ;; No key, or first key of a sequence, may be an evil motion or
+      ;; operator; j and k stay motions, by screen line.
+      (dolist (key '("h" "l" "w" "b" "e" "v" "V" "y" "d" "c" "n" "N" "/"))
         (expect (seq-find (lambda (b) (equal (car (split-string (nth 2 b))) key)) bound)
-                :to-be nil)))))
+                :to-be nil))
+      (expect (mapcar (lambda (key) (nth 3 (seq-find (lambda (b) (equal (nth 2 b) key)) bound)))
+                      '("j" "k"))
+              :to-equal '(evil-next-visual-line evil-previous-visual-line)))))
 
 ;;; test-approve-nav.el ends here

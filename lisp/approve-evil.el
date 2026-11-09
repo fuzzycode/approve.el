@@ -32,6 +32,11 @@
 ;; selection or yank: Approve's single-letter keys move to g-, y- and
 ;; capital-letter keys instead.
 ;;
+;; j and k move by screen line, as magit's own motions do
+;; (`line-move-visual'): moving by logical line from a collapsed
+;; heading stops at the start of its hidden body, and magit's
+;; intangible text then puts point back at the end of the heading.
+;;
 ;; approve.el loads this file once evil is loaded; nothing here
 ;; requires evil.
 
@@ -43,7 +48,9 @@
 (declare-function evil-define-key* "evil-core" (state keymap key def &rest bindings))
 
 (defconst approve-evil-pr-bindings
-  '(("RET" . approve-visit)
+  '(("j" . evil-next-visual-line)
+    ("k" . evil-previous-visual-line)
+    ("RET" . approve-visit)
     ("TAB" . magit-section-toggle)
     ("za" . magit-section-toggle)
     ("gr" . approve-pr-refresh)
