@@ -400,6 +400,20 @@ Return the new point."
       (forward-line (1- (plist-get position :line))))
     (point)))
 
+(defun approve-pr--detach-markers ()
+  "Detach the markers of the sections about to be erased.
+A marker stays in its buffer until it is garbage-collected, and
+every insertion moves each one, so a redraw would otherwise pay for
+the markers of earlier redraws."
+  (when magit-root-section
+    (magit-map-sections
+     (lambda (section)
+       (dolist (marker (list (oref section start) (oref section content)
+                             (oref section end)))
+         (when (markerp marker)
+           (set-marker marker nil))))
+     magit-root-section)))
+
 (defun approve-pr-redraw ()
   "Draw the current PR buffer again from its store.
 The buffer is erased and `approve-pr-sections-hook' is run.  Point
@@ -410,6 +424,7 @@ the buffer, and collapsed sections stay collapsed (decision D13)."
          (positions (cons (approve-pr--position nil)
                           (mapcar #'approve-pr--position windows)))
          (inhibit-read-only t))
+    (approve-pr--detach-markers)
     (erase-buffer)
     (save-excursion
       (magit-insert-section (approve-root-section)

@@ -178,6 +178,15 @@
       (expect (oref (approve-test-find-section 'approve-commits-section) hidden)
               :to-be nil)))
 
+  (it "detaches the markers of the sections it erases"
+    (test-pr--with-medium
+      (let ((old (approve-test-find-section 'approve-files-section)))
+        (approve-pr-redraw)
+        (expect (marker-buffer (oref old start)) :to-be nil)
+        (expect (marker-buffer (oref old end)) :to-be nil)
+        (expect (marker-buffer (oref (approve-test-find-section 'approve-files-section) start))
+                :to-be (current-buffer)))))
+
   (it "starts with checks and commits collapsed and the rest expanded"
     (test-pr--with-medium
       (expect (oref (approve-test-find-section 'approve-checks-section) hidden) :to-be t)
