@@ -46,6 +46,7 @@
 (require 'seq)
 (require 'subr-x)
 (require 'parse-time)
+(require 'magit-section)
 (require 'approve-faces)
 (require 'approve-icons)
 
@@ -152,22 +153,65 @@ SEPARATOR defaults to a dim \" · \"."
              (seq-remove (lambda (part) (or (null part) (string-empty-p part))) parts)
              (or separator (approve-face " · " 'approve-dim))))
 
-(defun approve-render-prefix (start end prefix)
-  "Show PREFIX before every line between START and END.
-PREFIX is display-only (`line-prefix' and `wrap-prefix'), so moving
-and copying ignore it.  A prefix that is already there stays after
-PREFIX, so nested prefixes add up."
-  (let ((pos start))
-    (while (< pos end)
-      (let* ((next (next-single-property-change pos 'line-prefix nil end))
-             (old (get-text-property pos 'line-prefix))
-             (new (if old (concat prefix old) prefix)))
-        (add-text-properties pos next (list 'line-prefix new 'wrap-prefix new))
-        (setq pos next)))))
+(defconst approve-render--prefix-inherits
+  '(magit-section approve-line approve-thing invisible)
+  "Properties a prefix takes from the first character of its line.
+With them, the section, the diff line and the thing at point are the
+same on the indentation as on the text after it.")
 
-(defun approve-render-indent (columns)
-  "Return a display-only prefix of COLUMNS spaces."
-  (make-string columns ?\s))
+(defun approve-render--extend-sections (section from to)
+  "Move SECTION's start back from TO to FROM, and its parents' that start there.
+A finished section's start marker advances over text inserted at
+it, which would leave a prefix inserted there outside the section."
+  (while (and section
+              (markerp (oref section start))
+              (= (oref section start) to))
+    (set-marker (oref section start) from)
+    (setq section (oref section parent))))
+
+(defun approve-render-prefix (start end prefix)
+  "Indent every line between START and END with PREFIX.
+PREFIX is inserted as text at the start of each line, marked as
+decoration (`approve-render-decoration'), so copying leaves it out.
+It keeps its own faces and takes the properties in
+`approve-render--prefix-inherits' from its line, so commands work
+on it as on the line.  Lines that wrap continue under their text:
+PREFIX goes in front of the `wrap-prefix' too.  Prefixes nest: an
+outer prefix, added later, goes in front of an inner one.  An empty
+line gets PREFIX without its trailing spaces, so no line ends in
+whitespace.  A line that starts before START is left as it is.
+
+The indentation is text rather than a display-only `line-prefix'
+because a collapsed section would lend the prefix of its hidden
+body to the next heading, and moving down would stop in the hidden
+text.  Text after END, point included, moves with what is inserted."
+  (let ((tail (- (point-max) end))
+        (blank (string-trim-right prefix)))
+    (save-excursion
+      (goto-char start)
+      (unless (bolp)
+        (forward-line 1))
+      ;; END moves with the insertions; the text after it does not change.
+      (while (< (point) (- (point-max) tail))
+        (let* ((text (if (eolp) blank prefix))
+               (length (length text)))
+          (when (> length 0)
+            (let ((section (get-text-property (point) 'magit-section)))
+              (setq text (approve-render-decoration (copy-sequence text)))
+              (dolist (prop approve-render--prefix-inherits)
+                (when-let* ((value (get-text-property (point) prop)))
+                  (put-text-property 0 length prop value text)))
+              (insert text)
+              (approve-render--extend-sections section (- (point) length) (point)))
+            (let ((pos (- (point) length))
+                  (eol (min (1+ (line-end-position)) (- (point-max) tail))))
+              (while (< pos eol)
+                (let ((next (next-single-property-change pos 'wrap-prefix nil eol))
+                      (old (get-text-property pos 'wrap-prefix)))
+                  (put-text-property pos next 'wrap-prefix
+                                     (if old (concat prefix old) prefix))
+                  (setq pos next)))))
+          (forward-line 1))))))
 
 (defun approve-render-pad (text width &optional left)
   "Return TEXT padded with spaces to WIDTH columns, on the right.

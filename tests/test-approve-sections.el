@@ -76,24 +76,24 @@
       (let ((lines (split-string (test-sections--text 'approve-pending-review-section)
                                  "\n" t)))
         (expect (car lines) :to-match "\\`Your pending review +3 comments")
-        (expect (nth 1 lines) :to-match "\\`internal/parser/parser.go:134 +Is this branch reachable")
-        (expect (nth 2 lines) :to-match "\\`internal/engine/engine.go:365–367 ")
+        (expect (nth 1 lines) :to-match "\\`  internal/parser/parser.go:134 +Is this branch reachable")
+        (expect (nth 2 lines) :to-match "\\`  internal/engine/engine.go:365–367 ")
         (expect (length lines) :to-equal 4))))
 
   (describe "description"
     (it "shows the rendered body and its reactions"
       (expect (test-sections--text 'approve-description-section)
               :to-equal (concat "Description\n"
-                                "Rewrites the parser for speed and renames the queue to a scheduler.\n\n"
-                                "The lexer fixes come in a follow-up commit.\n\n"
-                                "Fixes #12.\n\n👍 3  🚀 1\n\n"))))
+                                "  Rewrites the parser for speed and renames the queue to a scheduler.\n\n"
+                                "  The lexer fixes come in a follow-up commit.\n\n"
+                                "  Fixes #12.\n\n  👍 3  🚀 1\n\n"))))
 
   (describe "commits"
     (it "counts commits and marks those after the viewer's review"
       (let ((lines (split-string (test-sections--text 'approve-commits-section) "\n" t)))
         (expect (car lines) :to-match "\\`Commits (4) +2 new since your review")
-        (expect (nth 2 lines) :to-match "\\`  6fa7df8  Rename the queue to scheduler .*← your review")
-        (expect (nth 3 lines) :to-match "\\`┃ 71cc73d  Address review comments .* new\\'")))
+        (expect (nth 2 lines) :to-match "\\`    6fa7df8  Rename the queue to scheduler .*← your review")
+        (expect (nth 3 lines) :to-match "\\`  ┃ 71cc73d  Address review comments .* new\\'")))
 
     (it "carries each commit's oid"
       (expect (plist-get (test-sections--thing-at "dd4ac8a") :kind) :to-be 'commit)))
@@ -105,29 +105,29 @@
 
     (it "lists each file with its viewed mark, counts, bar and threads"
       (expect (test-sections--text 'approve-file-entry-section "internal/parser/parser.go")
-              :to-match "\\`· internal/parser/parser.go +\\+21  −11  ██▒ +💬 5\n")
+              :to-match "\\`  · internal/parser/parser.go +\\+21  −11  ██▒ +💬 5\n")
       (expect (test-sections--text 'approve-file-entry-section "internal/engine/legacy.go")
-              :to-match "\\`✓ internal/engine/legacy.go +\\+0  −38  ▒▒▒▒ ")
+              :to-match "\\`  ✓ internal/engine/legacy.go +\\+0  −38  ▒▒▒▒ ")
       (expect (test-sections--text 'approve-file-entry-section "CHANGELOG.md")
-              :to-match "\\`↻ CHANGELOG.md ")))
+              :to-match "\\`  ↻ CHANGELOG.md ")))
 
   (describe "conversation"
     (it "starts with who opened the PR and ends the line"
       (let ((lines (split-string (test-sections--text 'approve-conversation-section) "\n" t)))
         (expect (car lines) :to-equal "Conversation (30)")
-        (expect (nth 1 lines) :to-equal "alice-example opened this 3 days ago")
-        (expect (car (last lines)) :to-equal "╰")))
+        (expect (nth 1 lines) :to-equal "  alice-example opened this 3 days ago")
+        (expect (car (last lines)) :to-equal "  ╰")))
 
     (it "folds runs of commits and of labels"
       (let ((text (test-sections--text 'approve-conversation-section)))
-        (expect text :to-match "├ ↑ alice-example pushed 2 commits · 3 days ago\n  dd4ac8a  Add the new parser\n  6fa7df8  Rename")
-        (expect text :to-match "├ 🏷 alice-example added  enhancement   area: parser  · 3 days ago")))
+        (expect text :to-match "  ├ ↑ alice-example pushed 2 commits · 3 days ago\n  │     dd4ac8a  Add the new parser\n  │     6fa7df8  Rename")
+        (expect text :to-match "  ├ 🏷 alice-example added  enhancement   area: parser  · 3 days ago")))
 
     (it "shows comments and reviews with their verdict, body and code comments"
       (let ((text (test-sections--text 'approve-conversation-section)))
-        (expect text :to-match "├ 💬 bob-example commented · 3 days ago\nThanks! I'll take a look today.\n👍 1\n")
-        (expect text :to-match "├ ✓ bob-example approved · 1 day ago · 2 comments on code\nLooks good to me.")
-        (expect text :to-match "├ ✗ carol-example requested changes · 1 day ago · 1 comment on code")))
+        (expect text :to-match "  ├ 💬 bob-example commented · 3 days ago\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
+        (expect text :to-match "  ├ ✓ bob-example approved · 1 day ago · 2 comments on code\n  │   Looks good to me.")
+        (expect text :to-match "  ├ ✗ carol-example requested changes · 1 day ago · 1 comment on code")))
 
     (it "shows events in words"
       (let ((text (test-sections--text 'approve-conversation-section)))
@@ -136,11 +136,40 @@
         (expect text :to-match "mentioned this in acme-example/rocket#12 The parser is slow")
         (expect text :to-match "force-pushed the branch from e99c61a to 6fa7df8")))
 
-    (it "draws the timeline's line left of comment bodies, display-only"
+    (it "draws the timeline's line left of comment bodies, left out on copy"
       (with-current-buffer test-sections--buffer
         (goto-char (point-min))
         (search-forward "Thanks! I'll take a look")
-        (expect (substring-no-properties (get-text-property (point) 'line-prefix))
-                :to-equal "  │   ")))))
+        (goto-char (match-beginning 0))
+        (expect (buffer-substring-no-properties (line-beginning-position) (point))
+                :to-equal "  │   ")
+        (expect (filter-buffer-substring (line-beginning-position) (line-end-position))
+                :to-equal "Thanks! I'll take a look today.")))
+
+    (it "keeps empty lines free of trailing spaces"
+      (with-current-buffer test-sections--buffer
+        (goto-char (point-min))
+        (expect (re-search-forward "^[ \t]+$" nil t) :to-be nil)))))
+
+(describe "Indentation in the medium PR"
+  (it "is text, never a line-prefix, which a collapsed body lends the next heading"
+    (approve-test-with-fixture "medium"
+      (let ((buffer (approve-test-open-pr "medium")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (magit-section-show-level-4-all)
+              (expect (text-property-not-all (point-min) (point-max) 'line-prefix nil)
+                      :to-be nil)
+              ;; Each section starts at the start of its line, indentation
+              ;; included, so hiding a body never hides part of a line.
+              (magit-map-sections
+               (lambda (section)
+                 (save-excursion
+                   (goto-char (oref section start))
+                   (expect (bolp) :to-be t)
+                   (when (oref section content)
+                     (goto-char (oref section content))
+                     (expect (bolp) :to-be t))))))
+          (kill-buffer buffer))))))
 
 ;;; test-approve-sections.el ends here

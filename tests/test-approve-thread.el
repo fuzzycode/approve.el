@@ -34,16 +34,10 @@
      ,@body))
 
 (defun test-thread--lines ()
-  "Return the buffer's lines, each with its display prefix in front."
-  (let (lines)
-    (save-excursion
-      (goto-char (point-min))
-      (while (not (eobp))
-        (push (concat (or (get-text-property (point) 'line-prefix) "")
-                      (buffer-substring-no-properties (point) (line-end-position)))
-              lines)
-        (forward-line 1)))
-    (mapcar #'substring-no-properties (nreverse lines))))
+  "Return the buffer's lines as they show, indentation included."
+  (split-string (string-remove-suffix
+                 "\n" (buffer-substring-no-properties (point-min) (point-max)))
+                "\n"))
 
 (describe "approve-thread-insert"
   (before-all
@@ -68,7 +62,7 @@
         (expect (car lines) :to-match "\\`╭─ carol-example · 2 days ago ─+\\'")
         (expect (string-width (car lines)) :to-equal (approve-thread-width))
         (expect (nth 1 lines) :to-equal "│ This allocates on every call; hoist the buffer out of the loop.")
-        (expect (nth 2 lines) :to-equal "│ ")
+        (expect (nth 2 lines) :to-equal "│")
         (expect (nth 3 lines) :to-match "\\`│ alice-example · 2 days ago")
         (expect (car (last lines)) :to-match "\\`╰─+\\'"))))
 

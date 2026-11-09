@@ -250,7 +250,14 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   =approve-render-strip-decorations=, which drops it: copying diff lines
   gives the code alone.  =approve-diff-line-numbers= turns the numbers off.
   Other gutters (thread bars, indentation, the timeline line) are
-  display-only =line-prefix=, which copying ignores by itself.
+  decoration text too (=approve-render-prefix=), with a =wrap-prefix= so
+  wrapped lines continue under their text.
+- Amended (2026-11-09) :: indentation and gutters were display-only
+  =line-prefix=.  A collapsed section lent its hidden body's prefix to the
+  next heading, which showed indented, and a move down to column 0 stopped
+  on that prefix inside the hidden text.  As text, they behave like Magit's
+  own indentation; the prefix takes its line's section, diff line and thing,
+  so commands work on it as on the line.
 - Why :: Text matches the mockups, is indented with its section, works in
   terminals and costs nothing extra to draw.  A margin would sit at the
   window's edge, need its width managed per window, and still put a real

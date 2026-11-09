@@ -40,8 +40,8 @@
 ;;
 ;; The thread is an `approve-thread-section' (value: thread id); each
 ;; comment is an `approve-comment-section' (value: comment id).  The
-;; bar left of the comments is display-only (`line-prefix'), so copying
-;; a comment gives its text alone.  Resolved threads start collapsed
+;; bar left of the comments is decoration (`approve-render-prefix'), so
+;; copying a comment gives its text alone.  Resolved threads start collapsed
 ;; to their heading.  Pending comments, which only the viewer sees
 ;; until the review is submitted, have the `approve-pending' background
 ;; and say so.

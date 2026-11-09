@@ -453,7 +453,7 @@ FONTIFIED is its code with syntax faces, or nil."
       text)))
 
 (defun approve-diff--insert-threads (threads gutter)
-  "Insert THREADS, each indented by GUTTER columns, display-only."
+  "Insert THREADS, each indented by GUTTER columns."
   (dolist (thread threads)
     (let ((start (point)))
       (approve-thread-insert thread)
@@ -555,10 +555,9 @@ HIDE collapses it at first; NOTE is dim text on the right."
         (dolist (file files)
           (let ((path (alist-get 'path file)))
             (magit-insert-section (approve-file-section path t)
-              (let ((start (point)))
-                (magit-insert-heading
-                  (approve-diff--file-heading file (approve-diff-file-entry path)))
-                (approve-render-prefix start (point) "  "))
+              (magit-insert-heading
+                approve-sections-indentation
+                (approve-diff--file-heading file (approve-diff-file-entry path)))
               (magit-insert-section-body
                 (approve-diff--insert-file-body file))))))
       (insert "\n"))))

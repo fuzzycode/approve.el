@@ -127,8 +127,11 @@ COUNT is a number or nil; RIGHT a string or nil."
            (and count (approve-face (format " (%s)" count) 'approve-count)))
    right))
 
+(defconst approve-sections-indentation (approve-render-decoration "  ")
+  "The indentation of a body line, for lines that insert it themselves.")
+
 (defun approve-sections-insert-body (start)
-  "Indent the text inserted since START by two columns, display-only."
+  "Indent the text inserted since START by two columns."
   (approve-render-prefix start (point) "  "))
 
 (defun approve-sections--ref (thing)
@@ -707,28 +710,31 @@ The checks themselves load when the section is first expanded."
                             (approve-face (format "%d unresolved thread%s" unresolved
                                                   (if (= unresolved 1) "" "s"))
                                           'approve-outdated))))))))
+      ;; Each row carries its indentation: one insertion per row, where
+      ;; indenting afterwards would insert again into a buffer of markers.
+      (dolist (file files)
+        (let-alist file
+          (magit-insert-section (approve-file-entry-section .path)
+            (let ((line (concat (approve-sections-viewed-mark .viewerViewedState) " "
+                                (approve-face (approve-render-pad (approve-render-truncate
+                                                                   .path path-width)
+                                                                  path-width)
+                                              'approve-path)
+                                "  "
+                                (approve-sections-counts .additions .deletions
+                                                          number-width)
+                                "  "
+                                (approve-render-pad (approve-sections--bar .additions .deletions
+                                                                           largest)
+                                                    approve-diffstat-width)
+                                "  "
+                                (approve-sections--thread-count (gethash .path counts)))))
+              (insert approve-sections-indentation
+                      (if (equal .viewerViewedState "VIEWED")
+                          (approve-face-add line 'approve-viewed)
+                        line)
+                      "\n")))))
       (let ((start (point)))
-        (dolist (file files)
-          (let-alist file
-            (magit-insert-section (approve-file-entry-section .path)
-              (let ((line (concat (approve-sections-viewed-mark .viewerViewedState) " "
-                                  (approve-face (approve-render-pad (approve-render-truncate
-                                                             .path path-width)
-                                                            path-width)
-                                                'approve-path)
-                                  "  "
-                                  (approve-sections-counts .additions .deletions
-                                                            number-width)
-                                  "  "
-                                  (approve-render-pad (approve-sections--bar .additions .deletions
-                                                                     largest)
-                                              approve-diffstat-width)
-                                  "  "
-                                  (approve-sections--thread-count (gethash .path counts)))))
-                (insert (if (equal .viewerViewedState "VIEWED")
-                            (approve-face-add line 'approve-viewed)
-                          line)
-                        "\n")))))
         (cond
          ((approve-model-truncated-p connection)
           (insert (approve-face (format "… %d more loading"

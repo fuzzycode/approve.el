@@ -130,7 +130,7 @@
   (it "names the file, its change and viewed state in the heading"
     (with-current-buffer test-diff--buffer
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/scheduler.go"))
-              :to-match "\\`internal/engine/queue.go → internal/engine/scheduler.go +renamed   \\+6 −3   · not viewed\n")
+              :to-match "\\`  internal/engine/queue.go → internal/engine/scheduler.go +renamed   \\+6 −3   · not viewed\n")
       (expect (approve-test-section-text (test-diff--file-section "CHANGELOG.md"))
               :to-match "↻ changed since viewed")))
 
@@ -158,9 +158,11 @@
       (with-current-buffer test-diff--buffer
         (test-diff--line-at "if err != nil {")
         (let ((line (buffer-substring (line-beginning-position) (line-end-position))))
-          (expect (substring-no-properties line) :to-equal "     13 +\tif err != nil {")
+          (expect (substring-no-properties line) :to-equal "         13 +\tif err != nil {")
           (expect (filter-buffer-substring (line-beginning-position) (line-end-position))
-                  :to-equal "\tif err != nil {"))))
+                  :to-equal "\tif err != nil {")
+          (expect (get-text-property (line-beginning-position) 'approve-line)
+                  :to-equal (get-text-property (line-end-position) 'approve-line)))))
 
     (it "tells every line where it is"
       (with-current-buffer test-diff--buffer
@@ -188,15 +190,21 @@
         (let ((section (approve-test-find-section
                         'approve-line-section '("internal/parser/parser.go" "RIGHT" 15))))
           (expect (approve-test-section-text section)
-                  :to-match "\\`.*\t}\n╭─ carol-example")
+                  :to-match "\\`.*\t}\n +╭─ carol-example")
           (expect (oref (car (oref section children)) type) :to-be 'approve-thread-section))))
 
-    (it "indents threads under the code, display-only"
+    (it "indents threads under the code, and copying leaves the indentation out"
       (with-current-buffer test-diff--buffer
         (goto-char (point-min))
         (search-forward "This allocates on every call")
-        (expect (substring-no-properties (get-text-property (point) 'line-prefix))
-                :to-equal (concat "    " (make-string 9 ?\s) "│ "))))
+        (goto-char (match-beginning 0))
+        (let ((indentation (concat "    " (make-string 9 ?\s) "│ ")))
+          (expect (buffer-substring-no-properties (line-beginning-position) (point))
+                  :to-equal indentation)
+          (expect (filter-buffer-substring (line-beginning-position) (point))
+                  :to-equal "")
+          (expect (oref (magit-section-at (line-beginning-position)) type)
+                  :to-be 'approve-comment-section))))
 
     (it "marks the words that changed between removed and added lines"
       (with-current-buffer test-diff--buffer
@@ -219,7 +227,7 @@
         (approve-pr-redraw)
         (test-diff--line-at "if err != nil {")
         (expect (buffer-substring-no-properties (line-beginning-position) (line-end-position))
-                :to-equal "+\tif err != nil {"))
+                :to-equal "    +\tif err != nil {"))
       (approve-pr-redraw))))
 
 (describe "The diff of the large PR"

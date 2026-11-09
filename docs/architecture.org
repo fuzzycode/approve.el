@@ -289,8 +289,10 @@ buffer and the file list's =RET= opens it.
 - Section classes are EIEIO subclasses of =magit-section=; their type is the
   class name.  A =keymap= slot can make keys depend on what point is on
   (thread keys on threads, file keys on files) once commands need it.
-- Bodies are indented by display-only =line-prefix= (=approve-render-prefix=),
-  which nests: a thread's bar sits inside its line's indentation.
+- Bodies are indented by decoration text (=approve-render-prefix=), which
+  copying leaves out and which nests: a thread's bar sits inside its line's
+  indentation.  Never by display-only =line-prefix=: a collapsed body would
+  lend it to the next heading (D28).
 - Every section value is stable across redraws, so the visibility cache and
   point restore work (D13).
 - Diff lines without threads are plain text with a text property
