@@ -129,13 +129,47 @@ The buffer is read-only and drawn from data loaded from GitHub;
   (add-function :filter-return (local 'filter-buffer-substring-function)
                 #'approve-render-strip-decorations '((depth . 90)))
   (add-hook 'post-command-hook #'approve-pr--run-lazy-loaders nil t)
-  (add-hook 'kill-buffer-hook #'approve-pr--cancel-redraw nil t))
+  (add-hook 'kill-buffer-hook #'approve-pr--cancel-redraw nil t)
+  ;; Evil's bindings load with the first buffer that may need them
+  ;; (decision D17); evil sets this buffer's keymaps up after this.
+  (when (featurep 'evil)
+    (require 'approve-evil)))
 
 (defun approve-pr--revert (&rest _)
   "Refresh the PR, as `revert-buffer-function'."
   (approve-pr-refresh))
 
 ;;; Buffers
+
+(defconst approve-pr--url-regexp
+  (rx string-start
+      "http" (? "s") "://"
+      (group (+ (not (in "/"))))         ; host
+      "/" (group (+ (not (in "/"))))     ; owner
+      "/" (group (+ (not (in "/"))))     ; repository
+      "/pull/" (group (+ digit))          ; number
+      (? (in "/?#") (* anything))
+      string-end)
+  "Regexp matching a pull request URL.
+Groups: 1 host, 2 owner, 3 repository, 4 number.")
+
+(defun approve-parse-url (url)
+  "Parse URL of a GitHub pull request.
+Return a plist (:host HOST :owner OWNER :repo REPO :number NUMBER),
+or nil when URL is not a pull request URL.  HOST is the web host as
+written in URL, such as \"github.com\" or a GitHub Enterprise host.
+Anything after the number (\"/files\", a query, an anchor) is ignored.
+
+Example:
+  (approve-parse-url \"https://github.com/magit/magit/pull/5000/files\")
+  => (:host \"github.com\" :owner \"magit\" :repo \"magit\" :number 5000)"
+  (when (stringp url)
+    (let ((url (string-trim url)))
+      (when (string-match approve-pr--url-regexp url)
+        (list :host (downcase (match-string 1 url))
+              :owner (match-string 2 url)
+              :repo (match-string 3 url)
+              :number (string-to-number (match-string 4 url)))))))
 
 (defun approve-pr-buffer-name (owner repo number)
   "Return the name of the buffer of PR NUMBER in OWNER/REPO."

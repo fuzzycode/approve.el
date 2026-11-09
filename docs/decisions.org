@@ -97,6 +97,9 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Decision :: Evil bindings are defined in =approve-evil.el=, loaded with
   =with-eval-after-load 'evil=.  In normal state we never shadow motions or
   visual selection ([[file:ui.org::*Keys][keys]]).
+- Amended (2026-11-08) :: package-lint rejects =with-eval-after-load= in a
+  package, so =approve-pr-mode= requires =approve-evil= when evil is loaded
+  (=featurep=), before evil sets the buffer's keymaps up.  The rest stands.
 - Why :: The author uses evil; many users don't.  Visual line selection is how
   evil users pick a range of lines to comment on.
 

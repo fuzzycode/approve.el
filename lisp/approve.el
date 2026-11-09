@@ -54,6 +54,9 @@
 (require 'approve-sections)
 (require 'approve-conversation)
 (require 'approve-diff)
+(require 'approve-context)
+(require 'approve-nav)
+(require 'approve-menus)
 
 (declare-function magit-add-section-hook "magit-section")
 
@@ -64,36 +67,6 @@ Takes the same arguments as `magit-add-section-hook'; use it to add,
 remove or reorder the sections of Approve buffers.")
 
 ;;; Pull request URLs
-
-(defconst approve--pr-url-regexp
-  (rx string-start
-      "http" (? "s") "://"
-      (group (+ (not (in "/"))))         ; host
-      "/" (group (+ (not (in "/"))))     ; owner
-      "/" (group (+ (not (in "/"))))     ; repository
-      "/pull/" (group (+ digit))          ; number
-      (? (in "/?#") (* anything))
-      string-end)
-  "Regexp matching a pull request URL.
-Groups: 1 host, 2 owner, 3 repository, 4 number.")
-
-(defun approve-parse-url (url)
-  "Parse URL of a GitHub pull request.
-Return a plist (:host HOST :owner OWNER :repo REPO :number NUMBER),
-or nil when URL is not a pull request URL.  HOST is the web host as
-written in URL, such as \"github.com\" or a GitHub Enterprise host.
-Anything after the number (\"/files\", a query, an anchor) is ignored.
-
-Example:
-  (approve-parse-url \"https://github.com/magit/magit/pull/5000/files\")
-  => (:host \"github.com\" :owner \"magit\" :repo \"magit\" :number 5000)"
-  (when (stringp url)
-    (let ((url (string-trim url)))
-      (when (string-match approve--pr-url-regexp url)
-        (list :host (downcase (match-string 1 url))
-              :owner (match-string 2 url)
-              :repo (match-string 3 url)
-              :number (string-to-number (match-string 4 url)))))))
 
 (defun approve--default-url ()
   "Return a pull request URL at point or in the kill ring, or nil."

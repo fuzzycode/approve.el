@@ -62,8 +62,9 @@ The shell is fish: wrap loops in =bash -c '…'=.
   package code (lesson from approve-mvp/old).
 - Errors: =user-error= for things the user can fix, explaining how; =define-error=
   types under =approve-error= for the rest.
-- Evil: never =require= evil.  Bindings live in =approve-evil.el=, loaded by
-  =with-eval-after-load 'evil=.
+- Evil: never =require= evil.  Bindings live in =approve-evil.el=, which an
+  Approve mode requires when =(featurep 'evil)= (D17; package-lint rejects
+  =with-eval-after-load=).  Never shadow evil's motions there.
 - Faces only from =approve-faces.el=; icons only through =approve-icon=.
 - Every =defcustom= has =:type=, =:group= and a docstring with an example.
 - Async: callbacks never assume the buffer is alive or point unchanged.

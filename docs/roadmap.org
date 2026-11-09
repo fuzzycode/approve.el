@@ -62,7 +62,7 @@ Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], hea
 - [X] =approve-thread.el=: thread and comment rendering, resolved collapsed,
       pending styling, reactions, edited marker.
 - [X] =approve-context.el= with all the read-only contexts.
-- [ ] Navigation: =j= transient, =]u= =[u= =]t= =[t=, =RET=, =o=, =y=.
+- [X] Navigation: =j= transient, =]u= =[u= =]t= =[t=, =RET=, =o=, =y=.
 - [ ] =approve-eldoc.el= ([[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]], [[file:flows.org::*F20 Look up details][F20]]): =:echo= lines from the store
       for every context kind, full docs for the eldoc buffer, lazy detail
       queries (user, team, =#123=, commit, outdated thread code) with the
