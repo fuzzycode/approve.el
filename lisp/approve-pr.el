@@ -430,7 +430,10 @@ the buffer, and collapsed sections stay collapsed (decision D13)."
       (magit-insert-section (approve-root-section)
         (if-let* ((fatal (approve-session-get :fatal)))
             (approve-pr--insert-fatal fatal)
-          (magit-run-section-hook 'approve-pr-sections-hook))))
+          (magit-run-section-hook 'approve-pr-sections-hook)))
+      ;; Inserting only records which sections are collapsed; this hides
+      ;; their bodies, as `magit-refresh-buffer' does.
+      (magit-section-show magit-root-section))
     (approve-pr--restore (car positions))
     (dolist (position (cdr positions))
       (let ((window (plist-get position :window))

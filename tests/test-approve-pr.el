@@ -29,6 +29,18 @@
     (error "%S is not in the buffer" text))
   (goto-char (match-beginning 0)))
 
+(defun test-pr--shown-but-collapsed ()
+  "Return (TYPE VALUE) of each collapsed section whose body still shows."
+  (let (shown)
+    (magit-map-sections
+     (lambda (section)
+       (when (and (oref section hidden)
+                  (oref section content)
+                  (< (oref section content) (oref section end))
+                  (not (invisible-p (oref section content))))
+         (push (list (oref section type) (oref section value)) shown))))
+    (nreverse shown)))
+
 (describe "approve-pr-open"
   (it "names the buffer after the PR and puts it in approve-pr-mode"
     (approve-test-with-fixture "small"
@@ -177,6 +189,16 @@
               :to-be t)
       (expect (oref (approve-test-find-section 'approve-commits-section) hidden)
               :to-be nil)))
+
+  (it "hides the body of every collapsed section, when opened and after a redraw"
+    (test-pr--with-medium
+      (expect (test-pr--shown-but-collapsed) :to-be nil)
+      (magit-section-hide (approve-test-find-section 'approve-description-section))
+      (approve-pr-redraw)
+      (expect (test-pr--shown-but-collapsed) :to-be nil)
+      (expect (invisible-p (oref (approve-test-find-section 'approve-description-section)
+                                 content))
+              :to-be-truthy)))
 
   (it "detaches the markers of the sections it erases"
     (test-pr--with-medium
