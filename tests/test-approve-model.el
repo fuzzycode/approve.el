@@ -511,6 +511,8 @@ The check list carries HAS-NEXT and CURSOR."
     (it "return nil before the PR is loaded"
       (expect (approve-pr) :to-be nil)
       (expect (approve-pr-field 'title) :to-be nil)
+      (expect (approve-pr-fields '(title)) :to-be nil)
+      (expect (approve-pr-list-fields 'reviewThreads '(id)) :to-be nil)
       (expect (approve-pr-files) :to-be nil)
       (expect (approve-pr-threads) :to-be nil)
       (expect (approve-pr-threads-for-file "lisp/a.el") :to-be nil)
@@ -530,6 +532,12 @@ The check list carries HAS-NEXT and CURSOR."
         (expect (approve-pr-field 'number) :to-equal 7)
         (expect (approve-pr-field 'commitCount) :to-equal '((totalCount . 3))))
 
+      (it "approve-pr-fields reads several fields"
+        (expect (approve-pr-fields '(number title))
+                :to-equal '((number . 7) (title . "Fix the frobnicator")))
+        (expect (let-alist (approve-pr-fields '(author)) .author.login)
+                :to-equal "alice"))
+
       (it "approve-pr-files lists the files"
         (expect (approve-pr-files)
                 :to-equal (list (test-approve-model--file "lisp/a.el" 10)
@@ -543,6 +551,13 @@ The check list carries HAS-NEXT and CURSOR."
                                    (alist-get 'comments (car threads))))
                     .author.login)
                   :to-equal "bob")))
+
+      (it "approve-pr-list-fields reads some fields of every node"
+        (expect (approve-pr-list-fields 'reviewThreads '(id path isResolved))
+                :to-equal '(((id . "PRRT_1") (path . "lisp/a.el") (isResolved))
+                            ((id . "PRRT_2") (path . "lisp/b.el") (isResolved))
+                            ((id . "PRRT_3") (path . "lisp/a.el") (isResolved . t))))
+        (expect (approve-pr-list-fields 'noSuchList '(id)) :to-be nil))
 
       (it "approve-pr-threads-for-file keeps the threads of one path in order"
         (let ((threads (approve-pr-threads-for-file "lisp/a.el")))

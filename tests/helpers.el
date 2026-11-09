@@ -23,8 +23,10 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'magit-section)
 (require 'approve-api)
 (require 'approve-dev)
+(require 'approve-pr)
 
 (defvar approve-test--fixtures (make-hash-table :test #'equal)
   "Scenarios read so far, by name.")
@@ -72,8 +74,9 @@ NAMES is a scenario name or a list of them.  `approve-api-transport'
 replays them without latency; a request they do not answer fails
 with `approve-api-not-found'.  Queries come from the source tree's
 graphql/ (`approve-test-graphql-directory'), whatever another test
-left in `approve-graphql-directory'.  Requests have no timeout, and
-progress messages are kept out of the test output.  Wait for the
+left in `approve-graphql-directory'.  Requests have no timeout,
+progress messages are kept out of the test output, and relative
+dates count from `approve-test-now'.  Wait for the
 answers with `approve-test-wait-for' inside BODY."
   (declare (indent 1) (debug t))
   `(let ((approve-api-transport
@@ -82,6 +85,7 @@ answers with `approve-test-wait-for' inside BODY."
          (approve-graphql-directory approve-test-graphql-directory)
          (approve-api-timeout nil)
          (approve-api-host nil)
+         (approve-render-now approve-test-now)
          (inhibit-message t))
      ,@body))
 
@@ -97,6 +101,54 @@ so a callback that never comes fails the test instead of hanging it."
                (or timeout 5) predicate))
       (accept-process-output nil 0.01))
     value))
+
+(defconst approve-test-now (encode-time (list 0 0 12 4 10 2026 nil nil t))
+  "The time tests count relative dates from: 2026-10-04 12:00 UTC.
+The fixtures' events happen between 2026-10-01 and 2026-10-03.")
+
+(defun approve-test-pr-plist (name)
+  "Return the PR of scenario NAME as `approve-parse-url' would."
+  (let ((scenario (approve-test-fixture name)))
+    (list :host "github.com" :owner (plist-get scenario :owner)
+          :repo (plist-get scenario :repo) :number (plist-get scenario :number))))
+
+(defun approve-test-open-pr (name &optional no-wait)
+  "Return a PR buffer of scenario NAME, loaded through the fake API.
+Run it inside `approve-test-with-fixture'.  Unless NO-WAIT, wait
+until every query has settled and redraw.  Kill the buffer after."
+  (let ((buffer (approve-pr-setup-buffer (approve-test-pr-plist name))))
+    (with-current-buffer buffer
+      (approve-pr-load)
+      (unless no-wait
+        (approve-test-wait-for (lambda () (not (approve-pr-loading-p))))
+        (approve-pr-redraw)))
+    buffer))
+
+(defun approve-test-find-section (type &optional value)
+  "Return the first section of TYPE (and VALUE, if given) in the buffer."
+  (let (found)
+    (magit-map-sections
+     (lambda (section)
+       (when (and (not found)
+                  (eq (oref section type) type)
+                  (or (null value) (equal (oref section value) value)))
+         (setq found section))))
+    found))
+
+(defun approve-test-section-text (section)
+  "Return the text of SECTION without properties."
+  (buffer-substring-no-properties (oref section start) (oref section end)))
+
+(defun approve-test-fail-queries (transport names)
+  "Return TRANSPORT, except that requests for NAMES fail with HTTP 502.
+NAMES are GraphQL query files or REST resources."
+  (lambda (request)
+    (if (member (or (plist-get request :name) (plist-get request :resource)) names)
+        (let ((timer (run-at-time 0 nil (plist-get request :on-failure)
+                                  (list :status 502
+                                        :payload '((message . "Bad Gateway"))))))
+          (lambda () (cancel-timer timer)))
+      (funcall transport request))))
 
 (provide 'approve-test-helpers)
 

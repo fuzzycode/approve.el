@@ -52,7 +52,7 @@ Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], hea
 - [X] =approve-html.el=: port approve-v2's shr renderer (code, pre with
       syntax classes, suggestion tables, tables, lists, blockquote, details,
       images, links).
-- [ ] =approve-pr.el=: mode, buffer naming, skeleton, the F02 loading plan,
+- [X] =approve-pr.el=: mode, buffer naming, skeleton, the F02 loading plan,
       coalesced redraw, point restore, header line.
 - [ ] Sections: header + metadata rows, description, checks (summary,
       expandable), commits, conversation timeline.

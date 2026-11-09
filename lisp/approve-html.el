@@ -101,7 +101,7 @@ them off:
   "Number of rendered strings kept before the cache is emptied.")
 
 (defvar approve-html--images (make-hash-table :test #'equal)
-  "Images by URL: an image descriptor, or `failed'.")
+  "Images by URL: an image descriptor, `loading' or `failed'.")
 
 (defvar approve-html-wanted-images nil
   "URLs of images rendered while not in the cache, newest first.
@@ -115,9 +115,14 @@ The buffer that renders takes them with
   (clrhash approve-html--images))
 
 (defun approve-html-take-wanted-images ()
-  "Return the URLs of images wanted since the last call, and forget them."
-  (prog1 (delete-dups (nreverse approve-html-wanted-images))
-    (setq approve-html-wanted-images nil)))
+  "Return the URLs of images wanted since the last call, and forget them.
+They count as loading from now on: the caller fetches them and gives
+each to `approve-html-put-image'."
+  (let ((urls (delete-dups (nreverse approve-html-wanted-images))))
+    (setq approve-html-wanted-images nil)
+    (dolist (url urls)
+      (puthash url 'loading approve-html--images))
+    urls))
 
 (defun approve-html-put-image (url data)
   "Remember DATA, the bytes of the image at URL, or that it failed.
@@ -727,7 +732,7 @@ A missing image is added to `approve-html-wanted-images'."
          (image (and (stringp url) (gethash url approve-html--images))))
     (when (stringp url)
       (cond
-       ((and approve-load-images (display-images-p) image (not (eq image 'failed)))
+       ((and approve-load-images (display-images-p) image (not (symbolp image)))
         (shr-ensure-newline)
         (insert-image image label)
         (add-text-properties (1- (point)) (point) (approve-html-link-properties url))

@@ -609,6 +609,18 @@ Example: (approve-pr-field \\='title) => \"Fix the frobnicator\"."
       (approve-model--resolve (approve-model--root-field field)
                               (list approve-model--root)))))
 
+(defun approve-pr-fields (fields)
+  "Return an alist of FIELDS of the PullRequest, resolved, or nil.
+Nil before the PR is loaded.  FIELDS is a list of symbols.
+Example: (let-alist (approve-pr-fields \='(title number)) .title)"
+  (approve-model--with-store
+    (when approve-model--root
+      (let ((path (list approve-model--root))
+            (entity (approve-model--raw approve-model--root)))
+        (mapcar (lambda (name)
+                  (cons name (approve-model--resolve (alist-get name entity) path)))
+                fields)))))
+
 (defun approve-pr-files ()
   "Return the PR's changed files, a list of alists.
 Each has `path', `additions', `deletions', `changeType' and
@@ -632,6 +644,26 @@ Only the matching threads are resolved."
                    (equal (alist-get 'path (approve-model--raw node)) path))
                  (approve-model-nodes
                   (approve-model--root-field 'reviewThreads))))))
+
+(defun approve-pr-list-fields (field fields)
+  "Return the FIELDS of each node in the PR's list FIELD, resolved.
+FIELD is a list or connection of the PullRequest, such as
+`reviewThreads'; FIELDS a list of symbols.  Only those fields are
+resolved, so this is cheap enough for counts and indexes on every
+redraw.  Each node becomes an alist of FIELDS, in store order.
+
+Example:
+  (approve-pr-list-fields \='reviewThreads \='(id isResolved))
+  => (((id . \"PRRT_1\") (isResolved)) ...)"
+  (approve-model--with-store
+    (let ((path (list approve-model--root)))
+      (mapcar (lambda (node)
+                (let ((entity (approve-model--raw node)))
+                  (mapcar (lambda (name)
+                            (cons name (approve-model--resolve
+                                        (alist-get name entity) path)))
+                          fields)))
+              (approve-model-nodes (approve-model--root-field field))))))
 
 (defun approve-pr-pending-review ()
   "Return the viewer's pending review, resolved, or nil.

@@ -1,0 +1,239 @@
+;;; test-approve-pr.el --- Tests for the pull request buffer -*- lexical-binding: t; -*-
+
+;;; Commentary:
+
+;; Opening a PR (F01), loading it (F02), redrawing it with point and
+;; collapsed sections kept (D13), refreshing it (F17), error states,
+;; lazily loaded checks (F16) and the header line.  Everything goes
+;; through the fake API with the fixtures.
+
+;;; Code:
+
+(require 'buttercup)
+(require 'approve)
+(require 'approve-test-helpers "helpers")
+
+(defmacro test-pr--with-medium (&rest body)
+  "Run BODY in the loaded medium PR buffer, killed afterwards."
+  (declare (indent 0) (debug t))
+  `(approve-test-with-fixture "medium"
+     (let ((buffer (approve-test-open-pr "medium")))
+       (unwind-protect
+           (with-current-buffer buffer ,@body)
+         (kill-buffer buffer)))))
+
+(defun test-pr--goto-text (text)
+  "Move point to the start of the first TEXT in the buffer."
+  (goto-char (point-min))
+  (unless (search-forward text nil t)
+    (error "%S is not in the buffer" text))
+  (goto-char (match-beginning 0)))
+
+(describe "approve-pr-open"
+  (it "names the buffer after the PR and puts it in approve-pr-mode"
+    (approve-test-with-fixture "small"
+      (let ((buffer (approve-test-open-pr "small")))
+        (unwind-protect
+            (progn
+              (expect (buffer-name buffer) :to-equal "*approve: acme-example/greeter#7*")
+              (expect (buffer-local-value 'major-mode buffer) :to-be 'approve-pr-mode))
+          (kill-buffer buffer)))))
+
+  (it "shows an open buffer of the PR as it is"
+    (approve-test-with-fixture "small"
+      (let ((buffer (approve-test-open-pr "small")))
+        (unwind-protect
+            (progn
+              (spy-on 'approve-pr-load)
+              (expect (approve-pr-open (approve-test-pr-plist "small")) :to-be buffer)
+              (expect 'approve-pr-load :not :to-have-been-called))
+          (kill-buffer buffer)))))
+
+  (it "is what `approve' opens, and `approve' refuses other URLs"
+    (spy-on 'approve-pr-open)
+    (approve "https://github.com/acme-example/greeter/pull/7/files")
+    (expect 'approve-pr-open :to-have-been-called-with
+            '(:host "github.com" :owner "acme-example" :repo "greeter" :number 7))
+    (expect (approve "https://github.com/acme-example/greeter/issues/7")
+            :to-throw 'user-error)))
+
+(describe "Loading a PR"
+  (it "draws a skeleton that says what is loading"
+    (approve-test-with-fixture "medium"
+      (let ((buffer (approve-test-open-pr "medium" t)))
+        (unwind-protect
+            (with-current-buffer buffer
+              (expect (buffer-string) :to-match "^#202 ")
+              (expect (buffer-string) :to-match "Loading…")
+              (expect (approve-pr-loading-p 'core) :to-be-truthy)
+              (expect approve-pr--header-line :to-match "loading pull request, files")
+              (approve-test-wait-for (lambda () (not (approve-pr-loading-p))))
+              (approve-test-wait-for (lambda () (null approve-pr--redraw-timer)))
+              (expect (buffer-string) :not :to-match "Loading…\nCommits"))
+          (kill-buffer buffer)))))
+
+  (it "fills every section from the store"
+    (test-pr--with-medium
+      (expect (approve-session-get :errors) :to-be nil)
+      (expect (approve-model-meta :viewer) :to-equal "vera-example")
+      (dolist (type '(approve-header-section approve-pending-review-section
+                      approve-description-section approve-checks-section
+                      approve-commits-section approve-files-section))
+        (expect (approve-test-find-section type) :to-be-truthy))
+      (expect (approve-test-section-text (approve-test-find-section 'approve-header-section))
+              :to-match "#202 Rewrite the parser and engine scheduler")
+      (expect (length (oref (approve-test-find-section 'approve-files-section) children))
+              :to-equal 30)))
+
+  (it "sums the PR up in the header line"
+    (test-pr--with-medium
+      (let ((line (substring-no-properties approve-pr--header-line)))
+        (expect line :to-match "#202")
+        (expect line :to-match "Open")
+        (expect line :to-match "8/30 viewed")
+        (expect line :to-match "3 pending")
+        (expect line :to-match "15 unresolved")
+        (expect line :not :to-match "loading"))))
+
+  (it "shows a query's error in its section only"
+    (approve-test-with-fixture "medium"
+      (let* ((approve-api-transport (approve-test-fail-queries
+                                     approve-api-transport
+                                     '("queries/pull-request-commits.graphql")))
+             (buffer (approve-test-open-pr "medium")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (expect (approve-pr-error 'commits) :to-be-truthy)
+              (expect (approve-test-section-text (approve-test-find-section
+                                                  'approve-commits-section))
+                      :to-match "Could not load the commits: Bad Gateway · g to retry")
+              (expect (approve-test-section-text (approve-test-find-section
+                                                  'approve-description-section))
+                      :to-match "Rewrites the parser"))
+          (kill-buffer buffer)))))
+
+  (it "says so in the whole buffer when the PR is not found"
+    (approve-test-with-fixture "medium"
+      (let ((buffer (approve-pr-setup-buffer
+                     '(:host "github.com" :owner "acme-example" :repo "nope" :number 1))))
+        (unwind-protect
+            (with-current-buffer buffer
+              (approve-pr-load)
+              (approve-test-wait-for (lambda () (not (approve-pr-loading-p))))
+              (approve-pr-redraw)
+              (expect (buffer-string)
+                      :to-match "Pull request not found, or the token has no access to it."))
+          (kill-buffer buffer))))))
+
+(describe "Redrawing"
+  (it "coalesces redraws scheduled close together"
+    (test-pr--with-medium
+      (spy-on 'approve-pr-redraw :and-call-through)
+      (approve-pr-schedule-redraw)
+      (approve-pr-schedule-redraw)
+      (approve-pr-schedule-redraw)
+      (approve-test-wait-for (lambda () (null approve-pr--redraw-timer)))
+      (expect 'approve-pr-redraw :to-have-been-called-times 1)))
+
+  (it "keeps point on the same section, line and column"
+    (test-pr--with-medium
+      (test-pr--goto-text "internal/parser/lexer.go")
+      (forward-char 5)
+      (let ((column (current-column)))
+        (approve-pr-redraw)
+        (expect (magit-section-ident (magit-current-section))
+                :to-equal (magit-section-ident
+                           (approve-test-find-section 'approve-file-entry-section
+                                                      "internal/parser/lexer.go")))
+        (expect (current-column) :to-equal column))))
+
+  (it "moves point to the same line when its section is gone"
+    (test-pr--with-medium
+      (test-pr--goto-text "Fix lexer edge cases")
+      (let ((line (line-number-at-pos))
+            (approve-pr-sections-hook (remove 'approve-insert-commits-section
+                                              approve-pr-sections-hook)))
+        (approve-pr-redraw)
+        (expect (line-number-at-pos) :to-equal line))))
+
+  (it "moves point to the nearest section left when its own is gone"
+    (test-pr--with-medium
+      (magit-section-show (approve-test-find-section 'approve-checks-section))
+      (approve-pr--run-lazy-loaders)
+      (approve-test-wait-for (lambda () (approve-pr-loaded-p 'checks)))
+      (approve-pr-redraw)
+      (test-pr--goto-text "CI / test")
+      (expect (oref (magit-current-section) type) :to-be 'approve-check-section)
+      (cl-letf (((symbol-function 'approve-sections--insert-checks) #'ignore))
+        (approve-pr-redraw))
+      (expect (oref (magit-current-section) type) :to-be 'approve-checks-section)))
+
+  (it "keeps collapsed sections collapsed and expanded ones expanded"
+    (test-pr--with-medium
+      (magit-section-hide (approve-test-find-section 'approve-description-section))
+      (magit-section-show (approve-test-find-section 'approve-commits-section))
+      (approve-pr-redraw)
+      (expect (oref (approve-test-find-section 'approve-description-section) hidden)
+              :to-be t)
+      (expect (oref (approve-test-find-section 'approve-commits-section) hidden)
+              :to-be nil)))
+
+  (it "starts with checks and commits collapsed and the rest expanded"
+    (test-pr--with-medium
+      (expect (oref (approve-test-find-section 'approve-checks-section) hidden) :to-be t)
+      (expect (oref (approve-test-find-section 'approve-commits-section) hidden) :to-be t)
+      (expect (oref (approve-test-find-section 'approve-description-section) hidden)
+              :to-be nil)
+      (expect (oref (approve-test-find-section 'approve-files-section) hidden) :to-be nil))))
+
+(describe "Refreshing"
+  (it "loads again, keeping the text until the data arrives"
+    (test-pr--with-medium
+      (let ((before (buffer-string)))
+        (approve-pr-refresh)
+        (expect (buffer-string) :to-equal before)
+        (expect (approve-pr-loading-p) :to-be-truthy)
+        (approve-test-wait-for (lambda () (not (approve-pr-loading-p))))
+        (approve-pr-redraw)
+        (expect (substring-no-properties (buffer-string))
+                :to-equal (substring-no-properties before)))))
+
+  (it "replaces paged lists whole"
+    (approve-test-with-fixture "large"
+      (let ((buffer (approve-test-open-pr "large")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (expect (length (approve-pr-files)) :to-equal 300)
+              (approve-pr-refresh)
+              (approve-test-wait-for (lambda () (not (approve-pr-loading-p))))
+              (expect (length (approve-pr-files)) :to-equal 300)
+              (expect (hash-table-count (approve-model-extra :patches)) :to-equal 300))
+          (kill-buffer buffer))))))
+
+(describe "The checks"
+  (it "load when the Checks section is expanded, and show failing ones first"
+    (test-pr--with-medium
+      (expect (approve-pr-loaded-p 'checks) :to-be nil)
+      (approve-pr--run-lazy-loaders)
+      (expect (approve-pr-loading-p 'checks) :to-be nil)
+      (magit-section-show (approve-test-find-section 'approve-checks-section))
+      (approve-pr--run-lazy-loaders)
+      (expect (approve-pr-loading-p 'checks) :to-be-truthy)
+      (approve-test-wait-for (lambda () (approve-pr-loaded-p 'checks)))
+      (approve-pr-redraw)
+      (let* ((section (approve-test-find-section 'approve-checks-section))
+             (lines (cdr (split-string (approve-test-section-text section) "\n" t))))
+        (expect (oref section hidden) :to-be nil)
+        (expect (car lines) :to-match "CI / test")
+        (expect (car lines) :to-match "required")
+        (expect (car lines) :to-match "failure")))))
+
+(describe "Copying"
+  (it "leaves out text marked as decoration"
+    (with-temp-buffer
+      (approve-pr-mode)
+      (let ((inhibit-read-only t))
+        (insert (approve-render-decoration "12 ") "code" (approve-render-decoration " x")))
+      (expect (filter-buffer-substring (point-min) (point-max)) :to-equal "code"))))
+
+;;; test-approve-pr.el ends here

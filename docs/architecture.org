@@ -62,6 +62,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-api.el=           | =approve-api-graphql=, =approve-api-rest=, transport, errors, rate limits       |     0 |
 | =approve-api-paging.el=    | =approve-api-graphql-all=, =approve-api-rest-all=: lists page by page           |     0 |
 | =approve-api-queue.el=     | Mutation queue (=approve-api-mutate=): one at a time, pauses on rate limits     |     0 |
+| =approve-api-url.el=       | Plain URL fetches (images in comments), async through =url-queue-retrieve=      |     1 |
 | =approve-model.el=         | Store, refs, connections, selectors, patch, list edits, shared store            |     0 |
 | =approve-session.el=       | Session state: loading, errors, in-flight, drafts, layout (never sent anywhere) |     0 |
 | =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, repo metadata        |   1–3 |
@@ -69,7 +70,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-faces.el=         | Every face, inheriting from magit/built-in                                      |     1 |
 | =approve-icons.el=         | =approve-icon=: semantic name → nerd-icons or Unicode                           |     1 |
 | =approve-html.el=          | =bodyHTML= → text with shr and custom tag handlers                              |     1 |
-| =approve-sections.el=      | Header, metadata, description, checks, commits, conversation, files list        |     1 |
+| =approve-sections.el=      | Header, metadata, pending review, description, checks, commits, files list      |     1 |
+| =approve-render.el=        | Shared renderer helpers: people, dates, reactions, hints, alignment, prefixes   |     1 |
 | =approve-diff.el=          | Patch parsing, line model, thread index, file/hunk/line sections                |     1 |
 | =approve-thread.el=        | Thread and comment sections (also used in the conversation)                     |     1 |
 | =approve-context.el=       | =approve-context-at-point=: what is under point or in the region                |     1 |
@@ -237,6 +239,14 @@ quickly and each section fills in when its data arrives.
   locally (=diff-no-select=, or =diff= on temp files).  Binary files show only a
   heading.
 - =g= reruns the same plan and keeps the buffer as it is until data arrives.
+  A refresh is atomic per query: a list's pages are collected and replace
+  the old list together, so it never shrinks to its first page meanwhile.
+- The session tracks each query under its key (=core=, =files=, =threads=,
+  =timeline=, =commits=, =patches=, =checks=): =:loading=, =:loaded=,
+  =:errors=.  Sections read it to show "Loading…" or their error.
+- Data that only an expanded section shows (the check contexts) is loaded
+  after the command that expanded it (=approve-pr-lazy-loaders=), and again
+  on =g= once it was loaded.
 
 * Rendering
 ** Section tree of the PR buffer

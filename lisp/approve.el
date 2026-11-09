@@ -41,11 +41,17 @@
 
 ;;; Code:
 
+(require 'seq)
+(require 'thingatpt)
+
 (defgroup approve nil
   "Review GitHub pull requests."
   :group 'tools
   :prefix "approve-"
   :link '(url-link :tag "Homepage" "https://github.com/fuzzycode/approve.el"))
+
+(require 'approve-pr)
+(require 'approve-sections)
 
 (declare-function magit-add-section-hook "magit-section")
 
@@ -86,6 +92,27 @@ Example:
               :owner (match-string 2 url)
               :repo (match-string 3 url)
               :number (string-to-number (match-string 4 url)))))))
+
+(defun approve--default-url ()
+  "Return a pull request URL at point or in the kill ring, or nil."
+  (seq-find #'approve-parse-url
+            (delq nil (list (thing-at-point 'url t)
+                            (ignore-errors (current-kill 0 t))))))
+
+;;;###autoload
+(defun approve (url)
+  "Open the GitHub pull request at URL for review (flow F01).
+Interactively, the prompt offers a pull request URL at point or in
+the kill ring.  An open buffer of the pull request is shown as it
+is; \\[approve-pr-refresh] there loads it again.
+
+Example: (approve \"https://github.com/magit/magit/pull/5000\")"
+  (interactive
+   (let ((default (approve--default-url)))
+     (list (read-string (format-prompt "Pull request URL" default)
+                        nil nil default))))
+  (approve-pr-open (or (approve-parse-url url)
+                       (user-error "Not a pull request URL: %s" url))))
 
 (provide 'approve)
 
