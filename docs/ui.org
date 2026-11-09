@@ -143,6 +143,8 @@ Notes:
   lines use =magit-diff-added=, removed =magit-diff-removed=, context
   =magit-diff-context=; changed words in pairs of removed and added lines
   are marked when =approve-diff-refine-hunk= is non-nil (the default).
+  Code is coloured by the file's major mode over those backgrounds
+  (=approve-diff-fontify=, [[file:decisions.org::*D30 Diff hunks are syntax-highlighted by default][D30]]).
 - Threads sit right under the line they belong to (the last line of a
   range).  For a multi-line thread the covered lines get a thin bar in the
   fringe while point is on the thread.

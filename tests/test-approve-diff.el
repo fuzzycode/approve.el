@@ -37,6 +37,39 @@
     (let ((patch (concat "@@ -1 +1 @@\n" "-a\n+b")))
       (expect (approve-diff-parse patch) :to-be (approve-diff-parse patch)))))
 
+(describe "Syntax highlighting in hunks"
+  (it "colours both sides of a hunk in the file's major mode, once per patch"
+    (let* ((approve-diff-fontify t)
+           (patch "@@ -1,2 +1,2 @@\n (defun f ()\n-  \"old\")\n+  \"new\")")
+           (hunks (approve-diff-parse patch))
+           (table (approve-diff--fontify "lisp/x.el" patch hunks))
+           (lines (approve-diff-hunk-lines (car hunks))))
+      (expect (ensure-list (get-text-property 1 'face (gethash (nth 0 lines) table)))
+              :to-contain 'font-lock-keyword-face)
+      (expect (ensure-list (get-text-property 3 'face (gethash (nth 1 lines) table)))
+              :to-contain 'font-lock-string-face)
+      (expect (ensure-list (get-text-property 3 'face (gethash (nth 2 lines) table)))
+              :to-contain 'font-lock-doc-face)
+      (expect (approve-diff--fontify "lisp/x.el" patch hunks) :to-be table)))
+
+  (it "keeps the diff's background under the syntax colours"
+    (let* ((approve-diff-fontify t)
+           (patch "@@ -1 +1 @@\n-(defun f ())\n+(defun g ())")
+           (hunks (approve-diff-parse patch))
+           (table (approve-diff--fontify "lisp/x.el" patch hunks))
+           (line (nth 1 (approve-diff-hunk-lines (car hunks))))
+           (text (approve-diff--line-text "lisp/x.el" line 3 nil (gethash line table)))
+           (faces (ensure-list (get-text-property (string-search "defun" text) 'face text))))
+      (expect faces :to-contain 'font-lock-keyword-face)
+      (expect faces :to-contain 'approve-diff-added)))
+
+  (it "does nothing when turned off or for files without a mode"
+    (let ((hunks (approve-diff-parse "@@ -1 +1 @@\n-a\n+b")))
+      (let ((approve-diff-fontify nil))
+        (expect (approve-diff--fontify "x.el" "p" hunks) :to-be nil))
+      (let ((approve-diff-fontify t))
+        (expect (approve-diff--fontify "no-mode-for-this.zzz9" "p" hunks) :to-be nil)))))
+
 (describe "approve-diff-thread-index"
   (it "puts threads under their line, on the file, or with the outdated"
     (let* ((lines (make-hash-table :test #'equal))

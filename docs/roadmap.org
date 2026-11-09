@@ -77,6 +77,7 @@ Before the diff task: try fontifying the reconstructed old and new texts of
 each hunk with the file's major mode (like =diff-font-lock-syntax=), applied
 only when a file is expanded.  Measure on the large fixture.  Decide: on by
 default, off by default, or dropped.
+- Done :: on by default, cached per patch ([[file:decisions.org::*D30 Diff hunks are syntax-highlighted by default][D30]]).
 
 ** SP5 Images in bodyHTML
 Check that private repository images (signed URLs) and public camo images load

@@ -86,6 +86,17 @@ hide them:
   :type 'boolean
   :group 'approve)
 
+(defcustom approve-diff-fontify t
+  "Whether code in the diff is coloured by the file's major mode.
+When non-nil, expanding a file fontifies its old and new lines in
+the major mode `auto-mode-alist' gives its name (without running
+the mode's hooks), the way `diff-font-lock-syntax' does, once per
+patch (decision D30).  To turn it off:
+
+  (setq approve-diff-fontify nil)"
+  :type 'boolean
+  :group 'approve)
+
 ;;; Section classes
 
 (defclass approve-diff-section (magit-section) ()
@@ -318,6 +329,79 @@ removed lines followed by added ones.  A value is a list of (START
           (pop rest))))
     marks))
 
+;;; Syntax
+
+(defun approve-diff--major-mode (path)
+  "Return the major mode `auto-mode-alist' gives PATH, or nil."
+  (let ((mode (assoc-default path auto-mode-alist #'string-match)))
+    (when (consp mode)
+      (setq mode (car mode)))
+    (and mode (symbolp mode) (fboundp mode) mode)))
+
+(defun approve-diff--faces-only (string)
+  "Return STRING with only its `face' property kept."
+  (let ((result (substring-no-properties string))
+        (pos 0))
+    (while (< pos (length string))
+      (let ((next (or (next-single-property-change pos 'face string) (length string)))
+            (face (get-text-property pos 'face string)))
+        (when face
+          (put-text-property pos next 'face face result))
+        (setq pos next)))
+    result))
+
+(defun approve-diff--fontify-codes (mode codes)
+  "Return CODES, a list of lines, fontified together in MODE.
+The mode's hooks do not run.  Return nil if fontifying fails."
+  (condition-case err
+      (with-temp-buffer
+        (insert (string-join codes "\n"))
+        (let ((enable-local-variables nil)
+              (inhibit-message t)
+              (message-log-max nil))
+          (delay-mode-hooks (funcall mode))
+          (font-lock-ensure))
+        (goto-char (point-min))
+        (let ((lines nil))
+          (dotimes (_ (length codes))
+            (push (approve-diff--faces-only
+                   (buffer-substring (point) (line-end-position)))
+                  lines)
+            (forward-line 1))
+          (nreverse lines)))
+    (error
+     (approve-log 'debug "Fontifying in %s failed: %s" mode (error-message-string err))
+     nil)))
+
+(defvar approve-diff--fontified (make-hash-table :test #'eq :weakness 'key)
+  "Fontified lines by patch string: (MODE . TABLE), see `approve-diff--fontify'.")
+
+(defun approve-diff--fontify (path patch hunks)
+  "Return a hash table from the lines of HUNKS to their code, fontified.
+HUNKS are the parse of PATCH.  The new side (context and added
+lines) and the old side (removed lines) are fontified as two texts
+in the major mode of PATH, once per patch.  Return nil when
+`approve-diff-fontify' is nil or PATH has no mode."
+  (when-let* ((approve-diff-fontify)
+              (mode (approve-diff--major-mode path)))
+    (let ((cached (gethash patch approve-diff--fontified)))
+      (if (eq (car cached) mode)
+          (cdr cached)
+        (let ((table (make-hash-table :test #'eq))
+              (new nil) (old nil))
+          (dolist (hunk hunks)
+            (dolist (line (approve-diff-hunk-lines hunk))
+              (pcase (car line)
+                ((or 'add 'ctx) (push line new))
+                ('del (push line old)))))
+          (dolist (side (list (nreverse new) (nreverse old)))
+            (cl-loop for line in side
+                     for code in (approve-diff--fontify-codes
+                                  mode (mapcar (lambda (line) (nth 3 line)) side))
+                     do (puthash line code table)))
+          (puthash patch (cons mode table) approve-diff--fontified)
+          table)))))
+
 ;;; Lines
 
 (defun approve-diff--number-width (hunks)
@@ -332,9 +416,10 @@ removed lines followed by added ones.  A value is a list of (START
   "Return the columns before the code of a line, for numbers WIDTH wide."
   (if approve-diff-line-numbers (+ (* 2 width) 3) 1))
 
-(defun approve-diff--line-text (path line width changed)
+(defun approve-diff--line-text (path line width changed &optional fontified)
   "Return LINE of PATH as text: numbers WIDTH wide, marker, code.
-CHANGED lists the (START . END) of its changed words, or nil."
+CHANGED lists the (START . END) of its changed words, or nil;
+FONTIFIED is its code with syntax faces, or nil."
   (pcase-let* ((`(,kind ,old ,new ,code) line)
                (face (pcase kind
                        ('add 'approve-diff-added)
@@ -349,7 +434,7 @@ CHANGED lists the (START . END) of its changed words, or nil."
                              'approve-line-number)
                           ""))
                (marker (pcase kind ('add "+") ('del "-") ('nonl "") (_ " ")))
-               (code (copy-sequence code)))
+               (code (copy-sequence (or fontified code))))
     (when changed
       (let ((refine (if (eq kind 'del) 'approve-diff-refine-removed
                       'approve-diff-refine-added)))
@@ -374,10 +459,11 @@ CHANGED lists the (START . END) of its changed words, or nil."
       (approve-thread-insert thread)
       (approve-render-prefix start (point) (make-string gutter ?\s)))))
 
-(defun approve-diff--insert-hunk (path hunk width index)
+(defun approve-diff--insert-hunk (path hunk width index &optional fontified)
   "Insert HUNK of PATH: its header, lines, and the threads under lines.
 WIDTH is the width of line numbers; INDEX is the file's thread
-index, from `approve-diff-thread-index'."
+index, from `approve-diff-thread-index'; FONTIFIED maps lines to
+their code with syntax faces, or is nil."
   (let* ((lines (approve-diff-hunk-lines hunk))
          (marks (and approve-diff-refine-hunk (approve-diff--refine lines)))
          (by-line (plist-get index :lines))
@@ -387,7 +473,8 @@ index, from `approve-diff-thread-index'."
         (approve-face (concat (approve-diff-hunk-header hunk) "\n")
                       'approve-diff-hunk-heading))
       (dolist (line lines)
-        (let* ((text (approve-diff--line-text path line width (and marks (gethash line marks))))
+        (let* ((text (approve-diff--line-text path line width (and marks (gethash line marks))
+                                              (and fontified (gethash line fontified))))
                (side (if (eq (car line) 'del) "LEFT" "RIGHT"))
                (number (if (eq (car line) 'del) (nth 1 line) (nth 2 line)))
                (threads (append (gethash (cons side number) by-line)
@@ -421,9 +508,10 @@ HIDE collapses it at first; NOTE is dim text on the right."
     (approve-diff--insert-thread-group 'file "On this file" (plist-get index :file) nil)
     (cond
      (hunks
-      (let ((width (approve-diff--number-width hunks)))
+      (let ((width (approve-diff--number-width hunks))
+            (fontified (approve-diff--fontify path patch hunks)))
         (dolist (hunk hunks)
-          (approve-diff--insert-hunk path hunk width index))))
+          (approve-diff--insert-hunk path hunk width index fontified))))
      ((approve-pr-error 'patches)
       (insert (approve-render-failure "the diff" (approve-pr-error 'patches))))
      ((null entry)

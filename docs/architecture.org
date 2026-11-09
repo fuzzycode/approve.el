@@ -454,7 +454,7 @@ measures whatever is loaded.
 
 Means: lazy bodies, a thread index built once per redraw, no per-line
 sections, faces as text properties (not overlays), coalesced redraws, and
-syntax highlighting only for expanded hunks ([[file:roadmap.org::*SP4 Syntax highlighting in hunks][SP4]]).  Rendered HTML is
+syntax highlighting only for expanded files, cached per patch (D30).  Rendered HTML is
 cached by its text, and parsed patches by their string.
 
 * Security and privacy

@@ -256,6 +256,21 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   window's edge, need its width managed per window, and still put a real
   character on each line; overlays for 20 000 lines would be slow.
 
+** D30 Diff hunks are syntax-highlighted by default
+- Status :: accepted (2026-11-08, answers SP4 and Q2)
+- Decision :: =approve-diff-fontify= is t by default.  When a file is first
+  expanded, its new side (context and added lines) and old side (removed
+  lines) are fontified as two texts in a temporary buffer in the major mode
+  =auto-mode-alist= gives its path, with the mode's hooks delayed (never
+  run).  The syntax colours go over the diff backgrounds.  Results are
+  cached per patch, so redraws and later expansions reuse them.
+- Why :: GitHub colours diffs, and diff-mode does the same by default
+  (=diff-font-lock-syntax=).  Measured on 500 lines, compiled: elisp 1.2 ms,
+  Go 3.8 ms, JavaScript 5.8 ms, C 9.5 ms, Python 12.3 ms, paid once per file
+  on top of 16 ms to draw it, within the 30 ms budget.  Expanding all 300
+  files of the large fixture went from 2.1 to 6.1 ms per file, mostly the
+  set-up of a mode per file.  Collapsed files cost nothing.
+
 * Platform and tooling
 ** D18 Emacs 29.1 or newer
 - Status :: accepted
@@ -304,9 +319,8 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
 
 - Q1 :: Diff line numbers: as text in the line, or in the margin?
   → answered by [[*D28 Diff line numbers are text that copying leaves out][D28]] (text, left out when copying).
-- Q2 :: Syntax highlighting inside diff hunks: reuse the idea of diff-mode's
-  =diff-font-lock-syntax= (fontify reconstructed old/new text in a temp
-  buffer)?  Cost on large diffs?  → [[file:roadmap.org::*SP4 Syntax highlighting in hunks][SP4]].
+- Q2 :: Syntax highlighting inside diff hunks?
+  → answered by [[*D30 Diff hunks are syntax-highlighted by default][D30]] (on by default, cached per patch).
 - Q3 :: GitHub edge cases for review comments: a single comment while a
   review is pending, a multi-line range across hunks, comments on context
   lines outside hunks, and comments in a commit-range view.  → [[file:roadmap.org::*SP1 Review API behaviour][SP1]].
