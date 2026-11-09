@@ -189,7 +189,8 @@
         (expect (seq-find (lambda (b) (equal (car (split-string (nth 2 b))) key)) bound)
                 :to-be nil))
       (expect (mapcar (lambda (key) (nth 3 (seq-find (lambda (b) (equal (nth 2 b) key)) bound)))
-                      '("j" "k"))
-              :to-equal '(evil-next-visual-line evil-previous-visual-line)))))
+                      '("j" "k" "<down>" "<up>"))
+              :to-equal '(evil-next-visual-line evil-previous-visual-line
+                          evil-next-visual-line evil-previous-visual-line)))))
 
 ;;; test-approve-nav.el ends here

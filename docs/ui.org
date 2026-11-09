@@ -543,11 +543,11 @@ Keys are a draft to check in Phases 1–2.  Principles:
 - Emacs: single letters as in Magit; the same letter in every Approve buffer
   means the same thing.
 - Evil normal state: never shadow motions (h j k l w b e W B E 0 ^ $ gg G
-  f t % { } H M L), search (/ n N), visual (v V C-v) or yank (y).  =j= and
-  =k= are evil's screen-line motions (=evil-next-visual-line=), as Magit's
-  own line motions are (=line-move-visual=): by logical line, moving down from
-  a collapsed heading stops in its hidden body and Magit puts point back at
-  the heading's end.  Visual
+  f t % { } H M L), search (/ n N), visual (v V C-v) or yank (y).  =j=, =k=
+  and the arrow keys are evil's screen-line motions (=evil-next-visual-line=),
+  as Magit's own line motions are (=line-move-visual=): by logical line,
+  moving down from a collapsed heading stops in its hidden body and Magit
+  puts point back at the heading's end.  Visual
   line selection (=V=) picks a range to comment on.  =?= opens dispatch, as in
   evil-collection's Magit.
 - Every command is also in the dispatch transient, so a missing key is never
