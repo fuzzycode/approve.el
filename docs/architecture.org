@@ -330,11 +330,14 @@ network.
 
 ** Context at point
 =approve-context-at-point= returns one plist that every DWIM command uses.
+It looks at the region (diff lines), then the thing under point
+(=approve-thing=), the diff line (=approve-line=), a link (=approve-url=),
+then walks up the sections from point to the first one that means something.
 
 | Point on / region over     | Context =:kind=                 | Extra keys                                       |
 |----------------------------+---------------------------------+--------------------------------------------------|
 | Diff line(s), region       | =lines=                         | =:path :side :line :start-line :start-side=      |
-| Diff line                  | =line=                          | =:path :side :line=                              |
+| Diff line                  | =line=                          | =:path :side :line :old :new :line-kind=         |
 | File heading / file entry  | =file=                          | =:path :viewed=                                  |
 | Thread heading             | =thread=                        | =:thread-id :resolved :can-reply :can-resolve=   |
 | Comment in a thread        | =review-comment=                | =:comment-id :thread-id :can-update :can-delete= |
@@ -343,6 +346,11 @@ network.
 | Description                | =description=                   | =:can-update=                                    |
 | Title                      | =title=                         | =:can-update=                                    |
 | Label, user, commit, check | =label= =user= =commit= =check= | =:value :url=                                    |
+| Team, =#123=, milestone,   | =team= =ref= =milestone=        | =:value :url= (=:thing=: what was drawn, for     |
+| branch, date, reactions    | =branch= =date= =reactions=     | eldoc)                                           |
+| Link in a comment          | =link=                          | =:value :url=                                    |
+| Metadata row, pending      | =meta= =pending-review= =event= | =:row= / =:review-id= / =:id=                    |
+| review, timeline event     |                                 |                                                  |
 | Anything else              | =pr=                            |                                                  |
 
 Every context also carries =:url= when one exists (for =o= and copying).
