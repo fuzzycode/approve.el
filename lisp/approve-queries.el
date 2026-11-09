@@ -56,6 +56,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'diff)
 (require 'approve-api)
 (require 'approve-api-paging)
 (require 'approve-model)
@@ -204,6 +205,80 @@ ON-PAGE, CALLBACK, ERRORBACK and ATOMIC are as for
        (approve-query-list (nth 1 entry) (nthcdr 2 entry)
                            :on-page on-page :callback callback
                            :errorback errorback :atomic atomic)))))
+
+;;; Diffs GitHub did not send
+
+(cl-defun approve-query-blob (oid path &key callback errorback)
+  "Fetch the text of PATH at commit OID of the PR's repository.
+CALLBACK is called with the text, or \"\" when the file does not exist
+at OID (it was added or deleted).  ERRORBACK is called with the
+error, also when the file is binary or too large for GitHub to send."
+  (approve-api-graphql
+   "queries/blob.graphql"
+   `((owner . ,(approve-model-meta :owner)) (name . ,(approve-model-meta :repo))
+     (expression . ,(format "%s:%s" oid path)))
+   :host (approve-query-host)
+   :progress (format "Fetching %s" path)
+   :errorback errorback
+   :callback
+   (lambda (data)
+     (let-alist data
+       (cond
+        ((null .repository.object) (funcall callback ""))
+        (.repository.object.isBinary
+         (funcall errorback (list 'approve-api-error "The file is binary")))
+        ((or .repository.object.isTruncated (null .repository.object.text))
+         (funcall errorback (list 'approve-api-error
+                                  "The file is too large for GitHub's API")))
+        (t (funcall callback .repository.object.text)))))))
+
+(defun approve-query--unified-diff (old new)
+  "Return the unified diff from text OLD to text NEW, from its first hunk.
+It is computed by the `diff' program on temporary files (decision
+D03 allows a local diff of fetched blobs)."
+  (let ((old-file (make-temp-file "approve-old"))
+        (new-file (make-temp-file "approve-new")))
+    (unwind-protect
+        (progn
+          (let ((coding-system-for-write 'utf-8-unix))
+            (write-region old nil old-file nil 'silent)
+            (write-region new nil new-file nil 'silent))
+          (with-temp-buffer
+            (let ((coding-system-for-read 'utf-8-unix))
+              (call-process diff-command nil t nil "-u" old-file new-file))
+            (goto-char (point-min))
+            (if (re-search-forward "^@@" nil t)
+                (buffer-substring-no-properties (match-beginning 0) (point-max))
+              "")))
+      (delete-file old-file)
+      (delete-file new-file))))
+
+(cl-defun approve-query-local-patch (path &key callback errorback)
+  "Compute the patch of PATH from its blobs, for a file GitHub sent none of.
+The base is the PR's base commit (at the old path of a renamed file),
+the head its head commit.  The patch goes into the file's entry under
+:patches, then CALLBACK is called with no arguments; ERRORBACK gets
+the error of a failed fetch."
+  (let* ((entry (gethash path (approve-model-extra :patches)))
+         (old-path (or (alist-get 'previous_filename entry) path))
+         (base (approve-pr-field 'baseRefOid))
+         (head (approve-pr-field 'headRefOid)))
+    (approve-query-blob
+     base old-path
+     :errorback errorback
+     :callback
+     (lambda (old)
+       (approve-query-blob
+        head path
+        :errorback errorback
+        :callback
+        (lambda (new)
+          (let ((table (approve-model-extra :patches)))
+            (puthash path (cons (cons 'patch (approve-query--unified-diff old new))
+                                (assq-delete-all 'patch (copy-alist (gethash path table))))
+                     table))
+          (when callback
+            (funcall callback))))))))
 
 ;;; Details (eldoc)
 

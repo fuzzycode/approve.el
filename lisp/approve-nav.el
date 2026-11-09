@@ -300,7 +300,8 @@ is collapsed again."
   "Follow the thing at point (flow F03).
 A file goes to its diff, a pending comment or a review to its thread,
 a link to its target (a pull request in Approve, anything else in the
-browser), a check to its details.  Elsewhere, toggle the section."
+browser), a check to its details, a diff GitHub did not send is
+computed from the file's versions.  Elsewhere, toggle the section."
   (interactive)
   (let ((context (approve-context-at-point)))
     (pcase (plist-get context :kind)
@@ -324,6 +325,7 @@ browser), a check to its details.  Elsewhere, toggle the section."
            (approve-nav--open-url url)
          (user-error "Nothing to visit here")))
       ('commit (browse-url (plist-get context :url)))
+      ('load-diff (approve-pr-load-local-patch (plist-get context :path)))
       (_ (approve-nav--toggle-or "Nothing to visit here")))))
 
 (defun approve-browse ()

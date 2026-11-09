@@ -434,11 +434,19 @@ HIDE collapses it at first; NOTE is dim text on the right."
       (insert (approve-render-empty "Binary file not shown.")))
      ((zerop (+ (alist-get 'additions file) (alist-get 'deletions file)))
       (insert (approve-render-empty "File renamed without changes.")))
+     ((approve-pr-loading-p (cons 'diff path))
+      (insert (approve-render-loading "the diff")))
+     ((approve-pr-error (cons 'diff path))
+      (insert (approve-render-failure "the diff" (approve-pr-error (cons 'diff path)))))
      (t
-      (insert (approve-face "Diff not shown by GitHub (too large)" 'approve-empty)
-              (if-let* ((hints (approve-render-hints '("o" approve-browse "open it on GitHub"))))
-                  (concat (approve-face " · " 'approve-dim) hints)
-                "")
+      (insert (approve-thing
+               (concat (approve-face "Diff not shown by GitHub (too large)" 'approve-empty)
+                       (if-let* ((hints (approve-render-hints
+                                         '("RET" approve-visit "load it anyway")
+                                         '("o" approve-browse "open it on GitHub"))))
+                           (concat (approve-face " · " 'approve-dim) hints)
+                         ""))
+               (list :kind 'load-diff :path path))
               "\n")))
     (approve-diff--insert-thread-group 'outdated "Outdated" (plist-get index :outdated) t
                                        "threads on lines no longer in the diff")

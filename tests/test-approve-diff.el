@@ -199,7 +199,45 @@
                                                         "pkg/mike/schema_10.json")))
                 (magit-section-show section)
                 (expect (approve-test-section-text section)
-                        :to-match "Diff not shown by GitHub (too large)")))
+                        :to-match "Diff not shown by GitHub (too large) · RET load it anyway")))
+          (kill-buffer buffer)))))
+
+  (it "computes such a diff from both versions of the file on RET"
+    (approve-test-with-fixture "large"
+      (let* ((replay approve-api-transport)
+             (blobs nil)
+             (approve-api-transport
+              (lambda (request)
+                (if (equal (plist-get request :name) "queries/blob.graphql")
+                    (let* ((expression (alist-get 'expression (plist-get request :variables)))
+                           (text (if (string-prefix-p (approve-pr-field 'baseRefOid) expression)
+                                     "{\n  \"a\": 1\n}\n"
+                                   "{\n  \"a\": 2\n}\n")))
+                      (push expression blobs)
+                      (run-at-time 0 nil (plist-get request :on-success)
+                                   `((data (repository (id . "R")
+                                                       (object (__typename . "Blob")
+                                                               (id . "B") (text . ,text)))))
+                                   nil)
+                      nil)
+                  (funcall replay request))))
+             (buffer (approve-test-open-pr "large")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (magit-section-show (approve-test-find-section 'approve-file-section
+                                                             "pkg/mike/schema_10.json"))
+              (goto-char (point-min))
+              (search-forward "load it anyway")
+              (approve-visit)
+              (approve-test-wait-for (lambda () (= (length blobs) 2)))
+              (approve-test-wait-for (lambda () (not (approve-pr-loading-p
+                                                      '(diff . "pkg/mike/schema_10.json")))))
+              (approve-pr-redraw)
+              (let ((section (approve-test-find-section 'approve-file-section
+                                                        "pkg/mike/schema_10.json")))
+                (expect (approve-test-section-text section) :to-match "@@ -1,3 \\+1,3 @@")
+                (expect (approve-test-section-text section) :to-match "-  \"a\": 1")
+                (expect (approve-test-section-text section) :to-match "\\+  \"a\": 2")))
           (kill-buffer buffer))))))
 
 ;;; test-approve-diff.el ends here

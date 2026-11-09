@@ -1,0 +1,24 @@
+# A file's contents at a commit, by "OID:path" (architecture.org, "Loading a
+# PR": a diff GitHub did not send is computed locally from both blobs).
+# text is null for binary blobs; isTruncated is true when GitHub cut it.
+query Blob($owner: String!, $name: String!, $expression: String!) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    object(expression: $expression) {
+      __typename
+      ... on Blob {
+        id
+        text
+        isBinary
+        isTruncated
+        byteSize
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

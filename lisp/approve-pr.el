@@ -282,6 +282,26 @@ extended details (`approve-pr-clear-cache-functions')."
     (run-hooks 'approve-pr-clear-cache-functions))
   (approve-pr-load t))
 
+(defun approve-pr-load-local-patch (path)
+  "Compute the diff of PATH from its blobs, as GitHub sent none.
+Tracked in the session under (diff . PATH); the buffer redraws when
+it is in."
+  (let ((buffer (current-buffer))
+        (key (cons 'diff path)))
+    (unless (approve-pr-loading-p key)
+      (approve-session-add :loading key)
+      (approve-session-map-remove :errors key)
+      (approve-query-local-patch
+       path
+       :callback (lambda ()
+                   (approve-session-remove :loading key)
+                   (approve-pr-schedule-redraw buffer))
+       :errorback (lambda (err)
+                    (approve-session-remove :loading key)
+                    (approve-session-map-put :errors key err)
+                    (approve-pr-schedule-redraw buffer)))
+      (approve-pr-redraw))))
+
 (defun approve-pr--run-lazy-loaders ()
   "Run the lazy loaders whose data is wanted now and missing."
   (when (and (approve-model-root-ref) (not (approve-session-get :fatal)))

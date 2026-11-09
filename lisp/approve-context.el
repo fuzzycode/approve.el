@@ -134,6 +134,8 @@ The region must start and end on diff lines of one file."
          ('milestone (list :value (plist-get thing :title) :url (plist-get thing :url)))
          ('branch (list :value (plist-get thing :name)))
          ('date (list :value (plist-get thing :value)))
+         ('load-diff (list :path (plist-get thing :path)
+                           :url (approve-context-file-url (plist-get thing :path))))
          ('title (list :value (approve-pr-field 'title)
                        :can-update (approve-pr-viewer-can 'update)
                        :url (approve-context--pr-url)))
