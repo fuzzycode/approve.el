@@ -181,7 +181,11 @@
         (load "approve-evil" nil t))
       (expect (seq-find (lambda (b) (equal (nth 2 b) "g r")) bound)
               :to-equal (list 'normal approve-pr-mode-map "g r" 'approve-pr-refresh))
-      (dolist (motion '("h" "j" "k" "l" "w" "b" "e" "v" "V" "y" "n" "N" "/"))
-        (expect (seq-find (lambda (b) (equal (nth 2 b) motion)) bound) :to-be nil)))))
+      (expect (seq-find (lambda (b) (equal (nth 2 b) "g y")) bound)
+              :to-equal (list 'normal approve-pr-mode-map "g y" 'approve-copy))
+      ;; No key, or first key of a sequence, may be an evil motion or operator.
+      (dolist (key '("h" "j" "k" "l" "w" "b" "e" "v" "V" "y" "d" "c" "n" "N" "/"))
+        (expect (seq-find (lambda (b) (equal (car (split-string (nth 2 b))) key)) bound)
+                :to-be nil)))))
 
 ;;; test-approve-nav.el ends here

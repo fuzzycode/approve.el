@@ -134,6 +134,9 @@ Before =approve-review.el=, on a scratch repository, find out and note in
 Check the key table against evil-collection's magit-section bindings and
 =evil-collection-magit= habits; make sure =V= range selection gives the right
 region to =c=.
+- Found in Phase 1 :: =yu= made =y= a prefix, shadowing evil's yank; copy is
+  =gy= now.  Check every two-key binding the same way: its first key must not
+  be an evil operator or motion.
 
 * Phase 3 — Find PRs
 Implements F01 in full.

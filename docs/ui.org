@@ -558,7 +558,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k= | any                       |
 | Visit thing at point          | =RET=         | =RET=                 | file, line, link, commit… |
 | Open in browser               | =o=           | =go=                  | any (thing or PR)         |
-| Copy URL / sha / value        | =y=           | =yu=                  | any                       |
+| Copy URL / sha / value        | =y=           | =gy=                  | any                       |
 | Comment at point (DWIM)       | =c=           | =c=                   | line, region, file, PR    |
 | Suggest change                | =s=           | =s=                   | line, region (new side)   |
 | Reply / quote                 | =r=           | =r=                   | thread, comment           |

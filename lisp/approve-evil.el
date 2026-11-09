@@ -48,7 +48,7 @@
     ("za" . magit-section-toggle)
     ("gr" . approve-pr-refresh)
     ("go" . approve-browse)
-    ("yu" . approve-copy)
+    ("gy" . approve-copy)
     ("J" . approve-jump)
     ("K" . approve-show-details)
     ("gj" . magit-section-forward)
