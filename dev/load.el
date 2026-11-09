@@ -7,7 +7,8 @@
 ;;   M-x load-file RET ~/workspace/approve/dev/load.el RET
 ;;
 ;; Loading it again reloads every module (compiled ones when `make
-;; build' ran) and redraws the open PR buffers, so a fix shows at once.
+;; build' ran) and redraws the open PR buffers, so a fix shows at once;
+;; options left at their default take a changed default.
 ;; Dependencies the Emacs lacks (often ghub and treepy) come from the
 ;; project's Cask (`make install').  It turns on `approve-dev-offline-mode' with
 ;; `approve-dev-offline-fallback': the fixture PRs open without a token,
@@ -41,11 +42,26 @@
     (user-error "Approve needs its dependencies: run `make install' in %s" root))
   (let* ((names (mapcar #'file-name-base (directory-files lisp nil "\\`approve.*\\.el\\'")))
          (order (append (mapcar #'symbol-name approve-dev-load-order)
-                        (seq-difference names (mapcar #'symbol-name approve-dev-load-order)))))
+                        (seq-difference names (mapcar #'symbol-name approve-dev-load-order))))
+         ;; Options still at their default follow a changed default; a
+         ;; reload alone keeps the old value.
+         (defaults nil))
+    (mapatoms (lambda (symbol)
+                (when (and (string-prefix-p "approve-" (symbol-name symbol))
+                           (boundp symbol)
+                           (get symbol 'standard-value)
+                           (ignore-errors
+                             (equal (symbol-value symbol)
+                                    (eval (car (get symbol 'standard-value)) t))))
+                  (push symbol defaults))))
     (dolist (name order)
       (when (and (member name names)
                  (or (not (equal name "approve-evil")) (featurep 'evil)))
-        (load (expand-file-name name lisp) nil t))))
+        (load (expand-file-name name lisp) nil t)))
+    (dolist (symbol defaults)
+      (let ((value (eval (car (get symbol 'standard-value)) t)))
+        (unless (equal (symbol-value symbol) value)
+          (funcall (or (get symbol 'custom-set) #'set-default) symbol value)))))
   (approve-icon-clear-cache)
   (approve-html-clear-cache)
   (setq approve-dev-offline-fallback t)
