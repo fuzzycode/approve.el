@@ -226,6 +226,21 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   diff bodies, full redraws stay cheap.  Measure in Phase 1; optimize only if
   needed.
 
+** D28 Diff line numbers are text that copying leaves out
+- Status :: accepted (2026-11-08, answers Q1)
+- Decision :: Each diff line starts with its old and new line numbers and
+  its =+=/=-= marker, as text.  That text has the property
+  =approve-decoration=, and Approve buffers filter copied text
+  (=filter-buffer-substring-function=, so =M-w= and evil's =y=) through
+  =approve-render-strip-decorations=, which drops it: copying diff lines
+  gives the code alone.  =approve-diff-line-numbers= turns the numbers off.
+  Other gutters (thread bars, indentation, the timeline line) are
+  display-only =line-prefix=, which copying ignores by itself.
+- Why :: Text matches the mockups, is indented with its section, works in
+  terminals and costs nothing extra to draw.  A margin would sit at the
+  window's edge, need its width managed per window, and still put a real
+  character on each line; overlays for 20 000 lines would be slow.
+
 * Platform and tooling
 ** D18 Emacs 29.1 or newer
 - Status :: accepted
@@ -272,9 +287,8 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 * Open questions
 Each one names the spike or phase that will answer it ([[file:roadmap.org][roadmap]]).
 
-- Q1 :: Diff line numbers: as text in the line, or in the margin
-  (=display '((margin left-margin) …)=)?  The margin keeps copied code clean.
-  → Phase 1.
+- Q1 :: Diff line numbers: as text in the line, or in the margin?
+  → answered by [[*D28 Diff line numbers are text that copying leaves out][D28]] (text, left out when copying).
 - Q2 :: Syntax highlighting inside diff hunks: reuse the idea of diff-mode's
   =diff-font-lock-syntax= (fontify reconstructed old/new text in a temp
   buffer)?  Cost on large diffs?  → [[file:roadmap.org::*SP4 Syntax highlighting in hunks][SP4]].

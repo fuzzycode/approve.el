@@ -159,7 +159,7 @@ A hidden (minimized) comment is one dim line saying why."
         (magit-insert-heading (approve-thread-comment-byline comment)))
       (approve-thread-insert-comment-body comment)
       (when (approve-thread-pending-p comment)
-        (add-face-text-property start (point) 'approve-pending t)))))
+        (approve-face-region start (point) 'approve-pending)))))
 
 (defun approve-thread-insert (thread)
   "Insert THREAD, a resolved PullRequestReviewThread, as a box.
@@ -190,9 +190,9 @@ starts collapsed."
                                (approve-face "│ " 'approve-thread-border)))
       (insert (approve-thread--footer thread) "\n"))
     (cond
-     (pending (add-face-text-property start (point) 'approve-pending t))
+     (pending (approve-face-region start (point) 'approve-pending))
      ((alist-get 'isResolved thread)
-      (add-face-text-property start (point) 'approve-resolved t)))))
+      (approve-face-region start (point) 'approve-resolved)))))
 
 (defun approve-thread-summary (thread)
   "Return a one-line summary of THREAD: its first comment's author and text."

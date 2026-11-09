@@ -136,12 +136,13 @@ Notes:
   (GitHub's =DISMISSED=, highlighted).  The bar is a diffstat scaled to the
   largest file (=approve-diffstat-width=).  =RET= jumps to the file's diff
   (single layout) or opens the diff buffer there (split layout).
-- Diff file headings repeat the viewed state; =v= toggles it.  Viewed files
-  start collapsed.
-- Line numbers (old, new) are drawn in the margin or as text ([[file:decisions.org::*Open questions][Q1]]).  Added
+- Diff file headings repeat the viewed state; =v= toggles it.  All files
+  start collapsed; a file's body is drawn when it is first expanded.
+- Line numbers (old, new) and the =+=/=-= marker are text that copying
+  leaves out ([[file:decisions.org::*D28 Diff line numbers are text that copying leaves out][D28]]); =approve-diff-line-numbers= hides the numbers.  Added
   lines use =magit-diff-added=, removed =magit-diff-removed=, context
-  =magit-diff-context=; word-level refinement follows
-  =approve-diff-refine-hunk= (like Magit's).
+  =magit-diff-context=; changed words in pairs of removed and added lines
+  are marked when =approve-diff-refine-hunk= is non-nil (the default).
 - Threads sit right under the line they belong to (the last line of a
   range).  For a multi-line thread the covered lines get a thin bar in the
   fringe while point is on the thread.

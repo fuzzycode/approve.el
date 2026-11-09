@@ -116,7 +116,7 @@ The largest file fills it."
 (defun approve-sections-state (key what)
   "Return a line saying the data of query KEY is loading or failed, or nil.
 WHAT names the data in the line, such as \"files\"."
-  (cond ((approve-pr-error key) (approve-render-error what (approve-pr-error key)))
+  (cond ((approve-pr-error key) (approve-render-failure what (approve-pr-error key)))
         ((approve-pr-loading-p key) (approve-render-loading))))
 
 (defun approve-sections-heading (title &optional count right)
@@ -409,7 +409,7 @@ COUNT is a number or nil; RIGHT a string or nil."
                       "\n")))
           (approve-sections-insert-body body))
         (insert "\n"))
-      (add-face-text-property start (1- (point)) 'approve-pending t))))
+      (approve-face-region start (1- (point)) 'approve-pending))))
 
 ;;; Description
 
@@ -652,7 +652,7 @@ The checks themselves load when the section is first expanded."
     (concat (approve-face (make-string added ?█) 'approve-diffstat-added)
             (approve-face (make-string removed ?▒) 'approve-diffstat-removed))))
 
-(defun approve-sections--counts (additions deletions &optional width)
+(defun approve-sections-counts (additions deletions &optional width)
   "Return ADDITIONS and DELETIONS as \"+A −D\", each padded to WIDTH if given."
   (let ((pad (lambda (text) (if width (approve-render-pad text width t) text))))
     (concat (approve-face (funcall pad (format "+%d" additions)) 'approve-diffstat-added)
@@ -693,7 +693,7 @@ The checks themselves load when the section is first expanded."
                    (if .changedFiles
                        (concat "   " (format "%d file%s  " .changedFiles
                                              (if (= .changedFiles 1) "" "s"))
-                               (approve-sections--counts .additions .deletions))
+                               (approve-sections-counts .additions .deletions))
                      ""))
            (and files
                 (approve-render-join
@@ -713,7 +713,7 @@ The checks themselves load when the section is first expanded."
                                                             path-width)
                                                 'approve-path)
                                   "  "
-                                  (approve-sections--counts .additions .deletions
+                                  (approve-sections-counts .additions .deletions
                                                             number-width)
                                   "  "
                                   (approve-render-pad (approve-sections--bar .additions .deletions

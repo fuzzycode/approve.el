@@ -57,7 +57,7 @@ Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], hea
 - [X] Sections: header + metadata rows, description, checks (summary,
       expandable), commits, conversation timeline.
 - [ ] =approve-diff.el=: patch parsing (port approve-v2's), file list,
-      lazy file bodies, hunks, line numbers ([[file:decisions.org::*Open questions][Q1]]), thread index, inline
+      lazy file bodies, hunks, line numbers ([[file:decisions.org::*D28 Diff line numbers are text that copying leaves out][D28]]), thread index, inline
       threads, outdated and file-level threads, large/binary files.
 - [X] =approve-thread.el=: thread and comment rendering, resolved collapsed,
       pending styling, reactions, edited marker.

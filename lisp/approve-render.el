@@ -235,7 +235,7 @@ badges, as GitHub does."
                         'approve-loading)
           "\n"))
 
-(defun approve-render-error (what err)
+(defun approve-render-failure (what err)
   "Return a line saying WHAT could not be loaded because of ERR.
 ERR is an error from approve-api; its message is shown, with how to
 retry."

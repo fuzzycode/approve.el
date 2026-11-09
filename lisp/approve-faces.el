@@ -413,6 +413,19 @@ it to colour an icon or a part that has a face of its own."
         (setq pos next)))
     string))
 
+(defun approve-face-region (start end face)
+  "Add FACE under the faces of the text between START and END.
+Like `add-face-text-property' with APPEND, but `font-lock-face' gets
+the same faces as `face', so the text keeps them when font-lock
+clears `face' (as it does in Magit buffers)."
+  (when (< start end)
+    (add-face-text-property start end face t)
+    (let ((pos start))
+      (while (< pos end)
+        (let ((next (next-single-property-change pos 'face nil end)))
+          (put-text-property pos next 'font-lock-face (get-text-property pos 'face))
+          (setq pos next))))))
+
 (defun approve--hex-color (color)
   "Return COLOR, a GitHub hex colour such as \"a2eeef\", as \"#a2eeef\".
 Return nil unless COLOR is six hex digits, with or without a hash."

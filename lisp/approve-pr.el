@@ -74,7 +74,8 @@
     approve-insert-checks-section
     approve-insert-commits-section
     approve-insert-conversation-section
-    approve-insert-files-section)
+    approve-insert-files-section
+    approve-insert-diff-section)
   "Functions that insert the sections of a pull request buffer.
 Each is called with no arguments, at point, in the PR buffer, and
 reads the store through selectors.  The default ones are defined in

@@ -255,40 +255,52 @@ Single layout (D05).  In the split layout, =approve-diff= moves to the diff
 buffer and the file list's =RET= opens it.
 
 #+begin_example
- approve-root
- ├── approve-header              title, state, refs, author, dates
- │   └── approve-meta-*          reviewers, assignees, labels, milestone, issues, status
- ├── approve-pending-review      only when the viewer has a pending review
- ├── approve-description
- ├── approve-checks
- │   └── approve-check *
- ├── approve-commits
- │   └── approve-commit *
- ├── approve-conversation
- │   └── approve-event * | approve-review * | approve-comment *
- ├── approve-files               file list with stats (value: nil)
- │   └── approve-file-entry *    (value: path)
- └── approve-diff
-     └── approve-file *          (value: path)          body inserted lazily
-         ├── approve-file-threads   file-level and outdated threads
-         └── approve-hunk *      (value: (path . "@@ -a,b +c,d @@"))
-             └── approve-line *  (value: (path side line))  only lines with threads
-                 └── approve-thread *  (value: thread id)
-                     └── approve-comment * (value: comment id)
+ approve-root-section
+ ├── approve-header-section          title, state, refs, author, dates
+ │   └── approve-meta-section *      (value: reviewers, assignees, labels, milestone, issues, status)
+ ├── approve-pending-review-section  only when the viewer has a pending review (value: review id)
+ │   └── approve-pending-comment-section *  (value: comment id)
+ ├── approve-description-section
+ │   └── approve-html-details *      <details> in the body (value: (index . summary))
+ ├── approve-checks-section          collapsed; contexts load when first expanded
+ │   ├── approve-check-section *     (value: check id)
+ │   └── approve-checks-more-section "… N more passed"
+ ├── approve-commits-section         collapsed
+ │   └── approve-commit-section *    (value: oid)
+ ├── approve-conversation-section
+ │   └── approve-issue-comment-section * | approve-review-section *
+ │       | approve-event-section *     (value: node id of the first item of a run)
+ ├── approve-files-section           file list with stats
+ │   └── approve-file-entry-section * (value: path)
+ └── approve-diff-section
+     └── approve-file-section *      (value: path)        collapsed; body inserted lazily
+         ├── approve-file-threads-section   (value: file) file-level threads
+         ├── approve-hunk-section *  (value: (path . "@@ -a,b +c,d @@ …"))
+         │   └── approve-line-section *  (value: (path side line))  only lines with threads
+         │       └── approve-thread-section *  (value: thread id)
+         │           └── approve-comment-section * (value: comment id)
+         └── approve-file-threads-section   (value: outdated) collapsed
 #+end_example
 
-- Section classes are EIEIO subclasses of =magit-section= with a =keymap= slot,
-  so keys can depend on what point is on (thread keys on threads, file keys on
-  files).
+- Section classes are EIEIO subclasses of =magit-section=; their type is the
+  class name.  A =keymap= slot can make keys depend on what point is on
+  (thread keys on threads, file keys on files) once commands need it.
+- Bodies are indented by display-only =line-prefix= (=approve-render-prefix=),
+  which nests: a thread's bar sits inside its line's indentation.
 - Every section value is stable across redraws, so the visibility cache and
   point restore work (D13).
 - Diff lines without threads are plain text with a text property
   =approve-line= = =(:path P :side LEFT|RIGHT :old N :new M :kind add|del|ctx)=.
   Only lines with threads become sections, which keeps the section count low.
 - Diff bodies use =magit-insert-section-body=, so collapsed files cost nothing.
-- Thread index: a hash of =(path side line)= → threads, built once per redraw
-  from the store.  Threads whose line is not in the current diff go to
+- Thread index: a hash of =(side . line)= → threads, built for a file when
+  its body is drawn (=approve-diff-thread-index=).  A thread sits under the
+  line its =diffSide= and =line= name (the end of a range; a =LEFT= thread
+  under a removed or context line by its old number).  File-level threads go
+  to "On this file", threads whose line is not in the current diff to
   "Outdated" under the file.
+- Parsed patches are cached by patch string (weakly), so a redraw never
+  parses again.
 
 ** Rendered HTML
 =approve-html-render= turns a =bodyHTML= into a string with faces, at column
