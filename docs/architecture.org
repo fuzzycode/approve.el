@@ -279,6 +279,22 @@ buffer and the file list's =RET= opens it.
   from the store.  Threads whose line is not in the current diff go to
   "Outdated" under the file.
 
+** Rendered HTML
+=approve-html-render= turns a =bodyHTML= into a string with faces, at column
+0 and =approve-fill-column= wide; callers indent it.  Strings are cached by
+HTML and width, so a redraw only inserts them.  Links carry =approve-url=,
+and mentions, team mentions, issue links and commit links also carry
+=approve-thing= (=(:kind user :login …)=, =(:kind ref :owner :repo :number)=,
+…) for the context and eldoc.  =approve-html-insert= turns each top-level
+=<details>= into an =approve-html-details= section (value: index and
+summary, so it is stable).
+
+Images: the renderer draws an image from =approve-html='s image cache, or a
+placeholder link and adds the URL to =approve-html-wanted-images=.  The
+buffer fetches wanted images after a redraw, hands each to
+=approve-html-put-image= and redraws, so the renderer never touches the
+network.
+
 ** Point restore
 #+begin_example
  before redraw:  ident  = (magit-section-ident (magit-current-section))

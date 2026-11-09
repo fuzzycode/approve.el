@@ -49,7 +49,7 @@ Open any PR by URL and read all of it.  No writes.
 Implements F01 (URL only), F02, F03, F16 (summary + expand), F17 (=g=), F20.
 Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], header line, loading/error states, [[file:ui.org::*Eldoc][eldoc]].
 - [X] =approve-faces.el=, =approve-icons.el= (with fallback).
-- [ ] =approve-html.el=: port approve-v2's shr renderer (code, pre with
+- [X] =approve-html.el=: port approve-v2's shr renderer (code, pre with
       syntax classes, suggestion tables, tables, lists, blockquote, details,
       images, links).
 - [ ] =approve-pr.el=: mode, buffer naming, skeleton, the F02 loading plan,

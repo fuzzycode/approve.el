@@ -362,6 +362,11 @@ See `approve-label-face'."
   "Face of the summary of a collapsible <details> block."
   :group 'approve-faces)
 
+(defface approve-html-heading
+  '((t :inherit bold))
+  "Face of headings (h1 to h6) and alert titles in rendered text."
+  :group 'approve-faces)
+
 (defface approve-html-table-border
   '((t :inherit shadow))
   "Face of table borders."
