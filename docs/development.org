@@ -27,8 +27,9 @@ predictable.
  │   ├── fixtures/         recorded JSON responses (scrubbed), per scenario
  │   ├── helpers.el        fake API, fixture loading, buffer helpers
  │   └── test-<module>.el  one per lisp module
- ├── dev/
- │   └── try.el            init file of =make try= (not packaged)
+ ├── dev/                  not packaged
+ │   ├── load.el           loads this checkout into a running Emacs
+ │   └── try.el            init file of =make try=
  ├── docs/                 these docs
  │   └── html/             HTML views: mockups (hand-written) and flows (graphviz)
  ├── Cask  Makefile  LICENSE  CODE_OF_CONDUCT.md
@@ -46,6 +47,12 @@ predictable.
 | =make docs=    | rebuild the flow diagrams and =docs/html/flows.html=         | exists (needs graphviz)                    |
 | =make try=     | a fresh Emacs (=-Q=, Cask dependencies only) that replays    | exists; =M-x approve-dev-try= does the     |
 |                | the fixtures and lists their PRs (=dev/try.el=)              | same in any Emacs with Approve loaded      |
+
+To try Approve in the Emacs you work in, =M-x load-file= =dev/load.el=.  It
+loads every module from =lisp/= (compiled after =make build=), takes the
+dependencies that Emacs lacks from Cask, replays the fixture PRs and sends
+other URLs to GitHub (=approve-dev-offline-fallback=).  Loading it again
+reloads everything and redraws the open PR buffers.
 
 The shell is fish: wrap loops in =bash -c '…'=.
 
