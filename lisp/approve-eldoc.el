@@ -463,7 +463,7 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
          (groups (plist-get thing :groups))
          (line (lambda (group)
                  (let-alist group
-                   (format "%s %d — %s" (approve-render-reaction-emoji .content)
+                   (format "%s %d — %s" (approve-render-reaction-icon .content)
                            .reactors.totalCount (approve-eldoc--reaction-count group))))))
     (list
      :echo (mapconcat line groups (approve-face " · " 'approve-dim))

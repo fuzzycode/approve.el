@@ -301,14 +301,20 @@ retry."
 ;;; Reactions
 
 (defconst approve-render-reactions
-  '(("THUMBS_UP" . "👍") ("THUMBS_DOWN" . "👎") ("LAUGH" . "😄")
-    ("HOORAY" . "🎉") ("CONFUSED" . "😕") ("HEART" . "❤️")
-    ("ROCKET" . "🚀") ("EYES" . "👀"))
-  "Emoji of each GitHub reaction.")
+  '(("THUMBS_UP" . reaction-thumbs-up) ("THUMBS_DOWN" . reaction-thumbs-down)
+    ("LAUGH" . reaction-laugh) ("HOORAY" . reaction-hooray)
+    ("CONFUSED" . reaction-confused) ("HEART" . reaction-heart)
+    ("ROCKET" . reaction-rocket) ("EYES" . reaction-eyes))
+  "Icon of each GitHub reaction: its name in `approve-icons'.
+Reactions are flat glyphs like every other icon; the emoji GitHub
+shows are their fallbacks (`approve-icon-fallbacks').")
 
-(defun approve-render-reaction-emoji (content)
-  "Return the emoji of the reaction CONTENT, such as \"THUMBS_UP\"."
-  (or (cdr (assoc content approve-render-reactions)) content))
+(defun approve-render-reaction-icon (content &optional face)
+  "Return the icon of the reaction CONTENT, such as \"THUMBS_UP\", with FACE.
+An unknown CONTENT is returned as it is."
+  (if-let* ((name (cdr (assoc content approve-render-reactions))))
+      (approve-icon name face)
+    content))
 
 (defun approve-render-reaction-groups (groups)
   "Return the GROUPS of reactions that someone gave, in GitHub's order."
@@ -325,11 +331,12 @@ GROUPS are reactionGroups; reactions the viewer gave use
     (approve-thing
      (mapconcat (lambda (group)
                   (let-alist group
-                    (approve-face (format "%s %d" (approve-render-reaction-emoji .content)
-                                          .reactors.totalCount)
-                                  (if .viewerHasReacted
-                                      'approve-reaction-viewer
-                                    'approve-reaction))))
+                    (let ((face (if .viewerHasReacted
+                                    'approve-reaction-viewer
+                                  'approve-reaction)))
+                      (concat (approve-render-reaction-icon .content face) " "
+                              (approve-face (number-to-string .reactors.totalCount)
+                                            face)))))
                 given "  ")
      (list :kind 'reactions :groups given :subject subject))))
 

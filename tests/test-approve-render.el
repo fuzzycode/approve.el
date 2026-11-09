@@ -84,4 +84,36 @@
                 :to-equal "  body\n")
         (expect (magit-section-at 1) :to-be child)))))
 
+(describe "approve-render-reactions-text"
+  :var (saved)
+  (before-each
+    (setq saved approve-use-nerd-icons)
+    (approve-icon-clear-cache))
+  (after-each
+    (setq approve-use-nerd-icons saved)
+    (approve-icon-clear-cache))
+
+  (it "draws each reaction as a flat icon with its count"
+    (setq approve-use-nerd-icons t)
+    (let ((text (approve-render-reactions-text
+                 '(((content . "THUMBS_UP") (viewerHasReacted . t)
+                    (reactors (totalCount . 3)))
+                   ((content . "HOORAY") (reactors (totalCount . 1)))
+                   ((content . "ROCKET") (reactors (totalCount . 0)))))))
+      (expect (substring-no-properties text)
+              :to-equal (concat (nerd-icons-mdicon "nf-md-thumb_up_outline") " 3  "
+                                (nerd-icons-mdicon "nf-md-party_popper") " 1"))
+      (expect (memq 'approve-reaction-viewer (ensure-list (get-text-property 0 'face text)))
+              :not :to-be nil)
+      (expect (plist-get (get-text-property 0 'approve-thing text) :kind)
+              :to-be 'reactions)))
+
+  (it "falls back to GitHub's emoji without nerd-icons"
+    (setq approve-use-nerd-icons nil)
+    (expect (substring-no-properties
+             (approve-render-reactions-text
+              '(((content . "HEART") (reactors (totalCount . 2)))
+                ((content . "EYES") (reactors (totalCount . 1))))))
+            :to-equal "❤️ 2  👀 1")))
+
 ;;; test-approve-render.el ends here

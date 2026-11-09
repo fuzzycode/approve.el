@@ -131,12 +131,15 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   set in nerd-icons (names =nf-md-*=), as in the table in [[file:ui.org::*Icons][ui.org › Icons]].
   =approve-icons= stays a =defcustom=, and it takes a glyph from any
   nerd-icons set: the prefix of the name (=nf-md-=, =nf-cod-=, =nf-oct-=,
-  =nf-fa-=, …) picks the set.
+  =nf-fa-=, …) picks the set.  Reactions are icons too (=reaction-thumbs-up=
+  … =reaction-eyes=): flat outline glyphs like the rest, with GitHub's colour
+  emoji only as their fallbacks.
 - Why :: In Emacs, Codicons' pull request, merge and comment glyphs look
   like GitHub's Octicons, which the author finds ugly next to text.  Of the
   four sets compared ([[file:html/icons.html][html/icons.html]]), the author chose Material Design's
   rounded outline icons, which cover every state too (pull, merge, branch
-  removed, a progress pencil for drafts, decagrams for verdicts).
+  removed, a progress pencil for drafts, decagrams for verdicts).  Colour
+  emoji for reactions looked out of place next to them.
 
 ** D27 Extended information through eldoc: one line, then the eldoc buffer
 - Status :: accepted (2026-11-08)

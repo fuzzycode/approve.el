@@ -620,32 +620,44 @@ from any other nerd-icons set can take a place, its prefix (=nf-cod-=,
 rows align with =string-width=.  The other sets that were compared are on
 [[file:html/icons.html][html/icons.html]].
 
-| Name                | Material Design                      | Fallback |
-|---------------------+--------------------------------------+----------|
-| =open=              | =nf-md-source_pull=                  | ●        |
-| =draft=             | =nf-md-progress_pencil=              | ◌        |
-| =merged=            | =nf-md-source_merge=                 | ⮌        |
-| =closed=            | =nf-md-source_branch_remove=         | ⊘        |
-| =approved=          | =nf-md-check_decagram=               | ✓        |
-| =changes-requested= | =nf-md-alert_decagram=               | ✗        |
-| =commented=         | =nf-md-comment_text_outline=         | 💬       |
-| =requested=         | =nf-md-account_clock_outline=        | ○        |
-| =viewed=            | =nf-md-checkbox_marked_outline=      | ✓        |
-| =unviewed=          | =nf-md-checkbox_blank_outline=       | ·        |
-| =dismissed=         | =nf-md-update=                       | ↻        |
-| =check-success=     | =nf-md-check_circle=                 | ✓        |
-| =check-failure=     | =nf-md-close_circle=                 | ✗        |
-| =check-pending=     | =nf-md-progress_clock=               | ◐        |
-| =pending-comment=   | =nf-md-comment_edit_outline=         | ✎        |
-| =comment=           | =nf-md-comment_outline=              | 💬       |
-| =label=             | =nf-md-tag_outline=                  | 🏷        |
-| =push=              | =nf-md-arrow_up_bold_circle_outline= | ↑        |
-| =commit=            | =nf-md-source_commit=                | ●        |
-| =issue=             | =nf-md-record_circle_outline=        | ◉        |
-| =milestone=         | =nf-md-flag_outline=                 | ⚑       |
-| =person=            | =nf-md-account_outline=              | 👤       |
-| =bell=              | =nf-md-bell_outline=                 | ●        |
-| =lock=              | =nf-md-lock_outline=                 | 🔒       |
-| =external=          | =nf-md-open_in_new=                  | ↗        |
-| =loading=           | =nf-md-loading=                      | ⟳        |
-| =error=             | =nf-md-alert_circle_outline=         | ✗        |
+| Name                   | Material Design                      | Fallback |
+|------------------------+--------------------------------------+----------|
+| =open=                 | =nf-md-source_pull=                  | ●        |
+| =draft=                | =nf-md-progress_pencil=              | ◌        |
+| =merged=               | =nf-md-source_merge=                 | ⮌        |
+| =closed=               | =nf-md-source_branch_remove=         | ⊘        |
+| =approved=             | =nf-md-check_decagram=               | ✓        |
+| =changes-requested=    | =nf-md-alert_decagram=               | ✗        |
+| =commented=            | =nf-md-comment_text_outline=         | 💬       |
+| =requested=            | =nf-md-account_clock_outline=        | ○        |
+| =viewed=               | =nf-md-checkbox_marked_outline=      | ✓        |
+| =unviewed=             | =nf-md-checkbox_blank_outline=       | ·        |
+| =dismissed=            | =nf-md-update=                       | ↻        |
+| =check-success=        | =nf-md-check_circle=                 | ✓        |
+| =check-failure=        | =nf-md-close_circle=                 | ✗        |
+| =check-pending=        | =nf-md-progress_clock=               | ◐        |
+| =pending-comment=      | =nf-md-comment_edit_outline=         | ✎        |
+| =comment=              | =nf-md-comment_outline=              | 💬       |
+| =label=                | =nf-md-tag_outline=                  | 🏷        |
+| =push=                 | =nf-md-arrow_up_bold_circle_outline= | ↑        |
+| =commit=               | =nf-md-source_commit=                | ●        |
+| =issue=                | =nf-md-record_circle_outline=        | ◉        |
+| =milestone=            | =nf-md-flag_outline=                 | ⚑       |
+| =person=               | =nf-md-account_outline=              | 👤       |
+| =bell=                 | =nf-md-bell_outline=                 | ●        |
+| =lock=                 | =nf-md-lock_outline=                 | 🔒       |
+| =external=             | =nf-md-open_in_new=                  | ↗        |
+| =loading=              | =nf-md-loading=                      | ⟳        |
+| =error=                | =nf-md-alert_circle_outline=         | ✗        |
+| =reaction-thumbs-up=   | =nf-md-thumb_up_outline=             | 👍       |
+| =reaction-thumbs-down= | =nf-md-thumb_down_outline=           | 👎       |
+| =reaction-laugh=       | =nf-md-emoticon_happy_outline=       | 😄       |
+| =reaction-hooray=      | =nf-md-party_popper=                 | 🎉       |
+| =reaction-confused=    | =nf-md-emoticon_confused_outline=    | 😕       |
+| =reaction-heart=       | =nf-md-heart_outline=                | ❤️        |
+| =reaction-rocket=      | =nf-md-rocket_launch_outline=        | 🚀       |
+| =reaction-eyes=        | =nf-md-eye_outline=                  | 👀       |
+
+GitHub's eight reactions are icons like the rest, flat glyphs in the
+reaction faces; GitHub's colour emoji are only their fallbacks.  Mockups
+in this file show the fallbacks.

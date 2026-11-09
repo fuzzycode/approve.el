@@ -32,7 +32,15 @@
       "external": ["nf-md-open_in_new", 0xf03cc],
       "person": ["nf-md-account_outline", 0xf0013],
       "bell": ["nf-md-bell_outline", 0xf009c],
-      "milestone": ["nf-md-flag_outline", 0xf023d]
+      "milestone": ["nf-md-flag_outline", 0xf023d],
+      "reaction-thumbs-up": ["nf-md-thumb_up_outline", 0xf0514],
+      "reaction-thumbs-down": ["nf-md-thumb_down_outline", 0xf0512],
+      "reaction-laugh": ["nf-md-emoticon_happy_outline", 0xf01f5],
+      "reaction-hooray": ["nf-md-party_popper", 0xf1056],
+      "reaction-confused": ["nf-md-emoticon_confused_outline", 0xf10df],
+      "reaction-heart": ["nf-md-heart_outline", 0xf02d5],
+      "reaction-rocket": ["nf-md-rocket_launch_outline", 0xf14df],
+      "reaction-eyes": ["nf-md-eye_outline", 0xf06d0]
     },
     codicons: {
       "open": ["nf-cod-git_pull_request", 0xea64],
@@ -131,7 +139,10 @@
     "unviewed": "·", "dismissed": "↻", "check-success": "✓", "check-failure": "✗",
     "check-pending": "◐", "pending-comment": "✎", "label": "🏷", "push": "↑",
     "loading": "⟳", "error": "✗", "comment": "💬", "commit": "●", "issue": "◉",
-    "lock": "🔒", "external": "↗", "person": "👤", "bell": "●", "milestone": "⚑"
+    "lock": "🔒", "external": "↗", "person": "👤", "bell": "●", "milestone": "⚑",
+    "reaction-thumbs-up": "👍", "reaction-thumbs-down": "👎", "reaction-laugh": "😄",
+    "reaction-hooray": "🎉", "reaction-confused": "😕", "reaction-heart": "❤️",
+    "reaction-rocket": "🚀", "reaction-eyes": "👀"
   };
 
   var ORDER = ["unicode", "material", "codicons", "fontawesome", "octicons"];

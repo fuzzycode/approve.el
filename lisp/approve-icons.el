@@ -104,7 +104,15 @@ characters in `approve-icon-fallbacks'.  Without a Nerd Font:
     (lock . "nf-md-lock_outline")
     (external . "nf-md-open_in_new")
     (loading . "nf-md-loading")
-    (error . "nf-md-alert_circle_outline"))
+    (error . "nf-md-alert_circle_outline")
+    (reaction-thumbs-up . "nf-md-thumb_up_outline")
+    (reaction-thumbs-down . "nf-md-thumb_down_outline")
+    (reaction-laugh . "nf-md-emoticon_happy_outline")
+    (reaction-hooray . "nf-md-party_popper")
+    (reaction-confused . "nf-md-emoticon_confused_outline")
+    (reaction-heart . "nf-md-heart_outline")
+    (reaction-rocket . "nf-md-rocket_launch_outline")
+    (reaction-eyes . "nf-md-eye_outline"))
   "Glyph of each icon: semantic name → nerd-icons name.
 The defaults are Material Design icons (nf-md-…), but any glyph
 `nerd-icons-insert' lists will do, whatever its set: the prefix of
@@ -144,7 +152,15 @@ approvals with a thumbs-up:
     (lock . "🔒")
     (external . "↗")
     (loading . "⟳")
-    (error . "✗"))
+    (error . "✗")
+    (reaction-thumbs-up . "👍")
+    (reaction-thumbs-down . "👎")
+    (reaction-laugh . "😄")
+    (reaction-hooray . "🎉")
+    (reaction-confused . "😕")
+    (reaction-heart . "❤️")
+    (reaction-rocket . "🚀")
+    (reaction-eyes . "👀"))
   "Unicode text of each icon when nerd-icons are not used.
 See `approve-use-nerd-icons'.  For example, a plainer comment icon:
 
