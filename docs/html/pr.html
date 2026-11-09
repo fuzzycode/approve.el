@@ -44,10 +44,8 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="emacs">
 <div class="tb">*approve: fuzzycode/approve#1234*</div>
 <div class="win">
-<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir">2 pending</span> <span class="d">·</span> <span class="wa">3 unresolved</span></div>
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                                 <span class="ok"><i data-i="open">●</i> Open</span></div>
 <div class="buf">
-<p><span class="t">#1234 Add retry logic to the GraphQL client</span>                                 <span class="badge open"><i data-i="open">●</i> Open</span></p>
-<p></p>
 <p><span class="m">Author</span>      <span class="u">alice</span></p>
 <p><span class="m">Repository</span>  fuzzycode/approve</p>
 <p><span class="m">Branch</span>      <span class="pi">feature/retry</span> <span class="d">→</span> <span class="pi">main</span> <span class="d">· 4 commits</span></p>
@@ -261,10 +259,10 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="tb">Emacs — approve</div>
 <div class="split">
 <div class="win">
-<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed</div>
+<div class="hl"><span class="t">#1234 Add retry logic to the Graph…</span>  <span class="ok"><i data-i="open">●</i> Open</span></div>
 <div class="buf">
-<p><span class="t">#1234 Add retry logic to the GraphQL…</span></p>
-<p><span class="d">fuzzycode/approve ·</span> <span class="u">alice</span> <span class="d">→</span> <span class="pi">main</span></p>
+<p><span class="m">Author</span>      <span class="u">alice</span></p>
+<p><span class="m">Branch</span>      <span class="pi">feature/retry</span> <span class="d">→</span> <span class="pi">main</span></p>
 <p></p>
 <p><span class="m">Reviewers</span>  <span class="ok"><i data-i="approved">✓</i></span> <span class="u">bob</span>  <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span></p>
 <p><span class="m">Status</span>     <span class="er"><i data-i="changes-requested">✗</i> Changes requested</span></p>
@@ -313,13 +311,14 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <!-- ================================================================== -->
 <section class="shot" id="header-line">
 <h2>Header line <span class="ref">ui.org › Header line · D23</span></h2>
-<p>Always visible while scrolling. The last form appears when change detection sees new commits or comments on GitHub;
-the buffer never redraws by itself.</p>
+<p>Always visible while scrolling: the number, title and state. Counts live in their sections. The second form
+appears when change detection sees new commits or comments on GitHub; the buffer never redraws by itself. The
+third is the first moment, before the title has loaded.</p>
 <div class="emacs">
 <div class="win stack">
-<div class="hl"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> checks</span> <span class="d">·</span> 4/12 viewed <span class="d">·</span> <span class="ir">2 pending</span> <span class="d">·</span> <span class="wa">3 unresolved</span></div>
-<div class="hl" style="border-top:1px solid var(--overlay)"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="m"><i data-i="loading">⟳</i> loading files, threads…</span></div>
-<div class="hl" style="border-top:1px solid var(--overlay)"><span class="b">#1234</span> <span class="ok"><i data-i="open">●</i> Open</span> <span class="d">·</span> <span class="ok"><i data-i="check-success">✓</i> checks</span> <span class="d">·</span> 12/12 viewed <span class="d">·</span> 0 unresolved <span class="d">·</span> <span class="ir"><i data-i="loading">⟳</i> updated on GitHub — <span class="k">g</span> to refresh · 2 new commits</span></div>
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                                 <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="hl" style="border-top:1px solid var(--overlay)"><span class="t">#1234 Add retry logic to the GraphQL client</span> <span class="d">·</span> <span class="ir"><i data-i="loading">⟳</i> updated on GitHub — <span class="k">g</span> to refresh · 2 new commits</span>  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="hl" style="border-top:1px solid var(--overlay)"><span class="t">#1234</span> <span class="d">·</span> <span class="m"><i data-i="loading">⟳</i> loading pull request, files, threads…</span></div>
 </div>
 </div>
 </section>
@@ -333,9 +332,9 @@ section; huge and binary files get a heading and an explanation. Empty sections 
 <div class="emacs">
 <div class="tb">*approve: fuzzycode/approve#1234*</div>
 <div class="win">
-<div class="hl"><span class="b">#1234</span> <span class="d">·</span> <span class="m"><i data-i="loading">⟳</i> loading description, conversation…</span></div>
+<div class="hl"><span class="t">#1234</span> <span class="d">·</span> <span class="m"><i data-i="loading">⟳</i> loading pull request, description, conversation…</span></div>
 <div class="buf">
-<p><span class="t">#1234</span>  <span class="d">(from the URL; title loading)</span></p>
+<p><span class="d">fuzzycode/approve#1234</span>  <span class="d">(from the URL; the rest is loading)</span></p>
 <p></p>
 <p><span class="tog"></span> <span class="h">Description</span></p>
 <p>  <span class="m"><i data-i="loading">⟳</i> Loading…</span></p>

@@ -150,18 +150,6 @@ COUNT is a number or nil; RIGHT a string or nil."
 
 ;;; Header
 
-(defun approve-sections--title-line ()
-  "Return the first line of the header: number, title and state."
-  (let-alist (approve-pr-fields '(number title state isDraft url))
-    (approve-render-justify
-     (approve-thing
-      (let ((face (list (list :height approve-title-height) 'approve-title)))
-        (propertize (format "#%s %s" (or .number (approve-model-meta :number))
-                            (or .title ""))
-                    'face face 'font-lock-face face))
-      (list :kind 'title :url .url))
-     (approve-render-state-badge .state .isDraft))))
-
 (defun approve-sections--branch (name ref owner)
   "Return the branch NAME as text, with REF (a Ref) and OWNER for eldoc."
   (approve-thing (approve-face (or name "?") 'approve-branch)
@@ -205,17 +193,18 @@ COUNT is a number or nil; RIGHT a string or nil."
                                   (approve-render-date .closedAt))))))))
 
 (defun approve-insert-header-section ()
-  "Insert the header: the title and state, then the metadata rows."
+  "Insert the header: the metadata rows.
+The number, title and state are in the header line, which stays in
+view (`approve-pr--update-header-line')."
   (magit-insert-section (approve-header-section)
-    (magit-insert-heading (approve-sections--title-line))
     (cond
      ((approve-model-root-ref)
-      (insert "\n")
       (dolist (row approve-metadata-rows)
         (approve-sections--insert-meta-row row)))
      (t
-      (insert (approve-face (format "%s/%s" (approve-model-meta :owner)
-                                    (approve-model-meta :repo))
+      (insert (approve-face (format "%s/%s#%s" (approve-model-meta :owner)
+                                    (approve-model-meta :repo)
+                                    (approve-model-meta :number))
                             'approve-dim)
               "\n")
       (insert (or (approve-sections-state 'core "the pull request") ""))))
@@ -760,41 +749,6 @@ The checks themselves load when the section is first expanded."
                       (approve-render-empty "No files changed.")))))
         (approve-sections-insert-body start))
       (insert "\n"))))
-
-;;; Header line
-
-(defun approve-sections--header-line-checks ()
-  "Return the checks part of the header line, or nil."
-  (when-let* ((rollup (approve-pr-field 'statusCheckRollup)))
-    (concat (approve-sections--rollup-icon (alist-get 'state rollup)) " checks")))
-
-(defun approve-sections--header-line-viewed ()
-  "Return the viewed files part of the header line, or nil."
-  (when-let* ((files (approve-pr-files)))
-    (format "%d/%d viewed" (approve-sections-viewed-count files)
-            (or (approve-pr-field 'changedFiles) (length files)))))
-
-(defun approve-sections--header-line-pending ()
-  "Return the pending comments part of the header line, or nil."
-  (when-let* ((review (approve-pr-pending-review)))
-    (approve-face (format "%d pending"
-                          (length (approve-model-nodes (alist-get 'comments review))))
-                  'approve-pending)))
-
-(defun approve-sections--header-line-unresolved ()
-  "Return the unresolved threads part of the header line, or nil."
-  (when (approve-pr-field 'reviewThreads)
-    (let ((count (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
-                            (approve-pr-list-fields 'reviewThreads '(isResolved)))))
-      (if (> count 0)
-          (approve-face (format "%d unresolved" count) 'approve-outdated)
-        "0 unresolved"))))
-
-(dolist (function '(approve-sections--header-line-checks
-                    approve-sections--header-line-viewed
-                    approve-sections--header-line-pending
-                    approve-sections--header-line-unresolved))
-  (add-to-list 'approve-pr-header-line-functions function t))
 
 (provide 'approve-sections)
 

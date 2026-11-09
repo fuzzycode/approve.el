@@ -40,15 +40,13 @@
     (approve-icon-clear-cache))
 
   (describe "header"
-    (it "shows the title and state, then the author, repository, branches and dates as rows"
+    (it "shows the author, repository, branches and dates as rows; the title is in the header line"
       (let ((lines (split-string (test-sections--text 'approve-header-section) "\n")))
-        (expect (nth 0 lines) :to-match "\\`#202 Rewrite the parser and engine scheduler +● Open")
-        (expect (nth 1 lines) :to-equal "")
-        (expect (nth 2 lines) :to-equal "Author      alice-example")
-        (expect (nth 3 lines) :to-equal "Repository  acme-example/rocket")
-        (expect (nth 4 lines) :to-equal "Branch      parser-rewrite → main · 4 commits")
-        (expect (nth 5 lines) :to-equal "Opened      3 days ago · updated 23 hours ago")
-        (expect (nth 6 lines) :to-match "\\`Reviewers ")))
+        (expect (nth 0 lines) :to-equal "Author      alice-example")
+        (expect (nth 1 lines) :to-equal "Repository  acme-example/rocket")
+        (expect (nth 2 lines) :to-equal "Branch      parser-rewrite → main · 4 commits")
+        (expect (nth 3 lines) :to-equal "Opened      3 days ago · updated 23 hours ago")
+        (expect (nth 4 lines) :to-match "\\`Reviewers ")))
 
     (it "says when and by whom a merged PR was merged"
       (cl-letf (((symbol-function 'approve-pr-fields)

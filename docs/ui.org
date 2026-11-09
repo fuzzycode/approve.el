@@ -22,9 +22,9 @@ Buffer name: =*approve: fuzzycode/approve#1234*=.  The header line is in
 [[*Header line][Header line]].
 
 ** Top: header, metadata, pending review, description
+The first line is the header line (see [[*Header line][Header line]]); it stays in view.
 #+begin_example
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
-
  Author      alice
  Repository  fuzzycode/approve
  Branch      feature/retry → main · 4 commits
@@ -53,9 +53,11 @@ Buffer name: =*approve: fuzzycode/approve#1234*=.  The header line is in
 #+end_example
 
 Notes:
-- Line 1: title (bold, larger with =approve-title-height=), then state badges:
-  Open/Closed/Merged and Draft, coloured by face.
-- Then the metadata rows (=approve-metadata-rows=, in order and which):
+- The header line: number and title (=approve-title=, larger with
+  =approve-title-height=, cut with … when long), then state badges on the
+  right: Open/Closed/Merged and Draft, coloured by face.
+- The buffer starts with the metadata rows (=approve-metadata-rows=, in order
+  and which):
   Author, Repository (=o= opens it), Branch (head → base, the number of
   commits; =RET= copies a branch, =o= opens it), Opened (when it was opened
   and updated, and merged and by whom, or closed), then Reviewers … Status.
@@ -199,19 +201,25 @@ Both buffers share one store; a change in one redraws both.
 
 * Header line
 Shown in the PR buffer and the diff buffer; it stays visible while scrolling.
+It names the PR; counts are in the sections (viewed files and unresolved
+threads on Files changed, pending comments on Your pending review, checks on
+Status and Checks).
 
 #+begin_example
- #1234 ● Open · ◐ checks · 4/12 viewed · 2 pending · 3 unresolved
- #1234 ● Open · ✓ checks · 12/12 viewed · 0 unresolved · ⟳ updated on GitHub — g to refresh
- #1234 ● Open · loading files, threads…
+ #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
+ #1234 Add retry logic to the GraphQL client · ⟳ updated on GitHub — g to refresh  ● Open
+ #1234 · loading pull request, files, threads…
 #+end_example
 
 The second form appears when change detection ([[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]) finds new commits or
-comments.
+comments (=approve-pr-header-line-functions=).  The third is the first moment,
+before the title has loaded.
 
 * Loading, empty and error states
 #+begin_example
- #1234 …                                                           (from the URL)
+ #1234 · loading pull request, files…                             (header line)
+ fuzzycode/approve#1234                                            (from the URL)
+ ⟳ Loading…
  ▾ Description
    ⟳ Loading…
  ▾ Conversation

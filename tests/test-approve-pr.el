@@ -75,10 +75,10 @@
       (let ((buffer (approve-test-open-pr "medium" t)))
         (unwind-protect
             (with-current-buffer buffer
-              (expect (buffer-string) :to-match "^#202 ")
+              (expect (buffer-string) :to-match "^acme-example/rocket#202")
               (expect (buffer-string) :to-match "Loading…")
               (expect (approve-pr-loading-p 'core) :to-be-truthy)
-              (expect approve-pr--header-line :to-match "loading pull request, files")
+              (expect approve-pr--header-line :to-match "#202 · loading pull request, files")
               (approve-test-wait-for (lambda () (not (approve-pr-loading-p))))
               (approve-test-wait-for (lambda () (null approve-pr--redraw-timer)))
               (expect (buffer-string) :not :to-match "Loading…\nCommits"))
@@ -93,19 +93,24 @@
                       approve-commits-section approve-files-section))
         (expect (approve-test-find-section type) :to-be-truthy))
       (expect (approve-test-section-text (approve-test-find-section 'approve-header-section))
-              :to-match "#202 Rewrite the parser and engine scheduler")
+              :to-match "\\`Author      alice-example")
       (expect (length (oref (approve-test-find-section 'approve-files-section) children))
               :to-equal 30)))
 
-  (it "sums the PR up in the header line"
+  (it "puts the number, title and state in the header line"
     (test-pr--with-medium
       (let ((line (substring-no-properties approve-pr--header-line)))
-        (expect line :to-match "#202")
-        (expect line :to-match "Open")
-        (expect line :to-match "8/30 viewed")
-        (expect line :to-match "3 pending")
-        (expect line :to-match "15 unresolved")
-        (expect line :not :to-match "loading"))))
+        (expect line :to-match "\\` #202 Rewrite the parser and engine scheduler +.? ?Open\\'")
+        (expect (approve-test-section-text (approve-test-find-section 'approve-header-section))
+                :not :to-match "Rewrite the parser"))))
+
+  (it "cuts a long title so the state still shows"
+    (test-pr--with-medium
+      (let ((approve-page-width 40))
+        (approve-pr--update-header-line)
+        (let ((line (substring-no-properties approve-pr--header-line)))
+          (expect line :to-match "… +.? ?Open\\'")
+          (expect (string-width (car (split-string line "…"))) :to-be-less-than 40)))))
 
   (it "shows a query's error in its section only"
     (approve-test-with-fixture "medium"

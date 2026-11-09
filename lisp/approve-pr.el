@@ -109,6 +109,9 @@ run.  The sections that need such data add entries.")
 
 (defvar-local approve-pr--header-line nil
   "The header line, computed at each redraw.")
+;; Without this, the header line would drop the text's faces and the
+;; space that aligns the state on the right.
+(put 'approve-pr--header-line 'risky-local-variable t)
 
 (defvar-local approve-pr--redraw-timer nil
   "Timer of the scheduled redraw, or nil.")
@@ -473,7 +476,8 @@ the buffer, and collapsed sections stay collapsed (decision D13)."
 (defvar approve-pr-header-line-functions nil
   "Functions that return parts of the header line, or nil.
 Each is called with no arguments in the PR buffer after a redraw;
-the parts are joined with \" · \" after the number and state.")
+the parts follow the number and title, joined with \" · \".  Use it
+for notices, such as changes on GitHub; the state is on the right.")
 
 (defun approve-pr--loading-names ()
   "Return the names of the queries still loading, for the header line."
@@ -485,22 +489,38 @@ the parts are joined with \" · \" after the number and state.")
                       names))))
 
 (defun approve-pr--update-header-line ()
-  "Compute the header line of the current PR buffer."
+  "Compute the header line of the current PR buffer.
+It is the number and title, what is still loading and the parts of
+`approve-pr-header-line-functions', with the state on the right.  It
+stays in view while the buffer scrolls."
   (setq approve-pr--header-line
-        (let* ((number (approve-face (format " #%s" (approve-model-meta :number))
-                                     'approve-heading))
+        (let* ((loaded (approve-model-root-ref))
+               (badge (if loaded
+                          (approve-render-state-badge (approve-pr-field 'state)
+                                                      (approve-pr-field 'isDraft))
+                        ""))
                (loading (approve-pr--loading-names))
-               (parts (and (approve-model-root-ref)
-                           (cons (approve-render-state-badge
-                                  (approve-pr-field 'state) (approve-pr-field 'isDraft))
-                                 (mapcar #'funcall approve-pr-header-line-functions)))))
-          (concat number " "
-                  (approve-render-join
-                   (append parts
-                           (and loading
-                                (list (approve-face
-                                       (format "loading %s…" (string-join loading ", "))
-                                       'approve-loading)))))))))
+               (notes (append
+                       (and loading
+                            (list (approve-face
+                                   (format "loading %s…" (string-join loading ", "))
+                                   'approve-loading)))
+                       (and loaded (mapcar #'funcall approve-pr-header-line-functions))))
+               (notes (approve-render-join notes))
+               (number (format "#%s " (approve-model-meta :number)))
+               (room (- approve-page-width (string-width number) (string-width badge)
+                        (if (string-empty-p notes) 0 (+ 3 (string-width notes)))
+                        3))
+               (title (approve-render-truncate (or (and loaded (approve-pr-field 'title)) "")
+                                               (max 10 room)))
+               (face (list (list :height approve-title-height) 'approve-title)))
+          (concat " "
+                  (approve-render-justify
+                   (approve-render-join
+                    (list (propertize (string-trim-right (concat number title))
+                                      'face face)
+                          notes))
+                   badge)))))
 
 (provide 'approve-pr)
 

@@ -34,11 +34,6 @@
                                                        "internal/parser/parser.go")))))
   (after-all (kill-buffer test-context--buffer))
 
-  (it "is the title on the title"
-    (let ((context (test-context--at "Rewrite the parser and engine")))
-      (expect (plist-get context :kind) :to-be 'title)
-      (expect (plist-get context :url) :to-equal "https://github.com/acme-example/rocket/pull/202")))
-
   (it "is a user on a login, with the profile URL"
     (let ((context (test-context--at "bob-example")))
       (expect (plist-get context :kind) :to-be 'user)
@@ -113,6 +108,7 @@
   (it "is the pull request anywhere else"
     (with-current-buffer test-context--buffer
       (goto-char (point-min))
+      (search-forward "Status ")
       (forward-line 1)
       (expect (plist-get (approve-context-at-point) :kind) :to-be 'pr))))
 
