@@ -40,12 +40,33 @@
     (approve-icon-clear-cache))
 
   (describe "header"
-    (it "shows the title, state, branches and dates"
+    (it "shows the title and state, then the author, repository, branches and dates as rows"
       (let ((lines (split-string (test-sections--text 'approve-header-section) "\n")))
         (expect (nth 0 lines) :to-match "\\`#202 Rewrite the parser and engine scheduler +● Open")
-        (expect (nth 1 lines)
-                :to-equal "acme-example/rocket · alice-example wants to merge 4 commits into main from parser-rewrite")
-        (expect (nth 2 lines) :to-equal "Opened 3 days ago · updated 23 hours ago")))
+        (expect (nth 1 lines) :to-equal "")
+        (expect (nth 2 lines) :to-equal "Author      alice-example")
+        (expect (nth 3 lines) :to-equal "Repository  acme-example/rocket")
+        (expect (nth 4 lines) :to-equal "Branch      parser-rewrite → main · 4 commits")
+        (expect (nth 5 lines) :to-equal "Opened      3 days ago · updated 23 hours ago")
+        (expect (nth 6 lines) :to-match "\\`Reviewers ")))
+
+    (it "says when and by whom a merged PR was merged"
+      (cl-letf (((symbol-function 'approve-pr-fields)
+                 (lambda (_fields)
+                   '((createdAt . "2026-10-01T12:00:00Z") (updatedAt . "2026-10-04T10:00:00Z")
+                     (merged . t) (mergedAt . "2026-10-04T11:00:00Z")
+                     (mergedBy (login . "bob-example"))))))
+        (let ((approve-render-now approve-test-now))
+          (expect (substring-no-properties (approve-sections--dates))
+                  :to-equal "3 days ago · updated 2 hours ago · merged 1 hour ago by bob-example"))))
+
+    (it "links the repository and carries the branches"
+      (with-current-buffer test-sections--buffer
+        (goto-char (point-min))
+        (search-forward "acme-example/rocket")
+        (expect (get-text-property (match-beginning 0) 'approve-url)
+                :to-match "/acme-example/rocket\\'"))
+      (expect (plist-get (test-sections--thing-at "parser-rewrite →") :kind) :to-be 'branch))
 
     (it "shows reviewers with their verdicts, then who is asked"
       (expect (test-sections--text 'approve-meta-section 'reviewers)

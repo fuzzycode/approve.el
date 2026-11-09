@@ -113,8 +113,7 @@
   (it "is the pull request anywhere else"
     (with-current-buffer test-context--buffer
       (goto-char (point-min))
-      (forward-line 2)
-      (end-of-line)
+      (forward-line 1)
       (expect (plist-get (approve-context-at-point) :kind) :to-be 'pr))))
 
 ;;; test-approve-context.el ends here

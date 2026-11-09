@@ -261,7 +261,7 @@ buffer and the file list's =RET= opens it.
 #+begin_example
  approve-root-section
  ├── approve-header-section          title, state, refs, author, dates
- │   └── approve-meta-section *      (value: reviewers, assignees, labels, milestone, issues, status)
+ │   └── approve-meta-section *      (value: author, repository, branch, opened, reviewers, …, status)
  ├── approve-pending-review-section  only when the viewer has a pending review (value: review id)
  │   └── approve-pending-comment-section *  (value: comment id)
  ├── approve-description-section

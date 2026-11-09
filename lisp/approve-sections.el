@@ -60,14 +60,19 @@
 ;;; Options
 
 (defcustom approve-metadata-rows
-  '(reviewers assignees labels milestone issues status)
-  "Metadata rows of the header, in order.
-Each is one of `reviewers', `assignees', `labels', `milestone',
-`issues' and `status'.  To show only reviewers and labels:
+  '(author repository branch opened reviewers assignees labels milestone issues
+           status)
+  "Metadata rows of the header, under the title, in order.
+Each is one of `author', `repository', `branch' (head → base and the
+number of commits), `opened' (when it was opened, updated, merged or
+closed), `reviewers', `assignees', `labels', `milestone', `issues'
+and `status'.  To show only reviewers and labels:
 
   (setq approve-metadata-rows \\='(reviewers labels))"
-  :type '(repeat (choice (const reviewers) (const assignees) (const labels)
-                         (const milestone) (const issues) (const status)))
+  :type '(repeat (choice (const author) (const repository) (const branch)
+                         (const opened) (const reviewers) (const assignees)
+                         (const labels) (const milestone) (const issues)
+                         (const status)))
   :group 'approve)
 
 (defcustom approve-checks-passed-shown 5
@@ -162,47 +167,50 @@ COUNT is a number or nil; RIGHT a string or nil."
   (approve-thing (approve-face (or name "?") 'approve-branch)
                  (list :kind 'branch :name name :ref ref :owner owner)))
 
-(defun approve-sections--summary-line ()
-  "Return the second line of the header: who merges what where."
-  (let-alist (approve-pr-fields '(author state merged commitCount baseRefName headRefName
-                                         baseRef headRef headRepositoryOwner
-                                         isCrossRepository mergedBy))
-    (let* ((count .commitCount.totalCount)
-           (commits (format "%s commit%s" (or count "?") (if (equal count 1) "" "s")))
-           (head (if (and .isCrossRepository .headRepositoryOwner)
-                     (format "%s:%s" (alist-get 'login .headRepositoryOwner) .headRefName)
-                   .headRefName))
-           (dim (lambda (text) (approve-face text 'approve-dim))))
-      (concat (funcall dim (format "%s/%s · " (approve-model-meta :owner)
-                                   (approve-model-meta :repo)))
-              (approve-render-user (if .merged (or .mergedBy .author) .author))
-              (funcall dim (cond (.merged (format " merged %s into " commits))
-                                 ((equal .state "CLOSED")
-                                  (format " wanted to merge %s into " commits))
-                                 (t (format " wants to merge %s into " commits))))
+(defun approve-sections--branches ()
+  "Return the branch row's value: head → base, and the number of commits."
+  (let-alist (approve-pr-fields '(commitCount baseRefName headRefName baseRef headRef
+                                              headRepositoryOwner isCrossRepository))
+    (let ((count .commitCount.totalCount)
+          (head (if (and .isCrossRepository .headRepositoryOwner)
+                    (format "%s:%s" (alist-get 'login .headRepositoryOwner) .headRefName)
+                  .headRefName)))
+      (concat (approve-sections--branch head .headRef .headRepositoryOwner)
+              (approve-face " → " 'approve-dim)
               (approve-sections--branch .baseRefName .baseRef nil)
-              (funcall dim " from ")
-              (approve-sections--branch head .headRef .headRepositoryOwner)))))
+              (when count
+                (approve-face (format " · %d commit%s" count (if (= count 1) "" "s"))
+                              'approve-dim))))))
 
-(defun approve-sections--dates-line ()
-  "Return the third line of the header: when it was opened and updated."
-  (let-alist (approve-pr-fields '(createdAt updatedAt mergedAt closedAt merged closed))
+(defun approve-sections--repository ()
+  "Return the repository's owner/name, which opens its page on GitHub."
+  (let ((name (format "%s/%s" (approve-model-meta :owner) (approve-model-meta :repo)))
+        (url (when-let* ((pr (approve-pr-field 'url)))
+               (replace-regexp-in-string "/pull/[0-9]+\\'" "" pr))))
+    (if url (propertize name 'approve-url url) name)))
+
+(defun approve-sections--dates ()
+  "Return the opened row's value: when it was opened, updated, merged or closed."
+  (let-alist (approve-pr-fields '(createdAt updatedAt mergedAt closedAt merged closed
+                                            mergedBy))
     (approve-render-join
-     (list (concat (approve-face "Opened " 'approve-date) (approve-render-date .createdAt))
+     (list (approve-render-date .createdAt)
            (concat (approve-face "updated " 'approve-date) (approve-render-date .updatedAt))
            (cond (.merged (concat (approve-face "merged " 'approve-date)
-                                  (approve-render-date .mergedAt)))
+                                  (approve-render-date .mergedAt)
+                                  (when .mergedBy
+                                    (concat (approve-face " by " 'approve-date)
+                                            (approve-render-user .mergedBy)))))
                  (.closed (concat (approve-face "closed " 'approve-date)
                                   (approve-render-date .closedAt))))))))
 
 (defun approve-insert-header-section ()
-  "Insert the header: title, state, branches, dates and metadata rows."
+  "Insert the header: the title and state, then the metadata rows."
   (magit-insert-section (approve-header-section)
     (magit-insert-heading (approve-sections--title-line))
     (cond
      ((approve-model-root-ref)
-      (insert (approve-sections--summary-line) "\n"
-              (approve-sections--dates-line) "\n\n")
+      (insert "\n")
       (dolist (row approve-metadata-rows)
         (approve-sections--insert-meta-row row)))
      (t
@@ -339,6 +347,11 @@ COUNT is a number or nil; RIGHT a string or nil."
 (defun approve-sections--meta-value (row)
   "Return the value of the metadata ROW as text, or nil when empty."
   (pcase row
+    ('author (when-let* ((author (approve-pr-field 'author)))
+               (approve-render-user author)))
+    ('repository (approve-sections--repository))
+    ('branch (approve-sections--branches))
+    ('opened (approve-sections--dates))
     ('reviewers (approve-sections--reviewers))
     ('assignees (mapconcat #'approve-render-user (approve-pr-field 'assignees) "  "))
     ('labels (mapconcat #'approve-sections--label (approve-pr-field 'labels) " "))

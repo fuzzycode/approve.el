@@ -24,9 +24,11 @@ Buffer name: =*approve: fuzzycode/approve#1234*=.  The header line is in
 ** Top: header, metadata, pending review, description
 #+begin_example
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
- fuzzycode/approve · alice wants to merge 4 commits into main from feature/retry
- Opened 3 days ago · updated 2 hours ago
 
+ Author      alice
+ Repository  fuzzycode/approve
+ Branch      feature/retry → main · 4 commits
+ Opened      3 days ago · updated 2 hours ago
  Reviewers   ✓ bob   ✗ carol   ○ dave   ○ @fuzzycode/core
  Assignees   alice
  Labels      enhancement  api
@@ -53,8 +55,10 @@ Buffer name: =*approve: fuzzycode/approve#1234*=.  The header line is in
 Notes:
 - Line 1: title (bold, larger with =approve-title-height=), then state badges:
   Open/Closed/Merged and Draft, coloured by face.
-- Line 2: where and what.  The head branch is a link (=RET= copies it, =o=
-  opens it).
+- Then the metadata rows (=approve-metadata-rows=, in order and which):
+  Author, Repository (=o= opens it), Branch (head → base, the number of
+  commits; =RET= copies a branch, =o= opens it), Opened (when it was opened
+  and updated, and merged and by whom, or closed), then Reviewers … Status.
 - Metadata rows are one section each (=approve-meta-*=), so each has its own
   keys (=l= on Labels edits labels) and eldoc (label descriptions, user names).
 - Reviewer marks: ✓ approved, ✗ changes requested, 💬 commented, ○ requested
