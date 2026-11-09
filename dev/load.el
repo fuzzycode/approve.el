@@ -54,6 +54,12 @@
                              (equal (symbol-value symbol)
                                     (eval (car (get symbol 'standard-value)) t))))
                   (push symbol defaults))))
+    ;; Lists the modules fill as they load start empty again, so what a
+    ;; module no longer adds goes away.
+    (dolist (registry '(approve-pr-header-line-functions approve-pr-lazy-loaders
+                        approve-pr-clear-cache-functions))
+      (when (boundp registry)
+        (set registry nil)))
     (dolist (name order)
       (when (and (member name names)
                  (or (not (equal name "approve-evil")) (featurep 'evil)))
