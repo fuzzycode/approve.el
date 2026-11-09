@@ -19,7 +19,7 @@ task only needs the files it touches.
   commits, conversation, file list and diff, with threads in place, eldoc
   details on =K=, and the read-only keys (=RET o y j ]u [u ]t [t g=).  The
   speed budgets hold.  Decided on the way: D28 (line numbers), D29 (echo
-  lines), D30 (syntax highlighting in hunks).
+  lines), D30 (syntax highlighting in hunks), D31 (Material Design icons).
 - Left of Phase 1's done-when: checking three real PRs (one with
   suggestions, one of 100+ files) and private images (SP5).  fuzzycode/doom.d#2
   was checked (recorded through the =gh= CLI, since the token in

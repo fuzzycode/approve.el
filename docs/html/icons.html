@@ -43,7 +43,7 @@
 <main>
 <h1>Icon sets</h1>
 <p class="lead">Every icon in Approve goes through <code>approve-icon</code>: a semantic name mapped to a nerd-icons
-glyph, with a Unicode fallback (D16). Approve uses <b>Codicons</b> (D26), chosen from the four nerd-icons sets
+glyph, with a Unicode fallback (D16). Approve uses <b>Material Design</b> (D31; Codicons, D26, before), chosen from the four nerd-icons sets
 compared here. The picker at the top right still applies any set to every mockup page.</p>
 
 <section class="shot" id="context">
@@ -109,12 +109,12 @@ window.approveBeforeIcons = function () {
   // Table
   var t = document.getElementById("icon-table");
   var head = "<tr><th>Semantic name</th>" + sets.map(function (s) {
-    return "<th class=\"set" + (s === "codicons" ? " chosen" : "") + "\">" + I.LABELS[s] + "</th>";
+    return "<th class=\"set" + (s === "material" ? " chosen" : "") + "\">" + I.LABELS[s] + "</th>";
   }).join("") + "</tr>";
   var body = ROWS.map(function (r) {
     var cells = sets.map(function (s) {
       var nm = s === "unicode" ? "fallback" : (I.SETS[s][r[0]] || ["—"])[0].replace(/^nf-\w+-/, "");
-      return "<td class=\"cell" + (s === "codicons" ? " chosen" : "") + "\" data-icon-set=\"" + s + "\"><i class=\"" + r[2] + "\" data-i=\"" + r[0] +
+      return "<td class=\"cell" + (s === "material" ? " chosen" : "") + "\" data-icon-set=\"" + s + "\"><i class=\"" + r[2] + "\" data-i=\"" + r[0] +
              "\">" + I.UNICODE[r[0]] + "</i><small>" + nm + "</small></td>";
     }).join("");
     return "<tr><td class=\"name\"><code>" + r[0] + "</code><span>" + r[1] + "</span></td>" + cells + "</tr>";

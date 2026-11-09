@@ -88,7 +88,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Decision :: All faces live in =approve-faces.el= and inherit from Magit or
   built-in faces.  All icons go through =approve-icon= (semantic name →
   nerd-icons glyph, or a Unicode fallback when =approve-use-nerd-icons= is nil
-  or the font is missing).  Which glyphs: [[*D26 Icons come from Codicons][D26]].
+  or the font is missing).  Which glyphs: [[*D31 Icons come from Material Design][D31]].
 - Why :: Themes work out of the box; users can restyle everything; terminals
   and machines without the font still look right.
 
@@ -115,7 +115,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   ([[*D02 Durable state lives on GitHub][D02]]).
 
 ** D26 Icons come from Codicons
-- Status :: accepted (2026-11-08)
+- Status :: superseded by [[*D31 Icons come from Material Design][D31]] (2026-11-09)
 - Decision :: =approve-icon= maps every semantic icon to the Codicons set in
   nerd-icons (=nerd-icons-codicon=, names =nf-cod-*=).  The mapping is the
   table in [[file:ui.org::*Icons][ui.org › Icons]].  It is a =defcustom= (=approve-icons=), so
@@ -124,6 +124,19 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   Octicons ([[file:html/icons.html][html/icons.html]]); Codicons cover every pull request state
   (open, draft, merged, closed, request changes, comment draft) with one
   consistent outline style.  No extra dependency: nerd-icons ships them.
+
+** D31 Icons come from Material Design
+- Status :: accepted (2026-11-09, replaces [[*D26 Icons come from Codicons][D26]])
+- Decision :: =approve-icon= maps every semantic icon to the Material Design
+  set in nerd-icons (names =nf-md-*=), as in the table in [[file:ui.org::*Icons][ui.org › Icons]].
+  =approve-icons= stays a =defcustom=, and it takes a glyph from any
+  nerd-icons set: the prefix of the name (=nf-md-=, =nf-cod-=, =nf-oct-=,
+  =nf-fa-=, …) picks the set.
+- Why :: In Emacs, Codicons' pull request, merge and comment glyphs look
+  like GitHub's Octicons, which the author finds ugly next to text.  Of the
+  four sets compared ([[file:html/icons.html][html/icons.html]]), the author chose Material Design's
+  rounded outline icons, which cover every state too (pull, merge, branch
+  removed, a progress pencil for drafts, decagrams for verdicts).
 
 ** D27 Extended information through eldoc: one line, then the eldoc buffer
 - Status :: accepted (2026-11-08)

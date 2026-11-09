@@ -29,10 +29,11 @@
 
 ;; `approve-icon' turns a semantic name, such as `approved' or
 ;; `check-failure', into the text to draw (docs/decisions.org, D16 and
-;; D26; docs/ui.org, "Icons").  Every icon Approve shows goes through
+;; D31; docs/ui.org, "Icons").  Every icon Approve shows goes through
 ;; it.
 ;;
-;; The glyphs are Codicons from nerd-icons (`approve-icons').  When
+;; The glyphs are Material Design icons from nerd-icons
+;; (`approve-icons'); any other nerd-icons glyph can take a place.  When
 ;; `approve-use-nerd-icons' is nil, or a graphical frame lacks the
 ;; nerd-icons font, each icon falls back to a Unicode character
 ;; (`approve-icon-fallbacks').  Both tables are user options, so any
@@ -43,6 +44,7 @@
 
 ;;; Code:
 
+(require 'seq)
 (require 'nerd-icons)
 (require 'approve-faces)
 
@@ -65,7 +67,7 @@ Changing an icon option through Customize or `setopt' does this."
 
 (defcustom approve-use-nerd-icons t
   "Whether icons are nerd-icons glyphs.
-When non-nil, `approve-icon' uses the Codicons in `approve-icons',
+When non-nil, `approve-icon' uses the glyphs in `approve-icons',
 unless a graphical frame lacks the font `nerd-icons-font-family';
 a terminal is trusted to have it.  When nil, it uses the Unicode
 characters in `approve-icon-fallbacks'.  Without a Nerd Font:
@@ -76,38 +78,40 @@ characters in `approve-icon-fallbacks'.  Without a Nerd Font:
   :group 'approve-faces)
 
 (defcustom approve-icons
-  '((open . "nf-cod-git_pull_request")
-    (draft . "nf-cod-git_pull_request_draft")
-    (merged . "nf-cod-git_merge")
-    (closed . "nf-cod-git_pull_request_closed")
-    (approved . "nf-cod-pass")
-    (changes-requested . "nf-cod-request_changes")
-    (commented . "nf-cod-comment")
-    (requested . "nf-cod-watch")
-    (viewed . "nf-cod-eye")
-    (unviewed . "nf-cod-eye_closed")
-    (dismissed . "nf-cod-history")
-    (check-success . "nf-cod-pass_filled")
-    (check-failure . "nf-cod-error")
-    (check-pending . "nf-cod-loading")
-    (pending-comment . "nf-cod-comment_draft")
-    (comment . "nf-cod-comment_discussion")
-    (label . "nf-cod-tag")
-    (push . "nf-cod-repo_push")
-    (commit . "nf-cod-git_commit")
-    (issue . "nf-cod-issues")
-    (milestone . "nf-cod-milestone")
-    (person . "nf-cod-account")
-    (bell . "nf-cod-bell")
-    (lock . "nf-cod-lock")
-    (external . "nf-cod-link_external")
-    (loading . "nf-cod-sync")
-    (error . "nf-cod-warning"))
-  "Glyph of each icon: semantic name → nerd-icons Codicon name.
-Names are those of `nerd-icons-codicon' (nf-cod-…), as listed by
-`nerd-icons-insert'.  To draw approvals with a thumbs-up:
+  '((open . "nf-md-source_pull")
+    (draft . "nf-md-progress_pencil")
+    (merged . "nf-md-source_merge")
+    (closed . "nf-md-source_branch_remove")
+    (approved . "nf-md-check_decagram")
+    (changes-requested . "nf-md-alert_decagram")
+    (commented . "nf-md-comment_text_outline")
+    (requested . "nf-md-account_clock_outline")
+    (viewed . "nf-md-checkbox_marked_outline")
+    (unviewed . "nf-md-checkbox_blank_outline")
+    (dismissed . "nf-md-update")
+    (check-success . "nf-md-check_circle")
+    (check-failure . "nf-md-close_circle")
+    (check-pending . "nf-md-progress_clock")
+    (pending-comment . "nf-md-comment_edit_outline")
+    (comment . "nf-md-comment_outline")
+    (label . "nf-md-tag_outline")
+    (push . "nf-md-arrow_up_bold_circle_outline")
+    (commit . "nf-md-source_commit")
+    (issue . "nf-md-record_circle_outline")
+    (milestone . "nf-md-flag_outline")
+    (person . "nf-md-account_outline")
+    (bell . "nf-md-bell_outline")
+    (lock . "nf-md-lock_outline")
+    (external . "nf-md-open_in_new")
+    (loading . "nf-md-loading")
+    (error . "nf-md-alert_circle_outline"))
+  "Glyph of each icon: semantic name → nerd-icons name.
+The defaults are Material Design icons (nf-md-…), but any glyph
+`nerd-icons-insert' lists will do, whatever its set: the prefix of
+the name picks it (nf-md-, nf-cod-, nf-oct-, nf-fa-, …).  To draw
+approvals with a thumbs-up:
 
-  (setf (alist-get \\='approved approve-icons) \"nf-cod-thumbsup\")
+  (setf (alist-get \\='approved approve-icons) \"nf-md-thumb_up_outline\")
   (approve-icon-clear-cache)"
   :type '(alist :key-type symbol :value-type string)
   :set #'approve-icon--set
@@ -163,15 +167,38 @@ frame, the font `nerd-icons-font-family' exists (checked once)."
                           t)))
              approve-icon--font-found))))
 
+(defconst approve-icon--families
+  '(("nf-md-" . nerd-icons-mdicon)
+    ("nf-cod-" . nerd-icons-codicon)
+    ("nf-oct-" . nerd-icons-octicon)
+    ("nf-fa-" . nerd-icons-faicon)
+    ("nf-fae-" . nerd-icons-faicon)
+    ("nf-dev-" . nerd-icons-devicon)
+    ("nf-seti-" . nerd-icons-sucicon)
+    ("nf-custom-" . nerd-icons-sucicon)
+    ("nf-weather-" . nerd-icons-wicon)
+    ("nf-linux-" . nerd-icons-flicon)
+    ("nf-pom-" . nerd-icons-pomicon)
+    ("nf-iec-" . nerd-icons-ipsicon)
+    ("nf-pl-" . nerd-icons-powerline)
+    ("nf-ple-" . nerd-icons-powerline))
+  "The nerd-icons function that draws each prefix of glyph names.")
+
+(defun approve-icon--glyph (code)
+  "Return the nerd-icons glyph named CODE, such as \"nf-md-tag\", or nil."
+  (when-let* ((family (seq-find (lambda (family) (string-prefix-p (car family) code))
+                                approve-icon--families)))
+    (condition-case nil
+        (funcall (cdr family) code)
+      (error nil))))
+
 (defun approve-icon--make (name face nerd)
   "Return the icon NAME with FACE, a glyph when NERD is non-nil.
 Fall back to the Unicode text when the glyph is unknown, and to
 \"?\" when NAME has no fallback either."
   (let ((glyph (and nerd
                     (when-let* ((code (alist-get name approve-icons)))
-                      (condition-case nil
-                          (nerd-icons-codicon code)
-                        (error nil))))))
+                      (approve-icon--glyph code)))))
     (cond
      (glyph (if face (approve-face-add glyph face) glyph))
      (t (approve-face (or (alist-get name approve-icon-fallbacks) "?")
@@ -180,7 +207,7 @@ Fall back to the Unicode text when the glyph is unknown, and to
 (defun approve-icon (name &optional face)
   "Return the icon NAME as a string, with FACE if non-nil.
 NAME is a semantic name from `approve-icons', such as `approved'.
-The string is a Codicon glyph or a Unicode fallback, see
+The string is a nerd-icons glyph or a Unicode fallback, see
 `approve-use-nerd-icons'.  Its width can be 1 or 2 columns: align
 with `string-width'.  Icons are cached; do not modify the string.
 

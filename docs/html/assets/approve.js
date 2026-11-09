@@ -136,7 +136,7 @@
 
   var ORDER = ["unicode", "material", "codicons", "fontawesome", "octicons"];
   var LABELS = {
-    unicode: "Unicode", material: "Material Design", codicons: "Codicons (chosen)",
+    unicode: "Unicode", material: "Material Design (chosen)", codicons: "Codicons",
     fontawesome: "Font Awesome", octicons: "Octicons (GitHub)"
   };
 
@@ -186,9 +186,9 @@
 
   var params = new URLSearchParams(window.location.search);
   var theme = params.get("theme") || (store && store.getItem("approve-theme")) || "moon";
-  var icons = params.get("icons") || (store && store.getItem("approve-icon-set")) || "codicons";
+  var icons = params.get("icons") || (store && store.getItem("approve-icon-set")) || "material";
   if (icons === "nerd") icons = "octicons";            // older links
-  if (ORDER.indexOf(icons) < 0) icons = "codicons";
+  if (ORDER.indexOf(icons) < 0) icons = "material";
   applyTheme(theme);
 
   document.addEventListener("DOMContentLoaded", function () {

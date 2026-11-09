@@ -611,40 +611,41 @@ inherit:
 | =approve-check-success/failure/pending=          | =success= / =error= / =warning=              | Checks                    |
 
 * Icons
-=approve-icon= maps a semantic name to a nerd-icons glyph from the Codicons
-set (=nerd-icons-codicon=, [[file:decisions.org::*D26 Icons come from Codicons][D26]]), or to a Unicode fallback when
+=approve-icon= maps a semantic name to a nerd-icons glyph from the Material
+Design set (=nf-md-*=, [[file:decisions.org::*D31 Icons come from Material Design][D31]]), or to a Unicode fallback when
 =approve-use-nerd-icons= is nil or the font is missing.  Both columns of the
-table are user options (=approve-icons=, =approve-icon-fallbacks=).  The
-fallbacks can be two columns wide (emoji), so rows align with
-=string-width=.  The other sets
-that were compared are on [[file:html/icons.html][html/icons.html]].
+table are user options (=approve-icons=, =approve-icon-fallbacks=); a glyph
+from any other nerd-icons set can take a place, its prefix (=nf-cod-=,
+=nf-oct-=, …) says which.  The fallbacks can be two columns wide (emoji), so
+rows align with =string-width=.  The other sets that were compared are on
+[[file:html/icons.html][html/icons.html]].
 
-| Name                | Codicons                         | Fallback |
-|---------------------+----------------------------------+----------|
-| =open=              | =nf-cod-git_pull_request=        | ●        |
-| =draft=             | =nf-cod-git_pull_request_draft=  | ◌        |
-| =merged=            | =nf-cod-git_merge=               | ⮌        |
-| =closed=            | =nf-cod-git_pull_request_closed= | ⊘        |
-| =approved=          | =nf-cod-pass=                    | ✓        |
-| =changes-requested= | =nf-cod-request_changes=         | ✗        |
-| =commented=         | =nf-cod-comment=                 | 💬       |
-| =requested=         | =nf-cod-watch=                   | ○        |
-| =viewed=            | =nf-cod-eye=                     | ✓        |
-| =unviewed=          | =nf-cod-eye_closed=              | ·        |
-| =dismissed=         | =nf-cod-history=                 | ↻        |
-| =check-success=     | =nf-cod-pass_filled=             | ✓        |
-| =check-failure=     | =nf-cod-error=                   | ✗        |
-| =check-pending=     | =nf-cod-loading=                 | ◐        |
-| =pending-comment=   | =nf-cod-comment_draft=           | ✎        |
-| =comment=           | =nf-cod-comment_discussion=      | 💬       |
-| =label=             | =nf-cod-tag=                     | 🏷        |
-| =push=              | =nf-cod-repo_push=               | ↑        |
-| =commit=            | =nf-cod-git_commit=              | ●        |
-| =issue=             | =nf-cod-issues=                  | ◉        |
-| =milestone=         | =nf-cod-milestone=               | ⚑       |
-| =person=            | =nf-cod-account=                 | 👤       |
-| =bell=              | =nf-cod-bell=                    | ●        |
-| =lock=              | =nf-cod-lock=                    | 🔒       |
-| =external=          | =nf-cod-link_external=           | ↗        |
-| =loading=           | =nf-cod-sync=                    | ⟳        |
-| =error=             | =nf-cod-warning=                 | ✗        |
+| Name                | Material Design                      | Fallback |
+|---------------------+--------------------------------------+----------|
+| =open=              | =nf-md-source_pull=                  | ●        |
+| =draft=             | =nf-md-progress_pencil=              | ◌        |
+| =merged=            | =nf-md-source_merge=                 | ⮌        |
+| =closed=            | =nf-md-source_branch_remove=         | ⊘        |
+| =approved=          | =nf-md-check_decagram=               | ✓        |
+| =changes-requested= | =nf-md-alert_decagram=               | ✗        |
+| =commented=         | =nf-md-comment_text_outline=         | 💬       |
+| =requested=         | =nf-md-account_clock_outline=        | ○        |
+| =viewed=            | =nf-md-checkbox_marked_outline=      | ✓        |
+| =unviewed=          | =nf-md-checkbox_blank_outline=       | ·        |
+| =dismissed=         | =nf-md-update=                       | ↻        |
+| =check-success=     | =nf-md-check_circle=                 | ✓        |
+| =check-failure=     | =nf-md-close_circle=                 | ✗        |
+| =check-pending=     | =nf-md-progress_clock=               | ◐        |
+| =pending-comment=   | =nf-md-comment_edit_outline=         | ✎        |
+| =comment=           | =nf-md-comment_outline=              | 💬       |
+| =label=             | =nf-md-tag_outline=                  | 🏷        |
+| =push=              | =nf-md-arrow_up_bold_circle_outline= | ↑        |
+| =commit=            | =nf-md-source_commit=                | ●        |
+| =issue=             | =nf-md-record_circle_outline=        | ◉        |
+| =milestone=         | =nf-md-flag_outline=                 | ⚑       |
+| =person=            | =nf-md-account_outline=              | 👤       |
+| =bell=              | =nf-md-bell_outline=                 | ●        |
+| =lock=              | =nf-md-lock_outline=                 | 🔒       |
+| =external=          | =nf-md-open_in_new=                  | ↗        |
+| =loading=           | =nf-md-loading=                      | ⟳        |
+| =error=             | =nf-md-alert_circle_outline=         | ✗        |

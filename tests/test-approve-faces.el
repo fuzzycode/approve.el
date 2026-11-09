@@ -61,10 +61,10 @@
     (expect (get-text-property 0 'face (approve-icon 'approved 'approve-approved))
             :to-be 'approve-approved))
 
-  (it "uses the Codicon glyph when nerd-icons are on in a terminal"
+  (it "uses the Material Design glyph when nerd-icons are on in a terminal"
     (setq approve-use-nerd-icons t)
     (let ((icon (approve-icon 'approved 'approve-approved)))
-      (expect icon :to-equal (nerd-icons-codicon "nf-cod-pass"))
+      (expect icon :to-equal (nerd-icons-mdicon "nf-md-check_decagram"))
       (expect (memq 'approve-approved
                     (ensure-list (get-text-property 0 'face icon)))
               :not :to-be nil)))
@@ -72,13 +72,21 @@
   (it "has a glyph and a fallback for every icon"
     (dolist (entry approve-icons)
       (expect (assq (car entry) approve-icon-fallbacks) :not :to-be nil)
-      (expect (nerd-icons-codicon (cdr entry)) :to-be-truthy)))
+      (expect (approve-icon--glyph (cdr entry)) :to-be-truthy)))
+
+  (it "takes a glyph from any nerd-icons set, by the prefix of its name"
+    (setq approve-use-nerd-icons t)
+    (let ((approve-icons '((approved . "nf-cod-pass") (merged . "nf-oct-git_merge"))))
+      (approve-icon-clear-cache)
+      (expect (approve-icon 'approved) :to-equal (nerd-icons-codicon "nf-cod-pass"))
+      (expect (approve-icon 'merged) :to-equal (nerd-icons-octicon "nf-oct-git_merge"))))
 
   (it "falls back for an unknown glyph, and says ? for an unknown name"
     (setq approve-use-nerd-icons t)
-    (let ((approve-icons '((approved . "nf-cod-no-such-icon"))))
+    (let ((approve-icons '((approved . "nf-md-no-such-icon") (merged . "no-such-set"))))
       (approve-icon-clear-cache)
-      (expect (approve-icon 'approved) :to-equal "✓"))
+      (expect (approve-icon 'approved) :to-equal "✓")
+      (expect (approve-icon 'merged) :to-equal "⮌"))
     (expect (approve-icon 'no-such-icon) :to-equal "?"))
 
   (it "caches icons"
