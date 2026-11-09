@@ -603,7 +603,10 @@ inherit:
 * Icons
 =approve-icon= maps a semantic name to a nerd-icons glyph from the Codicons
 set (=nerd-icons-codicon=, [[file:decisions.org::*D26 Icons come from Codicons][D26]]), or to a Unicode fallback when
-=approve-use-nerd-icons= is nil or the font is missing.  The other sets
+=approve-use-nerd-icons= is nil or the font is missing.  Both columns of the
+table are user options (=approve-icons=, =approve-icon-fallbacks=).  The
+fallbacks can be two columns wide (emoji), so rows align with
+=string-width=.  The other sets
 that were compared are on [[file:html/icons.html][html/icons.html]].
 
 | Name                | Codicons                         | Fallback |
