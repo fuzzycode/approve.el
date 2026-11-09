@@ -672,6 +672,149 @@ Example:
                               :callback #'finish)))
     file))
 
+;;; Benchmarks
+
+(defconst approve-dev-speed-budgets
+  '((redraw-medium . 30) (expand-file . 30) (redraw-large . 100))
+  "Speed budgets in milliseconds (docs/architecture.org, \"Speed\").")
+
+(defun approve-dev--open-fixture (name)
+  "Return a PR buffer of the scenario NAME, loaded from the fixtures.
+The fixtures answer without latency; the buffer is hidden."
+  (let* ((scenario (approve-dev-read-scenario name))
+         (approve-api-transport (approve-dev-make-replay-transport (list scenario)))
+         (approve-api-timeout nil)
+         (inhibit-message t)
+         (buffer (approve-pr-setup-buffer
+                  (list :host "github.com" :owner (plist-get scenario :owner)
+                        :repo (plist-get scenario :repo)
+                        :number (plist-get scenario :number))))
+         (deadline (+ (float-time) 30)))
+    (with-current-buffer buffer
+      (approve-pr-load)
+      (while (and (approve-pr-loading-p) (< (float-time) deadline))
+        (accept-process-output nil 0.01))
+      (approve-pr-redraw))
+    buffer))
+
+(defun approve-dev--time (runs function)
+  "Return the mean milliseconds of RUNS calls of FUNCTION, after one warm-up.
+Garbage collection is included, as a user would feel it."
+  (funcall function)
+  (let ((start (float-time)))
+    (dotimes (_ runs)
+      (funcall function))
+    (/ (* 1000 (- (float-time) start)) runs)))
+
+(defun approve-dev--synthetic-patch (lines)
+  "Return a patch of about LINES lines in hunks of 50, and thread lines.
+The value is (PATCH . LINES-WITH-THREADS): new-side line numbers of
+added lines, one per hunk of the first five."
+  (let ((hunks nil) (threads nil) (old 1) (new 1))
+    (dotimes (h (/ lines 50))
+      (let ((body nil) (start-old old) (start-new new) (old-count 0) (new-count 0))
+        (dotimes (i 50)
+          (pcase (% i 5)
+            (0 (push (format "-\told line %d of the hunk %d" i h) body)
+               (cl-incf old) (cl-incf old-count))
+            (1 (push (format "+\tnew line %d of the hunk %d" i h) body)
+               (when (and (= i 21) (< h 5)) (push new threads))
+               (cl-incf new) (cl-incf new-count))
+            (_ (push (format " \tcontext line %d of the hunk %d" i h) body)
+               (cl-incf old) (cl-incf new) (cl-incf old-count) (cl-incf new-count))))
+        (push (concat (format "@@ -%d,%d +%d,%d @@ func hunk%d() {\n"
+                              start-old old-count start-new new-count h)
+                      (string-join (nreverse body) "\n"))
+              hunks)
+        (cl-incf old 20) (cl-incf new 20)))
+    (cons (string-join (nreverse hunks) "\n") (nreverse threads))))
+
+(defun approve-dev--file-section (path)
+  "Return the diff section of PATH in the current PR buffer."
+  (seq-find (lambda (section) (equal (oref section value) path))
+            (oref (seq-find (lambda (section)
+                              (eq (oref section type) 'approve-diff-section))
+                            (oref magit-root-section children))
+                  children)))
+
+(defconst approve-dev--expand-path "internal/parser/parser.go"
+  "The medium PR's file the expand benchmark draws.")
+
+(defun approve-dev--prepare-expand (buffer)
+  "Give the medium PR in BUFFER a 500-line file with 5 threads.
+Its parser.go gets a synthetic 500-line patch, and five of its
+threads move onto lines of it."
+  (with-current-buffer buffer
+    (let* ((path approve-dev--expand-path)
+           (synthetic (approve-dev--synthetic-patch 500))
+           (table (approve-model-extra :patches))
+           (threads (seq-take (seq-filter (lambda (thread)
+                                            (equal (alist-get 'path thread) path))
+                                          (approve-pr-list-fields
+                                           'reviewThreads '(id path)))
+                              5)))
+      (puthash path (cons (cons 'patch (car synthetic))
+                          (assq-delete-all 'patch (copy-alist (gethash path table))))
+               table)
+      (cl-loop for thread in threads
+               for line in (cdr synthetic)
+               do (approve-model-patch
+                   `((__typename . "PullRequestReviewThread") (id . ,(alist-get 'id thread))
+                     (line . ,line) (diffSide . "RIGHT") (subjectType . "LINE")
+                     (isOutdated)))))))
+
+(defun approve-dev--expand-once (buffer)
+  "Return the seconds it takes to expand the prepared file in BUFFER.
+The file is collapsed and the buffer redrawn first, so its body is
+drawn anew."
+  (with-current-buffer buffer
+    (magit-section-hide (approve-dev--file-section approve-dev--expand-path))
+    (approve-pr-redraw)
+    (let ((section (approve-dev--file-section approve-dev--expand-path))
+          (start (float-time)))
+      (magit-section-show section)
+      (- (float-time) start))))
+
+;;;###autoload
+(defun approve-dev-benchmark (&optional runs)
+  "Measure Approve against its speed budgets with the fixtures.
+Each case is timed RUNS times (default 10) after a warm-up:
+redrawing the medium PR with the diff collapsed, expanding a
+500-line file with 5 threads, and redrawing the large PR.  Return
+an alist of (CASE MILLISECONDS BUDGET), and show it."
+  (interactive)
+  (let* ((runs (or runs 10))
+         (medium (approve-dev--open-fixture "medium"))
+         (large (approve-dev--open-fixture "large"))
+         (results
+          (unwind-protect
+              (list (list 'redraw-medium
+                          (with-current-buffer medium
+                            (approve-dev--time runs #'approve-pr-redraw)))
+                    (list 'redraw-large
+                          (with-current-buffer large
+                            (approve-dev--time runs #'approve-pr-redraw)))
+                    (list 'expand-file
+                          (progn
+                            (approve-dev--prepare-expand medium)
+                            (approve-dev--expand-once medium)
+                            (let ((total 0))
+                              (dotimes (_ runs)
+                                (setq total (+ total (approve-dev--expand-once medium))))
+                              (/ (* 1000 total) runs)))))
+            (kill-buffer medium)
+            (kill-buffer large))))
+    (setq results (mapcar (lambda (result)
+                            (append result
+                                    (list (alist-get (car result)
+                                                     approve-dev-speed-budgets))))
+                          results))
+    (message "%s" (mapconcat (lambda (result)
+                               (format "%s %.1f ms (budget %d)" (nth 0 result)
+                                       (nth 1 result) (nth 2 result)))
+                             results ", "))
+    results))
+
 ;;; Inspecting
 
 (defun approve-dev--graphql-files ()

@@ -67,7 +67,7 @@ Mockups: [[file:ui.org::*PR buffer — single layout (default)][PR buffer]], hea
       for every context kind, full docs for the eldoc buffer, lazy detail
       queries (user, team, =#123=, commit, outdated thread code) with the
       session cache, =K= (=approve-show-details=).  Q7 settled by [[file:decisions.org::*D29 Echo lines show what the store holds; names and emails wait for K][D29]].
-- [ ] Measure against the [[file:architecture.org::*Speed][speed budgets]] with the fixtures.
+- [X] Measure against the [[file:architecture.org::*Speed][speed budgets]] with the fixtures.
 - Done when :: the medium fixture and three real PRs (small, with
   suggestions, 100+ files) render like the mockups, =g= keeps point and
   collapsed state, and the budgets hold.

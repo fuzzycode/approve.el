@@ -437,17 +437,25 @@ Every context also carries =:url= when one exists (for =o= and copying).
 
 * Speed
 Budgets, measured with fixtures (=approve-dev-benchmark=) in Phase 1 and kept
-in CI as soft checks:
-| Case                                                                        | Budget               |
-|-----------------------------------------------------------------------------+----------------------|
-| Redraw, medium PR (30 files, 1 500 diff lines, 40 comments), diff collapsed | < 30 ms              |
-| Expand one 500-line file with 5 threads                                     | < 30 ms              |
-| Redraw, large PR (300 files, 20 000 lines), all collapsed                   | < 100 ms             |
-| Keypress to input buffer for a comment                                      | < 50 ms (no network) |
+in CI as soft checks (=tests/test-speed.el= fails only past six times a
+budget).  Measured 2026-11-08, byte-compiled, Emacs 31.1 on an Apple M-series
+laptop, mean of 20 runs after a warm-up, garbage collection included:
+| Case                                                                        | Budget               | Measured |
+|-----------------------------------------------------------------------------+----------------------+----------|
+| Redraw, medium PR (30 files, 1 500 diff lines, 40 comments), diff collapsed | < 30 ms              | 10.5 ms  |
+| Expand one 500-line file with 5 threads                                     | < 30 ms              | 16.2 ms  |
+| Redraw, large PR (300 files, 20 000 lines), all collapsed                   | < 100 ms             | 68.6 ms  |
+| Keypress to input buffer for a comment                                      | < 50 ms (no network) | Phase 2  |
+
+The 500-line file is the medium PR's parser.go with a synthetic patch (ten
+hunks of 50 lines, changed words marked) and five threads moved onto it.
+Uncompiled code is about four times slower; =M-x approve-dev-benchmark=
+measures whatever is loaded.
 
 Means: lazy bodies, a thread index built once per redraw, no per-line
 sections, faces as text properties (not overlays), coalesced redraws, and
-syntax highlighting only for expanded hunks ([[file:roadmap.org::*SP4 Syntax highlighting in hunks][SP4]]).
+syntax highlighting only for expanded hunks ([[file:roadmap.org::*SP4 Syntax highlighting in hunks][SP4]]).  Rendered HTML is
+cached by its text, and parsed patches by their string.
 
 * Security and privacy
 - The token comes from ghub (auth-source).  Approve never stores it.
