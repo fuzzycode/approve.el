@@ -519,17 +519,24 @@ THING, if non-nil, is what the link points to (`approve-thing')."
 
 (defun approve-html--suggestion-line (cell refine)
   "Return the text of the suggestion CELL, changed words in face REFINE.
-GitHub marks the changed words with spans of class x."
+GitHub marks the changed words with spans of class x, and colours
+code with its syntax classes (pl-*)."
   (cond
    ((stringp cell) cell)
    ((null cell) "")
    (t
     (let ((text (mapconcat (lambda (child)
                              (approve-html--suggestion-line child refine))
-                           (dom-children cell) "")))
-      (when (approve-html--class-p cell "x")
+                           (dom-children cell) ""))
+          (syntax (seq-some #'approve-html--syntax-face
+                            (seq-filter (lambda (class) (string-prefix-p "pl-" class))
+                                        (approve-html--classes cell)))))
+      (when (or syntax (approve-html--class-p cell "x"))
         (setq text (copy-sequence text))
-        (add-face-text-property 0 (length text) refine t text))
+        (when (approve-html--class-p cell "x")
+          (add-face-text-property 0 (length text) refine t text))
+        (when syntax
+          (add-face-text-property 0 (length text) syntax t text)))
       text))))
 
 (defun approve-html--tag-suggestion (dom)

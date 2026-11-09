@@ -392,14 +392,18 @@ COUNT is a number or nil; RIGHT a string or nil."
                                                     (if (= replies 1) "y" "ies")))))
                   (approve-render-hints '("S" approve-submit-review "submit")
                                         '("X" approve-discard-review "discard"))))))
-        (let ((body (point)))
+        (let ((body (point))
+              (width (min 40 (apply #'max 10 (mapcar (lambda (comment)
+                                                       (string-width
+                                                        (approve-sections--location comment)))
+                                                     comments)))))
           (dolist (comment comments)
             (magit-insert-section (approve-pending-comment-section (alist-get 'id comment))
               (insert (if (alist-get 'replyTo comment)
                           (concat (approve-face "↳ reply on " 'approve-dim)
                                   (approve-sections--location comment))
-                        (concat (approve-render-pad (approve-sections--location comment) 30)
-                                " "
+                        (concat (approve-render-pad (approve-sections--location comment) width)
+                                "  "
                                 (if (approve-sections--suggestion-p comment)
                                     (concat (approve-icon 'pending-comment 'approve-pending)
                                             " suggestion")
