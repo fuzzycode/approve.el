@@ -366,6 +366,7 @@ signalled.  The transport is the current `approve-api-transport'."
 
 (defconst approve-api--network-error-regexp
   (rx (or "Could not create connection"
+          "make client process failed"
           "nodename nor servname provided"        ; macOS resolver
           "Name or service not known"             ; glibc resolver
           "Temporary failure in name resolution"
@@ -377,21 +378,25 @@ a connection synchronously (an unknown host, for example).")
 
 (defun approve-api--transport-condition (err)
   "Return the error condition for ERR, signalled by a transport.
-A connection that cannot be made is a network error: a `file-error'
-from `make-network-process', or a plain error whose message matches
-`approve-api--network-error-regexp'.  ghub's \"Required Github token
-... does not exist\" is `approve-api-unauthorized': like a 401, the
-user fixes it in auth-source."
+A connection that cannot be made is a network error: an error whose
+message matches `approve-api--network-error-regexp', such as the
+`file-error' of `make-network-process'.  ghub's \"Required Github
+token ... does not exist\", and a token file that cannot be
+decrypted (auth-source reading ~/.authinfo.gpg), are
+`approve-api-unauthorized': like a 401, the user fixes them in
+auth-source."
   (let ((message (error-message-string err)))
     (cond
-     ((or (memq 'file-error (get (car err) 'error-conditions))
-          (string-match-p approve-api--network-error-regexp message))
+     ((string-match-p approve-api--network-error-regexp message)
       (approve-api--condition 'approve-api-network-error
                               (approve-api--network-message err)))
      ((string-match-p (rx bos "Required " (+ nonl) " token " (+ nonl)
                           "does not exist")
                       message)
       (approve-api--condition 'approve-api-unauthorized message))
+     ((string-match-p (rx (or "Decryption failed" "authinfo" "netrc")) message)
+      (approve-api--condition 'approve-api-unauthorized
+                              (concat "Could not read the token: " message)))
      (t (approve-api--condition 'approve-api-error message)))))
 
 (defun approve-api--time-out (request)

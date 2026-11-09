@@ -344,6 +344,18 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
       (expect (car received) :to-be 'approve-api-unauthorized)
       (expect (approve-api-error-message received) :to-match "token .* does not exist")))
 
+  (it "fails with approve-api-unauthorized when the token file cannot be decrypted"
+    (let ((approve-api-transport
+           (lambda (_) (signal 'file-error '("Opening input file" "Decryption failed" ""
+                                             "Bad session key"))))
+          (approve-api-timeout nil)
+          received)
+      (approve-api-rest "GET" "/x" :errorback (lambda (err) (setq received err)))
+      (sleep-for 0.02)
+      (expect (car received) :to-be 'approve-api-unauthorized)
+      (expect (approve-api-error-message received)
+              :to-match "\\`Could not read the token: .*Decryption failed")))
+
   (it "fails with approve-api-network-error when the connection cannot be made at once"
     (let ((approve-api-timeout nil)
           (received nil))
