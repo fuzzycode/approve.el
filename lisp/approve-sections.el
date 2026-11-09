@@ -178,19 +178,21 @@ COUNT is a number or nil; RIGHT a string or nil."
     (if url (propertize name 'approve-url url) name)))
 
 (defun approve-sections--dates ()
-  "Return the opened row's value: when it was opened, updated, merged or closed."
+  "Return the opened row's value: when it was opened, updated, merged or closed.
+The dates look like the other rows' values; the words between them
+are dim."
   (let-alist (approve-pr-fields '(createdAt updatedAt mergedAt closedAt merged closed
                                             mergedBy))
-    (approve-render-join
-     (list (approve-render-date .createdAt)
-           (concat (approve-face "updated " 'approve-date) (approve-render-date .updatedAt))
-           (cond (.merged (concat (approve-face "merged " 'approve-date)
-                                  (approve-render-date .mergedAt)
-                                  (when .mergedBy
-                                    (concat (approve-face " by " 'approve-date)
-                                            (approve-render-user .mergedBy)))))
-                 (.closed (concat (approve-face "closed " 'approve-date)
-                                  (approve-render-date .closedAt))))))))
+    (let ((date (lambda (iso) (approve-render-date iso 'default)))
+          (dim (lambda (text) (approve-face text 'approve-dim))))
+      (approve-render-join
+       (list (funcall date .createdAt)
+             (concat (funcall dim "updated ") (funcall date .updatedAt))
+             (cond (.merged (concat (funcall dim "merged ") (funcall date .mergedAt)
+                                    (when .mergedBy
+                                      (concat (funcall dim " by ")
+                                              (approve-render-user .mergedBy)))))
+                   (.closed (concat (funcall dim "closed ") (funcall date .closedAt)))))))))
 
 (defun approve-insert-header-section ()
   "Insert the header: the metadata rows.

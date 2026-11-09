@@ -55,8 +55,13 @@
                      (merged . t) (mergedAt . "2026-10-04T11:00:00Z")
                      (mergedBy (login . "bob-example"))))))
         (let ((approve-render-now approve-test-now))
-          (expect (substring-no-properties (approve-sections--dates))
-                  :to-equal "3 days ago · updated 2 hours ago · merged 1 hour ago by bob-example"))))
+          (let ((dates (approve-sections--dates)))
+            (expect (substring-no-properties dates)
+                    :to-equal "3 days ago · updated 2 hours ago · merged 1 hour ago by bob-example")
+            ;; Dates look like the other rows' values; only the words are dim.
+            (expect (get-text-property 0 'face dates) :to-be 'default)
+            (expect (get-text-property (string-search "updated" dates) 'face dates)
+                    :to-be 'approve-dim)))))
 
     (it "links the repository and carries the branches"
       (with-current-buffer test-sections--buffer
