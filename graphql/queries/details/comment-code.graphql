@@ -1,0 +1,24 @@
+# Eldoc details of an outdated thread (F20): the code its first comment was
+# written on, which GitHub keeps as the comment's diffHunk.
+query CommentCode($id: ID!) {
+  node(id: $id) {
+    __typename
+    ... on PullRequestReviewComment {
+      id
+      path
+      diffHunk
+      originalLine
+      originalStartLine
+      originalCommit {
+        __typename
+        id
+        abbreviatedOid
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

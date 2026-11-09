@@ -1,0 +1,60 @@
+# Eldoc details of a commit (F20): the full message, who wrote and who
+# committed it, its signature and checks.
+query CommitDetails($owner: String!, $name: String!, $oid: GitObjectID!) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    object(oid: $oid) {
+      __typename
+      ... on Commit {
+        id
+        oid
+        abbreviatedOid
+        message
+        url
+        additions
+        deletions
+        changedFilesIfAvailable
+        author {
+          name
+          email
+          date
+          user {
+            __typename
+            id
+            login
+          }
+        }
+        committer {
+          name
+          email
+          date
+          user {
+            __typename
+            id
+            login
+          }
+        }
+        signature {
+          isValid
+          state
+          signer {
+            __typename
+            id
+            login
+          }
+        }
+        statusCheckRollup {
+          __typename
+          id
+          state
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

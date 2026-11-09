@@ -144,6 +144,18 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   frontends can show too).  Fetching lazily keeps loading a PR fast
   ([[*D24 Repository metadata is fetched lazily and cached per session][D24]]).  =:echo= needs eldoc 1.14 ([[*D25 Dependencies][D25]]).
 
+** D29 Echo lines show what the store holds; names and emails wait for K
+- Status :: accepted (2026-11-08, answers Q7)
+- Decision :: The echo line of a person is =@login — Name=, of a team
+  =@org/team — team=, of reactions =👍 3 — you and 2 others=: only what the
+  store holds.  A person's public email, a team's name and members, and who
+  reacted come with the lazy details, in the eldoc buffer (=K=).  Details
+  that are already cached may show in the echo line too, since that does
+  not wait.
+- Why :: The email needs a token scope Approve doesn't ask for, and reactor
+  names made the threads query cost 51 points instead of 1.  [[*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]] keeps the
+  echo line instant, so it can only show what is already loaded.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
@@ -303,9 +315,6 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
   minutes) load reliably through shr?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]].
 - Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 7.
 - Q6 :: Should the dashboard show unread state from notifications?  → Phase 7.
-- Q7 :: The eldoc echo lines in [[file:ui.org::*Eldoc][ui.org]] show a user's email and the names
-  of reactors, but the store holds neither: the email needs a token scope
-  Approve doesn't ask for, and reactor names made the threads query cost 51
-  points instead of 1.  Echo lines are built from the store only ([[*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]).
-  Show them only in the eldoc buffer (lazy details), or change the mockups?
-  → Phase 1 (=approve-eldoc.el=).
+- Q7 :: What the eldoc echo lines show for users and reactions, given the
+  store holds no email and no reactor names.
+  → answered by [[*D29 Echo lines show what the store holds; names and emails wait for K][D29]] (the mockups changed).

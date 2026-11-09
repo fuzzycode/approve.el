@@ -416,7 +416,7 @@ COUNT is a number or nil; RIGHT a string or nil."
 (defun approve-insert-description-section ()
   "Insert the description of the pull request, with its reactions."
   (magit-insert-section (approve-description-section)
-    (let-alist (approve-pr-fields '(bodyHTML reactionGroups lastEditedAt))
+    (let-alist (approve-pr-fields '(id bodyHTML reactionGroups lastEditedAt))
       (magit-insert-heading
         (approve-sections-heading
          "Description" nil
@@ -430,7 +430,7 @@ COUNT is a number or nil; RIGHT a string or nil."
           (insert (or (approve-sections-state 'core "the description") "")))
          ((not (approve-html-insert .bodyHTML))
           (insert (approve-render-empty "No description provided."))))
-        (when-let* ((reactions (approve-render-reactions-text .reactionGroups)))
+        (when-let* ((reactions (approve-render-reactions-text .reactionGroups .id)))
           (insert "\n" reactions "\n"))
         (approve-sections-insert-body start)))
     (insert "\n")))

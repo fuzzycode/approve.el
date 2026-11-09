@@ -57,6 +57,7 @@
 (require 'approve-context)
 (require 'approve-nav)
 (require 'approve-menus)
+(require 'approve-eldoc)
 
 (declare-function magit-add-section-hook "magit-section")
 

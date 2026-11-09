@@ -272,11 +272,11 @@ retry."
                 (> (or (let-alist group .reactors.totalCount) 0) 0))
               groups))
 
-(defun approve-render-reactions-text (groups)
+(defun approve-render-reactions-text (groups &optional subject)
   "Return the reactions in GROUPS as text, such as \"👍 3  🎉 1\", or nil.
 GROUPS are reactionGroups; reactions the viewer gave use
 `approve-reaction-viewer'.  The text carries a thing of kind
-`reactions' with GROUPS."
+`reactions' with GROUPS and SUBJECT, the id of what was reacted to."
   (when-let* ((given (approve-render-reaction-groups groups)))
     (approve-thing
      (mapconcat (lambda (group)
@@ -287,7 +287,7 @@ GROUPS are reactionGroups; reactions the viewer gave use
                                       'approve-reaction-viewer
                                     'approve-reaction))))
                 given "  ")
-     (list :kind 'reactions :groups given))))
+     (list :kind 'reactions :groups given :subject subject))))
 
 ;;; Text of comments
 

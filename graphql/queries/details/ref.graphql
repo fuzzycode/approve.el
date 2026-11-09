@@ -1,0 +1,55 @@
+# Eldoc details of a #123 reference (F20): an issue or pull request in any
+# repository the viewer can read.
+query RefDetails($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    issueOrPullRequest(number: $number) {
+      __typename
+      ... on Issue {
+        id
+        number
+        title
+        state
+        url
+        bodyText
+        author {
+          login
+        }
+        labels(first: 10) {
+          nodes {
+            __typename
+            id
+            name
+            color
+          }
+        }
+      }
+      ... on PullRequest {
+        id
+        number
+        title
+        state
+        isDraft
+        url
+        bodyText
+        author {
+          login
+        }
+        labels(first: 10) {
+          nodes {
+            __typename
+            id
+            name
+            color
+          }
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

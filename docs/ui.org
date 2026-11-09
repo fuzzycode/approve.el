@@ -462,19 +462,21 @@ eldoc function ([[file:decisions.org::*D27 Extended information through eldoc: o
 
 ** Echo area
 #+begin_example
- @fuzzycode — Björn Larsson — develop@bjornlarsson.nu
- @fuzzycode/core — Core maintainers — 4 members
+ @fuzzycode — Björn Larsson
+ @fuzzycode/core — team · K for its members
  enhancement — New feature or request
  d4e5f6a — Handle 502 responses — alice · 2026-11-07 14:02 · ✓ checks
  #1200 — Retry failing requests — open issue
  lint — failure — "3 files would be reformatted" · required
  lisp/approve-api.el — modified +120 −30 — ✓ viewed · 2 threads
  thread — outdated (was line 33) — 2 comments · K shows the original code
- 👍 3 — bob, carol, you
+ 👍 3 — you and 2 others · 🎉 1
  2 days ago — 2026-11-06 09:12
 #+end_example
 
-The email appears only when the user made it public on GitHub.
+The echo line shows only what is already loaded ([[file:decisions.org::*D29 Echo lines show what the store holds; names and emails wait for K][D29]]): a person's public
+email, a team's name and members, and who reacted come with =K=.  Details
+that =K= fetched before stay cached and show in the echo line too.
 
 ** Eldoc buffer
 Point is on =@bob= in the Reviewers row; =K= opened the eldoc buffer in a
@@ -496,7 +498,7 @@ side window.  The echo area keeps the one-line version.
  │                                        │                                                │
  │                                        │ https://github.com/bob            o open       │
  ├─ *approve: …#1234*  Top  L3 ───────────┴─ *eldoc*  All ─────────────────────────────────┤
- │ @bob — Bob Smith — bob@example.com                                                      │
+ │ @bob — Bob Smith                                                                         │
  └─────────────────────────────────────────────────────────────────────────────────────────┘
 #+end_example
 
@@ -519,16 +521,16 @@ written on (GitHub keeps it as the comment's =diffHunk=):
 ** What gets extended information
 | Thing at point            | Echo area                                | Eldoc buffer adds                                                      |
 |---------------------------+------------------------------------------+------------------------------------------------------------------------|
-| =@user=, author, reviewer | login — name — public email              | pronouns, bio, company, location, status, role in this PR, association |
-|                           |                                          | (Member, Contributor, First-time contributor), profile link            |
-| =@org/team=               | slug — name — member count               | description, members                                                   |
+| =@user=, author, reviewer | @login — name                            | public email, pronouns, bio, company, location, status, role in this   |
+|                           |                                          | PR, association (Member, Contributor, …), profile link                 |
+| =@org/team=               | @org/team — team                         | name, description, member count                                        |
 | Label                     | name — description                       | colour                                                                 |
 | Commit sha                | sha — subject — author · date · checks   | full message, author vs committer, signature, checks, files changed    |
 | =#123= reference          | #123 — title — state                     | author, labels, start of the body                                      |
 | Check                     | name — result — summary · required       | duration, details link                                                 |
 | File                      | path — status +a −d — viewed · threads   | rename source, its threads                                             |
 | Thread                    | state (resolved by, outdated) — comments | for outdated threads: the original code (=diffHunk=)                   |
-| Reactions                 | emoji count — who                        | everyone, per reaction                                                 |
+| Reactions                 | emoji count — you and N others           | who reacted, per reaction                                              |
 | Date                      | relative — absolute                      | —                                                                      |
 | Milestone                 | title — due date — progress              | description                                                            |
 | Branch ref                | owner:branch — fork or not               | ahead/behind the base                                                  |

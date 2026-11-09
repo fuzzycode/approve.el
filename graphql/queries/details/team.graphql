@@ -1,0 +1,23 @@
+# Eldoc details of a team (F20): its name, description and size.
+query TeamDetails($org: String!, $slug: String!) {
+  organization(login: $org) {
+    __typename
+    id
+    team(slug: $slug) {
+      __typename
+      id
+      name
+      combinedSlug
+      description
+      url
+      members {
+        totalCount
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

@@ -116,6 +116,9 @@ run.  The sections that need such data add entries.")
 (defvar approve-pr-redraw-hook nil
   "Hook run in a PR buffer after each redraw.")
 
+(defvar approve-pr-clear-cache-functions (list #'approve-html-clear-cache)
+  "Functions that forget session caches, run by \\[universal-argument] \\[approve-pr-refresh].")
+
 (define-derived-mode approve-pr-mode magit-section-mode "Approve"
   "Major mode of a buffer showing one GitHub pull request.
 The buffer is read-only and drawn from data loaded from GitHub;
@@ -270,12 +273,13 @@ and lazily loaded data that was loaded before is loaded again."
 (defun approve-pr-refresh (&optional clear-caches)
   "Load the pull request of this buffer again (flow F17).
 The buffer keeps its text until the data arrives.  With a prefix
-argument CLEAR-CACHES, also forget cached rendering and images."
+argument CLEAR-CACHES, also forget cached rendering, images and
+extended details (`approve-pr-clear-cache-functions')."
   (interactive "P")
   (unless (derived-mode-p 'approve-pr-mode)
     (user-error "Not in an Approve pull request buffer"))
   (when clear-caches
-    (approve-html-clear-cache))
+    (run-hooks 'approve-pr-clear-cache-functions))
   (approve-pr-load t))
 
 (defun approve-pr--run-lazy-loaders ()

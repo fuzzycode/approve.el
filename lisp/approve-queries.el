@@ -205,6 +205,52 @@ ON-PAGE, CALLBACK, ERRORBACK and ATOMIC are as for
                            :on-page on-page :callback callback
                            :errorback errorback :atomic atomic)))))
 
+;;; Details (eldoc)
+
+(defun approve-query--details-request (kind key)
+  "Return (QUERY VARIABLES PATH) of the details query of KIND for KEY.
+PATH leads from the response's data to the details."
+  (pcase kind
+    ('user (list "queries/details/user.graphql" `((login . ,key)) '(user)))
+    ('team (let ((parts (split-string key "/")))
+             (list "queries/details/team.graphql"
+                   `((org . ,(car parts)) (slug . ,(cadr parts)))
+                   '(organization team))))
+    ('ref (list "queries/details/ref.graphql"
+                `((owner . ,(nth 0 key)) (name . ,(nth 1 key)) (number . ,(nth 2 key)))
+                '(repository issueOrPullRequest)))
+    ('commit (list "queries/details/commit.graphql"
+                   `((owner . ,(approve-model-meta :owner))
+                     (name . ,(approve-model-meta :repo)) (oid . ,key))
+                   '(repository object)))
+    ('comment-code (list "queries/details/comment-code.graphql" `((id . ,key)) '(node)))
+    ('reactors (list "queries/details/reactors.graphql" `((id . ,key)) '(node)))
+    (_ (error "No details query for %s" kind))))
+
+(cl-defun approve-query-details (kind key &key callback errorback)
+  "Fetch the extended details of the thing of KIND identified by KEY.
+They are for eldoc (decision D27) and do not go into the store.
+KIND and KEY are: `user' and a login, `team' and \"org/slug\", `ref'
+and (OWNER REPO NUMBER), `commit' and an oid of the PR's repository,
+`comment-code' and a review comment id, `reactors' and the id of
+what was reacted to.  CALLBACK is called with the details, an alist;
+ERRORBACK with the error, also when GitHub has no such thing."
+  (pcase-let ((`(,query ,variables ,path) (approve-query--details-request kind key)))
+    (approve-api-graphql
+     query variables
+     :host (approve-query-host)
+     :progress nil
+     :errorback errorback
+     :callback
+     (lambda (data)
+       (let ((details data))
+         (dolist (step path)
+           (setq details (alist-get step details)))
+         (if details
+             (funcall callback details)
+           (funcall (or errorback #'approve-api-default-errorback)
+                    (list 'approve-api-not-found "Not found"))))))))
+
 (provide 'approve-queries)
 
 ;;; approve-queries.el ends here

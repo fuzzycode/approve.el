@@ -118,7 +118,7 @@ A hidden (minimized) comment is one dim line saying why."
      ((not (approve-html-insert .bodyHTML))
       (insert (approve-render-empty "No description provided."))))
     (unless .isMinimized
-      (when-let* ((reactions (approve-render-reactions-text .reactionGroups)))
+      (when-let* ((reactions (approve-render-reactions-text .reactionGroups .id)))
         (insert reactions "\n")))))
 
 (defun approve-thread--state (thread)

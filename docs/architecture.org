@@ -171,11 +171,12 @@ schema on 2026-11-08.
 | Search                 | =search(type: ISSUE, query: "is:pr …", first:)=                                                              |
 | Repo metadata (lazy)   | =repository.labels / assignableUsers / mentionableUsers / milestones=                                        |
 | Change detection       | =pullRequest { updatedAt headRefOid }=                                                                       |
-| User details (eldoc)   | =node(id) { ... on User { pronouns email bio company location websiteUrl status { emoji message } } }=       |
+| User details (eldoc)   | =user(login) { pronouns email bio company location websiteUrl status { emoji message } }=                    |
 | Team details (eldoc)   | =organization(login).team(slug) { name description members { totalCount } }=                                 |
 | =#123= details (eldoc) | =repository.issueOrPullRequest(number) { title state author labels bodyText }=                               |
 | Commit details (eldoc) | =repository.object(oid) { ... on Commit { message author committer signature statusCheckRollup } }=          |
-| Outdated thread code   | =PullRequestReviewComment { diffHunk originalLine originalCommit }= (first comment of the thread)            |
+| Outdated thread code   | =node(id) { ... on PullRequestReviewComment { diffHunk originalLine originalCommit } }= (first comment)      |
+| Reactors (eldoc)       | =node(id) { ... on Reactable { reactionGroups { content reactors(first: 20) { login } } } }=                 |
 | Rate limit             | =rateLimit { cost remaining resetAt }= in every query                                                        |
 | Notifications          | REST =GET /notifications=, =PATCH /notifications/threads/{id}=                                               |
 | Markdown preview       | REST =POST /markdown= (=mode: gfm=, =context: owner/repo=)                                                   |
@@ -401,16 +402,20 @@ Every context also carries =:url= when one exists (for =o= and copying).
   dashboard, search, notifications).  It returns nil where it has nothing, so
   other eldoc sources (flymake, etc.) still work.
 - Describers are small functions per context kind, in a table
-  (=approve-eldoc-describers=), so a new kind is one entry.  Each returns
-  =(:echo STRING :doc STRING :details QUERY-SPEC)=.
+  (=approve-eldoc-describers=), so a new kind is one entry.  Each is called
+  with the context and the cached details (or nil) and returns
+  =(:echo STRING :doc STRING :details (KIND . KEY))=; =approve-query-details=
+  runs the query for =(KIND . KEY)= (=graphql/queries/details/=).
 - Moving point around never touches the network: missing details are fetched
   only when the user presses =K= (=approve-show-details=, which fetches, then
-  shows the eldoc buffer) or while the eldoc buffer is visible.  Eldoc
-  itself ignores answers to requests that point has moved past.
+  shows the eldoc buffer) or while the eldoc buffer is visible.  Meanwhile
+  the eldoc buffer says "⟳ loading details…"; when they arrive, eldoc runs
+  again (=eldoc-print-current-symbol-info=), so it documents wherever point
+  is by then.  Each eldoc call answers synchronously, as the protocol wants.
 - A failed detail query is cached as an error for a minute, and the eldoc
   buffer says "details unavailable (…)".  The echo line is unaffected.
-- The eldoc buffer text uses Approve's faces, and links (URLs, =#123=, commit
-  shas) are buttons: =RET= follows them, =o= opens the thing in the browser.
+- The eldoc buffer text uses Approve's faces, and URLs are buttons: =RET=
+  opens them.
 - Needs eldoc 1.14 for =:echo= ([[file:decisions.org::*D25 Dependencies][D25]]).
 
 * Errors

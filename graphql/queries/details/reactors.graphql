@@ -1,0 +1,29 @@
+# Eldoc details of reactions (F20, D29): who gave each reaction to a
+# comment, review or description.  Asked only when the eldoc buffer shows
+# them, since naming reactors makes a query cost much more.
+query Reactors($id: ID!) {
+  node(id: $id) {
+    __typename
+    ... on Reactable {
+      id
+      reactionGroups {
+        content
+        viewerHasReacted
+        reactors(first: 20) {
+          totalCount
+          nodes {
+            __typename
+            ... on Actor {
+              login
+            }
+          }
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}
