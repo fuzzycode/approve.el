@@ -12,7 +12,8 @@ Design rules for every buffer:
 - Dim what is done (viewed files, resolved threads, outdated comments); keep
   what needs attention at normal weight.
 - Every actionable thing shows its key the first time it appears, as a dim
-  hint (=r reply · R resolve=).  =approve-show-hints= turns hints off.
+  hint (=r reply · R resolve=).  =approve-show-hints= turns hints off.  A hint
+  shows only once its command exists, so the read-only Phase 1 shows few.
 - No line exceeds =fill-column= + the indent; long text is wrapped (=shr=
   fills to =approve-fill-column=, default 80).
 

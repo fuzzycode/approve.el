@@ -83,6 +83,15 @@ default, off by default, or dropped.
 Check that private repository images (signed URLs) and public camo images load
 through shr asynchronously, and what happens when a signed URL has expired
 (refresh the PR? placeholder with =o= to open?).
+- Found (2026-11-08) :: Images don't load through shr: a renderer never
+  calls the network.  It draws a cached image or an =[image: alt]= link and
+  lists the URL; the PR buffer fetches it (=approve-api-fetch-url=,
+  =url-queue-retrieve=) and redraws.  A public image
+  (=user-images.githubusercontent.com=, in fuzzycode/doom.d#2) loads this way.
+  Still to check on a private repository: signed
+  =private-user-images= URLs.  They are fetched right after the =bodyHTML=
+  arrives, well within their few minutes; one that fails stays a link (=o=
+  opens it), and =g= brings new signed URLs, which the cache fetches anew.
 
 * Phase 2 — Review
 The core of the tool: everything needed to do a full review.

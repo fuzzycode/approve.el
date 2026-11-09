@@ -120,4 +120,6 @@ and what goes to GitHub.
   =*approve-log*=.
 - =approve-dev-inspect-query= shows a query with includes expanded.
 - =approve-dev-model-dump= shows the store of the current PR buffer.
+- =approve-dev-benchmark= times the speed budgets with the fixtures (compile
+  first: =make build=; uncompiled code is about four times slower).
 - Altair or =verb= (see approve-old's =graphql.org=) for trying queries by hand.

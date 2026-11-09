@@ -326,7 +326,8 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
   lines outside hunks, and comments in a commit-range view.  → [[file:roadmap.org::*SP1 Review API behaviour][SP1]].
 - Q4 :: Do private images in =bodyHTML= (signed
   =private-user-images.githubusercontent.com= URLs that expire after a few
-  minutes) load reliably through shr?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]].
+  minutes) load reliably?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]]: public images do; private ones are
+  still to check on a private repository.
 - Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 7.
 - Q6 :: Should the dashboard show unread state from notifications?  → Phase 7.
 - Q7 :: What the eldoc echo lines show for users and reactions, given the
