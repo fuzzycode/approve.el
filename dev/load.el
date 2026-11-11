@@ -60,6 +60,14 @@
                         approve-pr-clear-cache-functions))
       (when (boundp registry)
         (set registry nil)))
+    ;; `defface' leaves a face it has defined before as it was; without
+    ;; its old spec, the reload gives it the new one.  Faces the user
+    ;; customized keep theirs.
+    (dolist (face (face-list))
+      (when (and (string-prefix-p "approve-" (symbol-name face))
+                 (not (get face 'saved-face))
+                 (not (get face 'customized-face)))
+        (put face 'face-defface-spec nil)))
     (dolist (name order)
       (when (and (member name names)
                  (or (not (equal name "approve-evil")) (featurep 'evil)))
