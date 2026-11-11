@@ -385,23 +385,18 @@ view (`approve-pr--update-header-line')."
   (string-match-p "js-suggested-changes-blob" (or (alist-get 'bodyHTML comment) "")))
 
 (defun approve-insert-pending-review-section ()
-  "Insert the viewer's pending review, when there is one."
+  "Insert the viewer's pending review, when there is one.
+Its heading counts its comments, replies included; the comments
+keep the pending background in the diff, where they could be taken
+for published ones, but not here."
   (when-let* ((review (approve-pr-pending-review)))
-    (let* ((comments (approve-model-nodes (alist-get 'comments review)))
-           (replies (seq-count (lambda (c) (alist-get 'replyTo c)) comments))
-           (new (- (length comments) replies))
-           (start (point)))
+    (let ((comments (approve-model-nodes (alist-get 'comments review))))
       (magit-insert-section (approve-pending-review-section (alist-get 'id review))
         (magit-insert-heading
           (approve-sections-heading
-           "Your pending review" nil
-           (approve-render-join
-            (list (approve-render-join
-                   (list (and (> new 0) (format "%d comment%s" new (if (= new 1) "" "s")))
-                         (and (> replies 0) (format "%d repl%s" replies
-                                                    (if (= replies 1) "y" "ies")))))
-                  (approve-render-hints '("S" approve-submit-review "submit")
-                                        '("X" approve-discard-review "discard"))))))
+           "Your pending review" (length comments)
+           (approve-render-hints '("S" approve-submit-review "submit")
+                                 '("X" approve-discard-review "discard"))))
         (let ((body (point))
               (width (min 40 (apply #'max 10 (mapcar (lambda (comment)
                                                        (string-width
@@ -415,15 +410,13 @@ view (`approve-pr--update-header-line')."
                         (concat (approve-render-pad (approve-sections--location comment) width)
                                 "  "
                                 (if (approve-sections--suggestion-p comment)
-                                    (concat (approve-icon 'pending-comment 'approve-pending)
-                                            " suggestion")
+                                    (concat (approve-icon 'pending-comment) " suggestion")
                                   (approve-render-truncate
                                    (approve-render-first-line (alist-get 'bodyHTML comment))
                                    50))))
                       "\n")))
           (approve-sections-insert-body body))
-        (insert "\n"))
-      (approve-face-region start (1- (point)) 'approve-pending))))
+        (insert "\n")))))
 
 ;;; Description
 

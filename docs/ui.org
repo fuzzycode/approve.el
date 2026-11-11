@@ -36,7 +36,7 @@ The first line is the header line (see [[*Header line][Header line]]); it stays 
  Issues      #1200 Retry failing requests
  Status      ✗ Changes requested · ✓ No conflicts · ◐ 7 of 9 checks passed
 
- ▾ Your pending review                        2 comments · 1 reply    S submit · X discard
+ ▾ Your pending review (3)                                            S submit · X discard
      lisp/approve-api.el:42        Should `retries` be part of the defgroup?
      lisp/approve-api.el:87–91     ✎ suggestion
      ↳ reply on lisp/approve-model.el:12
@@ -66,7 +66,9 @@ Notes:
 - Reviewer marks: ✓ approved, ✗ changes requested, 💬 commented, ○ requested
   but not reviewed yet.
 - "Your pending review" appears only when one exists.  It lists the pending
-  comments; =RET= jumps to one in the diff.
+  comments, and its heading counts them, replies included; =RET= jumps to
+  one in the diff.  It has no background: pending comments keep theirs in
+  the diff, where they could be taken for published ones.
 - An empty description shows a dim "No description provided."
 
 ** Middle: checks, commits, conversation
@@ -556,7 +558,7 @@ side window.  The echo area keeps the one-line version.
  │ Assignees  alice                       │ Company   @acme                                │
  │ Labels     enhancement  api            │ Location  Gothenburg                           │
  │                                        │ Status    🌴 On holiday until Monday (busy)    │
- │ ▾ Your pending review  2 · 1 reply     │                                                │
+ │ ▾ Your pending review (3)              │                                                │
  │ ▾ Description                          │ In this pull request                           │
  │   Adds exponential back-off to …       │   ✓ approved 2 days ago · 3 comments on code   │
  │                                        │   Member of fuzzycode                          │

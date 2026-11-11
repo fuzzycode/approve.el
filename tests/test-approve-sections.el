@@ -99,10 +99,19 @@
     (it "lists the viewer's pending comments with where they are"
       (let ((lines (split-string (test-sections--text 'approve-pending-review-section)
                                  "\n" t)))
-        (expect (car lines) :to-match "\\`Your pending review +3 comments")
+        (expect (car lines) :to-match "\\`Your pending review (3)")
         (expect (nth 1 lines) :to-match "\\`  internal/parser/parser.go:134 +Is this branch reachable")
         (expect (nth 2 lines) :to-match "\\`  internal/engine/engine.go:365–367 ")
-        (expect (length lines) :to-equal 4))))
+        (expect (length lines) :to-equal 4)))
+
+    (it "has no pending background, which marks pending comments in the diff"
+      (with-current-buffer test-sections--buffer
+        (let ((section (approve-test-find-section 'approve-pending-review-section)))
+          (expect (seq-some (lambda (pos)
+                              (memq 'approve-pending
+                                    (ensure-list (get-text-property pos 'face))))
+                            (number-sequence (oref section start) (1- (oref section end))))
+                  :to-be nil)))))
 
   (describe "description"
     (it "shows the rendered body and its reactions"
