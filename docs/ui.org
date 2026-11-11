@@ -71,7 +71,7 @@ Notes:
 
 ** Middle: checks, commits, conversation
 #+begin_example
- ▸ Checks          ◐ 7 passed · 1 failed · 1 running
+ ▸ Checks (9)      ◐ 7 passed · 1 failed · 1 running
  ▸ Commits (4)     2 new since your review
  ▾ Conversation (6)
    alice opened this 3 days ago
@@ -105,14 +105,14 @@ Notes:
 
 ** Bottom: files and diff
 #+begin_example
- ▾ Files changed   12 files  +340 −56                           1 unresolved file thread
+ ▾ Files changed (12)  +340 −56                                 1 unresolved file thread
      lisp/approve-api.el            +120  −30  ██████████▒▒▒
      lisp/approve-model.el           +40  −10  ███▒
      lisp/approve-graphql.el         +12   −2  █               💬 1
      tests/test-approve-api.el      +160   −0  █████████████
      …
 
- ▾ Diff                                               4/12 viewed · 4 unresolved threads
+ ▾ Diff (12)                                          4/12 viewed · 4 unresolved threads
    ▾ ✓ ~ lisp/approve-api.el                                                        💬 2
      ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables
         40  40      (let* ((request-id (approve-api--generate-request-id))
@@ -206,10 +206,10 @@ Both buffers share one store; a change in one redraws both.
  ┌──────────────────────────────────────┐     ┌─────────────────────────────────────────┐
  │ #1234 Add retry logic …    ● Open    │     │ #1234 · all changes (main…e5f6a7b)      │
  │ …metadata…                           │     │ 4/12 viewed                             │
- │ ▸ Checks  ◐ 7/9                      │ RET │                                         │
+ │ ▸ Checks (9)  ◐ 7/9                  │ RET │                                         │
  │ ▸ Commits (4)                        │────▶│ ▾ ✓ ~ lisp/approve-api.el               │
  │ ▸ Conversation (6)                   │     │   ▾ @@ -40,7 +40,12 @@ …              │
- │ ▾ Files changed  12 files +340 −56   │     │      40  40   (let* ((request-id …      │
+ │ ▾ Files changed (12)  +340 −56       │     │      40  40   (let* ((request-id …      │
  │   lisp/approve-api.el    +120 −30    │◀────│   …                                     │
  │   lisp/approve-model.el   +40 −10    │  ^  │ ▸ · ~ lisp/approve-model.el             │
  └──────────────────────────────────────┘     └─────────────────────────────────────────┘
@@ -456,7 +456,7 @@ are dimmer ([[file:flows.org::*F14 Re-review after new commits][F14]]).
 
 * Checks section expanded
 #+begin_example
- ▾ Checks          ◐ 7 passed · 1 failed · 1 running                       required: 3
+ ▾ Checks (9)      ◐ 7 passed · 1 failed · 1 running                       required: 3
      ✗ lint                                  32s      required      RET details ↗
      ◐ test (macos-latest, 30.2)             running  required
      ✓ test (ubuntu-latest, 29.4)            2m 10s   required

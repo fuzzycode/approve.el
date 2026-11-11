@@ -124,13 +124,16 @@ WHAT names the data in the line, such as \"files\"."
   (cond ((approve-pr-error key) (approve-render-failure what (approve-pr-error key)))
         ((approve-pr-loading-p key) (approve-render-loading))))
 
+(defun approve-sections-title (title &optional count)
+  "Return TITLE as a section's title, with COUNT in parentheses if given.
+COUNT is a number or nil: \"Commits (4)\"."
+  (concat (approve-face title 'approve-heading)
+          (and count (approve-face (format " (%s)" count) 'approve-count))))
+
 (defun approve-sections-heading (title &optional count right)
   "Return a section heading: TITLE, COUNT in parentheses, RIGHT aligned.
 COUNT is a number or nil; RIGHT a string or nil."
-  (approve-render-justify
-   (concat (approve-face title 'approve-heading)
-           (and count (approve-face (format " (%s)" count) 'approve-count)))
-   right))
+  (approve-render-justify (approve-sections-title title count) right))
 
 (defconst approve-sections-indentation (approve-render-decoration "  ")
   "The indentation of a body line, for lines that insert it themselves.")
@@ -541,9 +544,10 @@ The checks themselves load when the section is first expanded."
   (when (or (not (approve-model-root-ref)) (approve-pr-field 'statusCheckRollup))
     (magit-insert-section (approve-checks-section nil t)
       (magit-insert-heading
-        (approve-render-justify (approve-face "Checks" 'approve-heading)
-                                (approve-sections-checks-summary)
-                                nil))
+        (approve-sections-heading "Checks"
+                                  (when-let* ((counts (approve-sections--check-counts)))
+                                    (apply #'+ counts))
+                                  (approve-sections-checks-summary)))
       (let ((start (point))
             (contexts (let-alist (approve-pr-field 'statusCheckRollup) .contexts)))
         (cond
@@ -718,12 +722,9 @@ threads on lines, and say which files the viewer viewed."
       (let-alist (approve-pr-fields '(changedFiles additions deletions))
         (magit-insert-heading
           (approve-render-justify
-           (concat (approve-face "Files changed" 'approve-heading)
-                   (if .changedFiles
-                       (concat "   " (format "%d file%s  " .changedFiles
-                                             (if (= .changedFiles 1) "" "s"))
-                               (approve-sections-counts .additions .deletions))
-                     ""))
+           (concat (approve-sections-title "Files changed" .changedFiles)
+                   (and .changedFiles
+                        (concat "  " (approve-sections-counts .additions .deletions))))
            (and files (approve-sections-unresolved counts "file")))))
       ;; Each row carries its indentation: one insertion per row, where
       ;; indenting afterwards would insert again into a buffer of markers.

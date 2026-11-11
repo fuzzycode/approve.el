@@ -618,8 +618,8 @@ threads on lines are unresolved; each file's heading counts its own."
                                        files))))
     (magit-insert-section (approve-diff-section)
       (magit-insert-heading
-        (approve-render-justify
-         (approve-face "Diff" 'approve-heading)
+        (approve-sections-heading
+         "Diff" (and files (or (approve-pr-field 'changedFiles) (length files)))
          (approve-render-join
           (list (and (approve-pr-loading-p 'patches)
                      (approve-face "loading the patches…" 'approve-loading))

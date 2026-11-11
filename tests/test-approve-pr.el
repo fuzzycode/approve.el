@@ -304,6 +304,14 @@
           (kill-buffer buffer))))))
 
 (describe "The checks"
+  (it "are counted in the heading before they load"
+    (test-pr--with-medium
+      (expect (approve-pr-loaded-p 'checks) :to-be nil)
+      (expect (car (split-string (approve-test-section-text
+                                  (approve-test-find-section 'approve-checks-section))
+                                 "\n"))
+              :to-match "\\`Checks (6) .*2 passed · 1 failed · 3 running\\'")))
+
   (it "load when the Checks section is expanded, and show failing ones first"
     (test-pr--with-medium
       (expect (approve-pr-loaded-p 'checks) :to-be nil)

@@ -173,7 +173,7 @@
       (expect (car (split-string (approve-test-section-text
                                   (approve-test-find-section 'approve-diff-section))
                                  "\n"))
-              :to-match "\\`Diff +8/30 viewed · 13 unresolved threads\\'")))
+              :to-match "\\`Diff (30) +8/30 viewed · 13 unresolved threads\\'")))
 
   (it "draws the change as an icon in its face"
     (dolist (case '(("ADDED" "+" approve-file-added)

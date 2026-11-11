@@ -125,7 +125,7 @@
   (describe "files"
     (it "sums the files up in the heading"
       (expect (car (split-string (test-sections--text 'approve-files-section) "\n"))
-              :to-match "\\`Files changed   30 files  \\+987 −184 +2 unresolved file threads\\'"))
+              :to-match "\\`Files changed (30)  \\+987 −184 +2 unresolved file threads\\'"))
 
     (it "lists each file with its counts, bar and threads on the whole file"
       ;; parser.go has one thread on the file and four on lines: the
