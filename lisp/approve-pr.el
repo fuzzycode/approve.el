@@ -233,9 +233,31 @@ as it is; \\<approve-pr-mode-map>\\[approve-pr-refresh] loads it again.  Return 
   "Return non-nil if the query KEY has loaded at least once."
   (approve-session-member-p :loaded key))
 
-(defun approve-pr--fatal-p (err)
-  "Return non-nil if ERR from the core query leaves nothing to show."
-  (memq (car-safe err) '(approve-api-not-found approve-api-unauthorized)))
+(defun approve-pr--fatal-p (key err)
+  "Return non-nil if ERR, from the query KEY, leaves nothing to show.
+That is any error of the core query, which has the pull request
+itself, and a token error from any query, as every query fails the
+same way then."
+  (or (eq key 'core) (eq (car-safe err) 'approve-api-unauthorized)))
+
+(defun approve-pr--name ()
+  "Return \"OWNER/REPO#NUMBER\" of the current PR buffer."
+  (format "%s/%s#%s" (approve-model-meta :owner) (approve-model-meta :repo)
+          (approve-model-meta :number)))
+
+(defun approve-pr--note-fatal (key err)
+  "Make ERR, from the query KEY, the error of the whole buffer if it is one.
+The buffer then shows that error alone, instead of each section
+saying it again.  A token error replaces another one, as it is the
+cause.  The echo area says it too."
+  (when (approve-pr--fatal-p key err)
+    (let ((old (approve-session-get :fatal)))
+      (when (or (null old)
+                (and (eq (car-safe err) 'approve-api-unauthorized)
+                     (not (eq (car-safe old) 'approve-api-unauthorized))))
+        (approve-session-put :fatal err)
+        (message "Approve: could not load %s: %s" (approve-pr--name)
+                 (car (split-string (approve-api-error-message err) "\n")))))))
 
 (defun approve-pr-run-query (key &optional atomic)
   "Run the query KEY for the current PR buffer, tracking it in the session.
@@ -255,8 +277,7 @@ Each page schedules a redraw."
      :errorback (lambda (err)
                   (approve-session-remove :loading key)
                   (approve-session-map-put :errors key err)
-                  (when (and (eq key 'core) (approve-pr--fatal-p err))
-                    (approve-session-put :fatal err))
+                  (approve-pr--note-fatal key err)
                   (approve-pr-schedule-redraw buffer)))))
 
 (defun approve-pr-load (&optional refresh)
@@ -454,22 +475,32 @@ the buffer, and collapsed sections stay collapsed (decision D13)."
   (run-hooks 'approve-pr-redraw-hook))
 
 (defun approve-pr--insert-fatal (err)
-  "Insert the whole-buffer error ERR, from the core query."
-  (let ((pr (format "%s/%s#%s" (approve-model-meta :owner) (approve-model-meta :repo)
-                    (approve-model-meta :number))))
-    (insert (approve-face pr 'approve-title) "\n\n")
-    (insert (approve-icon 'error 'approve-error) " "
-            (approve-face (pcase (car-safe err)
-                            ('approve-api-not-found
-                             "Pull request not found, or the token has no access to it.")
-                            (_ "GitHub refused the token."))
-                          'approve-error)
+  "Insert ERR as the error of the whole buffer: what failed, why, what to do.
+See `approve-pr--note-fatal'."
+  (insert (approve-face (approve-pr--name) 'approve-title) "\n\n")
+  (insert (approve-icon 'error 'approve-error) " "
+          (approve-face (pcase (car-safe err)
+                          ('approve-api-not-found
+                           "Pull request not found, or the token has no access to it.")
+                          ('approve-api-unauthorized "Could not use the GitHub token.")
+                          (_ "Could not load the pull request."))
+                        'approve-error)
+          "\n")
+  (let ((start (point))
+        (hint (pcase (car-safe err)
+                ('approve-api-not-found
+                 (format "Check the URL, and the token ghub finds for `%s'."
+                         approve-api-auth))
+                ('approve-api-unauthorized
+                 (format "Approve asks ghub for the token of `%s' (`approve-api-auth')."
+                         approve-api-auth)))))
+    (insert (approve-face (approve-api-error-message err) 'approve-dim) "\n\n")
+    (when hint
+      (insert (approve-face hint 'approve-dim) "\n"))
+    (insert (or (approve-render-hints '("g" approve-pr-refresh "to retry"))
+                (approve-face "g to retry" 'approve-hint))
             "\n")
-    (insert (approve-face (format "  %s" (or (cadr err) "")) 'approve-dim) "\n\n")
-    (insert (approve-face (format "Check the URL, and the token ghub finds for `%s'."
-                                  approve-api-auth)
-                          'approve-dim)
-            "\n")))
+    (approve-render-prefix start (point) "  ")))
 
 ;;; Header line
 
@@ -499,7 +530,8 @@ stays in view while the buffer scrolls."
                           (approve-render-state-badge (approve-pr-field 'state)
                                                       (approve-pr-field 'isDraft))
                         ""))
-               (loading (approve-pr--loading-names))
+               (loading (and (not (approve-session-get :fatal))
+                             (approve-pr--loading-names)))
                (notes (append
                        (and loading
                             (list (approve-face

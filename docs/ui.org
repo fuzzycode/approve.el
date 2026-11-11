@@ -239,6 +239,29 @@ before the title has loaded.
  ▾ + assets/logo.png                                             binary
 #+end_example
 
+When the pull request itself can't load (its core query fails), or GitHub
+gets no token (any query), there is nothing worth showing: the buffer shows
+that one error instead of each section repeating it, and the echo area says
+it.  A token error replaces another, as it is the cause.
+
+#+begin_example
+ #2                                                                (header line)
+ fuzzycode/doom.d#2
+
+ ✗ Could not use the GitHub token.
+   Required Github token ("fuzzycode^approve" for either "api.github.com" or
+   "github.com") does not exist.
+   See https://docs.magit.vc/ghub/Getting-Started.html
+   or (info "(ghub)Getting Started") for instructions.
+
+   Approve asks ghub for the token of `approve' (`approve-api-auth').
+   g to retry
+#+end_example
+
+The first line of the error is "Pull request not found, or the token has no
+access to it." for a 404, and "Could not load the pull request." for any
+other failure of the core query (a timeout, a 502).
+
 * Dashboard
 =M-x approve-dashboard=.  Sections come from =approve-dashboard-sections=
 (title, search filter or function, limit), as in approve-v2.

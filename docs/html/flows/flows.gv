@@ -77,7 +77,7 @@ q4 [label="Q timeline" @api]; q5 [label="Q commits" @api]; q6 [label="R patches\
 { rank=same; q1; q2; q3; q4; q5; q6; }
 arrive [label="a response arrives"];
 okq    [label="ok?" @dec];
-serr   [label="that section: \"✗ … · g to retry\"\n401/404 on core: whole-buffer error" @err];
+serr   [label="that section: \"✗ … · g to retry\"\ncore fails, or a token error:\nthe whole buffer shows that one error" @err];
 norm   [label="normalize into the store\nmore pages? request the next one\nschedule redraw (coalesced ≈50 ms)"];
 done   [label="all settled?" @dec];
 fin    [label="header line: final counts\nstart change detection (F17)" @ok];

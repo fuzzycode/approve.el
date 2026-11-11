@@ -233,6 +233,8 @@ quickly and each section fills in when its data arrives.
   └─ R patches ───────────────────────▶ diff bodies             (pages of 100)
         each arrival: normalize → store → schedule redraw (coalesced ≈50 ms)
         an error marks only its own section: "✗ … · g to retry"
+        (Q core failing, or a token error from any query: the whole buffer
+        shows that one error, and the echo area says it)
 #+end_example
 
 - Pagination: =approve-api-graphql-all= follows =pageInfo.endCursor= and
@@ -425,9 +427,10 @@ Every context also carries =:url= when one exists (for =o= and copying).
 * Errors
 | Class                                | Where it shows                                | User can          |
 |--------------------------------------+-----------------------------------------------+-------------------|
-| Network / timeout                    | Section placeholder, or echo area for actions | =g= / repeat      |
-| 401 / bad token                      | Echo area + =approve-doctor= hint             | fix auth-source   |
-| 404 / no access                      | Buffer body: "PR not found or no access"      | check URL / token |
+| Network / timeout                    | Section placeholder; the whole buffer when    | =g= / repeat      |
+|                                      | the core query fails; echo area for actions   |                   |
+| 401 / bad or missing token           | The whole buffer, from any query; echo area   | fix auth-source   |
+| 404 / no access                      | The whole buffer: "Pull request not found…"   | check URL / token |
 | Rate limit (primary or secondary)    | Echo area with reset time; queue pauses       | wait              |
 | GraphQL =errors= (validation, perms) | Echo area, message from GitHub                | —                 |
 | Precondition (=viewerCan*= false,    | =user-error= before any request, saying why   | —                 |
@@ -436,6 +439,10 @@ Every context also carries =:url= when one exists (for =o= and copying).
 
 - Every callback is wrapped so that an error in our code never leaves a
   progress reporter running or an in-flight mark stuck.
+- When the pull request itself can't load (its core query fails), or a
+  query finds no usable token, the PR buffer shows that one error instead
+  of each section repeating it (=approve-pr--note-fatal=).  A token error
+  replaces another, as it is the cause.
 - =approve-doctor= checks token, scopes, host, rate limit, and versions.
 - The log redacts =Authorization= headers and tokens.
 

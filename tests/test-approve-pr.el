@@ -140,7 +140,64 @@
               (approve-pr-redraw)
               (expect (buffer-string)
                       :to-match "Pull request not found, or the token has no access to it."))
-          (kill-buffer buffer))))))
+          (kill-buffer buffer)))))
+
+  (it "says once, for the whole buffer, that the pull request could not load"
+    (approve-test-with-fixture "medium"
+      (spy-on 'message)
+      (let* ((approve-api-transport (approve-test-fail-queries
+                                     approve-api-transport
+                                     '("queries/pull-request.graphql")))
+             (buffer (approve-test-open-pr "medium")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (let ((text (buffer-string)))
+                (expect text :to-match "\\`acme-example/rocket#202\n\n")
+                (expect text :to-match "Could not load the pull request\\.\n  Bad Gateway\n")
+                (expect text :to-match "g to retry")
+                ;; The sections that loaded are not drawn.
+                (expect text :not :to-match "Files changed")
+                (expect (approve-test-find-section 'approve-files-section) :to-be nil))
+              (expect (substring-no-properties approve-pr--header-line) :to-equal " #202")
+              (expect 'message :to-have-been-called-with
+                      "Approve: could not load %s: %s" "acme-example/rocket#202" "Bad Gateway"))
+          (kill-buffer buffer)))))
+
+  (it "makes a token error of any query the error of the whole buffer"
+    (approve-test-with-fixture "medium"
+      (spy-on 'message)
+      (let* ((fixtures approve-api-transport)
+             (approve-api-transport
+              (lambda (request)
+                (if (equal (plist-get request :name) "queries/pull-request-files.graphql")
+                    (error "Required Github token (\"vera^approve\" for either \"api.github.com\" or \"github.com\") does not exist.\nSee https://docs.magit.vc/ghub/Getting-Started.html")
+                  (funcall fixtures request))))
+             (buffer (approve-test-open-pr "medium")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (let ((text (buffer-string)))
+                (expect text :to-match "Could not use the GitHub token\\.\n  Required Github token")
+                (expect text :to-match "Approve asks ghub for the token of `approve'")
+                ;; Not the description, which loaded.
+                (expect text :not :to-match "Rewrites the parser"))
+              (expect 'message :to-have-been-called-with
+                      "Approve: could not load %s: %s" "acme-example/rocket#202"
+                      "Required Github token (\"vera^approve\" for either \"api.github.com\" or \"github.com\") does not exist."))
+          (kill-buffer buffer)))))
+
+  (it "lets a token error replace another error of the whole buffer"
+    (with-temp-buffer
+      (approve-model-init '(:host "github.com" :owner "o" :repo "r" :number 1))
+      (spy-on 'message)
+      (approve-pr--note-fatal 'files '(approve-api-timeout "No answer"))
+      (expect (approve-session-get :fatal) :to-be nil)
+      (approve-pr--note-fatal 'core '(approve-api-timeout "No answer"))
+      (expect (approve-session-get :fatal) :to-equal '(approve-api-timeout "No answer"))
+      (approve-pr--note-fatal 'files '(approve-api-unauthorized "No token"))
+      (expect (approve-session-get :fatal) :to-equal '(approve-api-unauthorized "No token"))
+      (approve-pr--note-fatal 'core '(approve-api-timeout "Later"))
+      (expect (approve-session-get :fatal) :to-equal '(approve-api-unauthorized "No token"))
+      (expect 'message :to-have-been-called-times 2))))
 
 (describe "Redrawing"
   (it "coalesces redraws scheduled close together"

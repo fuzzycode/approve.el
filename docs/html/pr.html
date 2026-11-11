@@ -333,7 +333,7 @@ third is the first moment, before the title has loaded.</p>
 <section class="shot" id="states">
 <h2>Loading, empty and error states <span class="ref">F02 · architecture.org › Errors</span></h2>
 <p>The skeleton draws at once; each section fills in when its query returns. A failed query marks only its own
-section; huge and binary files get a heading and an explanation. Empty sections say so in dim text
+section, unless it is the pull request itself or the token (below); huge and binary files get a heading and an explanation. Empty sections say so in dim text
 (“No description provided.”).</p>
 <div class="emacs">
 <div class="tb">*approve: fuzzycode/approve#1234*</div>
@@ -356,6 +356,29 @@ section; huge and binary files get a heading and an explanation. Empty sections 
 <div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   All  L1        <span class="pi">Approve-PR</span></div>
 </div>
 <div class="echo"></div>
+</div>
+<p>When the pull request itself can't load (its core query fails), or GitHub gets no token (any query), there is
+nothing worth showing: the buffer shows that one error instead of each section repeating it, and the echo area says
+it. A token error replaces another, as it is the cause. A 404 reads “Pull request not found, or the token has no
+access to it.”, any other failure of the core query “Could not load the pull request.”</p>
+<div class="emacs">
+<div class="tb">*approve: fuzzycode/doom.d#2*</div>
+<div class="win">
+<div class="hl"><span class="t">#2</span></div>
+<div class="buf">
+<p><span class="t">fuzzycode/doom.d#2</span></p>
+<p></p>
+<p><span class="er"><i data-i="error">✗</i> Could not use the GitHub token.</span></p>
+<p>  <span class="d">Required Github token ("fuzzycode^approve" for either "api.github.com" or "github.com") does not exist.</span></p>
+<p>  <span class="d">See https://docs.magit.vc/ghub/Getting-Started.html</span></p>
+<p>  <span class="d">or (info "(ghub)Getting Started") for instructions.</span></p>
+<p></p>
+<p>  <span class="d">Approve asks ghub for the token of `approve' (`approve-api-auth').</span></p>
+<p>  <span class="k">g</span> <span class="d">to retry</span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/doom.d#2*</span>   All  L1        <span class="pi">Approve-PR</span></div>
+</div>
+<div class="echo">Approve: could not load fuzzycode/doom.d#2: Required Github token ("fuzzycode^approve" for either "api.github.com" or "github.com") does not exist.</div>
 </div>
 </section>
 </main>

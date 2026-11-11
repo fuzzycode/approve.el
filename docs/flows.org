@@ -135,8 +135,10 @@ Opening from a notification also moves point to the thing that caused it
           ◇ a response arrives ◇◀────────────────────────────┐
                       │                                      │
           ◇ ok? ◇──no──▶ section error: "✗ … · g to retry"   │
-                      │ yes            (401/404 from Q core: │
-                      ▼                 whole buffer error)  │
+                      │ yes        (Q core fails, or any     │
+                      ▼             token error: the whole   │
+                                    buffer shows that one    │
+                                    error, echo area too)    │
  ┌──────────────────────────────────────────┐                │
  │ normalize into store                     │                │
  │ more pages? request next page            │                │
