@@ -42,7 +42,8 @@
 ;;   add|del|ctx).  Line numbers and the +/- marker are decoration
 ;;   (decision D28): copying leaves them out.
 ;; - A line with threads becomes an `approve-line-section' (value:
-;;   (PATH SIDE LINE)) with the threads under it.  File-level threads
+;;   (PATH SIDE LINE)) with the threads under it.  It does not fold:
+;;   it has no body, only children.  File-level threads
 ;;   are under "On this file", and threads whose line is no longer in
 ;;   the diff under "Outdated".
 ;; - Changed words in pairs of removed and added lines are marked when
@@ -504,9 +505,15 @@ their code with syntax faces, or is nil."
                                      (gethash (cons "LEFT" (nth 1 line)) by-line)))))
           (if (null threads)
               (insert text)
-            (magit-insert-section (approve-line-section (list path side number))
-              (magit-insert-heading text)
-              (approve-diff--insert-threads threads gutter))))))))
+            ;; The line keeps its threads as children but has no body to
+            ;; fold: folding it would hide them, heading and all, with
+            ;; nothing left to show for it.  Toggling on it folds the
+            ;; hunk instead (`approve-section-toggle').
+            (let ((section (magit-insert-section (approve-line-section (list path side number))
+                             (magit-insert-heading text)
+                             (approve-diff--insert-threads threads gutter))))
+              (oset section content nil)
+              (oset section hidden nil))))))))
 
 (defun approve-diff--insert-thread-group (value title threads hide &optional note)
   "Insert THREADS under a heading TITLE, as a section with VALUE.

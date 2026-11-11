@@ -631,6 +631,12 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Layout single/split           | =L=           | =gL=                  | any                       |
 | Show details (eldoc buffer)   | =K=           | =K=                   | any                       |
 
+Toggling a section (=approve-section-toggle=, also what =RET= does where there
+is nothing to visit) folds the section at point, except inside the diff: on a
+comment it folds the comment's thread, and on a diff line it folds the hunk,
+whether the line has threads or not.  A line with threads never folds by
+itself, or its threads would vanish with it.
+
 Input buffers: =C-c C-c= send, =C-c C-k= abort, =C-c C-s= suggestion, =C-c C-p=
 preview, =C-c @= mention (same in every state).
 

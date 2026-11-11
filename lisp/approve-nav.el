@@ -289,10 +289,33 @@ is collapsed again."
       (approve-pr-open pr)
     (browse-url url)))
 
-(defun approve-nav--toggle-or (message)
-  "Toggle the section at point if it has a heading, else say MESSAGE."
+(defconst approve-nav--fold-through '(approve-line-section approve-comment-section)
+  "Sections that toggling passes to their parent.
+A comment folds its thread, and a diff line with threads its hunk,
+as a line without threads does.")
+
+(defun approve-nav--foldable-section ()
+  "Return the section at point that toggling folds, or nil.
+That is the current section, or for one of
+`approve-nav--fold-through' the first parent of another type."
   (let ((section (magit-current-section)))
-    (if (and section (oref section content) (not (eq section magit-root-section)))
+    (while (and section (memq (oref section type) approve-nav--fold-through))
+      (setq section (oref section parent)))
+    (and section (not (eq section magit-root-section)) section)))
+
+(defun approve-section-toggle ()
+  "Fold or unfold the section at point.
+On a comment, that is its thread; on a diff line, its hunk.  A line
+with threads never folds itself: its threads would vanish with it."
+  (interactive)
+  (magit-section-toggle (or (approve-nav--foldable-section)
+                            (user-error "Nothing to fold here"))))
+
+(defun approve-nav--toggle-or (message)
+  "Toggle the section at point if it has a body, else say MESSAGE.
+The section is the one `approve-section-toggle' folds."
+  (let ((section (approve-nav--foldable-section)))
+    (if (and section (oref section content))
         (magit-section-toggle section)
       (message "%s" message))))
 
@@ -367,6 +390,7 @@ With a prefix argument URL, copy its URL instead."
 ;;; Keys
 
 (keymap-set approve-pr-mode-map "RET" #'approve-visit)
+(keymap-set approve-pr-mode-map "<remap> <magit-section-toggle>" #'approve-section-toggle)
 (keymap-set approve-pr-mode-map "o" #'approve-browse)
 (keymap-set approve-pr-mode-map "y" #'approve-copy)
 (keymap-set approve-pr-mode-map "] u" #'approve-next-unviewed-file)

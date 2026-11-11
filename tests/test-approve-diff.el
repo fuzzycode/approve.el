@@ -246,6 +246,48 @@
                   :to-match "\\`.*\t}\n +╭─ carol-example")
           (expect (oref (car (oref section children)) type) :to-be 'approve-thread-section))))
 
+    (it "never folds a line with threads, which would hide them all"
+      (with-current-buffer test-diff--buffer
+        (let* ((line (approve-test-find-section
+                      'approve-line-section '("internal/parser/parser.go" "RIGHT" 15)))
+               (thread (car (oref line children))))
+          (magit-section-hide line)
+          (unwind-protect
+              (progn
+                (expect (invisible-p (oref thread start)) :to-be nil)
+                (expect (invisible-p (1- (oref thread end))) :to-be nil))
+            (magit-section-show line)))))
+
+    (it "folds a comment's thread, and a line's hunk"
+      (with-current-buffer test-diff--buffer
+        (let* ((line (approve-test-find-section
+                      'approve-line-section '("internal/parser/parser.go" "RIGHT" 15)))
+               (thread (car (oref line children)))
+               (comment (car (oref thread children)))
+               (hunk (oref line parent)))
+          (expect (oref comment type) :to-be 'approve-comment-section)
+          ;; On a comment: the thread folds, its heading stays.
+          (goto-char (1+ (oref comment start)))
+          (approve-section-toggle)
+          (expect (oref thread hidden) :to-be t)
+          (expect (invisible-p (oref thread content)) :to-be-truthy)
+          (expect (invisible-p (oref thread start)) :to-be nil)
+          (expect (point) :to-equal (marker-position (oref thread start)))
+          (approve-section-toggle)
+          (expect (oref thread hidden) :to-be nil)
+          (expect (invisible-p (oref thread content)) :to-be nil)
+          ;; On the line: the hunk folds, as on a line without threads.
+          (goto-char (oref line start))
+          (approve-section-toggle)
+          (expect (oref hunk hidden) :to-be t)
+          (expect (oref line hidden) :to-be nil)
+          (approve-section-toggle)
+          (expect (oref hunk hidden) :to-be nil))))
+
+    (it "binds the keys that toggle sections to the toggle that knows lines"
+      (with-current-buffer test-diff--buffer
+        (expect (key-binding (kbd "TAB")) :to-be 'approve-section-toggle)))
+
     (it "indents threads under the code, and copying leaves the indentation out"
       (with-current-buffer test-diff--buffer
         (goto-char (point-min))

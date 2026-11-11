@@ -282,7 +282,7 @@ buffer and the file list's =RET= opens it.
      └── approve-file-section *      (value: path)        collapsed; body inserted lazily
          ├── approve-file-threads-section   (value: file) file-level threads
          ├── approve-hunk-section *  (value: (path . "@@ -a,b +c,d @@ …"))
-         │   └── approve-line-section *  (value: (path side line))  only lines with threads
+         │   └── approve-line-section *  (value: (path side line))  only lines with threads; never folds
          │       └── approve-thread-section *  (value: thread id)
          │           └── approve-comment-section * (value: comment id)
          └── approve-file-threads-section   (value: outdated) collapsed
