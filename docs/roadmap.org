@@ -206,3 +206,12 @@ Not planned yet.  Each needs a decision before it enters a phase.
 - A "review queue" mode: walk unviewed files one by one, full-screen, with
   =v= advancing to the next.
 - Avatars (shr images, cached) next to authors, behind a defcustom.
+- Filters on the file list and the diff, toggled from a transient and shown
+  in the section headings ("12 of 30 files · filter: code owner"), so a big
+  PR can be read a slice at a time.  Examples: files where I am a code owner
+  (CODEOWNERS fetched through the API and matched against me and my teams,
+  D03), by extension or glob (=*.cpp=/=*.h=), files with threads (or
+  unresolved ones), unviewed or changed since viewed, added/deleted, large,
+  generated.  Navigation (=]u=, =]t=) and the counts follow the filter.
+  Open questions: whether filters combine, and whether they are remembered
+  per repository.
