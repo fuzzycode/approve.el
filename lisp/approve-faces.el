@@ -273,8 +273,10 @@ in most themes, which magit's branch faces don't."
   :group 'approve-faces)
 
 (defface approve-new
-  '((t :inherit magit-diff-our-highlight))
-  "Face of things that are new since the viewer's last review."
+  '((t :inherit warning))
+  "Face of things that are new since the viewer's last review.
+A colour, not a background, like `approve-dismissed': both say
+what changed since the viewer last looked."
   :group 'approve-faces)
 
 ;;; Threads and the conversation
