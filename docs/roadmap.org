@@ -174,8 +174,9 @@ Implements F14, F15.
 Mockups: commits with range, review range transient, file view.
 - [ ] Review range: since my last review, one commit, a range (REST compare).
 - [ ] Commentability rules for a range view (SP1 results).
-- [ ] =approve-file.el=: blob fetch and cache, major mode, fringe, threads as
-      overlays, base/head toggle, comment on diff lines.
+- [ ] =approve-file.el=: blob fetch and cache, major mode, fringe, threads
+      folded under their line's bubble as in the diff (overlays),
+      base/head toggle, comment on diff lines.
 - [ ] "New since your last review" marks on comments and commits; =j n=.
 - Done when :: re-reviewing after a push shows only the new changes, and any
   changed file can be read whole with syntax highlighting.

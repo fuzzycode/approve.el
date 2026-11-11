@@ -348,7 +348,7 @@ cached [label="blob cached?\n(oid:path)" @dec];
 fetch  [label="repository.object(expression: \"OID:path\")\n{ ... on Blob { text isBinary byteSize } }" @api];
 big    [label="binary or\ntoo big?" @dec];
 err    [label="user-error · offer to open on GitHub" @err];
-buf    [label="*approve-file: …* read-only, file's major mode\nfringe marks from the patch · threads as overlays\npoint on the same line as in the diff" @ok];
+buf    [label="*approve-file: …* read-only, file's major mode\nfringe marks from the patch\nthreads folded under their line's bubble, as in the diff\npoint on the same line as in the diff" @ok];
 keys   [label="n/p change · ]t thread · b base/head · v viewed\nc comment (diff lines only) · q back" @note];
 u -> side; side -> base [@yes]; side -> head [@no];
 base -> cached; head -> cached;

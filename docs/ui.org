@@ -478,16 +478,24 @@ Failing and running checks come first.  =RET= opens the details URL.
    39                                    &key callback
  ▌ 40     (let* ((request-id (approve-api--generate-request-id))
  ▌ 41            (timeout approve-api-timeout)
- ▌ 42            (retries approve-api-retries))
-          │ 💬 bob: Should this be configurable per call?  (2)     TAB expand
+ ▌ 42            (retries approve-api-retries))                                     💬 2
+          ╭─ bob · 2 days ago ──────────────────────────────────────────────
+          │ Should this be configurable per call?
+          ╰─ r reply · R resolve ───────────────────────────────────────────
+          ╭─ ✎ Pending · you ───────────────────────────────────────────────
+          │ Should `retries` be part of the defgroup?
+          ╰─ e edit · k delete ─────────────────────────────────────────────
    43       (when progress-message
  ▸ 44         (make-progress-reporter progress-message))
 #+end_example
 
 - The buffer uses the file's major mode (font-lock, imenu, which-function).
 - Fringe: =▌= added or changed lines, =▸= where lines were removed.
-- Threads are overlays (=after-string=) under their lines, one line each until
-  expanded.
+- Threads sit under their lines as in the diff: a line with threads has the
+  speech bubble and their count at the right edge, and folds them (=TAB= on
+  the line or in them); lines whose threads are all resolved start folded,
+  so only the bubble shows.  They are overlays (=after-string=), as the
+  buffer holds the file's own text.
 - =c= works only on lines that are in the diff, as GitHub requires; on other
   lines it says why.
 

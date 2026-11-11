@@ -555,7 +555,7 @@ changes.
  ┌────────────────────────────────────────────────────────┐
  │ buffer *approve-file: …*, read-only, file's major mode │
  │ fringe marks from the parsed patch                     │
- │ threads as overlays under their lines                  │
+ │ threads under their lines; their line folds them       │
  │ point on the same line as in the diff                  │
  └───────────────────────────┬────────────────────────────┘
                              ▼
