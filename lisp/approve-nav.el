@@ -289,10 +289,10 @@ is collapsed again."
       (approve-pr-open pr)
     (browse-url url)))
 
-(defconst approve-nav--fold-through '(approve-line-section approve-comment-section)
+(defconst approve-nav--fold-through '(approve-thread-section approve-comment-section)
   "Sections that toggling passes to their parent.
-A comment folds its thread, and a diff line with threads its hunk,
-as a line without threads does.")
+Threads do not fold by themselves: in a thread, toggling folds the
+diff line it is on, or its group (\"On this file\", \"Outdated\").")
 
 (defun approve-nav--foldable-section ()
   "Return the section at point that toggling folds, or nil.
@@ -305,8 +305,8 @@ That is the current section, or for one of
 
 (defun approve-section-toggle ()
   "Fold or unfold the section at point.
-On a comment, that is its thread; on a diff line, its hunk.  A line
-with threads never folds itself: its threads would vanish with it."
+On a diff line with threads, that folds its threads; in a thread, the
+threads of its line (or its group); on another diff line, its hunk."
   (interactive)
   (magit-section-toggle (or (approve-nav--foldable-section)
                             (user-error "Nothing to fold here"))))

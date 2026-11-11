@@ -141,11 +141,11 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p></p>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Diff</span>                                                   4/12 viewed <span class="d">·</span> <span class="wa">3 unresolved threads</span></p>
+<p class="hd"><span class="tog"></span> <span class="h">Diff</span>                                                   4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span></p>
 <div class="sb">
 
 <div class="s">
-<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                            <i data-i="comment">💬</i> 1</p>
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                            <i data-i="comment">💬</i> 2</p>
 <div class="sb">
 <div class="s">
 <p class="hd hunk">    <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
@@ -153,21 +153,17 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p>       <span class="ln">40  40</span>      (let* ((request-id (approve-api--generate-request-id))</p>
 <p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
 <p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
-<p class="add">       <span class="ln">    42</span>  +          (retries approve-api-retries))</p>
 <div class="s">
-<p class="hd">                 <span class="d">╭─</span> <span class="tog"></span> <span class="u">bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────</span></p>
+<p class="hd add">       <span class="ln">    42</span>  +          (retries approve-api-retries))                              <i data-i="comment">💬</i> 2</p>
 <div class="sb">
+<p>                 <span class="d">╭─</span> <span class="u">bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────</span></p>
 <p>                 <span class="d">│</span> Should this be configurable per call?</p>
 <p>                 <span class="d">│</span></p>
 <p>                 <span class="d">│</span> <span class="u">alice</span> <span class="d">· 1 day ago</span></p>
 <p>                 <span class="d">│</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
 <p>                 <span class="d">│</span> <i data-i="reaction-thumbs-up">👍</i> 1</p>
 <p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────</span></p>
-</div>
-</div>
-<div class="s">
-<p class="hd pend">                 <span class="d">╭─</span> <span class="tog"></span> <span class="ir"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ─────────────────────────────────────────</span></p>
-<div class="sb">
+<p class="pend">                 <span class="d">╭─</span> <span class="ir"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ─────────────────────────────────────────</span></p>
 <p class="pend">                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup?</p>
 <p class="pend">                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ────────────────────────────────────────</span></p>
 </div>
@@ -176,7 +172,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p>       <span class="ln">43  44</span>          (make-progress-reporter progress-message))</p>
 </div>
 </div>
-<div class="s closed">
+<div class="s">
 <p class="hd hunk">    <span class="tog"></span> @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id</p>
 <div class="sb">
 <p>       <span class="ln">87  92</span>    (approve-api--cleanup-request request-id)</p>
@@ -184,14 +180,15 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p class="add">       <span class="ln">    94</span>  +    (cl-return-from approve-api--handle-timeout</p>
 <p class="add">       <span class="ln">    95</span>  +      (approve-api--retry request-id)))</p>
 <p>       <span class="ln">88  96</span>    (when error-callback</p>
-</div>
-</div>
+<p>        …</p>
 <div class="s closed">
-<p class="hd">      <span class="tog"></span> <span class="d"><i data-i="comment">💬</i> 1 resolved thread on line 101</span></p>
+<p class="hd">       <span class="ln">101 106</span>        (approve-api--retry request-id)                                 <span class="d"><i data-i="comment">💬</i> 1</span></p>
 <div class="sb">
 <p>                 <span class="d">╭─ dave · 1 day ago · resolved by alice ───────────────────────</span></p>
 <p>                 <span class="d">│ Typo: "recieve".</span></p>
 <p>                 <span class="d">╰─</span> <span class="k">R</span> <span class="d">unresolve ──────────────────────────────────────────────</span></p>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -255,7 +252,9 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
     (outdated ones too); the Diff heading sums the unresolved ones. A moved file reads
     <code>internal/engine/{queue.go → scheduler.go}</code>, as in git's diffstat; a path too long for its room loses whole
     directories in the middle (<code>internal/…/page.tmpl</code>).</li>
-  <li>Resolved threads and outdated threads start collapsed. Key hints (<code>r reply · R resolve</code>) can be turned off.</li>
+  <li>A diff line with threads has a speech bubble and their count at the right edge (dim when all are resolved). The
+    line folds its threads (click it, or <code>TAB</code> on it or in them); only the bubble stays. Lines whose threads are
+    all resolved start folded, as does Outdated. Key hints (<code>r reply · R resolve</code>) can be turned off.</li>
 </ul>
 </section>
 

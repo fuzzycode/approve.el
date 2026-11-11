@@ -42,10 +42,13 @@
 ;;   add|del|ctx).  Line numbers and the +/- marker are decoration
 ;;   (decision D28): copying leaves them out.
 ;; - A line with threads becomes an `approve-line-section' (value:
-;;   (PATH SIDE LINE)) with the threads under it.  It does not fold:
-;;   it has no body, only children.  File-level threads
-;;   are under "On this file", and threads whose line is no longer in
-;;   the diff under "Outdated".
+;;   (PATH SIDE LINE)): the line is its heading, with a speech bubble
+;;   and the count at the right edge, and its threads are its body, so
+;;   folding the line folds them away.  Lines whose threads are all
+;;   resolved start folded.  Threads do not fold by themselves.
+;;   File-level threads are under "On this file" (folded when all are
+;;   resolved), and threads whose line is no longer in the diff under
+;;   "Outdated".
 ;; - Changed words in pairs of removed and added lines are marked when
 ;;   `approve-diff-refine-hunk' is non-nil.
 ;;
@@ -482,6 +485,40 @@ FONTIFIED is its code with syntax faces, or nil."
       (approve-thread-insert thread)
       (approve-render-prefix start (point) (make-string gutter ?\s)))))
 
+(defun approve-diff--settled-p (threads)
+  "Return non-nil if every one of THREADS is resolved and none pending.
+Such threads start folded away."
+  (seq-every-p (lambda (thread)
+                 (and (alist-get 'isResolved thread)
+                      (not (when-let* ((first (car (approve-model-nodes
+                                                    (alist-get 'comments thread)))))
+                             (approve-thread-pending-p first)))))
+               threads))
+
+(defun approve-diff--with-threads (text threads)
+  "Return TEXT, a diff line, with a speech bubble for its THREADS.
+The bubble and the number of unresolved threads (or of all, dim,
+when all are resolved) end at the page's right edge, as the counts
+of the file headings do.  They have the line's background, are part
+of the line for commands, and copying leaves them out."
+  (let* ((end (1- (length text)))
+         (face (get-text-property end 'face text))
+         (count (approve-sections-thread-count
+                 (cons (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
+                                  threads)
+                       (length threads))))
+         (bubble (approve-render-decoration
+                  (approve-face-add
+                   (concat " " (propertize " " 'display
+                                           `(space :align-to ,(- approve-page-width
+                                                                 (string-width count))))
+                           count)
+                   face)))
+         (line (concat (substring text 0 end) bubble (substring text end))))
+    (when-let* ((place (get-text-property 0 'approve-line text)))
+      (put-text-property 0 (length line) 'approve-line place line))
+    line))
+
 (defun approve-diff--insert-hunk (path hunk width index &optional fontified)
   "Insert HUNK of PATH: its header, lines, and the threads under lines.
 WIDTH is the width of line numbers; INDEX is the file's thread
@@ -505,15 +542,12 @@ their code with syntax faces, or is nil."
                                      (gethash (cons "LEFT" (nth 1 line)) by-line)))))
           (if (null threads)
               (insert text)
-            ;; The line keeps its threads as children but has no body to
-            ;; fold: folding it would hide them, heading and all, with
-            ;; nothing left to show for it.  Toggling on it folds the
-            ;; hunk instead (`approve-section-toggle').
-            (let ((section (magit-insert-section (approve-line-section (list path side number))
-                             (magit-insert-heading text)
-                             (approve-diff--insert-threads threads gutter))))
-              (oset section content nil)
-              (oset section hidden nil))))))))
+            ;; The line is the heading of its threads: it folds them,
+            ;; and its bubble says they are there.
+            (magit-insert-section (approve-line-section (list path side number)
+                                                        (approve-diff--settled-p threads))
+              (magit-insert-heading (approve-diff--with-threads text threads))
+              (approve-diff--insert-threads threads gutter))))))))
 
 (defun approve-diff--insert-thread-group (value title threads hide &optional note)
   "Insert THREADS under a heading TITLE, as a section with VALUE.
@@ -534,7 +568,9 @@ HIDE collapses it at first; NOTE is dim text on the right."
          (start (point))
          (index (approve-diff-thread-index (approve-pr-threads-for-file path)
                                            (approve-diff--line-keys hunks))))
-    (approve-diff--insert-thread-group 'file "On this file" (plist-get index :file) nil)
+    (let ((on-file (plist-get index :file)))
+      (approve-diff--insert-thread-group 'file "On this file" on-file
+                                         (approve-diff--settled-p on-file)))
     (cond
      (hunks
       (let ((width (approve-diff--number-width hunks))

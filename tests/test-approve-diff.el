@@ -243,44 +243,70 @@
         (let ((section (approve-test-find-section
                         'approve-line-section '("internal/parser/parser.go" "RIGHT" 15))))
           (expect (approve-test-section-text section)
-                  :to-match "\\`.*\t}\n +╭─ carol-example")
+                  :to-match "\\`.*\t} +💬 1\n +╭─ carol-example")
           (expect (oref (car (oref section children)) type) :to-be 'approve-thread-section))))
 
-    (it "never folds a line with threads, which would hide them all"
+    (it "marks a line with threads with a bubble at the right edge"
       (with-current-buffer test-diff--buffer
-        (let* ((line (approve-test-find-section
-                      'approve-line-section '("internal/parser/parser.go" "RIGHT" 15)))
-               (thread (car (oref line children))))
-          (magit-section-hide line)
-          (unwind-protect
-              (progn
-                (expect (invisible-p (oref thread start)) :to-be nil)
-                (expect (invisible-p (1- (oref thread end))) :to-be nil))
-            (magit-section-show line)))))
+        (let ((line (approve-test-find-section
+                     'approve-line-section '("internal/parser/parser.go" "RIGHT" 15))))
+          (goto-char (oref line start))
+          (let* ((eol (line-end-position))
+                 (match (text-property-search-forward
+                         'display nil (lambda (_ value) (eq (car-safe value) 'space)) t))
+                 (column (plist-get (cdr (prop-match-value match)) :align-to)))
+            (expect (+ column (string-width (buffer-substring (prop-match-end match) eol)))
+                    :to-equal approve-page-width)
+            ;; The bubble is the line's for commands, and copying leaves it out.
+            (expect (get-text-property (1- eol) 'approve-line)
+                    :to-equal (get-text-property (oref line start) 'approve-line))
+            (expect (filter-buffer-substring (oref line start) eol) :to-equal "\t}")))))
 
-    (it "folds a comment's thread, and a line's hunk"
+    (it "starts lines folded whose threads are all resolved"
+      (with-current-buffer test-diff--buffer
+        (let ((folded 0) (open 0))
+          (magit-map-sections
+           (lambda (line)
+             (when (eq (oref line type) 'approve-line-section)
+               (let ((settled (seq-every-p
+                               (lambda (thread)
+                                 (approve-model-get "PullRequestReviewThread"
+                                                    (oref thread value) 'isResolved))
+                               (oref line children))))
+                 (expect (oref line hidden) :to-be settled)
+                 (if settled (cl-incf folded) (cl-incf open))))))
+          (expect folded :to-be-greater-than 0)
+          (expect open :to-be-greater-than 0))))
+
+    (it "folds a line's threads away, from the line or from inside them"
       (with-current-buffer test-diff--buffer
         (let* ((line (approve-test-find-section
                       'approve-line-section '("internal/parser/parser.go" "RIGHT" 15)))
                (thread (car (oref line children)))
-               (comment (car (oref thread children)))
-               (hunk (oref line parent)))
+               (comment (car (oref thread children))))
           (expect (oref comment type) :to-be 'approve-comment-section)
-          ;; On a comment: the thread folds, its heading stays.
+          ;; From a comment: the threads fold, the line and its bubble stay.
           (goto-char (1+ (oref comment start)))
           (approve-section-toggle)
-          (expect (oref thread hidden) :to-be t)
-          (expect (invisible-p (oref thread content)) :to-be-truthy)
-          (expect (invisible-p (oref thread start)) :to-be nil)
-          (expect (point) :to-equal (marker-position (oref thread start)))
+          (expect (oref line hidden) :to-be t)
+          (expect (invisible-p (oref thread start)) :to-be-truthy)
+          (expect (invisible-p (oref line start)) :to-be nil)
+          (expect (point) :to-equal (marker-position (oref line start)))
+          ;; From the line: they come back.
           (approve-section-toggle)
-          (expect (oref thread hidden) :to-be nil)
-          (expect (invisible-p (oref thread content)) :to-be nil)
-          ;; On the line: the hunk folds, as on a line without threads.
+          (expect (oref line hidden) :to-be nil)
+          (expect (invisible-p (oref thread start)) :to-be nil))))
+
+    (it "folds the hunk from a line without threads"
+      (with-current-buffer test-diff--buffer
+        (let* ((line (approve-test-find-section
+                      'approve-line-section '("internal/parser/parser.go" "RIGHT" 15)))
+               (hunk (oref line parent)))
           (goto-char (oref line start))
+          (forward-line -1)
+          (expect (oref (magit-current-section) type) :to-be 'approve-hunk-section)
           (approve-section-toggle)
           (expect (oref hunk hidden) :to-be t)
-          (expect (oref line hidden) :to-be nil)
           (approve-section-toggle)
           (expect (oref hunk hidden) :to-be nil))))
 

@@ -163,32 +163,37 @@ A hidden (minimized) comment is one dim line saying why."
 
 (defun approve-thread-insert (thread)
   "Insert THREAD, a resolved PullRequestReviewThread, as a box.
-It starts at column 0; the caller indents it.  A resolved thread
-starts collapsed."
+It starts at column 0; the caller indents it.  A thread does not
+fold by itself, so no line of it stays behind when it is folded:
+the diff line it is on, or the group it is in, folds it."
   (let* ((connection (alist-get 'comments thread))
          (comments (approve-model-nodes connection))
          (first (car comments))
          (more (- (or (approve-model-total-count connection) (length comments))
                   (length comments)))
          (pending (and first (approve-thread-pending-p first)))
-         (start (point)))
-    (magit-insert-section (approve-thread-section (alist-get 'id thread)
-                                                  (alist-get 'isResolved thread))
-      (magit-insert-heading (approve-thread--heading thread first))
-      (let ((body (point)))
-        (cl-loop for comment in comments
-                 for index from 0
-                 do (unless (= index 0)
-                      (insert "\n"))
-                 (approve-thread--insert-comment comment (= index 0)))
-        (when (> more 0)
-          (insert (approve-face (format "… %d more comment%s on GitHub" more
-                                        (if (= more 1) "" "s"))
-                                'approve-dim)
-                  "\n"))
-        (approve-render-prefix body (point)
-                               (approve-face "│ " 'approve-thread-border)))
-      (insert (approve-thread--footer thread) "\n"))
+         (start (point))
+         (section
+          (magit-insert-section (approve-thread-section (alist-get 'id thread))
+            (magit-insert-heading (approve-thread--heading thread first))
+            (let ((body (point)))
+              (cl-loop for comment in comments
+                       for index from 0
+                       do (unless (= index 0)
+                            (insert "\n"))
+                       (approve-thread--insert-comment comment (= index 0)))
+              (when (> more 0)
+                (insert (approve-face (format "… %d more comment%s on GitHub" more
+                                              (if (= more 1) "" "s"))
+                                      'approve-dim)
+                        "\n"))
+              (approve-render-prefix body (point)
+                                     (approve-face "│ " 'approve-thread-border)))
+            (insert (approve-thread--footer thread) "\n"))))
+    ;; No body to fold, whatever the visibility cache or a level
+    ;; command says.
+    (oset section content nil)
+    (oset section hidden nil)
     (cond
      (pending (approve-face-region start (point) 'approve-pending))
      ((alist-get 'isResolved thread)

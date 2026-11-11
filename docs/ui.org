@@ -112,13 +112,13 @@ Notes:
      tests/test-approve-api.el      +160   −0  █████████████
      …
 
- ▾ Diff                                               4/12 viewed · 3 unresolved threads
-   ▾ ✓ ~ lisp/approve-api.el                                                        💬 1
+ ▾ Diff                                               4/12 viewed · 4 unresolved threads
+   ▾ ✓ ~ lisp/approve-api.el                                                        💬 2
      ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables
         40  40      (let* ((request-id (approve-api--generate-request-id))
         41      -          (timeout approve-api-timeout))
             41  +          (timeout approve-api-timeout)
-            42  +          (retries approve-api-retries))
+            42  +          (retries approve-api-retries))                           💬 2
                   ╭─ bob · 2 days ago ─────────────────────────────────────────
                   │ Should this be configurable per call?
                   │
@@ -131,8 +131,9 @@ Notes:
                   ╰─ e edit · k delete ─────────────────────────────────────────
         42  43        (when progress-message
         43  44          (make-progress-reporter progress-message))
-     ▸ @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id
-       ▸ 💬 1 resolved thread on line 101
+     ▾ @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id
+        …
+       101 106        (approve-api--retry request-id)                               💬 1      (dim: resolved, folded)
 
    ▸ · ~ lisp/approve-model.el
    ▸ ↻ ~ lisp/approve-graphql.el                                                    💬 2
@@ -167,8 +168,13 @@ Notes:
 - Threads sit right under the line they belong to (the last line of a
   range).  For a multi-line thread the covered lines get a thin bar in the
   fringe while point is on the thread.
-- Resolved threads start collapsed as a single line.  Outdated threads (line
-  gone from the diff) are collected under the file: "▸ Outdated (2)".
+- A line with threads has a speech bubble and their count at the right
+  edge (unresolved ones; all of them, dim, when all are resolved).  The
+  line folds its threads: =TAB= on it, or anywhere in them, folds them
+  away, and only the bubble is left.  Threads don't fold one by one.
+  Lines whose threads are all resolved start folded; so does "On this
+  file" when its threads are.  Outdated threads (line gone from the diff)
+  are collected under the file: "▸ Outdated (2)".
 - Pending comments use =approve-pending-face= (an accent background) and say
   "Pending", so they can't be mistaken for published ones.
 
@@ -633,9 +639,9 @@ Keys are a draft to check in Phases 1–2.  Principles:
 
 Toggling a section (=approve-section-toggle=, also what =RET= does where there
 is nothing to visit) folds the section at point, except inside the diff: on a
-comment it folds the comment's thread, and on a diff line it folds the hunk,
-whether the line has threads or not.  A line with threads never folds by
-itself, or its threads would vanish with it.
+diff line with threads it folds the threads, and in a thread it folds the
+threads of its line (or its group, "On this file" or "Outdated"); on a
+line without threads it folds the hunk.
 
 Input buffers: =C-c C-c= send, =C-c C-k= abort, =C-c C-s= suggestion, =C-c C-p=
 preview, =C-c @= mention (same in every state).

@@ -76,11 +76,13 @@
                   :to-equal (mapcar (lambda (comment) (alist-get 'id comment))
                                     (approve-model-nodes (alist-get 'comments thread))))))))
 
-  (it "starts a resolved thread collapsed and says who resolved it"
+  (it "says who resolved a thread, which does not fold by itself"
     (test-thread--with-inserted (test-thread--find (lambda (thread)
                                                      (alist-get 'isResolved thread)))
       (let ((section (car (oref magit-root-section children))))
-        (expect (oref section hidden) :to-be t)
+        ;; Its line or group folds it, leaving no line of it behind.
+        (expect (oref section hidden) :to-be nil)
+        (expect (oref section content) :to-be nil)
         (expect (car (test-thread--lines)) :to-match "resolved by")
         (expect (ensure-list (get-text-property (point-min) 'face))
                 :to-contain 'approve-resolved))))
