@@ -246,6 +246,27 @@ See `approve-label-face'."
   "Face of files viewed before they changed again."
   :group 'approve-faces)
 
+(defface approve-file-added
+  '((t :inherit magit-diffstat-added))
+  "Face of the icon of an added file."
+  :group 'approve-faces)
+
+(defface approve-file-modified
+  '((t :inherit shadow))
+  "Face of the icon of a modified file, the usual change.
+A change of mode or type uses it too."
+  :group 'approve-faces)
+
+(defface approve-file-deleted
+  '((t :inherit magit-diffstat-removed))
+  "Face of the icon of a deleted file."
+  :group 'approve-faces)
+
+(defface approve-file-moved
+  '((t :inherit magit-branch-local))
+  "Face of the icon of a renamed or copied file."
+  :group 'approve-faces)
+
 (defface approve-new
   '((t :inherit magit-diff-our-highlight))
   "Face of things that are new since the viewer's last review."

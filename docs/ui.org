@@ -113,7 +113,7 @@ Notes:
      …
 
  ▾ Diff
-   ▾ lisp/approve-api.el                           modified  +120 −30   ✓ viewed
+   ▾ ~ lisp/approve-api.el                                   +120 −30   ✓ viewed
      ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables
         40  40      (let* ((request-id (approve-api--generate-request-id))
         41      -          (timeout approve-api-timeout))
@@ -134,8 +134,8 @@ Notes:
      ▸ @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id
        ▸ 💬 1 resolved thread on line 101
 
-   ▸ lisp/approve-model.el                         modified   +40 −10   · not viewed
-   ▸ lisp/approve-graphql.el                       modified   +12  −2   ↻ changed since viewed
+   ▸ ~ lisp/approve-model.el                                  +40 −10   · not viewed
+   ▸ ~ lisp/approve-graphql.el                                +12  −2   ↻ changed since viewed
 #+end_example
 
 Notes:
@@ -143,13 +143,15 @@ Notes:
   (GitHub's =DISMISSED=, highlighted).  The bar is a diffstat scaled to the
   largest file (=approve-diffstat-width=).  =RET= jumps to the file's diff
   (single layout) or opens the diff buffer there (split layout).
-- Diff file headings repeat the viewed state; =v= toggles it.  The change,
-  the counts and the viewed state are columns that start at the same place
-  in every heading.  A moved file is written as git's diffstat writes it,
-  =internal/engine/{queue.go → scheduler.go}=; a path too long for its room
-  loses whole directories in the middle, =internal/…/page.tmpl=, as in the
-  file list.  All files start collapsed; a file's body is drawn when it is
-  first expanded.
+- Diff file headings start with an icon of the change (the =file-*= icons:
+  added, modified, deleted, renamed, copied, mode changed), in the
+  =approve-file-*= faces; eldoc says it in words.  They repeat the viewed
+  state; =v= toggles it.  The counts and the viewed state are columns that
+  start at the same place in every heading.  A moved file is written as
+  git's diffstat writes it, =internal/engine/{queue.go → scheduler.go}=; a
+  path too long for its room loses whole directories in the middle,
+  =internal/…/page.tmpl=, as in the file list.  All files start collapsed;
+  a file's body is drawn when it is first expanded.
 - Line numbers (old, new) and the =+=/=-= marker are text that copying
   leaves out ([[file:decisions.org::*D28 Diff line numbers are text that copying leaves out][D28]]); =approve-diff-line-numbers= hides the numbers.  Added
   lines use =magit-diff-added=, removed =magit-diff-removed=, context
@@ -175,7 +177,7 @@ Notes:
                   │ └───────────────────────────────────────────────────────────
                   ╰─ r reply · R resolve ───────────────────────────────────────
 
-   ▾ lisp/approve-graphql.el                       modified   +12  −2   ↻ changed since viewed
+   ▾ ~ lisp/approve-graphql.el                                +12  −2   ↻ changed since viewed
      ▾ On this file (1)
          ╭─ dave · 1 day ago ─────────────────────────────────────────────────
          │ Could this file be split in two?
@@ -232,9 +234,9 @@ before the title has loaded.
  ▾ Files changed
    ✗ Could not load files: HTTP 502 Bad Gateway · g to retry
 
- ▾ lisp/huge-generated.json                           modified  +48 213 −47 990
+ ▾ ~ lisp/huge-generated.json                                   +48 213 −47 990
      Diff not shown by GitHub (too large) · RET load it anyway
- ▾ assets/logo.png                                    modified   binary
+ ▾ + assets/logo.png                                             binary
 #+end_example
 
 * Dashboard
@@ -650,6 +652,12 @@ rows align with =string-width=.  The other sets that were compared are on
 | =viewed=               | =nf-md-checkbox_marked_outline=      | ✓        |
 | =unviewed=             | =nf-md-checkbox_blank_outline=       | ·        |
 | =dismissed=            | =nf-md-update=                       | ↻        |
+| =file-added=           | =nf-md-file_plus_outline=            | +        |
+| =file-modified=        | =nf-md-file_edit_outline=            | ~        |
+| =file-deleted=         | =nf-md-file_remove_outline=          | −        |
+| =file-renamed=         | =nf-md-file_move_outline=            | →        |
+| =file-copied=          | =nf-md-file_multiple_outline=        | ⧉        |
+| =file-changed=         | =nf-md-file_cog_outline=             | ⚙        |
 | =check-success=        | =nf-md-check_circle=                 | ✓        |
 | =check-failure=        | =nf-md-close_circle=                 | ✗        |
 | =check-pending=        | =nf-md-progress_clock=               | ◐        |

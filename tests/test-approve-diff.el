@@ -151,13 +151,24 @@ column where the change, counts and viewed state start."
 
   (it "names the file, its change and viewed state in the heading"
     (with-current-buffer test-diff--buffer
-      ;; Too long for the room: the cut keeps the first directory and the end.
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/scheduler.go"))
-              :to-match "\\`  internal/…/{queue\\.go → scheduler\\.go} +renamed +\\+6 +−3   · not viewed\n")
+              :to-match "\\`  → internal/engine/{queue\\.go → scheduler\\.go} +\\+6 +−3   · not viewed\n")
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/engine.go"))
-              :to-match "\\`  internal/engine/engine\\.go +modified  \\+101  −36   · not viewed\n")
+              :to-match "\\`  ~ internal/engine/engine\\.go +\\+101  −36   · not viewed\n")
       (expect (approve-test-section-text (test-diff--file-section "CHANGELOG.md"))
               :to-match "↻ changed since viewed")))
+
+  (it "draws the change as an icon in its face"
+    (dolist (case '(("ADDED" "+" approve-file-added)
+                    ("MODIFIED" "~" approve-file-modified)
+                    ("DELETED" "−" approve-file-deleted)
+                    ("RENAMED" "→" approve-file-moved)
+                    ("COPIED" "⧉" approve-file-moved)
+                    ("CHANGED" "⚙" approve-file-modified)))
+      (let ((icon (approve-diff--change-icon (car case))))
+        (expect (substring-no-properties icon) :to-equal (nth 1 case))
+        (expect (memq (nth 2 case) (ensure-list (get-text-property 0 'face icon)))
+                :to-be-truthy))))
 
   (it "lines up the change, counts and viewed state of every heading"
     (with-current-buffer test-diff--buffer
@@ -254,7 +265,7 @@ column where the change, counts and viewed state start."
       (expect (approve-test-section-text (test-diff--show "assets/logo.png"))
               :to-match "Binary file not shown.")
       (expect (approve-test-section-text (test-diff--file-section "assets/logo.png"))
-              :to-match "added +binary   · not viewed")))
+              :to-match "\\`  \\+ assets/logo\\.png +binary   · not viewed")))
 
   (it "omits line numbers when asked"
     (with-current-buffer test-diff--buffer

@@ -185,12 +185,15 @@ Example:
   (when-let* ((table (approve-model-extra :patches)))
     (gethash path table)))
 
-(defun approve-diff--change-type (type)
-  "Return GitHub's file change TYPE in words."
+(defun approve-diff--change-icon (type)
+  "Return the icon of GitHub's file change TYPE, in its face."
   (pcase type
-    ("ADDED" "added") ("DELETED" "deleted") ("MODIFIED" "modified")
-    ("RENAMED" "renamed") ("COPIED" "copied") ("CHANGED" "changed")
-    (_ (downcase (or type "")))))
+    ("ADDED" (approve-icon 'file-added 'approve-file-added))
+    ("DELETED" (approve-icon 'file-deleted 'approve-file-deleted))
+    ("RENAMED" (approve-icon 'file-renamed 'approve-file-moved))
+    ("COPIED" (approve-icon 'file-copied 'approve-file-moved))
+    ("CHANGED" (approve-icon 'file-changed 'approve-file-modified))
+    (_ (approve-icon 'file-modified 'approve-file-modified))))
 
 (defun approve-diff--viewed (state)
   "Return the viewed state of a file's diff heading, from GitHub's STATE."
@@ -199,9 +202,6 @@ Example:
             ("VIEWED" (approve-face "viewed" 'approve-viewed))
             ("DISMISSED" (approve-face "changed since viewed" 'approve-dismissed))
             (_ (approve-face "not viewed" 'approve-unviewed)))))
-
-(defconst approve-diff--change-width 8
-  "Columns of the change column of file headings: \"modified\".")
 
 (defun approve-diff-heading-columns (files)
   "Return the widths that line up the headings of FILES, from GraphQL.
@@ -238,9 +238,10 @@ The directories both share are written once:
 
 (defun approve-diff--file-heading (file entry &optional columns)
   "Return the heading of the diff of FILE (from GraphQL) and its REST ENTRY.
-The change, the counts and the viewed state are columns that start
-at the same place in every heading, so the right side ends where
-the longest viewed state would.  COLUMNS, from
+An icon of the change (`approve-diff--change-icon') goes before the
+path.  The counts and the viewed state are columns that start at the
+same place in every heading, so the right side ends where the
+longest viewed state would.  COLUMNS, from
 `approve-diff-heading-columns', gives their widths; it defaults to
 those of FILE alone.  A path too long for the room left loses
 directories in the middle (`approve-render-shorten-path')."
@@ -248,28 +249,27 @@ directories in the middle (`approve-render-shorten-path')."
     (let* ((columns (or columns (approve-diff-heading-columns (list file))))
            (numbers (car columns))
            (old (alist-get 'previous_filename entry))
+           (icon (concat (approve-diff--change-icon .changeType) " "))
            (viewed (approve-diff--viewed .viewerViewedState))
-           (right (concat (approve-render-pad
-                           (approve-face (approve-diff--change-type .changeType) 'approve-dim)
-                           approve-diff--change-width)
-                          "  "
-                          (if (approve-diff--binary-p file entry)
+           (right (concat (if (approve-diff--binary-p file entry)
                               (approve-render-pad (approve-face "binary" 'approve-dim)
                                                   (1+ (* 2 numbers)) t)
                             (approve-sections-counts .additions .deletions numbers))
                           "   "
                           viewed))
            (end (- approve-page-width (- (cdr columns) (string-width viewed))))
-           ;; The room before the columns, less the indentation and a gap.
+           ;; The room before the columns, less the indentation, the
+           ;; icon and a gap.
            (room (- end (string-width right)
-                    (string-width approve-sections-indentation) 2)))
+                    (string-width approve-sections-indentation) (string-width icon) 2)))
       (approve-render-justify
-       (approve-face (approve-render-shorten-path
-                      (if (and old (not (equal old .path)))
-                          (approve-diff--moved old .path)
-                        .path)
-                      (max 10 room))
-                     'approve-diff-file-heading)
+       (concat icon
+               (approve-face (approve-render-shorten-path
+                              (if (and old (not (equal old .path)))
+                                  (approve-diff--moved old .path)
+                                .path)
+                              (max 10 room))
+                             'approve-diff-file-heading))
        right
        end))))
 
