@@ -266,8 +266,10 @@ A change of mode or type uses it too."
   :group 'approve-faces)
 
 (defface approve-file-moved
-  '((t :inherit magit-branch-local))
-  "Face of the icon of a renamed or copied file."
+  '((t :inherit font-lock-keyword-face))
+  "Face of the icon of a renamed or copied file.
+It inherits a colour that differs from the added and deleted ones
+in most themes, which magit's branch faces don't."
   :group 'approve-faces)
 
 (defface approve-new
