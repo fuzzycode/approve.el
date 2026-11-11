@@ -68,10 +68,13 @@
                  (not (get face 'saved-face))
                  (not (get face 'customized-face)))
         (put face 'face-defface-spec nil)))
-    (dolist (name order)
-      (when (and (member name names)
-                 (or (not (equal name "approve-evil")) (featurep 'evil)))
-        (load (expand-file-name name lisp) nil t)))
+    ;; A stale .elc, left by a build that did not finish, never wins over
+    ;; its newer source.
+    (let ((load-prefer-newer t))
+      (dolist (name order)
+        (when (and (member name names)
+                   (or (not (equal name "approve-evil")) (featurep 'evil)))
+          (load (expand-file-name name lisp) nil t))))
     (dolist (symbol defaults)
       (let ((value (eval (car (get symbol 'standard-value)) t)))
         (unless (equal (symbol-value symbol) value)
