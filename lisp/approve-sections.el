@@ -720,7 +720,7 @@ The checks themselves load when the section is first expanded."
         (let-alist file
           (magit-insert-section (approve-file-entry-section .path)
             (let ((line (concat (approve-sections-viewed-mark .viewerViewedState) " "
-                                (approve-face (approve-render-pad (approve-render-truncate
+                                (approve-face (approve-render-pad (approve-render-shorten-path
                                                                    .path path-width)
                                                                   path-width)
                                               'approve-path)

@@ -378,6 +378,31 @@ GROUPS are reactionGroups; reactions the viewer gave use
       (concat (truncate-string-to-width text (max 0 (1- width))) "…")
     text))
 
+(defun approve-render-shorten-path (path width)
+  "Return PATH cut to WIDTH columns, keeping its first directory and its end.
+The … replaces whole directories where it can, so the file name
+stays.
+
+Example:
+  (approve-render-shorten-path \"internal/render/templates/page.tmpl\" 24)
+  => \"internal/…/page.tmpl\""
+  (if (<= (string-width path) width)
+      path
+    (let* ((slash (string-search "/" path))
+           (head (if (and slash (<= (1+ slash) (/ width 2)))
+                     (substring path 0 (1+ slash))
+                   ""))
+           (room (max 0 (- width (string-width head) 1)))
+           (start (length path)))
+      (while (and (> start 0)
+                  (<= (string-width path (1- start)) room))
+        (setq start (1- start)))
+      ;; Start the end at a directory when there is one in it.
+      (let ((directory (string-search "/" path start)))
+        (when (and directory (< directory (1- (length path))))
+          (setq start directory)))
+      (concat head "…" (substring path start)))))
+
 (provide 'approve-render)
 
 ;;; approve-render.el ends here

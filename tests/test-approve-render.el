@@ -2,7 +2,8 @@
 
 ;;; Commentary:
 
-;; Indentation drawn as text: `approve-render-prefix'.
+;; Indentation drawn as text: `approve-render-prefix'.  Reactions, and
+;; paths shortened to fit.
 
 ;;; Code:
 
@@ -115,5 +116,27 @@
               '(((content . "HEART") (reactors (totalCount . 2)))
                 ((content . "EYES") (reactors (totalCount . 1))))))
             :to-equal "❤️ 2  👀 1")))
+
+(describe "approve-render-shorten-path"
+  (it "leaves a path that fits"
+    (expect (approve-render-shorten-path "internal/x.go" 13) :to-equal "internal/x.go"))
+
+  (it "keeps the first directory and the end, cut between directories"
+    (expect (approve-render-shorten-path "internal/render/templates/page.tmpl" 24)
+            :to-equal "internal/…/page.tmpl")
+    (expect (approve-render-shorten-path "internal/render/templates/{base.tmpl → page.tmpl}" 40)
+            :to-equal "internal/…/{base.tmpl → page.tmpl}"))
+
+  (it "cuts inside a name when no directory fits"
+    (expect (approve-render-shorten-path "src/x/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.el" 20)
+            :to-equal "src/…aaaaaaaaaaaa.el")
+    (expect (approve-render-shorten-path "averyveryverylongfilename-without-dirs.txt" 20)
+            :to-equal "…me-without-dirs.txt"))
+
+  (it "never returns more than WIDTH columns"
+    (dolist (width '(2 5 10 20 30))
+      (expect (string-width (approve-render-shorten-path
+                             "internal/render/templates/{base.tmpl → page.tmpl}" width))
+              :not :to-be-greater-than width))))
 
 ;;; test-approve-render.el ends here

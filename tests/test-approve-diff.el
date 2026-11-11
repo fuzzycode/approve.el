@@ -37,6 +37,13 @@
     (let ((patch (concat "@@ -1 +1 @@\n" "-a\n+b")))
       (expect (approve-diff-parse patch) :to-be (approve-diff-parse patch)))))
 
+(describe "approve-diff--moved"
+  (it "writes the directories both paths share once, as git does"
+    (expect (approve-diff--moved "internal/engine/queue.go" "internal/engine/scheduler.go")
+            :to-equal "internal/engine/{queue.go → scheduler.go}")
+    (expect (approve-diff--moved "a/x.go" "b/x.go") :to-equal "a/x.go → b/x.go")
+    (expect (approve-diff--moved "src/aa.go" "src/ab/c.go") :to-equal "src/{aa.go → ab/c.go}")))
+
 (describe "Syntax highlighting in hunks"
   (it "colours both sides of a hunk in the file's major mode, once per patch"
     (let* ((approve-diff-fontify t)
@@ -107,6 +114,21 @@
   (search-forward text)
   (get-text-property (point) 'approve-line))
 
+(defun test-diff--heading-columns (section)
+  "Return (PATH-END . COLUMNS) of the heading of the file SECTION.
+PATH-END is the column after the path and its space; COLUMNS is the
+column where the change, counts and viewed state start."
+  (save-excursion
+    (goto-char (oref section start))
+    (let ((pos (point)) (found nil))
+      (while (and (not found) (< pos (line-end-position)))
+        (let ((display (get-text-property pos 'display)))
+          (if (eq (car-safe display) 'space)
+              (setq found (cons (string-width (buffer-substring (line-beginning-position) pos))
+                                (plist-get (cdr display) :align-to)))
+            (setq pos (1+ pos)))))
+      found)))
+
 (describe "The diff of the medium PR"
   (before-all
     (setq approve-use-nerd-icons nil)
@@ -129,10 +151,23 @@
 
   (it "names the file, its change and viewed state in the heading"
     (with-current-buffer test-diff--buffer
+      ;; Too long for the room: the cut keeps the first directory and the end.
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/scheduler.go"))
-              :to-match "\\`  internal/engine/queue.go → internal/engine/scheduler.go +renamed   \\+6 −3   · not viewed\n")
+              :to-match "\\`  internal/…/{queue\\.go → scheduler\\.go} +renamed +\\+6 +−3   · not viewed\n")
+      (expect (approve-test-section-text (test-diff--file-section "internal/engine/engine.go"))
+              :to-match "\\`  internal/engine/engine\\.go +modified  \\+101  −36   · not viewed\n")
       (expect (approve-test-section-text (test-diff--file-section "CHANGELOG.md"))
               :to-match "↻ changed since viewed")))
+
+  (it "lines up the change, counts and viewed state of every heading"
+    (with-current-buffer test-diff--buffer
+      (let ((columns (mapcar #'test-diff--heading-columns
+                             (oref (approve-test-find-section 'approve-diff-section) children))))
+        (expect (length columns) :to-equal 30)
+        (expect (length (seq-uniq (mapcar #'cdr columns))) :to-equal 1)
+        ;; Every path, cut when long, ends before them.
+        (dolist (column columns)
+          (expect (car column) :to-be-less-than (cdr column))))))
 
   (describe "an expanded file"
     (before-all
@@ -219,7 +254,7 @@
       (expect (approve-test-section-text (test-diff--show "assets/logo.png"))
               :to-match "Binary file not shown.")
       (expect (approve-test-section-text (test-diff--file-section "assets/logo.png"))
-              :to-match "added   binary   · not viewed")))
+              :to-match "added +binary   · not viewed")))
 
   (it "omits line numbers when asked"
     (with-current-buffer test-diff--buffer
