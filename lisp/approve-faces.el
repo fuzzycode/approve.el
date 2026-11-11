@@ -45,7 +45,10 @@
 
 (require 'color)
 (require 'magit-section)
-(require 'magit-diff)
+;; The faces inherit from magit's, which are in magit.el and the
+;; libraries it loads (magit-diff, magit-log).  Without them they would
+;; have no colour until magit itself is loaded.
+(require 'magit)
 
 (defgroup approve-faces nil
   "Faces used by Approve."

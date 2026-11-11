@@ -25,6 +25,14 @@
         (expect (memq face members) :not :to-be nil)
         (expect (face-documentation face) :not :to-be nil))))
 
+  (it "inherits only from faces that exist once it is loaded"
+    ;; A face inheriting from one not defined yet has no colour; magit's
+    ;; are in magit.el and magit-log.el, not only in magit-diff.el.
+    (dolist (face (test-faces--approve-faces))
+      (dolist (parent (ensure-list (face-attribute face :inherit nil nil)))
+        (unless (eq parent 'unspecified)
+          (expect (cons face (and (facep parent) t)) :to-equal (cons face t))))))
+
   (it "sets face and font-lock-face"
     (let ((text (approve-face "x" 'approve-dim)))
       (expect (get-text-property 0 'face text) :to-be 'approve-dim)
