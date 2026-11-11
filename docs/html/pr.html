@@ -129,23 +129,23 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p></p>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Files changed</span>   12 files  <span class="ok">+340</span> <span class="er">−56</span>                     4/12 viewed <span class="d">·</span> <span class="wa">3 unresolved threads</span></p>
+<p class="hd"><span class="tog"></span> <span class="h">Files changed</span>   12 files  <span class="ok">+340</span> <span class="er">−56</span>                                   <span class="wa">3 unresolved threads</span></p>
 <div class="sb">
-<p>    <span class="d"><i data-i="viewed">✓</i> lisp/approve-api.el          +120  −30  ██████████▒▒▒</span>   <i data-i="comment">💬</i> 2</p>
-<p>    <span class="d"><i data-i="unviewed">·</i></span> lisp/approve-model.el         <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
-<p>    <span class="wa"><i data-i="dismissed">↻</i></span> lisp/approve-graphql.el       <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
-<p>    <span class="d"><i data-i="unviewed">·</i></span> tests/test-approve-api.el    <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
+<p>    lisp/approve-api.el            <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span>   <i data-i="comment">💬</i> 2</p>
+<p>    lisp/approve-model.el           <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
+<p>    lisp/approve-graphql.el         <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
+<p>    tests/test-approve-api.el      <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
 <p>    <span class="d">…  8 more</span></p>
 </div>
 </div>
 <p></p>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Diff</span></p>
+<p class="hd"><span class="tog"></span> <span class="h">Diff</span>                                                                4/12 viewed</p>
 <div class="sb">
 
 <div class="s">
-<p class="hd">  <span class="tog"></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                   <span class="ok">+120</span> <span class="er">−30</span>   <span class="ok"><i data-i="viewed">✓</i> viewed</span></p>
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span></p>
 <div class="sb">
 <div class="s">
 <p class="hd hunk">    <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
@@ -199,7 +199,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p></p>
 
 <div class="s closed">
-<p class="hd">  <span class="tog"></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-model.el</span>                                  <span class="ok">+40</span> <span class="er">−10</span>   <span class="d"><i data-i="unviewed">·</i> not viewed</span></p>
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-model.el</span></p>
 <div class="sb">
 <div class="s">
 <p class="hd hunk">    <span class="tog"></span> @@ -12,6 +12,9 @@ (defvar-local approve-model--store nil</p>
@@ -213,7 +213,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 </div>
 
 <div class="s closed">
-<p class="hd">  <span class="tog"></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span>                                <span class="ok">+12</span>  <span class="er">−2</span>   <span class="wa"><i data-i="dismissed">↻</i> changed since viewed</span></p>
+<p class="hd">  <span class="tog"></span> <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span></p>
 <div class="sb">
 <div class="s">
 <p class="hd">    <span class="tog"></span> <span class="h">On this file (1)</span></p>
@@ -244,11 +244,13 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <ul>
   <li>Reviewer marks: <span class="ok"><i data-i="approved">✓</i></span> approved, <span class="er"><i data-i="changes-requested">✗</i></span> changes requested, <i data-i="commented">💬</i> commented, <i data-i="requested">○</i> requested.</li>
   <li><b>Your pending review</b> only appears when one exists. It uses the pending background, as does every pending comment.</li>
-  <li>File list: <i data-i="viewed">✓</i> viewed (dimmed), <i data-i="unviewed">·</i> not viewed, <span class="wa"><i data-i="dismissed">↻</i></span> viewed but changed since (GitHub's <code>DISMISSED</code>).</li>
-  <li>Diff file headings: an icon of the change comes first (<span class="ok"><i data-i="file-added">+</i></span> added,
+  <li>File list: each file's counts, a diffstat bar and its threads. Which files are viewed is in the diff.</li>
+  <li>Diff file headings: the viewed mark (<i data-i="viewed">✓</i> viewed, dim; <i data-i="unviewed">·</i> not viewed;
+    <span class="wa"><i data-i="dismissed">↻</i></span> viewed but changed since, GitHub's <code>DISMISSED</code>; the Diff heading counts
+    them), an icon of the change (<span class="ok"><i data-i="file-added">+</i></span> added,
     <span class="m"><i data-i="file-modified">~</i></span> modified, <span class="er"><i data-i="file-deleted">−</i></span> deleted,
     <span class="pi"><i data-i="file-renamed">→</i></span> renamed, <span class="pi"><i data-i="file-copied">⧉</i></span> copied,
-    <span class="m"><i data-i="file-changed">⚙</i></span> mode changed); the counts and viewed state are columns that line up. A moved file reads
+    <span class="m"><i data-i="file-changed">⚙</i></span> mode changed), then the path; the size is in the file list. A moved file reads
     <code>internal/engine/{queue.go → scheduler.go}</code>, as in git's diffstat; a path too long for its room loses whole
     directories in the middle (<code>internal/…/page.tmpl</code>).</li>
   <li>Resolved threads and outdated threads start collapsed. Key hints (<code>r reply · R resolve</code>) can be turned off.</li>
@@ -281,16 +283,16 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p>▸ <span class="h">Commits (4)</span></p>
 <p>▸ <span class="h">Conversation (6)</span></p>
 <p><span class="tog"></span> <span class="h">Files changed</span>  12  <span class="ok">+340</span> <span class="er">−56</span></p>
-<p class="cur">  <span class="d"><i data-i="viewed">✓</i> lisp/approve-api.el   +120 −30</span></p>
-<p>  <span class="d"><i data-i="unviewed">·</i></span> lisp/approve-model.el   <span class="ok">+40</span> <span class="er">−10</span></p>
-<p>  <span class="wa"><i data-i="dismissed">↻</i></span> lisp/approve-graphql.el <span class="ok">+12</span>  <span class="er">−2</span></p>
+<p class="cur">  lisp/approve-api.el     <span class="ok">+120</span> <span class="er">−30</span></p>
+<p>  lisp/approve-model.el    <span class="ok">+40</span> <span class="er">−10</span></p>
+<p>  lisp/approve-graphql.el  <span class="ok">+12</span>  <span class="er">−2</span></p>
 </div>
 <div class="ml off"> <span class="b">*approve: …#1234*</span>   Top    Approve-PR</div>
 </div>
 <div class="win">
 <div class="hl"><span class="b">#1234</span> <span class="d">· all changes (main…e5f6a7b) ·</span> <span class="ir">2 pending</span></div>
 <div class="buf">
-<p><span class="tog"></span> <span class="fh">lisp/approve-api.el</span>     <span class="ok">+120</span> <span class="er">−30</span>  <span class="ok"><i data-i="viewed">✓</i></span></p>
+<p><span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span></p>
 <p class="hunk">  <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun …</p>
 <p>    <span class="ln">40  40</span>   (let* ((request-id …</p>
 <p class="del">    <span class="ln">41    </span>-        (timeout approve-api-…</p>
@@ -303,9 +305,9 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p>    <span class="ln">42  43</span>     (when progress-message</p>
 <p class="hunk">  ▸ @@ -87,6 +92,22 @@ (defun …</p>
 <p></p>
-<p>▸ <span class="fh">lisp/approve-model.el</span>    <span class="ok">+40</span> <span class="er">−10</span>  <span class="d"><i data-i="unviewed">·</i></span></p>
-<p>▸ <span class="fh">lisp/approve-graphql.el</span>  <span class="ok">+12</span>  <span class="er">−2</span>  <span class="wa"><i data-i="dismissed">↻</i></span></p>
-<p>▸ <span class="fh">tests/test-approve-api.el</span> <span class="ok">+160</span>    <span class="d"><i data-i="unviewed">·</i></span></p>
+<p>▸ <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-model.el</span></p>
+<p>▸ <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span></p>
+<p>▸ <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">tests/test-approve-api.el</span></p>
 </div>
 <div class="ml"> <span class="ir">&lt;N&gt;</span> <span class="b">*approve-diff: …#1234*</span>  L4  <span class="pi">Approve-Diff</span></div>
 </div>
@@ -349,9 +351,9 @@ section, unless it is the pull request itself or the token (below); huge and bin
 <p><span class="tog"></span> <span class="h">Files changed</span></p>
 <p>  <span class="er"><i data-i="error">✗</i> Could not load files: HTTP 502 Bad Gateway ·</span> <span class="k">g</span> <span class="er">to retry</span></p>
 <p></p>
-<p><span class="tog"></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/huge-generated.json</span>                                   <span class="ok">+48 213</span> <span class="er">−47 990</span></p>
+<p><span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/huge-generated.json</span></p>
 <p>    <span class="d">Diff not shown by GitHub (too large) ·</span> <span class="k">RET</span> <span class="d">load it anyway</span></p>
-<p><span class="tog"></span> <span class="ok"><i data-i="file-added">+</i></span> <span class="fh">assets/logo.png</span>                                             <span class="d">binary</span></p>
+<p><span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="ok"><i data-i="file-added">+</i></span> <span class="fh">assets/logo.png</span></p>
 </div>
 <div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   All  L1        <span class="pi">Approve-PR</span></div>
 </div>

@@ -114,21 +114,6 @@
   (search-forward text)
   (get-text-property (point) 'approve-line))
 
-(defun test-diff--heading-columns (section)
-  "Return (PATH-END . COLUMNS) of the heading of the file SECTION.
-PATH-END is the column after the path and its space; COLUMNS is the
-column where the change, counts and viewed state start."
-  (save-excursion
-    (goto-char (oref section start))
-    (let ((pos (point)) (found nil))
-      (while (and (not found) (< pos (line-end-position)))
-        (let ((display (get-text-property pos 'display)))
-          (if (eq (car-safe display) 'space)
-              (setq found (cons (string-width (buffer-substring (line-beginning-position) pos))
-                                (plist-get (cdr display) :align-to)))
-            (setq pos (1+ pos)))))
-      found)))
-
 (describe "The diff of the medium PR"
   (before-all
     (setq approve-use-nerd-icons nil)
@@ -149,14 +134,23 @@ column where the change, counts and viewed state start."
         (expect (oref (test-diff--file-section "internal/parser/parser.go") children)
                 :to-be nil))))
 
-  (it "names the file, its change and viewed state in the heading"
+  (it "heads each file with its viewed mark, its change and its path"
     (with-current-buffer test-diff--buffer
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/scheduler.go"))
-              :to-match "\\`  → internal/engine/{queue\\.go → scheduler\\.go} +\\+6 +−3   · not viewed\n")
+              :to-match "\\`  · → internal/engine/{queue\\.go → scheduler\\.go}\n")
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/engine.go"))
-              :to-match "\\`  ~ internal/engine/engine\\.go +\\+101  −36   · not viewed\n")
+              :to-match "\\`  · ~ internal/engine/engine\\.go\n")
+      (expect (approve-test-section-text (test-diff--file-section "internal/engine/legacy.go"))
+              :to-match "\\`  ✓ − internal/engine/legacy\\.go\n")
       (expect (approve-test-section-text (test-diff--file-section "CHANGELOG.md"))
-              :to-match "↻ changed since viewed")))
+              :to-match "\\`  ↻ ~ CHANGELOG\\.md\n")))
+
+  (it "says in its heading how many files are viewed"
+    (with-current-buffer test-diff--buffer
+      (expect (car (split-string (approve-test-section-text
+                                  (approve-test-find-section 'approve-diff-section))
+                                 "\n"))
+              :to-match "\\`Diff +8/30 viewed\\'")))
 
   (it "draws the change as an icon in its face"
     (dolist (case '(("ADDED" "+" approve-file-added)
@@ -169,16 +163,6 @@ column where the change, counts and viewed state start."
         (expect (substring-no-properties icon) :to-equal (nth 1 case))
         (expect (memq (nth 2 case) (ensure-list (get-text-property 0 'face icon)))
                 :to-be-truthy))))
-
-  (it "lines up the change, counts and viewed state of every heading"
-    (with-current-buffer test-diff--buffer
-      (let ((columns (mapcar #'test-diff--heading-columns
-                             (oref (approve-test-find-section 'approve-diff-section) children))))
-        (expect (length columns) :to-equal 30)
-        (expect (length (seq-uniq (mapcar #'cdr columns))) :to-equal 1)
-        ;; Every path, cut when long, ends before them.
-        (dolist (column columns)
-          (expect (car column) :to-be-less-than (cdr column))))))
 
   (describe "an expanded file"
     (before-all
@@ -265,7 +249,7 @@ column where the change, counts and viewed state start."
       (expect (approve-test-section-text (test-diff--show "assets/logo.png"))
               :to-match "Binary file not shown.")
       (expect (approve-test-section-text (test-diff--file-section "assets/logo.png"))
-              :to-match "\\`  \\+ assets/logo\\.png +binary   · not viewed")))
+              :to-match "\\`  · \\+ assets/logo\\.png\n")))
 
   (it "omits line numbers when asked"
     (with-current-buffer test-diff--buffer

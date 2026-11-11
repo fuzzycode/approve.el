@@ -683,7 +683,8 @@ The checks themselves load when the section is first expanded."
                          'approve-dim))))
 
 (defun approve-insert-files-section ()
-  "Insert the list of changed files with their viewed state and size."
+  "Insert the list of changed files with their size and threads.
+Which files the viewer viewed is in the diff's headings."
   (let* ((connection (approve-pr-field 'files))
          (files (approve-pr-files))
          (counts (approve-sections-thread-counts))
@@ -706,38 +707,28 @@ The checks themselves load when the section is first expanded."
                                              (if (= .changedFiles 1) "" "s"))
                                (approve-sections-counts .additions .deletions))
                      ""))
-           (and files
-                (approve-render-join
-                 (list (format "%d/%d viewed" (approve-sections-viewed-count files)
-                               (or .changedFiles (length files)))
-                       (and (> unresolved 0)
-                            (approve-face (format "%d unresolved thread%s" unresolved
-                                                  (if (= unresolved 1) "" "s"))
-                                          'approve-outdated))))))))
+           (and files (> unresolved 0)
+                (approve-face (format "%d unresolved thread%s" unresolved
+                                      (if (= unresolved 1) "" "s"))
+                              'approve-outdated)))))
       ;; Each row carries its indentation: one insertion per row, where
       ;; indenting afterwards would insert again into a buffer of markers.
       (dolist (file files)
         (let-alist file
           (magit-insert-section (approve-file-entry-section .path)
-            (let ((line (concat (approve-sections-viewed-mark .viewerViewedState) " "
-                                (approve-face (approve-render-pad (approve-render-shorten-path
-                                                                   .path path-width)
-                                                                  path-width)
-                                              'approve-path)
-                                "  "
-                                (approve-sections-counts .additions .deletions
-                                                          number-width)
-                                "  "
-                                (approve-render-pad (approve-sections--bar .additions .deletions
-                                                                           largest)
-                                                    approve-diffstat-width)
-                                "  "
-                                (approve-sections--thread-count (gethash .path counts)))))
-              (insert approve-sections-indentation
-                      (if (equal .viewerViewedState "VIEWED")
-                          (approve-face-add line 'approve-viewed)
-                        line)
-                      "\n")))))
+            (insert approve-sections-indentation
+                    (approve-face (approve-render-pad (approve-render-shorten-path
+                                                       .path path-width)
+                                                      path-width)
+                                  'approve-path)
+                    "  "
+                    (approve-sections-counts .additions .deletions number-width)
+                    "  "
+                    (approve-render-pad (approve-sections--bar .additions .deletions largest)
+                                        approve-diffstat-width)
+                    "  "
+                    (approve-sections--thread-count (gethash .path counts))
+                    "\n"))))
       (let ((start (point)))
         (cond
          ((approve-model-truncated-p connection)

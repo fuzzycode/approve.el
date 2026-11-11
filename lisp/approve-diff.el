@@ -195,27 +195,6 @@ Example:
     ("CHANGED" (approve-icon 'file-changed 'approve-file-modified))
     (_ (approve-icon 'file-modified 'approve-file-modified))))
 
-(defun approve-diff--viewed (state)
-  "Return the viewed state of a file's diff heading, from GitHub's STATE."
-  (concat (approve-sections-viewed-mark state) " "
-          (pcase state
-            ("VIEWED" (approve-face "viewed" 'approve-viewed))
-            ("DISMISSED" (approve-face "changed since viewed" 'approve-dismissed))
-            (_ (approve-face "not viewed" 'approve-unviewed)))))
-
-(defun approve-diff-heading-columns (files)
-  "Return the widths that line up the headings of FILES, from GraphQL.
-The value is (NUMBERS . VIEWED): the columns of a count with its
-sign, for the largest count of FILES, and of the longest viewed
-state.  `approve-diff--file-heading' takes it."
-  (cons (1+ (length (number-to-string
-                     (apply #'max 0 (mapcan (lambda (file)
-                                              (list (alist-get 'additions file)
-                                                    (alist-get 'deletions file)))
-                                            files)))))
-        (apply #'max (mapcar (lambda (state) (string-width (approve-diff--viewed state)))
-                             '("VIEWED" "DISMISSED" "UNVIEWED")))))
-
 (defun approve-diff--binary-p (file entry)
   "Return non-nil if FILE (from GraphQL) with REST ENTRY is binary."
   (and entry (not (alist-get 'patch entry))
@@ -236,42 +215,25 @@ The directories both share are written once:
                 (substring old shared) (substring new shared))
       (format "%s → %s" old new))))
 
-(defun approve-diff--file-heading (file entry &optional columns)
+(defun approve-diff--file-heading (file entry)
   "Return the heading of the diff of FILE (from GraphQL) and its REST ENTRY.
-An icon of the change (`approve-diff--change-icon') goes before the
-path.  The counts and the viewed state are columns that start at the
-same place in every heading, so the right side ends where the
-longest viewed state would.  COLUMNS, from
-`approve-diff-heading-columns', gives their widths; it defaults to
-those of FILE alone.  A path too long for the room left loses
-directories in the middle (`approve-render-shorten-path')."
+It is the viewed mark (`approve-sections-viewed-mark'), an icon of
+the change (`approve-diff--change-icon') and the path; the size is
+in the file list.  A path longer than the page loses directories in
+the middle (`approve-render-shorten-path')."
   (let-alist file
-    (let* ((columns (or columns (approve-diff-heading-columns (list file))))
-           (numbers (car columns))
-           (old (alist-get 'previous_filename entry))
-           (icon (concat (approve-diff--change-icon .changeType) " "))
-           (viewed (approve-diff--viewed .viewerViewedState))
-           (right (concat (if (approve-diff--binary-p file entry)
-                              (approve-render-pad (approve-face "binary" 'approve-dim)
-                                                  (1+ (* 2 numbers)) t)
-                            (approve-sections-counts .additions .deletions numbers))
-                          "   "
-                          viewed))
-           (end (- approve-page-width (- (cdr columns) (string-width viewed))))
-           ;; The room before the columns, less the indentation, the
-           ;; icon and a gap.
-           (room (- end (string-width right)
-                    (string-width approve-sections-indentation) (string-width icon) 2)))
-      (approve-render-justify
-       (concat icon
-               (approve-face (approve-render-shorten-path
-                              (if (and old (not (equal old .path)))
-                                  (approve-diff--moved old .path)
-                                .path)
-                              (max 10 room))
-                             'approve-diff-file-heading))
-       right
-       end))))
+    (let* ((old (alist-get 'previous_filename entry))
+           (marks (concat (approve-sections-viewed-mark .viewerViewedState) " "
+                          (approve-diff--change-icon .changeType) " ")))
+      (concat marks
+              (approve-face (approve-render-shorten-path
+                             (if (and old (not (equal old .path)))
+                                 (approve-diff--moved old .path)
+                               .path)
+                             (max 10 (- approve-page-width
+                                        (string-width approve-sections-indentation)
+                                        (string-width marks))))
+                            'approve-diff-file-heading)))))
 
 ;;; Threads
 
@@ -591,26 +553,31 @@ HIDE collapses it at first; NOTE is dim text on the right."
     (approve-render-prefix start (point) "    ")))
 
 (defun approve-insert-diff-section ()
-  "Insert the diff: every changed file, collapsed, its body drawn when expanded."
+  "Insert the diff: every changed file, collapsed, its body drawn when expanded.
+The heading says how many files the viewer has viewed."
   (let ((files (approve-pr-files)))
     (magit-insert-section (approve-diff-section)
       (magit-insert-heading
-        (approve-render-justify (approve-face "Diff" 'approve-heading)
-                                (and (approve-pr-loading-p 'patches)
-                                     (approve-face "loading the patches…" 'approve-loading))))
+        (approve-render-justify
+         (approve-face "Diff" 'approve-heading)
+         (approve-render-join
+          (list (and (approve-pr-loading-p 'patches)
+                     (approve-face "loading the patches…" 'approve-loading))
+                (and files
+                     (format "%d/%d viewed" (approve-sections-viewed-count files)
+                             (or (approve-pr-field 'changedFiles) (length files))))))))
       (if (null files)
           (let ((start (point)))
             (insert (or (approve-sections-state 'files "the files") ""))
             (approve-sections-insert-body start))
-        (let ((columns (approve-diff-heading-columns files)))
-          (dolist (file files)
-            (let ((path (alist-get 'path file)))
-              (magit-insert-section (approve-file-section path t)
-                (magit-insert-heading
-                  approve-sections-indentation
-                  (approve-diff--file-heading file (approve-diff-file-entry path) columns))
-                (magit-insert-section-body
-                  (approve-diff--insert-file-body file)))))))
+        (dolist (file files)
+          (let ((path (alist-get 'path file)))
+            (magit-insert-section (approve-file-section path t)
+              (magit-insert-heading
+                approve-sections-indentation
+                (approve-diff--file-heading file (approve-diff-file-entry path)))
+              (magit-insert-section-body
+                (approve-diff--insert-file-body file))))))
       (insert "\n"))))
 
 (provide 'approve-diff)

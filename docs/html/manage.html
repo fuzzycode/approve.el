@@ -196,7 +196,7 @@ Lines that can't take comments in a range view are dimmed.</p>
 <div class="win">
 <div class="buf">
 <p><span class="tog"></span> <span class="h">Diff</span> <span class="ir">· since your last review (2 commits)</span> <span class="d">·</span> <span class="k">V a</span> <span class="d">all changes</span></p>
-<p>  <span class="tog"></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                    <span class="ok">+22</span>  <span class="er">−3</span>   <span class="wa"><i data-i="dismissed">↻</i> changed since viewed</span></p>
+<p>  <span class="tog"></span> <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span></p>
 <p class="hunk">    ▾ @@ -88,6 +88,12 @@ (defun approve-api--handle-timeout (request-id</p>
 <p class="add">       <span class="ln">    93</span>  +  (when (approve-api--retry-p request-id)</p>
 <p class="add">       <span class="ln">    94</span>  +    (cl-return-from approve-api--handle-timeout</p>

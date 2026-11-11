@@ -125,15 +125,24 @@
   (describe "files"
     (it "sums the files up in the heading"
       (expect (car (split-string (test-sections--text 'approve-files-section) "\n"))
-              :to-match "\\`Files changed   30 files  \\+987 −184 +8/30 viewed · 15 unresolved threads"))
+              :to-match "\\`Files changed   30 files  \\+987 −184 +15 unresolved threads\\'"))
 
-    (it "lists each file with its viewed mark, counts, bar and threads"
+    (it "lists each file with its counts, bar and threads"
       (expect (test-sections--text 'approve-file-entry-section "internal/parser/parser.go")
-              :to-match "\\`  · internal/parser/parser.go +\\+21  −11  ██▒ +💬 5\n")
+              :to-match "\\`  internal/parser/parser.go +\\+21  −11  ██▒ +💬 5\n")
       (expect (test-sections--text 'approve-file-entry-section "internal/engine/legacy.go")
-              :to-match "\\`  ✓ internal/engine/legacy.go +\\+0  −38  ▒▒▒▒ ")
-      (expect (test-sections--text 'approve-file-entry-section "CHANGELOG.md")
-              :to-match "\\`  ↻ CHANGELOG.md ")))
+              :to-match "\\`  internal/engine/legacy.go +\\+0  −38  ▒▒▒▒ "))
+
+    (it "leaves out which files are viewed, which the diff's headings say"
+      (with-current-buffer test-sections--buffer
+        (let ((section (approve-test-find-section 'approve-file-entry-section
+                                                  "internal/engine/legacy.go")))
+          ;; legacy.go is viewed: it is neither marked nor dimmed.
+          (expect (seq-some (lambda (pos)
+                              (memq 'approve-viewed
+                                    (ensure-list (get-text-property pos 'face))))
+                            (number-sequence (oref section start) (1- (oref section end))))
+                  :to-be nil)))))
 
   (describe "conversation"
     (it "starts with who opened the PR and ends the line"
