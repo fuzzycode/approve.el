@@ -215,25 +215,35 @@ The directories both share are written once:
                 (substring old shared) (substring new shared))
       (format "%s → %s" old new))))
 
-(defun approve-diff--file-heading (file entry)
+(defun approve-diff--file-heading (file entry &optional threads width)
   "Return the heading of the diff of FILE (from GraphQL) and its REST ENTRY.
 It is the viewed mark (`approve-sections-viewed-mark'), an icon of
 the change (`approve-diff--change-icon') and the path; the size is
-in the file list.  A path longer than the page loses directories in
-the middle (`approve-render-shorten-path')."
+in the file list.  THREADS, (UNRESOLVED . TOTAL) of the threads on
+the file's lines or nil, is counted at the page's right edge,
+padded on the left to WIDTH columns, so the counts of all headings
+line up.  A path too long for its room loses directories in the
+middle (`approve-render-shorten-path')."
   (let-alist file
     (let* ((old (alist-get 'previous_filename entry))
            (marks (concat (approve-sections-viewed-mark .viewerViewedState) " "
-                          (approve-diff--change-icon .changeType) " ")))
-      (concat marks
-              (approve-face (approve-render-shorten-path
-                             (if (and old (not (equal old .path)))
-                                 (approve-diff--moved old .path)
-                               .path)
-                             (max 10 (- approve-page-width
-                                        (string-width approve-sections-indentation)
-                                        (string-width marks))))
-                            'approve-diff-file-heading)))))
+                          (approve-diff--change-icon .changeType) " "))
+           (count (approve-sections-thread-count threads))
+           (count (if (string-empty-p count) count
+                    (approve-render-pad count (or width 0) t)))
+           (room (- approve-page-width
+                    (string-width approve-sections-indentation)
+                    (string-width marks)
+                    (if (string-empty-p count) 0 (+ 2 (string-width count))))))
+      (approve-render-justify
+       (concat marks
+               (approve-face (approve-render-shorten-path
+                              (if (and old (not (equal old .path)))
+                                  (approve-diff--moved old .path)
+                                .path)
+                              (max 10 room))
+                             'approve-diff-file-heading))
+       count))))
 
 ;;; Threads
 
@@ -554,8 +564,15 @@ HIDE collapses it at first; NOTE is dim text on the right."
 
 (defun approve-insert-diff-section ()
   "Insert the diff: every changed file, collapsed, its body drawn when expanded.
-The heading says how many files the viewer has viewed."
-  (let ((files (approve-pr-files)))
+The heading says how many files the viewer has viewed and how many
+threads on lines are unresolved; each file's heading counts its own."
+  (let* ((files (approve-pr-files))
+         (counts (approve-sections-thread-counts 'line))
+         (width (apply #'max 0 (mapcar (lambda (file)
+                                         (string-width (approve-sections-thread-count
+                                                        (gethash (alist-get 'path file)
+                                                                 counts))))
+                                       files))))
     (magit-insert-section (approve-diff-section)
       (magit-insert-heading
         (approve-render-justify
@@ -565,7 +582,8 @@ The heading says how many files the viewer has viewed."
                      (approve-face "loading the patches…" 'approve-loading))
                 (and files
                      (format "%d/%d viewed" (approve-sections-viewed-count files)
-                             (or (approve-pr-field 'changedFiles) (length files))))))))
+                             (or (approve-pr-field 'changedFiles) (length files))))
+                (and files (approve-sections-unresolved counts))))))
       (if (null files)
           (let ((start (point)))
             (insert (or (approve-sections-state 'files "the files") ""))
@@ -575,7 +593,8 @@ The heading says how many files the viewer has viewed."
             (magit-insert-section (approve-file-section path t)
               (magit-insert-heading
                 approve-sections-indentation
-                (approve-diff--file-heading file (approve-diff-file-entry path)))
+                (approve-diff--file-heading file (approve-diff-file-entry path)
+                                           (gethash path counts) width))
               (magit-insert-section-body
                 (approve-diff--insert-file-body file))))))
       (insert "\n"))))

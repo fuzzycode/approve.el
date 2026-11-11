@@ -633,16 +633,31 @@ The checks themselves load when the section is first expanded."
 
 ;;; Files
 
-(defun approve-sections-thread-counts ()
-  "Return a hash table from path to (UNRESOLVED . TOTAL) threads."
+(defun approve-sections-thread-counts (kind)
+  "Return a hash table from path to (UNRESOLVED . TOTAL) threads of KIND.
+KIND is `file' for threads on a whole file, which the file list
+counts, or `line' for threads on lines of the diff, outdated ones
+included, which the diff's headings count."
   (let ((table (make-hash-table :test #'equal)))
-    (dolist (thread (approve-pr-list-fields 'reviewThreads '(path isResolved)))
+    (dolist (thread (approve-pr-list-fields 'reviewThreads '(path isResolved subjectType)))
       (let-alist thread
-        (let ((counts (gethash .path table (cons 0 0))))
-          (puthash .path (cons (+ (car counts) (if .isResolved 0 1))
-                               (1+ (cdr counts)))
-                   table))))
+        (when (eq (equal .subjectType "FILE") (eq kind 'file))
+          (let ((counts (gethash .path table (cons 0 0))))
+            (puthash .path (cons (+ (car counts) (if .isResolved 0 1))
+                                 (1+ (cdr counts)))
+                     table)))))
     table))
+
+(defun approve-sections-unresolved (counts &optional what)
+  "Return \"N unresolved WHAT threads\" from COUNTS, or nil when N is 0.
+COUNTS is a table from `approve-sections-thread-counts'; WHAT, such
+as \"file\", goes before \"thread\"."
+  (let ((unresolved (apply #'+ (mapcar #'car (hash-table-values counts)))))
+    (and (> unresolved 0)
+         (approve-face (format "%d unresolved %sthread%s" unresolved
+                               (if what (concat what " ") "")
+                               (if (= unresolved 1) "" "s"))
+                       'approve-outdated))))
 
 (defun approve-sections-viewed-mark (state)
   "Return the mark of a file whose viewed STATE is GitHub's."
@@ -674,8 +689,10 @@ The checks themselves load when the section is first expanded."
   "Return how many of FILES the viewer marked as viewed."
   (seq-count (lambda (file) (equal (alist-get 'viewerViewedState file) "VIEWED")) files))
 
-(defun approve-sections--thread-count (counts)
-  "Return the thread mark of a file from COUNTS, (UNRESOLVED . TOTAL)."
+(defun approve-sections-thread-count (counts)
+  "Return the thread mark of a file from COUNTS, (UNRESOLVED . TOTAL).
+It is the unresolved count, or the total, dim, when all are resolved;
+empty without threads."
   (cond ((null counts) "")
         ((> (car counts) 0)
          (concat (approve-icon 'comment) " " (format "%d" (car counts))))
@@ -684,11 +701,11 @@ The checks themselves load when the section is first expanded."
 
 (defun approve-insert-files-section ()
   "Insert the list of changed files with their size and threads.
-Which files the viewer viewed is in the diff's headings."
+The threads are those on a whole file; the diff's headings count the
+threads on lines, and say which files the viewer viewed."
   (let* ((connection (approve-pr-field 'files))
          (files (approve-pr-files))
-         (counts (approve-sections-thread-counts))
-         (unresolved (apply #'+ (mapcar #'car (hash-table-values counts))))
+         (counts (approve-sections-thread-counts 'file))
          (largest (apply #'max 0 (mapcar (lambda (file)
                                            (+ (alist-get 'additions file)
                                               (alist-get 'deletions file)))
@@ -707,10 +724,7 @@ Which files the viewer viewed is in the diff's headings."
                                              (if (= .changedFiles 1) "" "s"))
                                (approve-sections-counts .additions .deletions))
                      ""))
-           (and files (> unresolved 0)
-                (approve-face (format "%d unresolved thread%s" unresolved
-                                      (if (= unresolved 1) "" "s"))
-                              'approve-outdated)))))
+           (and files (approve-sections-unresolved counts "file")))))
       ;; Each row carries its indentation: one insertion per row, where
       ;; indenting afterwards would insert again into a buffer of markers.
       (dolist (file files)
@@ -727,7 +741,7 @@ Which files the viewer viewed is in the diff's headings."
                     (approve-render-pad (approve-sections--bar .additions .deletions largest)
                                         approve-diffstat-width)
                     "  "
-                    (approve-sections--thread-count (gethash .path counts))
+                    (approve-sections-thread-count (gethash .path counts))
                     "\n"))))
       (let ((start (point)))
         (cond

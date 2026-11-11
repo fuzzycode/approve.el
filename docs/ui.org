@@ -105,15 +105,15 @@ Notes:
 
 ** Bottom: files and diff
 #+begin_example
- ▾ Files changed   12 files  +340 −56                               3 unresolved threads
-     lisp/approve-api.el            +120  −30  ██████████▒▒▒   💬 2
+ ▾ Files changed   12 files  +340 −56                           1 unresolved file thread
+     lisp/approve-api.el            +120  −30  ██████████▒▒▒
      lisp/approve-model.el           +40  −10  ███▒
      lisp/approve-graphql.el         +12   −2  █               💬 1
      tests/test-approve-api.el      +160   −0  █████████████
      …
 
- ▾ Diff                                                                4/12 viewed
-   ▾ ✓ ~ lisp/approve-api.el
+ ▾ Diff                                               4/12 viewed · 3 unresolved threads
+   ▾ ✓ ~ lisp/approve-api.el                                                        💬 1
      ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables
         40  40      (let* ((request-id (approve-api--generate-request-id))
         41      -          (timeout approve-api-timeout))
@@ -135,25 +135,28 @@ Notes:
        ▸ 💬 1 resolved thread on line 101
 
    ▸ · ~ lisp/approve-model.el
-   ▸ ↻ ~ lisp/approve-graphql.el
+   ▸ ↻ ~ lisp/approve-graphql.el                                                    💬 2
 #+end_example
 
 Notes:
 - The file list gives each file's size: its counts and a diffstat bar
-  scaled to the largest file (=approve-diffstat-width=), and its threads.
-  =RET= jumps to the file's diff (single layout) or opens the diff buffer
-  there (split layout).
+  scaled to the largest file (=approve-diffstat-width=), and its threads on
+  the whole file (the diff's "On this file"); its heading sums the
+  unresolved ones.  =RET= jumps to the file's diff (single layout) or opens
+  the diff buffer there (split layout).
 - Diff file headings say which files are viewed, the file list doesn't:
   ✓ viewed (dim), · not viewed, ↻ viewed but changed since (GitHub's
   =DISMISSED=, highlighted); =v= toggles it, and the Diff heading counts
   the viewed files.  Then an icon of the change (the =file-*= icons: added,
   modified, deleted, renamed, copied, mode changed), in the =approve-file-*=
   faces; eldoc says it in words.  Then the path; the size is in the file
-  list.  A moved file is written as git's diffstat writes it,
-  =internal/engine/{queue.go → scheduler.go}=; a path longer than the page
-  loses whole directories in the middle, =internal/…/page.tmpl=, as in the
-  file list.  All files start collapsed; a file's body is drawn when it is
-  first expanded.
+  list.  At the right edge, the threads on its lines, outdated ones too
+  (unresolved, or all of them dim when all are resolved), lined up; the
+  Diff heading sums the unresolved ones.  A moved file is written as git's
+  diffstat writes it, =internal/engine/{queue.go → scheduler.go}=; a path
+  too long for its room loses whole directories in the middle,
+  =internal/…/page.tmpl=, as in the file list.  All files start collapsed;
+  a file's body is drawn when it is first expanded.
 - Line numbers (old, new) and the =+=/=-= marker are text that copying
   leaves out ([[file:decisions.org::*D28 Diff line numbers are text that copying leaves out][D28]]); =approve-diff-line-numbers= hides the numbers.  Added
   lines use =magit-diff-added=, removed =magit-diff-removed=, context
@@ -179,7 +182,7 @@ Notes:
                   │ └───────────────────────────────────────────────────────────
                   ╰─ r reply · R resolve ───────────────────────────────────────
 
-   ▾ ↻ ~ lisp/approve-graphql.el
+   ▾ ↻ ~ lisp/approve-graphql.el                                                    💬 2
      ▾ On this file (1)
          ╭─ dave · 1 day ago ─────────────────────────────────────────────────
          │ Could this file be split in two?
@@ -210,9 +213,10 @@ Both buffers share one store; a change in one redraws both.
 
 * Header line
 Shown in the PR buffer and the diff buffer; it stays visible while scrolling.
-It names the PR; counts are in the sections (viewed files on Diff,
-unresolved threads on Files changed, pending comments on Your pending
-review, checks on Status and Checks).
+It names the PR; counts are in the sections (viewed files and unresolved
+threads on lines on Diff, unresolved threads on whole files on Files
+changed, pending comments on Your pending review, checks on Status and
+Checks).
 
 #+begin_example
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft

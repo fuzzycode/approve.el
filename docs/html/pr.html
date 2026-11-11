@@ -129,9 +129,9 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p></p>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Files changed</span>   12 files  <span class="ok">+340</span> <span class="er">−56</span>                                   <span class="wa">3 unresolved threads</span></p>
+<p class="hd"><span class="tog"></span> <span class="h">Files changed</span>   12 files  <span class="ok">+340</span> <span class="er">−56</span>                               <span class="wa">1 unresolved file thread</span></p>
 <div class="sb">
-<p>    lisp/approve-api.el            <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span>   <i data-i="comment">💬</i> 2</p>
+<p>    lisp/approve-api.el            <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span></p>
 <p>    lisp/approve-model.el           <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
 <p>    lisp/approve-graphql.el         <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
 <p>    tests/test-approve-api.el      <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
@@ -141,11 +141,11 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p></p>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Diff</span>                                                                4/12 viewed</p>
+<p class="hd"><span class="tog"></span> <span class="h">Diff</span>                                                   4/12 viewed <span class="d">·</span> <span class="wa">3 unresolved threads</span></p>
 <div class="sb">
 
 <div class="s">
-<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span></p>
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                            <i data-i="comment">💬</i> 1</p>
 <div class="sb">
 <div class="s">
 <p class="hd hunk">    <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
@@ -213,7 +213,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 </div>
 
 <div class="s closed">
-<p class="hd">  <span class="tog"></span> <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span></p>
+<p class="hd">  <span class="tog"></span> <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span>                                                        <i data-i="comment">💬</i> 2</p>
 <div class="sb">
 <div class="s">
 <p class="hd">    <span class="tog"></span> <span class="h">On this file (1)</span></p>
@@ -244,13 +244,15 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <ul>
   <li>Reviewer marks: <span class="ok"><i data-i="approved">✓</i></span> approved, <span class="er"><i data-i="changes-requested">✗</i></span> changes requested, <i data-i="commented">💬</i> commented, <i data-i="requested">○</i> requested.</li>
   <li><b>Your pending review</b> only appears when one exists. It uses the pending background, as does every pending comment.</li>
-  <li>File list: each file's counts, a diffstat bar and its threads. Which files are viewed is in the diff.</li>
+  <li>File list: each file's counts, a diffstat bar and its threads on the whole file (the diff's “On this file”); its
+    heading sums the unresolved ones. Which files are viewed is in the diff.</li>
   <li>Diff file headings: the viewed mark (<i data-i="viewed">✓</i> viewed, dim; <i data-i="unviewed">·</i> not viewed;
     <span class="wa"><i data-i="dismissed">↻</i></span> viewed but changed since, GitHub's <code>DISMISSED</code>; the Diff heading counts
     them), an icon of the change (<span class="ok"><i data-i="file-added">+</i></span> added,
     <span class="m"><i data-i="file-modified">~</i></span> modified, <span class="er"><i data-i="file-deleted">−</i></span> deleted,
     <span class="pi"><i data-i="file-renamed">→</i></span> renamed, <span class="pi"><i data-i="file-copied">⧉</i></span> copied,
-    <span class="m"><i data-i="file-changed">⚙</i></span> mode changed), then the path; the size is in the file list. A moved file reads
+    <span class="m"><i data-i="file-changed">⚙</i></span> mode changed), then the path; the size is in the file list. At the right edge, lined up, the threads on its lines
+    (outdated ones too); the Diff heading sums the unresolved ones. A moved file reads
     <code>internal/engine/{queue.go → scheduler.go}</code>, as in git's diffstat; a path too long for its room loses whole
     directories in the middle (<code>internal/…/page.tmpl</code>).</li>
   <li>Resolved threads and outdated threads start collapsed. Key hints (<code>r reply · R resolve</code>) can be turned off.</li>
