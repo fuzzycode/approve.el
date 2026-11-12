@@ -170,6 +170,10 @@ Notes:
 - Threads sit right under the line they belong to (the last line of a
   range).  For a multi-line thread the covered lines get a thin bar in the
   fringe while point is on the thread.
+- A thread is a box open on the right, on purpose: code blocks, tables and
+  URLs that are not wrapped, lines that wrap in a narrow window and images
+  would each put a right border in another column.  Closing it (padding to
+  the box width, a =│= copying leaves out) can come later for text lines.
 - A line with threads has a speech bubble and their count at the right
   edge (unresolved ones; all of them, dim, when all are resolved).  The
   line folds its threads: =TAB= on it, or anywhere in them, folds them
