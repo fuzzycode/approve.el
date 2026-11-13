@@ -67,8 +67,7 @@ Notes:
   but not reviewed yet.
 - "Your pending review" appears only when one exists.  It lists the pending
   comments, and its heading counts them, replies included; =RET= jumps to
-  one in the diff.  It has no background: pending comments keep theirs in
-  the diff, where they could be taken for published ones.
+  one in the diff.
 - An empty description shows a dim "No description provided."
 
 ** Middle: checks, commits, conversation
@@ -181,8 +180,9 @@ Notes:
   Lines whose threads are all resolved start folded; so does "On this
   file" when its threads are.  Outdated threads (line gone from the diff)
   are collected under the file: "▸ Outdated (2)".
-- Pending comments use =approve-pending= (an accent background) and say
-  "Pending", so they can't be mistaken for published ones.
+- A pending comment says "✎ Pending" (=approve-pending=) where a published
+  one says when it was written, so the two can't be mistaken.  Only that
+  label is coloured: the comment has no background.
 
 ** Threads: suggestions, file-level, outdated
 #+begin_example
@@ -673,7 +673,7 @@ inherit:
 | =approve-label=                                  | (colour from GitHub, readable fg)            | Labels as boxes           |
 | =approve-state-open/closed/merged/draft=         | =success= / =error= / =magit-tag= / =shadow= | State badges              |
 | =approve-approved= / =approve-changes-requested= | =success= / =error=                          | Review marks              |
-| =approve-pending=                                | =secondary-selection=                        | Pending comments          |
+| =approve-pending=                                | =warning=                                    | "Pending" label           |
 | =approve-thread-border=                          | =shadow=                                     | Thread box lines          |
 | =approve-resolved= / =approve-outdated=          | =shadow= / =warning=                         | Thread states             |
 | =approve-new= / =approve-dismissed=              | =warning=                                    | New since your review     |

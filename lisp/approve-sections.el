@@ -386,9 +386,7 @@ view (`approve-pr--update-header-line')."
 
 (defun approve-insert-pending-review-section ()
   "Insert the viewer's pending review, when there is one.
-Its heading counts its comments, replies included; the comments
-keep the pending background in the diff, where they could be taken
-for published ones, but not here."
+Its heading counts its comments, replies included."
   (when-let* ((review (approve-pr-pending-review)))
     (let ((comments (approve-model-nodes (alist-get 'comments review))))
       (magit-insert-section (approve-pending-review-section (alist-get 'id review))

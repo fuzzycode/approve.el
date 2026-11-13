@@ -107,7 +107,7 @@ Edit them into what they should be.</p>
 <section class="shot" id="after">
 <h2>After sending: the pending comment <span class="ref">F00 · F05</span></h2>
 <p>While GitHub works, the target shows <span class="m it"><i data-i="loading">⟳</i> saving…</span> (no optimistic updates, D14). Then the
-thread appears under the last line of the range, in the pending colour, and the counts update.</p>
+thread appears under the last line of the range, marked <span class="wa"><i data-i="pending-comment">✎</i> Pending</span>, and the counts update.</p>
 <div class="emacs">
 <div class="win">
 <div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                    <span class="ok"><i data-i="open">●</i> Open</span></div>
@@ -115,10 +115,10 @@ thread appears under the last line of the range, in the pending colour, and the 
 <p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
 <p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
 <p class="add">       <span class="ln">    42</span>  +          (retries approve-api-retries))</p>
-<p class="pend">                 <span class="d">╭─</span> <span class="ir"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you · lines 41–42 ────────────────────────────────</span></p>
-<p class="pend">                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup? A per-call <span class="code">:retries</span></p>
-<p class="pend">                 <span class="d">│</span> keyword would make the tests simpler too.</p>
-<p class="pend">                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ─────────────────────────────────────────────</span></p>
+<p>                 <span class="d">╭─</span> <span class="wa"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you · lines 41–42 ────────────────────────────────</span></p>
+<p>                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup? A per-call <span class="code">:retries</span></p>
+<p>                 <span class="d">│</span> keyword would make the tests simpler too.</p>
+<p>                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ─────────────────────────────────────────────</span></p>
 <p>       <span class="ln">42  43</span>        (when progress-message</p>
 </div>
 <div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   12%  L45      <span class="pi">Approve-PR</span></div>

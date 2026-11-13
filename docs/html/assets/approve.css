@@ -30,7 +30,6 @@
   --del-bg: #4a3a58;
   --hunk-fg: #232136;
   --hunk-bg: #53496b;
-  --pending-bg: #322c4a;
   --target-bg: #393552;
   --fringe: #44415a;
 }
@@ -60,7 +59,6 @@
   --del-bg: #f3e0e0;
   --hunk-fg: #faf4ed;
   --hunk-bg: #9893a5;
-  --pending-bg: #efe6f3;
   --target-bg: #dfdad9;
   --fringe: #cecacd;
 }
@@ -172,7 +170,6 @@ section.shot code, .lead code, .card code {
 .buf p.add { background: var(--add-bg); color: var(--add-fg); }
 .buf p.del { background: var(--del-bg); color: var(--del-fg); }
 .buf p.hunk { background: var(--hunk-bg); color: var(--hunk-fg); }
-.buf p.pend { background: var(--pending-bg); }
 .buf p.tgt { background: var(--target-bg); }
 .buf p.cur { background: var(--hl-low); }
 .mini p.sel { background: var(--overlay); }

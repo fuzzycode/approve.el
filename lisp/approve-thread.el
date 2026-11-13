@@ -43,8 +43,8 @@
 ;; bar left of the comments is decoration (`approve-render-prefix'), so
 ;; copying a comment gives its text alone.  Resolved threads start collapsed
 ;; to their heading.  Pending comments, which only the viewer sees
-;; until the review is submitted, have the `approve-pending' background
-;; and say so.
+;; until the review is submitted, say "✎ Pending" in the `approve-pending'
+;; face instead of their author and date; they have no background.
 ;;
 ;; `approve-thread-insert-comment-body' draws a comment's body,
 ;; reactions and hidden state; the conversation uses it too.
@@ -154,12 +154,9 @@ A hidden (minimized) comment is one dim line saying why."
 (defun approve-thread--insert-comment (comment first)
   "Insert COMMENT of a thread; FIRST if the thread's heading names it."
   (magit-insert-section (approve-comment-section (alist-get 'id comment))
-    (let ((start (point)))
-      (unless first
-        (magit-insert-heading (approve-thread-comment-byline comment)))
-      (approve-thread-insert-comment-body comment)
-      (when (approve-thread-pending-p comment)
-        (approve-face-region start (point) 'approve-pending)))))
+    (unless first
+      (magit-insert-heading (approve-thread-comment-byline comment)))
+    (approve-thread-insert-comment-body comment)))
 
 (defun approve-thread-insert (thread)
   "Insert THREAD, a resolved PullRequestReviewThread, as a box.
@@ -171,7 +168,6 @@ the diff line it is on, or the group it is in, folds it."
          (first (car comments))
          (more (- (or (approve-model-total-count connection) (length comments))
                   (length comments)))
-         (pending (and first (approve-thread-pending-p first)))
          (start (point))
          (section
           (magit-insert-section (approve-thread-section (alist-get 'id thread))
@@ -194,10 +190,8 @@ the diff line it is on, or the group it is in, folds it."
     ;; command says.
     (oset section content nil)
     (oset section hidden nil)
-    (cond
-     (pending (approve-face-region start (point) 'approve-pending))
-     ((alist-get 'isResolved thread)
-      (approve-face-region start (point) 'approve-resolved)))))
+    (when (alist-get 'isResolved thread)
+      (approve-face-region start (point) 'approve-resolved))))
 
 (defun approve-thread-summary (thread)
   "Return a one-line summary of THREAD: its first comment's author and text."

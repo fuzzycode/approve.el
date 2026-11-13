@@ -92,14 +92,16 @@
                                                      (alist-get 'isOutdated thread)))
       (expect (car (test-thread--lines)) :to-match "· outdated ─")))
 
-  (it "draws a pending thread on the pending background, saying so"
+  (it "marks a pending thread with a coloured label, not a background"
     (test-thread--with-inserted (test-thread--find
                                  (lambda (thread)
                                    (approve-thread-pending-p
                                     (car (approve-model-nodes (alist-get 'comments thread))))))
       (expect (car (test-thread--lines)) :to-match "\\`╭─ ✎ Pending · vera-example ─")
+      (search-forward "Pending")
+      (expect (ensure-list (get-text-property (1- (point)) 'face)) :to-contain 'approve-pending)
       (search-forward "branch reachable")
-      (expect (ensure-list (get-text-property (point) 'face)) :to-contain 'approve-pending)))
+      (expect (ensure-list (get-text-property (point) 'face)) :not :to-contain 'approve-pending)))
 
   (it "shows a suggestion inside the box"
     (test-thread--with-inserted (test-thread--find (lambda (thread)

@@ -104,7 +104,7 @@
         (expect (nth 2 lines) :to-match "\\`  internal/engine/engine.go:365–367 ")
         (expect (length lines) :to-equal 4)))
 
-    (it "has no pending background, which marks pending comments in the diff"
+    (it "lists its comments without the pending face"
       (with-current-buffer test-sections--buffer
         (let ((section (approve-test-find-section 'approve-pending-review-section)))
           (expect (seq-some (lambda (pos)

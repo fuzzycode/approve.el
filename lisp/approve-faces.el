@@ -215,10 +215,9 @@ See `approve-label-face'."
   :group 'approve-faces)
 
 (defface approve-pending
-  '((t :inherit secondary-selection :extend t))
-  "Face of the viewer's pending (unsubmitted) review and its comments.
-An accent background with no diff meaning: Magit's diff faces would
-make pending comments look like removed or added lines."
+  '((t :inherit warning))
+  "Face of the \"Pending\" label and icon of the viewer's pending comments.
+Only the label is coloured; the comment itself has no background."
   :group 'approve-faces)
 
 (defface approve-check-success

@@ -163,9 +163,9 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p>                 <span class="d">│</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
 <p>                 <span class="d">│</span> <i data-i="reaction-thumbs-up">👍</i> 1</p>
 <p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────</span></p>
-<p class="pend">                 <span class="d">╭─</span> <span class="ir"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ─────────────────────────────────────────</span></p>
-<p class="pend">                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup?</p>
-<p class="pend">                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ────────────────────────────────────────</span></p>
+<p>                 <span class="d">╭─</span> <span class="wa"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ─────────────────────────────────────────</span></p>
+<p>                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup?</p>
+<p>                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ────────────────────────────────────────</span></p>
 </div>
 </div>
 <p>       <span class="ln">42  43</span>        (when progress-message</p>
@@ -240,8 +240,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 
 <ul>
   <li>Reviewer marks: <span class="ok"><i data-i="approved">✓</i></span> approved, <span class="er"><i data-i="changes-requested">✗</i></span> changes requested, <i data-i="commented">💬</i> commented, <i data-i="requested">○</i> requested.</li>
-  <li><b>Your pending review</b> only appears when one exists; its heading counts the comments, replies included. It has
-    no background: pending comments keep theirs in the diff, where they could be taken for published ones.</li>
+  <li><b>Your pending review</b> only appears when one exists; its heading counts the comments, replies included.</li>
   <li>File list: each file's counts, a diffstat bar and its threads on the whole file (the diff's “On this file”); its
     heading sums the unresolved ones. Which files are viewed is in the diff.</li>
   <li>Diff file headings: the viewed mark (<i data-i="viewed">✓</i> viewed, dim; <i data-i="unviewed">·</i> not viewed;
