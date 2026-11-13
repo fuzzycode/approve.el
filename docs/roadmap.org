@@ -97,7 +97,7 @@ through shr asynchronously, and what happens when a signed URL has expired
 The core of the tool: everything needed to do a full review.
 Implements F00, F04–F10, F17 (change detection), F18.
 Mockups: input buffer, dispatch, submit review, pending review section, keys.
-- [ ] =approve-input.el=: port approve-v2's, add targets/drafts, header-line
+- [X] =approve-input.el=: port approve-v2's, add targets/drafts, header-line
       context, target highlight, completion (=@=, =#=, =:emoji:=), =C-c C-s=
       suggestion, =C-c C-p= preview.
 - [ ] Action pipeline (F00) as one macro or function the commands share.

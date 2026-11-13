@@ -313,4 +313,124 @@ header line's form."
     (with-current-buffer (with-current-buffer pr (approve-input-read))
       (expect (approve-input-preview) :to-throw 'user-error))))
 
+(defconst test-input--metadata
+  '(("queries/metadata/mentionable-users.graphql"
+     (data (repository
+            (__typename . "Repository") (id . "R_1")
+            (mentionableUsers
+             (totalCount . 2) (pageInfo (hasNextPage) (endCursor . "c"))
+             (nodes ((__typename . "User") (id . "U_a") (login . "alice-example")
+                     (name . "Alice Example"))
+                    ((__typename . "User") (id . "U_z") (login . "zed-example")
+                     (name . "Zed Example")))))))
+    ("queries/metadata/recent-refs.graphql"
+     (data (search (nodes ((__typename . "Issue") (id . "I_9") (number . 9)
+                           (title . "Crash on empty files") (state . "OPEN"))
+                          ((__typename . "PullRequest") (id . "PR_7") (number . 7)
+                           (title . "Faster lexer") (state . "MERGED") (isDraft))))))
+    ("/emojis"
+     (tada . "https://github.githubassets.com/images/icons/emoji/unicode/1f389.png?v8")
+     (taco . "https://github.githubassets.com/images/icons/emoji/unicode/1f32e.png?v8")
+     (octocat . "https://github.githubassets.com/images/icons/emoji/octocat.png?v8")))
+  "GitHub's answers to the metadata requests, by query file or resource.")
+
+(defun test-input--metadata-transport (request)
+  "Answer REQUEST from `test-input--metadata', later."
+  (let ((body (cdr (assoc (or (plist-get request :name) (plist-get request :resource))
+                          test-input--metadata))))
+    (run-at-time 0 nil (plist-get request :on-success) (copy-tree body) nil)
+    nil))
+
+(defun test-input--complete (buffer text)
+  "Put TEXT in the input BUFFER and return what completion offers after it.
+The value is (CANDIDATES NOTES EXIT), or nil when nothing completes."
+  (with-current-buffer buffer
+    (erase-buffer)
+    (insert text)
+    (when-let* ((completion (approve-input-completion-at-point)))
+      (pcase-let* ((`(,start ,end ,table . ,props) completion)
+                   (candidates (all-completions (buffer-substring start end) table)))
+        (list candidates
+              (mapcar (plist-get props :annotation-function) candidates)
+              (plist-get props :exit-function))))))
+
+(describe "Completion in an input"
+  :var (pr input)
+  (before-all
+    (approve-test-with-fixture "medium"
+      (setq pr (approve-test-open-pr "medium")))
+    (switch-to-buffer pr)
+    (delete-other-windows)
+    (approve-metadata-clear-cache)
+    (let ((approve-api-transport #'test-input--metadata-transport)
+          (approve-api-timeout nil))
+      (setq input (with-current-buffer pr (approve-input-read)))
+      (approve-test-wait-for (lambda ()
+                               (with-current-buffer pr
+                                 (and (approve-metadata 'mentionable-users)
+                                      (approve-metadata 'refs)
+                                      (approve-metadata 'emoji)))))))
+  (after-all
+    (test-input--kill-inputs)
+    (kill-buffer pr)
+    (approve-metadata-clear-cache))
+
+  (it "offers people after @: the PR's first, its author ahead, never the viewer"
+    (pcase-let ((`(,people ,notes) (test-input--complete input "Thanks @")))
+      (expect (car people) :to-equal "alice-example")
+      (expect (car notes) :to-equal "  Alice Example · author")
+      (expect (car (last people)) :to-equal "zed-example")
+      (expect (seq-count (lambda (login) (equal login "alice-example")) people)
+              :to-equal 1)
+      (expect people :to-contain "fixture-ci")
+      (expect (nth (seq-position people "fixture-ci") notes) :to-equal "  bot")
+      (expect people :not :to-contain "vera-example"))
+    (expect (car (test-input--complete input "@bo")) :to-equal '("bob-example")))
+
+  (it "offers issues and pull requests after #, by number"
+    (pcase-let ((`(,refs ,notes) (test-input--complete input "Fixes #")))
+      (expect refs :to-contain "9")
+      (expect (nth (seq-position refs "9") notes)
+              :to-equal "  Crash on empty files · open issue")
+      (expect (nth (seq-position refs "7") notes)
+              :to-equal "  Faster lexer · merged pull request")))
+
+  (it "offers emoji after a colon, and closes the one chosen"
+    (pcase-let ((`(,emoji ,notes ,exit) (test-input--complete input "Nice :ta")))
+      (expect emoji :to-equal '("tada" "taco"))
+      (expect notes :to-equal '("  🎉" "  🌮"))
+      (with-current-buffer input
+        (insert "da")
+        (funcall exit "tada" 'finished)
+        (expect (buffer-string) :to-equal "Nice :tada:"))))
+
+  (it "leaves e-mail addresses, URLs, headings and words alone"
+    (dolist (text '("mail me@exa" "https://x" "a:b" "##" "x#1" "Note: "))
+      (expect (test-input--complete input text) :to-be nil)))
+
+  (it "inserts a mention with C-c @"
+    (with-current-buffer input
+      (expect (key-binding (kbd "C-c @")) :to-be #'approve-input-insert-mention)
+      (erase-buffer)
+      (insert "Ask ")
+      (approve-input-insert-mention "bob-example")
+      (insert "or @")
+      (approve-input-insert-mention "carol-example")
+      (expect (buffer-string) :to-equal "Ask @bob-example or @carol-example "))))
+
+(describe "Completion before the metadata arrives"
+  (it "offers the people the PR shows"
+    (approve-metadata-clear-cache)
+    (let (pr)
+      (approve-test-with-fixture "medium"
+        (setq pr (approve-test-open-pr "medium")))
+      (unwind-protect
+          (let ((input (with-current-buffer pr (approve-input-read))))
+            (expect (car (test-input--complete input "@"))
+                    :to-equal '("alice-example" "dave-example" "bob-example"
+                                "carol-example" "fixture-ci"))
+            (expect (test-input--complete input ":ta") :to-be nil))
+        (test-input--kill-inputs)
+        (kill-buffer pr)))))
+
 ;;; test-approve-input.el ends here

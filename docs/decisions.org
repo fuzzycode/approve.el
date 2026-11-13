@@ -236,11 +236,17 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Why :: Content must not move under the reader's cursor.
 
 ** D24 Repository metadata is fetched lazily and cached per session
-- Status :: proposed
+- Status :: accepted (2026-11-13)
 - Decision :: Labels, assignable users, mentionable users and milestones are
   fetched the first time a command needs them (completion, metadata edits),
   then cached per repository for the Emacs session.  =g= with a prefix clears
   the cache.
+- Amended (2026-11-13) :: Completion in input buffers needs mentionable
+  users, the issues and PRs updated last (=#123=) and GitHub's emoji
+  (per host) at once, as a completion function can't wait for the
+  network.  Opening an input buffer fetches the three in the background
+  when they aren't cached; until they arrive, =@= completes the people
+  the store holds.  =approve-metadata.el= holds the cache.
 - Why :: approve-v2 fetched them with every PR load, which made the main query
   slow and big.
 

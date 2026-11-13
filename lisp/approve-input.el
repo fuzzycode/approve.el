@@ -57,11 +57,17 @@
 ;; - C-c C-p shows the text as GitHub will show it: GitHub renders the
 ;;   markdown (REST /markdown) and approve-html draws it, in a window
 ;;   beside the input.
+;; - Completion at point (M-TAB, or corfu and the like) offers people
+;;   after @, issues and pull requests after #, and emoji after a
+;;   colon; C-c @ inserts a mention.  The people the PR shows come
+;;   first.  The rest is repository metadata (approve-metadata.el,
+;;   decision D24), fetched in the background when an input opens.
 ;; - Opening the same target twice shows the buffer already open.
 ;;
 ;; Layer rules: this is the input layer, beside the buffers.  It keeps
 ;; drafts in the session of the buffer it was opened from and never
-;; sends anything itself: the caller's ON-COMMIT does.
+;; sends anything itself: the caller's ON-COMMIT does.  It reads the
+;; store of that buffer and its repository's metadata.
 
 ;;; Code:
 
@@ -74,6 +80,7 @@
 (require 'approve-render)
 (require 'approve-html)
 (require 'approve-queries)
+(require 'approve-metadata)
 (require 'approve-diff)
 
 ;;; Options
@@ -160,7 +167,8 @@ A suggestion block starts with them.")
   "C-c C-c" #'approve-input-commit
   "C-c C-k" #'approve-input-abort
   "C-c C-s" #'approve-input-insert-suggestion
-  "C-c C-p" #'approve-input-preview)
+  "C-c C-p" #'approve-input-preview
+  "C-c @" #'approve-input-insert-mention)
 
 (define-derived-mode approve-input-mode gfm-mode "Approve-Input"
   "Major mode of the buffers comments and other text are written in.
@@ -174,6 +182,7 @@ screen (`visual-line-mode').
   (setq-local header-line-format '(:eval (approve-input--header-line)))
   (visual-line-mode 1)
   (add-hook 'kill-buffer-hook #'approve-input--killed nil t)
+  (add-hook 'completion-at-point-functions #'approve-input-completion-at-point nil t)
   ;; Evil users start in insert state (decision D17).
   (when (featurep 'evil)
     (require 'approve-evil)))
@@ -374,6 +383,8 @@ Example:
             (setq approve-input--initial (buffer-string)))
           (approve-input--highlight))
         (add-hook 'approve-pr-redraw-hook #'approve-input--rehighlight nil t)
+        (unless single-line
+          (approve-input--prefetch))
         (pop-to-buffer buffer approve-input-display-action)
         (when draft
           (message "Approve: your draft is back"))
@@ -430,6 +441,148 @@ lines goes in; point ends after the last of them."
     (setq end (point))
     (insert "\n" fence "\n")
     (goto-char end)))
+
+;;; Completion
+
+(defconst approve-input--metadata '(mentionable-users refs emoji)
+  "The repository metadata input buffers complete from.")
+
+(defun approve-input--prefetch ()
+  "Fetch what completion needs, in the background, unless it is there.
+Run it in the buffer the input is for; a buffer without a
+repository fetches nothing."
+  (when (approve-model-meta :owner)
+    (dolist (kind approve-input--metadata)
+      (approve-metadata-fetch kind))))
+
+(defun approve-input--people ()
+  "Return the people one can mention, as (LOGIN . NOTE), in order.
+The people the PR shows come first, its author ahead, then the
+others who can be mentioned in the repository.  NOTE is their name,
+and says who wrote the PR and who is a bot.  The viewer is left out.
+Run it in the buffer the input is for."
+  (let ((author (alist-get 'login (approve-pr-field 'author)))
+        (viewer (approve-model-meta :viewer))
+        (seen (make-hash-table :test #'equal))
+        (people nil))
+    (dolist (person (append (approve-pr-people) (approve-metadata 'mentionable-users)))
+      (let ((login (alist-get 'login person)))
+        (unless (or (null login) (equal login viewer) (gethash login seen))
+          (puthash login t seen)
+          (push (cons login
+                      (approve-render-join
+                       (list (alist-get 'name person)
+                             (and (equal login author) "author")
+                             (and (equal (alist-get '__typename person) "Bot") "bot"))
+                       " · "))
+                people))))
+    (nreverse people)))
+
+(defun approve-input--ref-state (ref)
+  "Return the state of REF, an issue or pull request, in words."
+  (let-alist ref
+    (concat (cond ((and .isDraft (equal .state "OPEN")) "draft")
+                  (.state (downcase .state))
+                  (t ""))
+            (if (equal .__typename "PullRequest") " pull request" " issue"))))
+
+(defun approve-input--refs ()
+  "Return the issues and pull requests one can refer to, as (NUMBER . NOTE).
+They are the issues the PR closes, then those of the repository
+updated last.  NUMBER is a string; NOTE the title and state.  Run it
+in the buffer the input is for."
+  (let* ((prefix (format "/%s/%s/" (approve-model-meta :owner) (approve-model-meta :repo)))
+         (closes (seq-filter (lambda (issue)
+                               (string-search prefix (or (alist-get 'url issue) "")))
+                             (approve-model-nodes (approve-pr-field 'closingIssuesReferences))))
+         (seen (make-hash-table :test #'equal))
+         (refs nil))
+    (dolist (ref (append closes (approve-metadata 'refs)))
+      (let ((number (alist-get 'number ref)))
+        (when (and number (not (gethash number seen)))
+          (puthash number t seen)
+          (push (cons (number-to-string number)
+                      (concat (alist-get 'title ref) " · " (approve-input--ref-state ref)))
+                refs))))
+    (nreverse refs)))
+
+(defun approve-input--table (candidates category)
+  "Return a completion table of CANDIDATES, strings kept in their order.
+CATEGORY is the completion category, such as `approve-person'."
+  (lambda (string predicate action)
+    (if (eq action 'metadata)
+        `(metadata (category . ,category)
+                   (display-sort-function . identity)
+                   (cycle-sort-function . identity))
+      (complete-with-action action candidates string predicate))))
+
+(defun approve-input--completion (start end candidates category &optional exit)
+  "Return the completion of the text from START to END from CANDIDATES.
+CANDIDATES is a list of (STRING . NOTE); NOTE annotates STRING.
+CATEGORY is as for `approve-input--table'; EXIT is the function run
+after a completion, or nil.  Return nil without CANDIDATES."
+  (when candidates
+    (let ((notes (make-hash-table :test #'equal)))
+      (dolist (candidate candidates)
+        (puthash (car candidate) (cdr candidate) notes))
+      (append
+       (list start end (approve-input--table (mapcar #'car candidates) category)
+             :annotation-function
+             (lambda (string)
+               (let ((note (gethash string notes)))
+                 (and note (not (string-empty-p note)) (concat "  " note))))
+             :exclusive 'no)
+       (and exit (list :exit-function exit))))))
+
+(defun approve-input--close-emoji (_string status)
+  "Close a completed emoji with a colon, unless one follows; STATUS says."
+  (when (and (memq status '(finished sole)) (not (eq (char-after) ?:)))
+    (insert ":")))
+
+(defun approve-input-completion-at-point ()
+  "Complete a mention, a reference or an emoji before point.
+After @ come people (the PR's first), after # issues and pull
+requests by number, after a colon emoji by name.  None of them
+completes after a letter or digit, so e-mail addresses and URLs are
+left alone.  For `completion-at-point-functions'."
+  (when (buffer-live-p approve-input--source)
+    (let ((source approve-input--source)
+          (bol (line-beginning-position))
+          (end (point)))
+      (cond
+       ((looking-back "\\(?:^\\|[^[:alnum:]_`/@]\\)@\\([[:alnum:]-]*\\)" bol)
+        (approve-input--completion (match-beginning 1) end
+                                   (with-current-buffer source (approve-input--people))
+                                   'approve-person))
+       ((looking-back "\\(?:^\\|[^[:alnum:]_&/#]\\)#\\([0-9]*\\)" bol)
+        (approve-input--completion (match-beginning 1) end
+                                   (with-current-buffer source (approve-input--refs))
+                                   'approve-reference))
+       ((looking-back "\\(?:^\\|[^[:alnum:]_:/]\\):\\([[:alnum:]_+-]+\\)" bol)
+        (approve-input--completion (match-beginning 1) end
+                                   (mapcar (lambda (emoji) (cons (car emoji) (or (cdr emoji) "")))
+                                           (with-current-buffer source
+                                             (approve-metadata 'emoji)))
+                                   'approve-emoji #'approve-input--close-emoji))))))
+
+(defun approve-input-insert-mention (login)
+  "Insert a mention of LOGIN, such as @octocat.
+Interactively, choose among the people the PR shows (first) and
+those who can be mentioned in its repository."
+  (interactive
+   (let* ((people (if (buffer-live-p approve-input--source)
+                      (with-current-buffer approve-input--source (approve-input--people))
+                    (user-error "The buffer this text was for is gone")))
+          (completion-extra-properties
+           (list :annotation-function
+                 (lambda (login)
+                   (let ((note (cdr (assoc login people))))
+                     (and note (not (string-empty-p note)) (concat "  " note)))))))
+     (list (completing-read "Mention: " (approve-input--table (mapcar #'car people)
+                                                               'approve-person)))))
+  (unless (eq (char-before) ?@)
+    (insert "@"))
+  (insert login " "))
 
 ;;; Preview
 
@@ -546,6 +699,9 @@ The highlight of its lines and its preview go away in any case."
   (unless approve-input--done
     (setq approve-input--done t)
     (approve-input--keep-draft (approve-input-text))))
+
+;; C-u g in a PR buffer forgets the metadata completion uses, too.
+(add-hook 'approve-pr-clear-cache-functions #'approve-metadata-clear-cache)
 
 (provide 'approve-input)
 

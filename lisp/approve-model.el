@@ -678,6 +678,33 @@ It is the first review in the PR's `pendingReviews' whose `state' is
                         (approve-model--root-field 'pendingReviews)))))
       (car (approve-model--resolve-nodes (list node))))))
 
+(defun approve-pr-people ()
+  "Return the people the store holds, users and bots, as alists.
+Each has `login', `name' and `__typename'.  They are the people the
+PR shows: its author, reviewers, assignees, commenters.  The author
+comes first, then the others in the order they were loaded, each
+once; the viewer is left out."
+  (approve-model--with-store
+    (let* ((author (alist-get 'login (approve-pr-field 'author)))
+           (viewer (plist-get approve-model--meta :viewer))
+           (seen (make-hash-table :test #'equal))
+           (people nil))
+      (dolist (typename '("User" "Bot"))
+        (when-let* ((table (and approve-model--store
+                                (gethash typename approve-model--store))))
+          (maphash (lambda (_id entity)
+                     (let ((login (alist-get 'login entity)))
+                       (unless (or (null login) (equal login viewer) (gethash login seen))
+                         (puthash login t seen)
+                         (push `((login . ,login) (name . ,(alist-get 'name entity))
+                                 (__typename . ,typename))
+                               people))))
+                   table)))
+      (setq people (nreverse people))
+      (let ((first (seq-find (lambda (person) (equal (alist-get 'login person) author))
+                             people)))
+        (if first (cons first (delq first people)) people)))))
+
 (defun approve-model--viewer-can-field (what)
   "Return the field name `viewerCan<What>' for the symbol WHAT.
 Example: `merge-as-admin' => `viewerCanMergeAsAdmin'."

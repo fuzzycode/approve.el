@@ -611,6 +611,17 @@ The check list carries HAS-NEXT and CURSOR."
                                (id . "PRR_pending") (state . "COMMENTED")))
         (expect (approve-pr-pending-review) :to-be nil))
 
+      (it "approve-pr-people lists the people in the store, the author first"
+        (approve-model-patch '((__typename . "Bot") (id . "BOT_1") (login . "ci-bot")))
+        (approve-model-set-meta :viewer "nobody")
+        (let ((logins (lambda () (mapcar (lambda (person) (alist-get 'login person))
+                                         (approve-pr-people)))))
+          (expect (funcall logins) :to-equal '("alice" "bob" "carol" "ci-bot"))
+          (expect (alist-get '__typename (car (last (approve-pr-people))))
+                  :to-equal "Bot")
+          (approve-model-set-meta :viewer "bob")
+          (expect (funcall logins) :to-equal '("alice" "carol" "ci-bot"))))
+
       (it "approve-pr-viewer-can maps lisp names to viewerCan fields"
         (expect (approve-pr-viewer-can 'update) :to-be t)
         (expect (approve-pr-viewer-can 'react) :to-be t)

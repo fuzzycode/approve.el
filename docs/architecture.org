@@ -400,8 +400,17 @@ Every context also carries =:url= when one exists (for =o= and copying).
   finds where a range is drawn, =approve-diff-range-lines= its lines in the
   patch.
 - Evil users start in insert state (=approve-evil.el=).
-- Completion at point: =@user= (mentionable users), =#123= (issues/PRs in the
-  repo, by search), =:emoji:=.
+- Completion at point (=approve-input-completion-at-point=): =@user= (the
+  people the store holds, the PR's author first, then the repository's
+  mentionable users; never the viewer), =#123= (the issues the PR closes,
+  then the 100 issues and PRs updated last, annotated with title and
+  state), =:emoji:= (GitHub's, with their glyphs; the colon is closed).
+  Nothing completes right after a letter or digit, so e-mail addresses and
+  URLs are left alone.  =C-c @= inserts a mention through =completing-read=.
+  The lists other than the store's are repository metadata (D24,
+  =approve-metadata.el=): opening an input buffer (not a single line)
+  fetches them in the background unless they are cached, as a completion
+  function can't wait for the network.
 - =C-c C-p= shows the text as GitHub will: =approve-query-markdown= sends
   it to REST =/markdown= (=gfm=, in the PR's repository, read as text), and
   =approve-html= draws the answer in a window beside the input

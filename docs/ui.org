@@ -363,7 +363,7 @@ buffer until the input is committed or aborted.
 | =C-c C-k= | Abort; the text is kept as a draft for this target             |
 | =C-c C-s= | Insert a suggestion block prefilled with the target lines      |
 | =C-c C-p= | Preview rendered markdown (GitHub renders it) in a side window |
-| =C-c @=   | Insert a mention (completing-read over mentionable users)      |
+| =C-c @=   | Insert a mention (completing-read over the people, PR's first) |
 | =M-TAB=   | Complete =@user=, =#123=, =:emoji:= at point                   |
 
 The header-line text names the action: "Comment on…", "Reply to bob on…",
