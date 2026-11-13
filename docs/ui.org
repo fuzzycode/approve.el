@@ -27,7 +27,7 @@ The first line is the header line (see [[*Header line][Header line]]); it stays 
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
  Author      alice
  Repository  fuzzycode/approve
- Branch      feature/retry → main · 4 commits
+ Branch      feature/retry → main
  Opened      3 days ago · updated 2 hours ago
  Reviewers   ✓ bob   ✗ carol   ○ dave   ○ @fuzzycode/core
  Assignees   alice
@@ -58,9 +58,10 @@ Notes:
   right: Open/Closed/Merged and Draft, coloured by face.
 - The buffer starts with the metadata rows (=approve-metadata-rows=, in order
   and which):
-  Author, Repository (=o= opens it), Branch (head → base, the number of
-  commits; =RET= copies a branch, =o= opens it), Opened (when it was opened
-  and updated, and merged and by whom, or closed), then Reviewers … Status.
+  Author, Repository (=o= opens it), Branch (head → base; =RET= copies a
+  branch, =o= opens it; the Commits heading counts the commits), Opened
+  (when it was opened and updated, and merged and by whom, or closed), then
+  Reviewers … Status.
 - Metadata rows are one section each (=approve-meta-*=), so each has its own
   keys (=l= on Labels edits labels) and eldoc (label descriptions, user names).
 - Reviewer marks: ✓ approved, ✗ changes requested, 💬 commented, ○ requested

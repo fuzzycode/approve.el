@@ -63,10 +63,10 @@
   '(author repository branch opened reviewers assignees labels milestone issues
            status)
   "Metadata rows of the header, under the title, in order.
-Each is one of `author', `repository', `branch' (head → base and the
-number of commits), `opened' (when it was opened, updated, merged or
-closed), `reviewers', `assignees', `labels', `milestone', `issues'
-and `status'.  To show only reviewers and labels:
+Each is one of `author', `repository', `branch' (head → base),
+`opened' (when it was opened, updated, merged or closed),
+`reviewers', `assignees', `labels', `milestone', `issues' and
+`status'.  To show only reviewers and labels:
 
   (setq approve-metadata-rows \\='(reviewers labels))"
   :type '(repeat (choice (const author) (const repository) (const branch)
@@ -159,19 +159,16 @@ COUNT is a number or nil; RIGHT a string or nil."
                  (list :kind 'branch :name name :ref ref :owner owner)))
 
 (defun approve-sections--branches ()
-  "Return the branch row's value: head → base, and the number of commits."
-  (let-alist (approve-pr-fields '(commitCount baseRefName headRefName baseRef headRef
-                                              headRepositoryOwner isCrossRepository))
-    (let ((count .commitCount.totalCount)
-          (head (if (and .isCrossRepository .headRepositoryOwner)
+  "Return the branch row's value: head → base.
+The Commits heading counts the commits."
+  (let-alist (approve-pr-fields '(baseRefName headRefName baseRef headRef
+                                  headRepositoryOwner isCrossRepository))
+    (let ((head (if (and .isCrossRepository .headRepositoryOwner)
                     (format "%s:%s" (alist-get 'login .headRepositoryOwner) .headRefName)
                   .headRefName)))
       (concat (approve-sections--branch head .headRef .headRepositoryOwner)
               (approve-face " → " 'approve-dim)
-              (approve-sections--branch .baseRefName .baseRef nil)
-              (when count
-                (approve-face (format " · %d commit%s" count (if (= count 1) "" "s"))
-                              'approve-dim))))))
+              (approve-sections--branch .baseRefName .baseRef nil)))))
 
 (defun approve-sections--repository ()
   "Return the repository's owner/name, which opens its page on GitHub."

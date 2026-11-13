@@ -44,7 +44,7 @@
       (let ((lines (split-string (test-sections--text 'approve-header-section) "\n")))
         (expect (nth 0 lines) :to-equal "Author      alice-example")
         (expect (nth 1 lines) :to-equal "Repository  acme-example/rocket")
-        (expect (nth 2 lines) :to-equal "Branch      parser-rewrite → main · 4 commits")
+        (expect (nth 2 lines) :to-equal "Branch      parser-rewrite → main")
         (expect (nth 3 lines) :to-equal "Opened      3 days ago · updated 23 hours ago")
         (expect (nth 4 lines) :to-match "\\`Reviewers ")))
 
