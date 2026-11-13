@@ -685,6 +685,7 @@ inherit:
 | =approve-diff-file-heading=                      | =magit-diff-file-heading=                    | File headings             |
 | =approve-line-number=                            | =line-number=                                | Diff line numbers         |
 | =approve-target=                                 | =region=                                     | Lines being commented on  |
+| =approve-input-prompt= / =approve-input-context= | =bold= / =font-lock-keyword-face=            | Input header line         |
 | =approve-inflight=                               | =shadow=, italic                             | Things waiting for GitHub |
 | =approve-check-success/failure/pending=          | =success= / =error= / =warning=              | Checks                    |
 

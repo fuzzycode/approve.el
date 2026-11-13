@@ -37,7 +37,9 @@
 ;; heading stops at the start of its hidden body, and magit's
 ;; intangible text then puts point back at the end of the heading.
 ;;
-;; approve.el loads this file once evil is loaded; nothing here
+;; Input buffers start in insert state, to write at once.
+;;
+;; The modes require this file once evil is loaded; nothing here
 ;; requires evil.
 
 ;;; Code:
@@ -46,6 +48,7 @@
 (require 'approve-pr)
 
 (declare-function evil-define-key* "evil-core" (state keymap key def &rest bindings))
+(declare-function evil-set-initial-state "evil-core" (mode state))
 
 (defconst approve-evil-pr-bindings
   '(("j" . evil-next-visual-line)
@@ -72,9 +75,11 @@
   "Keys of `approve-pr-mode' in evil's normal state: (KEY . COMMAND).")
 
 (defun approve-evil-setup ()
-  "Bind `approve-evil-pr-bindings' in evil's normal state."
+  "Bind `approve-evil-pr-bindings' in evil's normal state.
+Input buffers start in insert state."
   (dolist (binding approve-evil-pr-bindings)
-    (evil-define-key* 'normal approve-pr-mode-map (kbd (car binding)) (cdr binding))))
+    (evil-define-key* 'normal approve-pr-mode-map (kbd (car binding)) (cdr binding)))
+  (evil-set-initial-state 'approve-input-mode 'insert))
 
 (approve-evil-setup)
 

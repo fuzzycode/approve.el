@@ -366,12 +366,25 @@ then walks up the sections from point to the first one that means something.
 Every context also carries =:url= when one exists (for =o= and copying).
 
 * Input buffers
-- =approve-input-read= (from approve-v2) with =:prompt :initial :on-commit
-  :on-abort=, plus =:target= (a stable key for drafts) and =:context= (shown
-  in the header line).
-- Abort keeps the text in =:drafts= under the target, and reopening the same
-  target offers it again.  Killing the PR buffer drops drafts (D02 allows
-  this).
+- =approve-input-read= (from approve-v2) opens a buffer in
+  =approve-input-mode= (=gfm-mode=) below the current window
+  (=approve-input-display-action=) and returns it.  =:prompt= says what the
+  text is for and =:context= where it goes; both start the header line, with
+  the keys at its right edge.  =:name= names the buffer, =:initial= fills
+  it, =:single-line= makes RET send one line (a title), =:allow-empty= lets
+  an empty text be sent (a review body), =:commit-label= says what =C-c C-c=
+  does ("send", "submit").  =:on-commit= gets the text and =:on-abort=
+  nothing, both in the buffer the input was opened from, after the input's
+  window is gone.
+- =:target= is a stable key for drafts, such as =(reply "PRRT_1")=.  Abort
+  keeps the text in the session's =:drafts= under the target, and so does
+  killing the input buffer; reopening the same target fills the buffer from
+  the draft.  A sent text stays the draft too, until the action drops it
+  with =approve-input-clear-draft= once GitHub has it (F00), so a failed
+  request loses nothing.  A blank text, or the unchanged =:initial=, drops
+  the draft.  Killing the PR buffer drops drafts (D02 allows this).
+  An input already open for a target is shown again rather than doubled.
+- Evil users start in insert state (=approve-evil.el=).
 - Completion at point: =@user= (mentionable users), =#123= (issues/PRs in the
   repo, by search), =:emoji:=.
 - =C-c C-p= previews through REST =/markdown= in a side window, rendered with

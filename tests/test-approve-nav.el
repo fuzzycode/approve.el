@@ -173,11 +173,20 @@
       (expect (current-kill 0) :to-equal "bob-example"))))
 
 (describe "approve-evil"
+  (it "starts input buffers in insert state"
+    (let ((initial nil))
+      (cl-letf (((symbol-function 'evil-define-key*) #'ignore)
+                ((symbol-function 'evil-set-initial-state)
+                 (lambda (mode state) (push (cons mode state) initial))))
+        (load "approve-evil" nil t))
+      (expect initial :to-equal '((approve-input-mode . insert)))))
+
   (it "binds Approve's keys in normal state without shadowing motions"
     (let ((bound nil))
       (cl-letf (((symbol-function 'evil-define-key*)
                  (lambda (state map key def)
-                   (push (list state map (key-description key) def) bound))))
+                   (push (list state map (key-description key) def) bound)))
+                ((symbol-function 'evil-set-initial-state) #'ignore))
         (load "approve-evil" nil t))
       (expect (seq-find (lambda (b) (equal (nth 2 b) "g r")) bound)
               :to-equal (list 'normal approve-pr-mode-map "g r" 'approve-pr-refresh))

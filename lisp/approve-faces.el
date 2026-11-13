@@ -124,6 +124,18 @@
   "Face of the lines a comment is being written on."
   :group 'approve-faces)
 
+(defface approve-input-prompt
+  '((t :inherit bold))
+  "Face of what an input buffer is for, such as \"Comment on a.el:42\".
+It starts the header line of the buffer."
+  :group 'approve-faces)
+
+(defface approve-input-context
+  '((t :inherit font-lock-keyword-face))
+  "Face of where the text of an input buffer goes, such as \"pending review\".
+It follows the prompt in the header line."
+  :group 'approve-faces)
+
 ;;; Things
 
 (defface approve-user
