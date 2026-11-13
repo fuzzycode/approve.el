@@ -1,0 +1,25 @@
+${include:fragments/user.graphql}
+
+# Repository metadata (D24): who can be @mentioned, for completion in input
+# buffers.  Fetched once per session, 100 per page.
+query MentionableUsers($owner: String!, $name: String!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    mentionableUsers(first: 100, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ...UserFields
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

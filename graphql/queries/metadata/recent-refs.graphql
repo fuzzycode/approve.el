@@ -1,0 +1,28 @@
+# Repository metadata (D24): the issues and pull requests updated last, for
+# #123 completion in input buffers.  $search is "repo:OWNER/NAME
+# sort:updated-desc"; one page of 100, fetched once per session.
+query RecentRefs($search: String!) {
+  search(type: ISSUE, query: $search, first: 100) {
+    nodes {
+      __typename
+      ... on Issue {
+        id
+        number
+        title
+        state
+      }
+      ... on PullRequest {
+        id
+        number
+        title
+        state
+        isDraft
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

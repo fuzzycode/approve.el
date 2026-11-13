@@ -30,7 +30,8 @@ callbacks it was given.
  │                          approve-context.el                              │
  │   normalized store, selectors, list edits, session, context at point     │
  ├──────────────────────────────────────────────────────────────────────────┤
- │ Operations               approve-queries.el · approve-mutations.el       │
+ │ Operations               approve-queries.el · approve-mutations.el ·     │
+ │                          approve-metadata.el                             │
  │   one function per .graphql file / REST call; load/patch the store       │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Transport                approve-api.el · approve-api-paging.el ·        │
@@ -65,7 +66,9 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-api-url.el=       | Plain URL fetches (images in comments), async through =url-queue-retrieve=      |     1 |
 | =approve-model.el=         | Store, refs, connections, selectors, patch, list edits, shared store            |     0 |
 | =approve-session.el=       | Session state: loading, errors, in-flight, drafts, layout (never sent anywhere) |     0 |
-| =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, repo metadata        |   1–3 |
+| =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, markdown preview     |   1–3 |
+| =approve-metadata.el=      | Repository metadata fetched once per session (D24): mentionable users, recent   |     2 |
+|                            | issues and PRs, emoji; later labels, assignable users, milestones               |       |
 | =approve-mutations.el=     | All mutations ([[*API map][API map]])                                                         |   2–5 |
 | =approve-faces.el=         | Every face, inheriting from magit/built-in                                      |     1 |
 | =approve-icons.el=         | =approve-icon=: semantic name → nerd-icons or Unicode                           |     1 |
@@ -145,6 +148,10 @@ The store from approve-v2 (D10), with a few additions.
   message) live in one global cache, =approve-eldoc--details=, keyed by host,
   type and id, for the Emacs session.  They are shared by every Approve
   buffer; =C-u g= clears them.
+- Repository metadata (D24: mentionable users, the issues and PRs updated
+  last, emoji) lives in =approve-metadata.el='s global cache, keyed by API
+  host, repository and kind (emoji by host only), for the Emacs session.
+  It never enters the store; =C-u g= clears it.
 
 * API map
 What each feature uses.  GraphQL unless marked REST.  Check names against the
@@ -170,6 +177,8 @@ schema on 2026-11-08.
 | File contents          | =repository.object(expression: "OID:path") { ... on Blob { text isBinary byteSize } }=                       |
 | Search                 | =search(type: ISSUE, query: "is:pr …", first:)=                                                              |
 | Repo metadata (lazy)   | =repository.labels / assignableUsers / mentionableUsers / milestones=                                        |
+| Recent refs (lazy)     | =search(type: ISSUE, query: "repo:o/r sort:updated-desc", first: 100)=, for =#123= completion               |
+| Emoji (lazy)           | REST =GET /emojis= (name → image URL; the glyph is in a Unicode emoji's URL)                                 |
 | Change detection       | =pullRequest { updatedAt headRefOid }=                                                                       |
 | User details (eldoc)   | =user(login) { pronouns email bio company location websiteUrl status { emoji message } }=                    |
 | Team details (eldoc)   | =organization(login).team(slug) { name description members { totalCount } }=                                 |
