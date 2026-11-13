@@ -41,7 +41,7 @@ The first line is the header line (see [[*Header line][Header line]]); it stays 
      lisp/approve-api.el:87–91     ✎ suggestion
      ↳ reply on lisp/approve-model.el:12
 
- ▾ Description                                                                    e edit
+ ▾ Description · edited                                                            e edit
    Adds exponential back-off to `approve-api-graphql`.  Requests are retried
    on 5xx responses and on secondary rate limits.
 
@@ -70,6 +70,8 @@ Notes:
   comments, and its heading counts them, replies included; =RET= jumps to
   one in the diff.
 - An empty description shows a dim "No description provided."
+- An edited description says so right after its heading:
+  "Description · edited" (eldoc shows when).
 
 ** Middle: checks, commits, conversation
 #+begin_example

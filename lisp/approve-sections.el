@@ -416,16 +416,17 @@ Its heading counts its comments, replies included."
 ;;; Description
 
 (defun approve-insert-description-section ()
-  "Insert the description of the pull request, with its reactions."
+  "Insert the description of the pull request, with its reactions.
+An edited description says so right after its heading."
   (magit-insert-section (approve-description-section)
     (let-alist (approve-pr-fields '(id bodyHTML reactionGroups lastEditedAt))
       (magit-insert-heading
-        (approve-sections-heading
-         "Description" nil
+        (approve-render-justify
          (approve-render-join
-          (list (and .lastEditedAt (approve-render-edited
-                                    `((lastEditedAt . ,.lastEditedAt))))
-                (approve-render-hints '("e" approve-edit "edit"))))))
+          (list (approve-sections-title "Description")
+                (and .lastEditedAt (approve-render-edited
+                                    `((lastEditedAt . ,.lastEditedAt))))))
+         (approve-render-hints '("e" approve-edit "edit"))))
       (let ((start (point)))
         (cond
          ((not (approve-model-root-ref))

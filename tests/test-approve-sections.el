@@ -119,7 +119,25 @@
               :to-equal (concat "Description\n"
                                 "  Rewrites the parser for speed and renames the queue to a scheduler.\n\n"
                                 "  The lexer fixes come in a follow-up commit.\n\n"
-                                "  Fixes #12.\n\n  👍 3  🚀 1\n\n"))))
+                                "  Fixes #12.\n\n  👍 3  🚀 1\n\n")))
+
+    (it "says it was edited right after its heading"
+      (cl-letf (((symbol-function 'approve-pr-fields)
+                 (lambda (_fields)
+                   '((id . "PR_1") (bodyHTML . "<p>Hello</p>")
+                     (lastEditedAt . "2026-10-04T10:00:00Z"))))
+                ((symbol-function 'approve-model-root-ref) (lambda () t)))
+        (with-temp-buffer
+          (magit-section-mode)
+          (let ((inhibit-read-only t))
+            (magit-insert-section (root)
+              (approve-insert-description-section)))
+          (goto-char (point-min))
+          (expect (buffer-substring-no-properties (point-min) (line-end-position))
+                  :to-equal "Description · edited")
+          (search-forward "edited")
+          (expect (plist-get (get-text-property (match-beginning 0) 'approve-thing) :kind)
+                  :to-be 'date)))))
 
   (describe "commits"
     (it "counts commits and marks those after the viewer's review"
