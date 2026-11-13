@@ -181,7 +181,7 @@ Notes:
   Lines whose threads are all resolved start folded; so does "On this
   file" when its threads are.  Outdated threads (line gone from the diff)
   are collected under the file: "▸ Outdated (2)".
-- Pending comments use =approve-pending-face= (an accent background) and say
+- Pending comments use =approve-pending= (an accent background) and say
   "Pending", so they can't be mistaken for published ones.
 
 ** Threads: suggestions, file-level, outdated
@@ -673,7 +673,7 @@ inherit:
 | =approve-label=                                  | (colour from GitHub, readable fg)            | Labels as boxes           |
 | =approve-state-open/closed/merged/draft=         | =success= / =error= / =magit-tag= / =shadow= | State badges              |
 | =approve-approved= / =approve-changes-requested= | =success= / =error=                          | Review marks              |
-| =approve-pending=                                | =magit-diff-our-highlight= bg                | Pending comments          |
+| =approve-pending=                                | =secondary-selection=                        | Pending comments          |
 | =approve-thread-border=                          | =shadow=                                     | Thread box lines          |
 | =approve-resolved= / =approve-outdated=          | =shadow= / =warning=                         | Thread states             |
 | =approve-new= / =approve-dismissed=              | =warning=                                    | New since your review     |
