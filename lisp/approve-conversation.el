@@ -247,16 +247,21 @@ which only the viewer sees, are left out."
          (approve-conversation--line (approve-icon 'open 'approve-state-open) item
                                      (approve-face "reopened this" 'approve-state-open)))
         ("CrossReferencedEvent"
+         ;; Like GitHub: "#12" from this repository, "owner/repo#12" from another.
          (approve-conversation--line
           (approve-icon 'issue) item (funcall dim "mentioned this in ")
-          (let-alist .source
-            (concat (propertize (approve-face (format "%s#%s" (or .repository.nameWithOwner "")
-                                                      .number)
-                                              'approve-link)
-                                'approve-url .url
-                                'approve-thing (list :kind 'ref :number .number
-                                                     :url .url :title .title))
-                    " " (or .title "")))))))))
+          (let ((other .isCrossRepository))
+            (let-alist .source
+              (concat (propertize (approve-face (format "%s#%s"
+                                                        (if other
+                                                            (or .repository.nameWithOwner "")
+                                                          "")
+                                                        .number)
+                                                'approve-link)
+                                  'approve-url .url
+                                  'approve-thing (list :kind 'ref :number .number
+                                                       :url .url :title .title))
+                      " " (or .title ""))))))))))
 
 (defun approve-conversation--gutter-body (start)
   "Draw the timeline's line left of the text inserted since START."

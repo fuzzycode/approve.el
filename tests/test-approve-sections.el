@@ -197,8 +197,23 @@
       (let ((text (test-sections--text 'approve-conversation-section)))
         (expect text :to-match "changed the title from “Parser rewrite” to “Rewrite the parser and engine scheduler”")
         (expect text :to-match "asked @acme-example/core for a review")
-        (expect text :to-match "mentioned this in acme-example/rocket#12 The parser is slow")
+        (expect text :to-match "mentioned this in #12 The parser is slow")
+        (expect text :not :to-match "acme-example/rocket#12")
         (expect text :to-match "force-pushed the branch from e99c61a to 6fa7df8")))
+
+    (it "names the repository of a mention only when it is another one"
+      (let ((approve-render-now approve-test-now)
+            (approve-use-nerd-icons nil))
+        (expect (substring-no-properties
+                 (approve-conversation--event-text
+                  '((__typename . "CrossReferencedEvent")
+                    (actor (login . "carol-example"))
+                    (createdAt . "2026-10-04T10:00:00Z")
+                    (isCrossRepository . t)
+                    (source (__typename . "Issue") (number . 7) (title . "Slow on ARM")
+                            (url . "https://github.com/other-example/tool/issues/7")
+                            (repository (nameWithOwner . "other-example/tool"))))))
+                :to-match "mentioned this in other-example/tool#7 Slow on ARM")))
 
     (it "draws the timeline's line left of comment bodies, left out on copy"
       (with-current-buffer test-sections--buffer
