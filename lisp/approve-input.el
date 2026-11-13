@@ -51,7 +51,9 @@
 ;;   names the keys.
 ;; - The lines a comment is on (:lines, a range as approve-diff.el
 ;;   reads them) stay highlighted in the buffer it was opened from,
-;;   across its redraws, until the text is sent or aborted.
+;;   across its redraws, until the text is sent or aborted.  C-c C-s
+;;   suggests a change of them: a suggestion block holding their new
+;;   side (flow F06).
 ;; - Opening the same target twice shows the buffer already open.
 ;;
 ;; Layer rules: this is the input layer, beside the buffers.  It keeps
@@ -128,12 +130,17 @@ ranges.")
 (defvar-local approve-input--overlays nil
   "Overlays highlighting `approve-input--lines' in the source buffer.")
 
+(defvar-local approve-input--code nil
+  "The new side of `approve-input--lines', a list of lines, or nil.
+A suggestion block starts with them.")
+
 ;;; Modes
 
 (defvar-keymap approve-input-mode-map
   :doc "Keymap of `approve-input-mode'."
   "C-c C-c" #'approve-input-commit
-  "C-c C-k" #'approve-input-abort)
+  "C-c C-k" #'approve-input-abort
+  "C-c C-s" #'approve-input-insert-suggestion)
 
 (define-derived-mode approve-input-mode gfm-mode "Approve-Input"
   "Major mode of the buffers comments and other text are written in.
@@ -177,7 +184,7 @@ Call it once GitHub has the text that was sent for TARGET."
 A blank TEXT, or the text the input started with, drops the draft
 instead.  Return non-nil if a draft was kept."
   (let ((target approve-input--target)
-        (initial approve-input--initial))
+        (initial (approve-input--clean (or approve-input--initial ""))))
     (when (and target (buffer-live-p approve-input--source))
       (with-current-buffer approve-input--source
         (if (or (string-blank-p text) (equal text initial))
@@ -193,12 +200,20 @@ instead.  Return non-nil if a draft was kept."
     (key-description keys)))
 
 (defun approve-input--hints ()
-  "Return the key hints of the header line, or nil."
-  (apply #'approve-render-hints
-         (delq nil (list (list (approve-input--key #'approve-input-commit)
-                               #'approve-input-commit approve-input--commit-label)
-                         (list (approve-input--key #'approve-input-abort)
-                               #'approve-input-abort "abort")))))
+  "Return the key hints of the header line, or nil.
+After sending and aborting comes the suggestion, while the text is
+on code and has none yet."
+  (let ((hint (lambda (command label)
+                (when-let* ((key (approve-input--key command)))
+                  (list key command label)))))
+    (apply #'approve-render-hints
+           (delq nil
+                 (list (funcall hint #'approve-input-commit approve-input--commit-label)
+                       (funcall hint #'approve-input-abort "abort")
+                       (and approve-input--code
+                            (not (approve-input--suggestion-p))
+                            (funcall hint #'approve-input-insert-suggestion
+                                     "suggest")))))))
 
 (defun approve-input--header-line ()
   "Return the header line of an input buffer.
@@ -265,7 +280,7 @@ A redraw draws the lines anew, so it runs after each one."
     (with-current-buffer buffer
       (approve-input--highlight))))
 
-(cl-defun approve-input-read (&key prompt context target name initial lines
+(cl-defun approve-input-read (&key prompt context target name initial lines suggest
                                    single-line allow-empty (commit-label "send")
                                    on-commit on-abort)
   "Open a buffer to write text in, and return it.
@@ -281,10 +296,14 @@ until the caller drops it with `approve-input-clear-draft'.  When an
 input for TARGET is already open, it is shown instead.  With no
 TARGET, no draft is kept.
 
-LINES is the range of diff lines the text is about, a context plist
-of kind `line' or `lines' (from `approve-context-at-point').  They
-stay highlighted in the current buffer until the text is sent or
-aborted.
+\\<approve-input-mode-map>LINES is the range of diff lines the text is
+about, a context plist of kind `line' or `lines' (from
+`approve-context-at-point').  They stay highlighted in the current
+buffer until the text is sent or aborted, and \\[approve-input-insert-suggestion]
+suggests a change of them.  SUGGEST starts the text with that
+suggestion, after INITIAL, with point in it (unless a draft fills
+the buffer); it signals a `user-error' when LINES have no new side
+to change.
 
 SINGLE-LINE asks for one line (a title): RET sends it, and only its
 first line counts.  ALLOW-EMPTY lets an empty text be sent (a review
@@ -303,9 +322,15 @@ Example:
   (let ((source (current-buffer)))
     (if-let* ((open (approve-input--find source target)))
         (progn (pop-to-buffer open approve-input-display-action) open)
-      (let ((draft (and target (approve-input-draft target)))
-            (window (selected-window))
-            (buffer (generate-new-buffer (format "*approve-input: %s*" (or name "text")))))
+      (let* ((draft (and target (approve-input-draft target)))
+             (suggest (and suggest (not draft)))
+             (code (if suggest
+                       (approve-input--new-side source lines)
+                     (and lines (ignore-error user-error
+                                  (approve-input--new-side source lines)))))
+             (window (selected-window))
+             (buffer (generate-new-buffer
+                      (format "*approve-input: %s*" (or name "text")))))
         (with-current-buffer buffer
           (approve-input-mode)
           (setq approve-input--source source
@@ -318,10 +343,14 @@ Example:
                 approve-input--allow-empty allow-empty
                 approve-input--on-commit on-commit
                 approve-input--on-abort on-abort
-                approve-input--lines lines)
+                approve-input--lines lines
+                approve-input--code code)
           (when single-line
             (approve-input-single-line-mode 1))
           (insert (or draft initial ""))
+          (when suggest
+            (approve-input-insert-suggestion)
+            (setq approve-input--initial (buffer-string)))
           (approve-input--highlight))
         (add-hook 'approve-pr-redraw-hook #'approve-input--rehighlight nil t)
         (pop-to-buffer buffer approve-input-display-action)
@@ -329,16 +358,73 @@ Example:
           (message "Approve: your draft is back"))
         buffer))))
 
+;;; Suggestions
+
+(defun approve-input--new-side (source lines)
+  "Return the code of the new side of LINES, as a list of lines.
+LINES is a range, as for `approve-input-read'; its code comes from the
+patches in SOURCE's store.  Signal a `user-error' saying why when
+there is none."
+  (unless lines
+    (user-error "Suggestions are written on lines of the diff"))
+  (unless (buffer-live-p source)
+    (user-error "The buffer this text was for is gone"))
+  (let ((range (with-current-buffer source
+                 (approve-diff-range-lines lines))))
+    (unless range
+      (user-error "Those lines of %s are not in its diff" (plist-get lines :path)))
+    (or (mapcar (lambda (line) (nth 3 line))
+                (seq-filter (lambda (line) (memq (car line) '(add ctx))) range))
+        (user-error "Suggestions change the new version: comment on added or unchanged lines"))))
+
+(defun approve-input--suggestion-p ()
+  "Return non-nil if the text has a suggestion block."
+  (save-excursion
+    (goto-char (point-min))
+    (re-search-forward "^[ \t]*```+[ \t]*suggestion" nil t)))
+
+(defun approve-input--fence (code)
+  "Return a code fence longer than any run of backticks in CODE."
+  (let ((longest 2))
+    (dolist (line code)
+      (let ((start 0))
+        (while (string-match "`+" line start)
+          (setq longest (max longest (- (match-end 0) (match-beginning 0)))
+                start (match-end 0)))))
+    (make-string (1+ longest) ?`)))
+
+(defun approve-input-insert-suggestion ()
+  "Insert a suggestion block holding the lines the comment is on.
+GitHub shows it as a change of those lines, which the author can
+apply: edit them into what they should be.  Only the new side of the
+lines goes in; point ends after the last of them."
+  (interactive)
+  (let* ((code (or approve-input--code
+                   (approve-input--new-side approve-input--source approve-input--lines)))
+         (fence (approve-input--fence code))
+         end)
+    (unless (bolp)
+      (insert "\n"))
+    (insert fence "suggestion\n" (string-join code "\n"))
+    (setq end (point))
+    (insert "\n" fence "\n")
+    (goto-char end)))
+
 ;;; Sending and aborting
+
+(defun approve-input--clean (text)
+  "Return TEXT as it would be sent from the current input buffer.
+That is without leading blank lines and trailing whitespace; in a
+single-line input, the first line, trimmed."
+  (if approve-input-single-line-mode
+      (string-trim (car (split-string text "\n")))
+    (string-trim-right (replace-regexp-in-string "\\`\\(?:[ \t]*\n\\)+" "" text))))
 
 (defun approve-input-text ()
   "Return the text of the current input buffer as it would be sent.
 That is without leading blank lines and trailing whitespace; in a
 single-line input, the first line, trimmed."
-  (let ((text (buffer-substring-no-properties (point-min) (point-max))))
-    (if approve-input-single-line-mode
-        (string-trim (car (split-string text "\n")))
-      (string-trim-right (replace-regexp-in-string "\\`\\(?:[ \t]*\n\\)+" "" text)))))
+  (approve-input--clean (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun approve-input--close ()
   "Close the current input buffer: its window, then the buffer itself."

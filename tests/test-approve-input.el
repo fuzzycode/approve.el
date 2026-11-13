@@ -186,6 +186,11 @@ header line's form."
                               (overlays-in (point-min) (point-max)))
                   (lambda (a b) (< (overlay-start a) (overlay-start b)))))))
 
+(defconst test-input--range
+  '(:kind lines :path "internal/parser/parser.go"
+          :start-side "RIGHT" :start-line 13 :side "RIGHT" :line 14)
+  "Two added lines of parser.go in the medium PR.")
+
 (describe "The lines a comment is on"
   :var (pr)
   (before-all
@@ -204,10 +209,7 @@ header line's form."
 
   (it "stay highlighted in the PR buffer, across redraws, until the input closes"
     (let ((buffer (with-current-buffer pr
-                    (approve-input-read
-                     :lines '(:kind lines :path "internal/parser/parser.go"
-                                    :start-side "RIGHT" :start-line 13
-                                    :side "RIGHT" :line 14))))
+                    (approve-input-read :lines test-input--range)))
           (lines '("if err != nil {" "return nil, fmt.Errorf(\"lookup 14: %w\", err)")))
       (expect (test-input--highlighted pr) :to-equal lines)
       (with-current-buffer pr
@@ -215,6 +217,50 @@ header line's form."
       (expect (test-input--highlighted pr) :to-equal lines)
       (with-current-buffer buffer
         (approve-input-abort))
-      (expect (test-input--highlighted pr) :to-be nil))))
+      (expect (test-input--highlighted pr) :to-be nil)))
+
+  (it "suggest a change of their new side with C-c C-s, point in the block"
+    (with-current-buffer (with-current-buffer pr
+                           (approve-input-read :lines test-input--range
+                                               :initial "Let callers override it:"))
+      (expect (test-input--header (current-buffer)) :to-match "C-c C-s suggest\\'")
+      (expect (key-binding (kbd "C-c C-s")) :to-be #'approve-input-insert-suggestion)
+      (approve-input-insert-suggestion)
+      (expect (buffer-string)
+              :to-equal (concat "Let callers override it:\n```suggestion\n"
+                                "\tif err != nil {\n"
+                                "\t\treturn nil, fmt.Errorf(\"lookup 14: %w\", err)\n"
+                                "```\n"))
+      (expect (buffer-substring (line-beginning-position) (point))
+              :to-equal "\t\treturn nil, fmt.Errorf(\"lookup 14: %w\", err)")
+      (expect (test-input--header (current-buffer)) :not :to-match "suggest")))
+
+  (it "suggest only the new side of a range over removed and added lines"
+    (with-current-buffer (with-current-buffer pr
+                           (approve-input-read
+                            :suggest t
+                            :lines (append '(:start-side "LEFT" :start-line 13)
+                                           test-input--range)))
+      (expect (buffer-string) :to-match "\\````suggestion\n\tif err != nil {\n")
+      (expect (buffer-string) :not :to-match "oldStep")))
+
+  (it "refuse to suggest without lines, or on removed lines only"
+    (with-current-buffer (with-current-buffer pr (approve-input-read))
+      (expect (approve-input-insert-suggestion) :to-throw 'user-error))
+    (let ((removed '(:kind lines :path "internal/parser/parser.go"
+                           :start-side "LEFT" :start-line 13 :side "LEFT" :line 14)))
+      (with-current-buffer (with-current-buffer pr (approve-input-read :lines removed))
+        (expect (test-input--header (current-buffer)) :not :to-match "suggest")
+        (expect (approve-input-insert-suggestion) :to-throw 'user-error))
+      (expect (with-current-buffer pr (approve-input-read :lines removed :suggest t))
+              :to-throw 'user-error)))
+
+  (it "keep no draft of a suggestion left as it was opened"
+    (with-current-buffer (with-current-buffer pr
+                           (approve-input-read :suggest t :lines test-input--range
+                                               :target '(comment "suggest")))
+      (approve-input-abort))
+    (expect (with-current-buffer pr (approve-input-draft '(comment "suggest")))
+            :to-be nil)))
 
 ;;; test-approve-input.el ends here

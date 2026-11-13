@@ -395,8 +395,11 @@ Every context also carries =:url= when one exists (for =o= and copying).
   repo, by search), =:emoji:=.
 - =C-c C-p= previews through REST =/markdown= in a side window, rendered with
   =approve-html=.
-- =C-c C-s= inserts a ```suggestion``` block, prefilled with the target lines
-  (new side) when the target is code.
+- =C-c C-s= inserts a ```suggestion``` block holding the new side of
+  =:lines= (their added and context lines, from the patch), with point at
+  the end of its last line; =:suggest= starts the text with it (F06).  On
+  removed lines alone, or with no lines, it says why it can't.  The header
+  line offers it while the text is on code and has no suggestion yet.
 
 * Extended information (eldoc)
 [[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]; mockups in [[file:ui.org::*Eldoc][ui.org › Eldoc]]; flow in [[file:flows.org::*F20 Look up details][F20]].
