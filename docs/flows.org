@@ -228,23 +228,25 @@ line selection), or a whole file.
  └───────────────────────────┬────────────────────────────┘
                              │ [user] C-c C-c
                              ▼
-     ◇ viewer has a pending review? ◇──yes──▶ addPullRequestReviewThread
-        │ no                                   (pullRequestReviewId, target, body)
-        ▼
-     ◇ single comment (C-u, or default single)? ◇──yes──▶ addPullRequestReview
-        │ no                                              (event COMMENT, threads [target])
-        ▼                                                 → published now
- addPullRequestReview (no event, threads [target])
- → a new PENDING review holding the thread
-        │
-        ▼
- ┌────────────────────────────────────────────────────────┐
- │ patch store: thread, comment, review                   │
- │ append thread ref to PR.reviewThreads                  │
- │ set pending review ref (if new)                        │
- │ redraw: thread under its line, "Your pending review"   │
- │ section, header counts                                 │
- └────────────────────────────────────────────────────────┘
+     ◇ single comment (C-u, or default single)? ◇──no──────────────────┐
+        │ yes                                                          │
+        ▼                                                              │
+     ◇ viewer has a pending review? ◇──yes──▶ joins it (the header     │
+        │ no                                    line said so) ────────▶│
+        ▼                                                              ▼
+ addPullRequestReview                            addPullRequestReviewThread
+ (event COMMENT, threads [target])               (pullRequestId, target, body)
+ → published now; a whole file:                 → joins the pending review,
+   a file thread, then submit                      or starts one (D32); a null
+        │                                          thread fails ("that line takes
+        │                                          no comment"), draft kept
+        ▼                                                              ▼
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │ patch store: thread, comment, review                                │
+ │ append thread ref to PR.reviewThreads                               │
+ │ set pending review ref (if new)                                     │
+ │ redraw: thread under its line, "Your pending review", counts        │
+ └─────────────────────────────────────────────────────────────────────┘
 #+end_example
 
 Side and line rules:
@@ -253,7 +255,10 @@ Side and line rules:
 - A range spanning removed and added lines uses =startSide=/=side= for each
   end.
 - The thread is drawn under the =line= (the end of the range).
-- Open details for [[file:roadmap.org::*SP1 Review API behaviour][SP1]]: ranges across hunks, and lines outside hunks.
+- A range stays in one hunk, and only lines of the diff take comments
+  ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): GitHub would take a range across hunks, but the lines between
+  them aren't shown, and it answers a line outside the hunks with a null
+  thread, not an error.
 
 The pending review over its life:
 #+begin_example
@@ -261,7 +266,7 @@ The pending review over its life:
    ┌───────┐ ─────────────────────────────────────────▶ ┌─────────┐
    │ none  │                                            │ PENDING │◀─┐ add · edit ·
    └───────┘ ◀─── discard: deletePullRequestReview ──── └────┬────┘──┘ delete comments
-       ▲                                                     │
+       ▲        (or delete its last comment, D32)            │
        │          submit: submitPullRequestReview            │
        └──────────── (APPROVE · REQUEST_CHANGES · COMMENT) ◀─┘
                      review becomes visible to everyone
@@ -305,10 +310,13 @@ is a later idea ([[file:roadmap.org::*Ideas][roadmap]]).
  (C-u r: quote the comment at point; region: quote the region)
         │ C-c C-c
         ▼
-     ◇ pending review? ◇──yes──▶ addPullRequestReviewThreadReply(threadId, body, reviewId)
-        │ no                     → reply is pending, listed in "Your pending review"
+ addPullRequestReviewThreadReply(threadId, body)        (no review id: D32)
+        │
         ▼
- addPullRequestReviewThreadReply(threadId, body) → published now
+     ◇ pending review? ◇──yes──▶ the reply joins it, listed in "Your pending review"
+        │ no
+        ▼
+ the reply is published now
         │
         ▼
  append comment ref to thread.comments → redraw
@@ -336,8 +344,8 @@ the mutation:
 | issue-comment   | =updateIssueComment=                          | =deleteIssueComment=                     |
 | review-comment  | =updatePullRequestReviewComment=              | =deletePullRequestReviewComment=         |
 | review (body)   | =updatePullRequestReview=                     | — (dismiss is a separate command)        |
-| pending comment | =updatePullRequestReviewComment=              | =deletePullRequestReviewComment= (an     |
-|                 |                                               | emptied pending review stays; check SP1) |
+| pending comment | =updatePullRequestReviewComment=              | =deletePullRequestReviewComment= (the    |
+|                 |                                               | last one takes the pending review along) |
 
 #+begin_example
  [user] e                                   [user] k
@@ -362,18 +370,20 @@ the mutation:
    │
    ▼
  transient: Approve · Request changes · Comment   (header: pending counts)
+ (on your own PR, Approve and Request changes are inapt: GitHub refuses them)
    │
    ├─ C-u a ───────────────────────────────────────────────────┐ (no body)
    │                                                           │
    ▼                                                           │
- input buffer "Review body — Request changes" (draft prefilled)│
+ input buffer "Review body — Request changes"                  │
+ (the draft, else the pending review's body)                   │
    │ C-c C-c                                                   │
    ▼                                                           │
  ◇ body empty and verdict needs one? ◇──yes──▶ user-error      │
    │ no            (Request changes / Comment with no comments)│
    ◀───────────────────────────────────────────────────────────┘
    ▼
- ◇ pending review? ◇──yes──▶ submitPullRequestReview(reviewId, event, body)
+ ◇ pending review? ◇──yes──▶ submitPullRequestReview(pullRequestId, event, body)
    │ no
    ▼
  addPullRequestReview(event, body)
@@ -393,6 +403,7 @@ the mutation:
    │ yes
    ▼
  deletePullRequestReview → remove its threads and comments from the store → redraw
+ (by list edits: a query right after may still list them, D32)
 #+end_example
 
 * F10 Conversation comment, with quoting

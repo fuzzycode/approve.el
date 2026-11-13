@@ -15,7 +15,7 @@
 </g>
 <g id="F08-clust2" class="cluster">
 <title>cluster_k</title>
-<polygon fill="none" stroke="black" points="426,-90.64 426,-523.26 882,-523.26 882,-90.64 426,-90.64"/>
+<polygon fill="none" stroke="black" points="426,-83.14 426,-523.26 882,-523.26 882,-83.14 426,-83.14"/>
 <text xml:space="preserve" text-anchor="middle" x="654" y="-508.81" font-family="JetBrains Mono" font-size="11.00" fill="#6e6a86">k — delete own comment</text>
 </g>
 <!-- e -->
@@ -169,44 +169,45 @@
 <!-- kstop -->
 <g id="F08-node13" class="node note">
 <title>kstop</title>
-<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="594.06,-232.42 544,-232.42 544,-208.78 598,-208.78 598,-228.48 594.06,-232.42"/>
-<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="594.06,-232.42 594.06,-228.48"/>
-<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="598,-228.48 594.06,-228.48"/>
-<text xml:space="preserve" text-anchor="middle" x="571" y="-217.65" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">stop</text>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="572.06,-232.42 522,-232.42 522,-208.78 576,-208.78 576,-228.48 572.06,-232.42"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="572.06,-232.42 572.06,-228.48"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="576,-228.48 572.06,-228.48"/>
+<text xml:space="preserve" text-anchor="middle" x="549" y="-217.65" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">stop</text>
 </g>
 <!-- conf&#45;&gt;kstop -->
 <g id="F08-edge11" class="edge">
 <title>conf&#45;&gt;kstop</title>
-<path fill="none" stroke="#908caa" stroke-width="1.2" d="M664.96,-288.23C641.42,-271.54 613.4,-251.67 594.13,-238"/>
-<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="595.55,-236.01 588.42,-233.96 592.71,-240 595.55,-236.01"/>
-<text xml:space="preserve" text-anchor="middle" x="650.14" y="-265.42" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> n</text>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M654.5,-288.28C633.26,-275.86 608.81,-261.25 587,-247.42 582.23,-244.39 577.18,-241.06 572.39,-237.83"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="573.79,-235.82 566.62,-233.91 571.03,-239.87 573.79,-235.82"/>
+<text xml:space="preserve" text-anchor="middle" x="636.17" y="-265.42" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> n</text>
 </g>
 <!-- kmut -->
 <g id="F08-node14" class="node api">
 <title>kmut</title>
-<polygon fill="#2a273f" stroke="#3e8fb0" stroke-width="1.4" points="842.33,-247.42 619.67,-247.42 619.67,-193.78 842.33,-193.78 842.33,-247.42"/>
-<text xml:space="preserve" text-anchor="middle" x="731" y="-232.65" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">by context:</text>
-<text xml:space="preserve" text-anchor="middle" x="731" y="-217.65" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">deleteIssueComment</text>
-<text xml:space="preserve" text-anchor="middle" x="731" y="-202.65" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">deletePullRequestReviewComment</text>
+<polygon fill="#2a273f" stroke="#3e8fb0" stroke-width="1.4" points="820.33,-247.42 597.67,-247.42 597.67,-193.78 820.33,-193.78 820.33,-247.42"/>
+<text xml:space="preserve" text-anchor="middle" x="709" y="-232.65" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">by context:</text>
+<text xml:space="preserve" text-anchor="middle" x="709" y="-217.65" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">deleteIssueComment</text>
+<text xml:space="preserve" text-anchor="middle" x="709" y="-202.65" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">deletePullRequestReviewComment</text>
 </g>
 <!-- conf&#45;&gt;kmut -->
 <g id="F08-edge12" class="edge">
 <title>conf&#45;&gt;kmut</title>
-<path fill="none" stroke="#908caa" stroke-width="1.2" d="M716.02,-288.23C718.3,-278.09 720.84,-266.78 723.18,-256.4"/>
-<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="725.53,-257.08 724.68,-249.72 720.75,-256.01 725.53,-257.08"/>
-<text xml:space="preserve" text-anchor="middle" x="727.97" y="-265.42" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> y</text>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M709,-288.23C709,-278.2 709,-267.01 709,-256.71"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="711.45,-256.76 709,-249.76 706.55,-256.76 711.45,-256.76"/>
+<text xml:space="preserve" text-anchor="middle" x="715" y="-265.42" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> y</text>
 </g>
 <!-- kdone -->
 <g id="F08-node15" class="node ok">
 <title>kdone</title>
-<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M858.08,-122.28C858.08,-122.28 603.92,-122.28 603.92,-122.28 599.99,-122.28 596.04,-118.34 596.04,-114.4 596.04,-114.4 596.04,-106.52 596.04,-106.52 596.04,-102.58 599.99,-98.64 603.92,-98.64 603.92,-98.64 858.08,-98.64 858.08,-98.64 862.01,-98.64 865.96,-102.58 865.96,-106.52 865.96,-106.52 865.96,-114.4 865.96,-114.4 865.96,-118.34 862.01,-122.28 858.08,-122.28"/>
-<text xml:space="preserve" text-anchor="middle" x="731" y="-107.51" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">remove its ref from the list · redraw</text>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M862.46,-129.78C862.46,-129.78 535.54,-129.78 535.54,-129.78 529.54,-129.78 523.54,-123.78 523.54,-117.78 523.54,-117.78 523.54,-103.14 523.54,-103.14 523.54,-97.14 529.54,-91.14 535.54,-91.14 535.54,-91.14 862.46,-91.14 862.46,-91.14 868.46,-91.14 874.46,-97.14 874.46,-103.14 874.46,-103.14 874.46,-117.78 874.46,-117.78 874.46,-123.78 868.46,-129.78 862.46,-129.78"/>
+<text xml:space="preserve" text-anchor="middle" x="699" y="-115.01" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">remove its ref from the list · redraw</text>
+<text xml:space="preserve" text-anchor="middle" x="699" y="-100.01" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">(the last pending comment takes the review along)</text>
 </g>
 <!-- kmut&#45;&gt;kdone -->
 <g id="F08-edge13" class="edge">
 <title>kmut&#45;&gt;kdone</title>
-<path fill="none" stroke="#908caa" stroke-width="1.2" d="M731,-193.15C731,-174.15 731,-148.95 731,-131.58"/>
-<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="733.45,-131.65 731,-124.65 728.55,-131.65 733.45,-131.65"/>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M706.55,-193.15C705.03,-176.69 703.08,-155.56 701.54,-138.91"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="703.98,-138.74 700.9,-131.99 699.1,-139.19 703.98,-138.74"/>
 </g>
 </g>
 </svg>

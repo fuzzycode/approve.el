@@ -125,6 +125,19 @@ and what goes to GitHub.
 - One logical change per commit, with its tests and doc updates.
 - Work on =feature/…= branches; =main= always builds and passes tests.
 
+* Scratch repository
+Writes are tried on =fuzzycode/test-approve= (private), never on another
+repository: commands under development, spikes, recording fixtures.
+- Its pull requests are set up for trying Approve; #4 holds the author's
+  pending review.  #8 holds the SP1 experiments ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): threads across
+  hunks, from a removed line to an added one, on a context line by its old
+  number, and on a whole file.
+- #9 is by github-actions[bot], for what one can't do on one's own pull
+  request (approve, request changes).  The "Bot pull request" workflow
+  (=bot-pr.yml=, run by hand) opens another; =bot.yml= leaves a bot comment.
+- Operations can be tried there by hand with =gh api graphql=
+  ([[file:../graphql/README.org][graphql/README.org]]).
+
 * Debugging
 - =M-x approve-dev-offline-mode= serves fixtures instead of GitHub.
 - =approve-log-level= =debug= logs every request with its cost and timing to

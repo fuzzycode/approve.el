@@ -207,7 +207,8 @@ and the menu never jumps around.</p>
 <section class="shot" id="submit">
 <h2>Submit review <span class="ref">S · F09</span></h2>
 <p>The title line shows what is pending. A verdict opens the body input; <code>C-u a</code> approves at once with no body.
-With no pending review, the same keys create and submit a review in one call.</p>
+With no pending review, the same keys create and submit a review in one call. On your own pull request,
+Approve and Request changes are dimmed: GitHub refuses them (D32).</p>
 <div class="emacs">
 <div class="win stack">
 <div class="win">
@@ -235,7 +236,7 @@ With no pending review, the same keys create and submit a review in one call.</p
 <!-- ================================================================== -->
 <section class="shot" id="body">
 <h2>Review body <span class="ref">F09</span></h2>
-<p>The body is optional for an approval. <em>Request changes</em> needs one when there are no comments (to check in SP1).</p>
+<p>The body is optional for an approval. <em>Request changes</em> and <em>Comment</em> need one when there are no comments (D32).</p>
 <div class="emacs">
 <div class="win">
 <div class="hl"><span class="b">Review body — </span><span class="ok b">Approve</span> <span class="d">· #1234 · 2 comments, 1 reply will be published</span> <span class="k">C-c C-c</span> <span class="d">submit ·</span> <span class="k">C-c C-k</span> <span class="d">abort ·</span> <span class="k">C-c C-p</span> <span class="d">preview</span></div>

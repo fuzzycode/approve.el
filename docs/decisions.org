@@ -110,6 +110,9 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   (GitHub's "Add single comment") when no review is pending.  When a review is
   pending, every code comment and reply joins it, as on GitHub.
   =approve-comment-default= (=review= or =single=) flips the default.
+- Amended (2026-11-13) :: GitHub refuses a single comment while a review
+  is pending ([[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).  Then =C-u c= says so in the input's header line,
+  and the comment joins the review.
 - Why :: Batching comments into one review is how code review is meant to work
   and sends one notification.  Matches pr-review's habit, but on GitHub's side
   ([[*D02 Durable state lives on GitHub][D02]]).
@@ -250,6 +253,71 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Why :: approve-v2 fetched them with every PR load, which made the main query
   slow and big.
 
+** D32 Reviews are written the way GitHub's API allows (SP1)
+- Status :: accepted (2026-11-13, answers [[file:roadmap.org::*SP1 Review API behaviour][SP1]] and Q3, except the
+  commit-range view)
+- Found :: With =gh api graphql= on the scratch repository
+  (fuzzycode/test-approve: #8 is the viewer's own pull request, #9 one by
+  github-actions[bot]):
+  - =addPullRequestReviewThread= with the =pullRequestId= (no review id)
+    adds the thread to the viewer's pending review, and starts one when
+    there is none.  A file-level thread takes =subjectType: FILE= and no
+    line.
+  - While a review is pending, =addPullRequestReview= is refused, with or
+    without an event: "User can only have one pending review per pull
+    request".  No single comment can be posted then.
+  - A reply (=addPullRequestReviewThreadReply= without
+    =pullRequestReviewId=) joins the pending review when there is one, and
+    is published at once (as a review of its own) when there is none.
+  - A range may run from a removed line to an added one, or the other way.
+    GitHub even takes a range across hunks.  A line outside every hunk, or
+    a range starting outside one, takes no comment: the answer is
+    =thread: null=, with no error.
+  - Deleting the last comment of a pending review deletes the review.  An
+    empty pending review made on purpose (=addPullRequestReview= with
+    nothing) stays.
+  - Discarding a pending review (=deletePullRequestReview=) removes its
+    threads and comments, but a query right after may still list them.
+  - Comment and Request changes need a body or at least one comment;
+    Approve needs neither.  For an empty Comment, GitHub's message is empty
+    or speaks of requested changes.  On the viewer's own pull request,
+    Approve and Request changes are refused ("Can not approve your own pull
+    request").
+  - =submitPullRequestReview= takes the =pullRequestId= alone.
+  - A pending review keeps a body given when it was made
+    (=addPullRequestReview= with =body= and no event); =updatePullRequestReview=
+    edits it, and a submit without a body keeps it.  A pending review without
+    a body can't get one ("Could not edit a review with a missing body").
+  - A one-line thread's =startLine= is not null: it repeats the line, or for
+    a context line on the LEFT gives its new number; its =startDiffSide= is
+    null.  A file-level thread has =line= 1.  A comment's =startLine= is null
+    for one line.
+- Decision ::
+  - Code comments and replies are sent with the pull request's id, never the
+    review's: GitHub finds the pending review or starts one ([[*D22 Comments go into the pending review by default][D22]]).  A
+    single comment is =addPullRequestReview= with =event: COMMENT=, only when
+    nothing is pending; a single comment on a whole file is a file thread
+    then a submit (two mutations, queued).
+  - A range stays in one hunk, and only diff lines that are drawn take
+    comments: the lines between hunks are not shown, and a suggestion over
+    them would replace code nobody read.  A =null= thread is a failure, with
+    Approve's own message.
+  - Submitting checks first: Comment and Request changes need a body or
+    comments, and on the viewer's own pull request (=viewerDidAuthor=)
+    Approve and Request changes are inapt.  Submit and discard use the pull
+    request's id.
+  - Deleting the last pending comment drops the pending review from the
+    store.  Discarding removes its threads and comments by list edits, not
+    by a query.
+  - The review body draft is an input draft in the session; the body input
+    starts from it, else from the pending review's body.
+  - A thread is a range only when its =startDiffSide= is set; file-level
+    threads are known by =subjectType=, never by =line=.
+- Why :: These are GitHub's rules.  Checking them before sending gives
+  clear messages where GitHub's are silent or misleading.  Leaving the
+  pending review to GitHub means a review started in the browser is
+  continued without Approve knowing its id.
+
 * Rendering
 ** D13 Full redraw, point restored by section ident
 - Status :: accepted (revisit if measurements say so)
@@ -352,7 +420,9 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
   → answered by [[*D30 Diff hunks are syntax-highlighted by default][D30]] (on by default, cached per patch).
 - Q3 :: GitHub edge cases for review comments: a single comment while a
   review is pending, a multi-line range across hunks, comments on context
-  lines outside hunks, and comments in a commit-range view.  → [[file:roadmap.org::*SP1 Review API behaviour][SP1]].
+  lines outside hunks, and comments in a commit-range view.  → answered by
+  [[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]] (refused; Approve keeps a range in one hunk; refused, silently),
+  except the commit-range view → Phase 6.
 - Q4 :: Do private images in =bodyHTML= (signed
   =private-user-images.githubusercontent.com= URLs that expire after a few
   minutes) load reliably?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]]: public images do; private ones are

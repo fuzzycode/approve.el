@@ -403,9 +403,12 @@ doesn't jump around.
   X Discard pending review       q Quit
 #+end_example
 
-Choosing a verdict opens the body input (prefilled with the draft body).
-=C-c C-c= submits it.  =C-u a= approves with no body and no input buffer.
-With no pending review, =a=/=r=/=c= create and submit a review in one call.
+Choosing a verdict opens the body input (prefilled with the draft body, else
+the pending review's).  =C-c C-c= submits it.  =C-u a= approves with no body
+and no input buffer.  With no pending review, =a=/=r=/=c= create and submit a
+review in one call.  Request changes and Comment need a body when there are
+no comments; on your own pull request, Approve and Request changes are dimmed,
+as GitHub refuses them ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).
 
 ** Merge / state (=m=)
 #+begin_example

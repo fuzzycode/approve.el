@@ -129,6 +129,15 @@ Before =approve-review.el=, on a scratch repository, find out and note in
 - Does the =REQUEST_CHANGES= / =COMMENT= verdict need a body when there are
   no comments?  Does it need one on the viewer's own PR (where approve and
   request changes are not allowed)?
+- Found (2026-11-13) :: on fuzzycode/test-approve, written up as [[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]].
+  No single comment while a review is pending.  A reply without the review
+  id joins the pending review, and is published at once only when none is
+  pending.  Ranges may mix sides and even span hunks (Approve keeps them in
+  one).  Lines outside the hunks take no comment, and GitHub answers with
+  a null thread, not an error.  Deleting the last pending comment deletes
+  the review.  Comment and Request changes need a body or comments, Approve
+  needs neither; on one's own PR, Approve and Request changes are refused.
+  Comments, replies, submit and discard need only the PR's id.
 
 ** SP6 Evil keys
 Check the key table against evil-collection's magit-section bindings and

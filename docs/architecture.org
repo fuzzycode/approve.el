@@ -193,16 +193,17 @@ schema on 2026-11-08.
 ** Writes
 | Feature                         | Mutation                                                                    |
 |---------------------------------+-----------------------------------------------------------------------------|
-| Start review with first comment | =addPullRequestReview(pullRequestId, threads: [{path line side …}])=        |
-| Single comment (no pending)     | =addPullRequestReview(pullRequestId, event: COMMENT, threads: […])=         |
-| Add comment to pending review   | =addPullRequestReviewThread(pullRequestReviewId, path, line, side,=         |
-|                                 | =startLine, startSide, subjectType, body)=                                  |
-| Reply to thread                 | =addPullRequestReviewThreadReply(pullRequestReviewThreadId, body,=          |
-|                                 | =pullRequestReviewId?)=                                                     |
-| Submit review                   | =submitPullRequestReview(pullRequestReviewId, event, body)=                 |
+| Comment on code (review)        | =addPullRequestReviewThread(pullRequestId, path, line, side, startLine,=    |
+|                                 | =startSide, subjectType, body)=: joins the pending review, or starts one    |
+|                                 | (D32); =thread: null= means the line takes no comment                       |
+| Single comment (no pending)     | =addPullRequestReview(pullRequestId, event: COMMENT, threads: […])=; on a   |
+|                                 | whole file: a file thread, then =submitPullRequestReview=                   |
+| Reply to thread                 | =addPullRequestReviewThreadReply(pullRequestReviewThreadId, body)=: joins   |
+|                                 | the pending review, or is published when none is pending                    |
+| Submit review                   | =submitPullRequestReview(pullRequestId, event, body)=                       |
 | Approve/comment with no pending | =addPullRequestReview(pullRequestId, event, body)=                          |
-| Discard pending review          | =deletePullRequestReview=                                                   |
-| Edit review body                | =updatePullRequestReview=                                                   |
+| Discard pending review          | =deletePullRequestReview(pullRequestReviewId)=                              |
+| Edit review body                | =updatePullRequestReview= (not on a pending review without a body)          |
 | Dismiss a review                | =dismissPullRequestReview=                                                  |
 | Edit / delete review comment    | =updatePullRequestReviewComment= / =deletePullRequestReviewComment=         |
 | Resolve / unresolve             | =resolveReviewThread= / =unresolveReviewThread=                             |
