@@ -54,6 +54,9 @@
 ;;   across its redraws, until the text is sent or aborted.  C-c C-s
 ;;   suggests a change of them: a suggestion block holding their new
 ;;   side (flow F06).
+;; - C-c C-p shows the text as GitHub will show it: GitHub renders the
+;;   markdown (REST /markdown) and approve-html draws it, in a window
+;;   beside the input.
 ;; - Opening the same target twice shows the buffer already open.
 ;;
 ;; Layer rules: this is the input layer, beside the buffers.  It keeps
@@ -69,6 +72,8 @@
 (require 'approve-session)
 (require 'approve-faces)
 (require 'approve-render)
+(require 'approve-html)
+(require 'approve-queries)
 (require 'approve-diff)
 
 ;;; Options
@@ -84,6 +89,17 @@ in the window of the pull request instead:
 
   (setq approve-input-display-action
         \\='((display-buffer-same-window)))"
+  :type 'sexp
+  :group 'approve)
+
+(defcustom approve-input-preview-display-action
+  '((display-buffer-in-side-window) (side . right) (window-width . 0.4))
+  "How the preview of an input buffer is shown: a `display-buffer' action.
+The default shows it in a side window on the right.  To show it
+below the input instead:
+
+  (setq approve-input-preview-display-action
+        \='((display-buffer-below-selected)))"
   :type 'sexp
   :group 'approve)
 
@@ -134,13 +150,17 @@ ranges.")
   "The new side of `approve-input--lines', a list of lines, or nil.
 A suggestion block starts with them.")
 
+(defvar-local approve-input--preview nil
+  "The buffer showing the preview of this input, or nil.")
+
 ;;; Modes
 
 (defvar-keymap approve-input-mode-map
   :doc "Keymap of `approve-input-mode'."
   "C-c C-c" #'approve-input-commit
   "C-c C-k" #'approve-input-abort
-  "C-c C-s" #'approve-input-insert-suggestion)
+  "C-c C-s" #'approve-input-insert-suggestion
+  "C-c C-p" #'approve-input-preview)
 
 (define-derived-mode approve-input-mode gfm-mode "Approve-Input"
   "Major mode of the buffers comments and other text are written in.
@@ -202,7 +222,7 @@ instead.  Return non-nil if a draft was kept."
 (defun approve-input--hints ()
   "Return the key hints of the header line, or nil.
 After sending and aborting comes the suggestion, while the text is
-on code and has none yet."
+on code and has none yet; else the preview, unless it is one line."
   (let ((hint (lambda (command label)
                 (when-let* ((key (approve-input--key command)))
                   (list key command label)))))
@@ -210,10 +230,11 @@ on code and has none yet."
            (delq nil
                  (list (funcall hint #'approve-input-commit approve-input--commit-label)
                        (funcall hint #'approve-input-abort "abort")
-                       (and approve-input--code
-                            (not (approve-input--suggestion-p))
-                            (funcall hint #'approve-input-insert-suggestion
-                                     "suggest")))))))
+                       (cond
+                        ((and approve-input--code (not (approve-input--suggestion-p)))
+                         (funcall hint #'approve-input-insert-suggestion "suggest"))
+                        ((not approve-input-single-line-mode)
+                         (funcall hint #'approve-input-preview "preview"))))))))
 
 (defun approve-input--header-line ()
   "Return the header line of an input buffer.
@@ -410,6 +431,49 @@ lines goes in; point ends after the last of them."
     (insert "\n" fence "\n")
     (goto-char end)))
 
+;;; Preview
+
+(define-derived-mode approve-input-preview-mode special-mode "Approve-Preview"
+  "Major mode of the preview of an input buffer: its text as GitHub shows it."
+  :group 'approve
+  (add-function :filter-return (local 'filter-buffer-substring-function)
+                #'approve-render-strip-decorations '((depth . 90))))
+
+(defun approve-input--show-preview (html)
+  "Show HTML, the text of this input as GitHub renders it, in its preview."
+  (let ((buffer (if (buffer-live-p approve-input--preview)
+                    approve-input--preview
+                  (setq approve-input--preview
+                        (generate-new-buffer
+                         (replace-regexp-in-string "\\`\\*approve-input" "*approve-preview"
+                                                   (buffer-name)))))))
+    (with-current-buffer buffer
+      (approve-input-preview-mode)
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (approve-html-insert html)
+        (goto-char (point-min))))
+    (display-buffer buffer approve-input-preview-display-action)))
+
+(defun approve-input-preview ()
+  "Show the text as GitHub will show it, in a window beside it.
+GitHub renders the markdown, mentions and references included; the
+preview changes nothing there.  Ask again after a change."
+  (interactive)
+  (let ((text (approve-input-text))
+        (input (current-buffer)))
+    (when (string-empty-p text)
+      (user-error "There is nothing to preview yet"))
+    (unless (buffer-live-p approve-input--source)
+      (user-error "The buffer this text was for is gone"))
+    (with-current-buffer approve-input--source
+      (approve-query-markdown
+       text
+       :callback (lambda (html)
+                   (when (buffer-live-p input)
+                     (with-current-buffer input
+                       (approve-input--show-preview html))))))))
+
 ;;; Sending and aborting
 
 (defun approve-input--clean (text)
@@ -432,6 +496,8 @@ single-line input, the first line, trimmed."
         (source-window approve-input--source-window))
     (setq approve-input--done t)
     (approve-input--unhighlight)
+    (when (buffer-live-p approve-input--preview)
+      (kill-buffer approve-input--preview))
     (when-let* ((window (get-buffer-window buffer)))
       (quit-restore-window window 'kill))
     (when (buffer-live-p buffer)
@@ -473,8 +539,10 @@ Writing for the same target again starts from the draft."
 
 (defun approve-input--killed ()
   "Keep the text of an input buffer killed without sending or aborting.
-The highlight of its lines goes away in any case."
+The highlight of its lines and its preview go away in any case."
   (approve-input--unhighlight)
+  (when (buffer-live-p approve-input--preview)
+    (kill-buffer approve-input--preview))
   (unless approve-input--done
     (setq approve-input--done t)
     (approve-input--keep-draft (approve-input-text))))

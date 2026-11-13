@@ -66,10 +66,12 @@ header line's form."
                    (test-input--open :prompt "Comment on a.el:42"
                                      :context "pending review"))))
       (expect header :to-match "\\` Comment on a\\.el:42 · pending review ")
-      (expect header :to-match "C-c C-c send · C-c C-k abort\\'"))
+      (expect header :to-match "C-c C-c send · C-c C-k abort · C-c C-p preview\\'"))
     (expect (test-input--header (test-input--open :prompt "Review body"
                                                   :commit-label "submit"))
-            :to-match "C-c C-c submit"))
+            :to-match "C-c C-c submit")
+    (expect (test-input--header (test-input--open :prompt "New title" :single-line t))
+            :to-match "C-c C-k abort\\'"))
 
   (it "hand the text to ON-COMMIT in the source buffer, and close"
     (let* ((sent nil)
@@ -262,5 +264,53 @@ header line's form."
       (approve-input-abort))
     (expect (with-current-buffer pr (approve-input-draft '(comment "suggest")))
             :to-be nil)))
+
+(describe "The preview of an input"
+  :var (pr sent)
+  (before-all
+    (approve-test-with-fixture "medium"
+      (setq pr (approve-test-open-pr "medium"))))
+  (after-all
+    (kill-buffer pr))
+  (before-each
+    (switch-to-buffer pr)
+    (delete-other-windows)
+    (setq sent nil))
+  (after-each
+    (test-input--kill-inputs))
+
+  (it "shows the text as GitHub renders it, beside the input, until it closes"
+    (let ((approve-api-transport
+           (lambda (request)
+             (push request sent)
+             (run-at-time 0 nil (plist-get request :on-success)
+                          "<p>Ask <strong>@bob-example</strong></p>" nil)
+             nil))
+          (approve-api-timeout nil)
+          (inhibit-message t)
+          (input (with-current-buffer pr
+                   (approve-input-read :name "comment a.el:42"))))
+      (with-current-buffer input
+        (insert "Ask **@bob-example**")
+        (expect (key-binding (kbd "C-c C-p")) :to-be #'approve-input-preview)
+        (approve-input-preview))
+      (expect (plist-get (car sent) :resource) :to-equal "/markdown")
+      (expect (plist-get (car sent) :reader) :to-be 'text)
+      (expect (plist-get (car sent) :payload)
+              :to-equal '((text . "Ask **@bob-example**") (mode . "gfm")
+                          (context . "acme-example/rocket")))
+      (let ((preview (approve-test-wait-for
+                      (lambda () (get-buffer "*approve-preview: comment a.el:42*")))))
+        (approve-test-wait-for (lambda () (get-buffer-window preview)))
+        (with-current-buffer preview
+          (expect (buffer-string) :to-equal "Ask @bob-example\n")
+          (expect (get-text-property 5 'face) :to-equal 'bold))
+        (with-current-buffer input
+          (approve-input-abort))
+        (expect (buffer-live-p preview) :to-be nil))))
+
+  (it "has nothing to show for an empty text"
+    (with-current-buffer (with-current-buffer pr (approve-input-read))
+      (expect (approve-input-preview) :to-throw 'user-error))))
 
 ;;; test-approve-input.el ends here

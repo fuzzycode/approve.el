@@ -393,8 +393,11 @@ Every context also carries =:url= when one exists (for =o= and copying).
 - Evil users start in insert state (=approve-evil.el=).
 - Completion at point: =@user= (mentionable users), =#123= (issues/PRs in the
   repo, by search), =:emoji:=.
-- =C-c C-p= previews through REST =/markdown= in a side window, rendered with
-  =approve-html=.
+- =C-c C-p= shows the text as GitHub will: =approve-query-markdown= sends
+  it to REST =/markdown= (=gfm=, in the PR's repository, read as text), and
+  =approve-html= draws the answer in a window beside the input
+  (=approve-input-preview-display-action=, a side window).  It is asked for,
+  not live; the preview closes with its input.
 - =C-c C-s= inserts a ```suggestion``` block holding the new side of
   =:lines= (their added and context lines, from the patch), with point at
   the end of its last line; =:suggest= starts the text with it (F06).  On

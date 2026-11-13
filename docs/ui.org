@@ -368,7 +368,9 @@ buffer until the input is committed or aborted.
 
 The header-line text names the action: "Comment on…", "Reply to bob on…",
 "Edit comment", "Edit description", "Review body — Approve", "New title"
-(single line).  Evil users start in insert state.
+(single line).  Its right end names the keys: send and abort, then suggest
+while the text is on code and has no suggestion yet, else preview (not for
+a single line).  Evil users start in insert state.
 
 * Transients
 ** Dispatch (=?=)

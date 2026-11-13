@@ -280,6 +280,23 @@ the error of a failed fetch."
           (when callback
             (funcall callback))))))))
 
+;;; Markdown
+
+(cl-defun approve-query-markdown (text &key callback errorback)
+  "Render TEXT, GitHub-flavoured markdown, as GitHub shows a comment.
+Mentions and references such as #12 are read in the PR's repository.
+CALLBACK is called with the HTML, ERRORBACK with the error.  It
+changes nothing on GitHub (REST POST /markdown)."
+  (approve-api-rest "POST" "/markdown"
+                    :payload `((text . ,text) (mode . "gfm")
+                               (context . ,(format "%s/%s" (approve-model-meta :owner)
+                                                   (approve-model-meta :repo))))
+                    :reader 'text
+                    :host (approve-query-host)
+                    :progress "Rendering the preview"
+                    :callback callback
+                    :errorback errorback))
+
 ;;; Details (eldoc)
 
 (defun approve-query--details-request (kind key)
