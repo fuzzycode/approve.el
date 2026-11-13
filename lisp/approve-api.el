@@ -180,10 +180,13 @@ It is called with one plist describing the request:
   :host       API host, or nil for ghub's default.
   :auth       ghub's AUTH (`approve-api-auth').
   :username   user name, or nil (`approve-api-username').
+  :reader     REST: `text' to read the body as text (such as the
+              HTML of /markdown), else nil for JSON.
   :on-success function of (VALUE HEADERS): VALUE is the decoded JSON
               body (objects as alists with symbol keys, arrays as
-              lists, null and false as nil); HEADERS is an alist of
-              (NAME . VALUE) strings.
+              lists, null and false as nil), or the text of a
+              `text' body; HEADERS is an alist of (NAME . VALUE)
+              strings.
   :on-failure function of one plist:
                 :status   HTTP status, or nil for a network error
                 :payload  decoded error body, or nil
@@ -235,6 +238,14 @@ has ended; then the error is not ours and is signalled again."
                                 (list :error (list 'error 'connection-failed
                                                    (string-trim event))))))))))
 
+(defun approve-api--read-text (_status)
+  "Return the body of the response after point as text, or nil.
+The reader of a `text' request: ghub calls it in the response
+buffer, with point after the headers."
+  (unless (eobp)
+    (decode-coding-string (buffer-substring-no-properties (point) (point-max))
+                          'utf-8)))
+
 (defun approve-api-ghub-transport (request)
   "Perform REQUEST with `ghub-request'; the default `approve-api-transport'.
 REQUEST is the plist described there.  The request is made from the
@@ -255,6 +266,8 @@ user that ghub looks up.  Return a function that aborts the retrieval."
                                  :host (plist-get request :host)
                                  :auth (plist-get request :auth)
                                  :username (plist-get request :username)
+                                 :reader (and (eq (plist-get request :reader) 'text)
+                                              #'approve-api--read-text)
                                  :silent t
                                  :noerror t
                                  :callback (lambda (value headers _status _req)
@@ -733,7 +746,7 @@ Example:
                               :progress progress)))
 
 (cl-defun approve-api-rest (method resource
-                                   &key params payload callback errorback
+                                   &key params payload reader callback errorback
                                    (buffer (current-buffer))
                                    (timeout approve-api-timeout)
                                    (progress approve-api-default-progress)
@@ -742,17 +755,20 @@ Example:
 METHOD is a string such as \"GET\"; RESOURCE starts with a slash.
 PARAMS is an alist sent as the query of a GET or HEAD and as the body
 otherwise; PAYLOAD is an alist sent as the body.  CALLBACK is called
-with the decoded body.  ERRORBACK, BUFFER, TIMEOUT, PROGRESS and HOST
-are as for `approve-api-graphql'.
+with the decoded body, or with its text when READER is `text' (for
+resources that answer with something else than JSON).  ERRORBACK,
+BUFFER, TIMEOUT, PROGRESS and HOST are as for `approve-api-graphql'.
 
 Example:
   (approve-api-rest \"POST\" \"/markdown\"
                     :payload \\='((text . \"**hi**\") (mode . \"gfm\"))
+                    :reader \\='text
                     :callback (lambda (html) (message \"%s\" html)))"
   (approve-api--start
    (approve-api--make-request
     (list :kind 'rest :name nil :query nil :variables nil
           :method method :resource resource :params params :payload payload
+          :reader reader
           :host (or host approve-api-host)
           :auth approve-api-auth :username approve-api-username)
     :callback callback :errorback errorback

@@ -502,6 +502,15 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
         (expect (plist-get sent :payload) :to-equal '((text . "hi")))
         (expect (plist-get sent :name) :to-be nil))))
 
+  (it "asks the transport to read the body as text with READER text"
+    (test-approve-api--with-fake
+      (let (received)
+        (approve-api-rest "POST" "/markdown" :payload '((text . "hi")) :reader 'text
+                          :callback (lambda (value) (setq received value)))
+        (expect (plist-get (car test-approve-api--sent) :reader) :to-be 'text)
+        (test-approve-api--succeed "<p>hi</p>")
+        (expect received :to-equal "<p>hi</p>"))))
+
   (it "calls back with the decoded body and records the REST rate limit"
     (test-approve-api--with-fake
       (let (received)
@@ -540,6 +549,21 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
         (expect (functionp (plist-get keys :errorback)) :to-be-truthy)
         (funcall (plist-get keys :callback) '((data . ((a . 1)))) nil nil nil)
         (expect received :to-equal '((a . 1))))))
+
+  (it "reads a text body as text, and anything else as JSON"
+    (spy-on 'ghub-request)
+    (approve-api-ghub-transport (list :method "POST" :resource "/markdown" :reader 'text
+                                      :on-success #'ignore :on-failure #'ignore))
+    (approve-api-ghub-transport (list :method "GET" :resource "/x"
+                                      :on-success #'ignore :on-failure #'ignore))
+    (let ((reader (plist-get (nthcdr 3 (spy-calls-args-for 'ghub-request 0)) :reader)))
+      (with-temp-buffer
+        (insert "HTTP/1.1 200 OK\n\n" (encode-coding-string "<p>hé</p>" 'utf-8))
+        (goto-char (point-min))
+        (forward-line 2)
+        (expect (funcall reader 200) :to-equal "<p>hé</p>")))
+    (expect (plist-get (nthcdr 3 (spy-calls-args-for 'ghub-request 1)) :reader)
+            :to-be nil))
 
   (it "turns ghub's HTTP errors into failures"
     (let ((failures nil))
