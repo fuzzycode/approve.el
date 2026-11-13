@@ -642,6 +642,88 @@ threads on lines are unresolved; each file's heading counts its own."
                 (approve-diff--insert-file-body file))))))
       (insert "\n"))))
 
+;;; Ranges of lines
+
+;; A range is what a comment is written on: a context plist of kind
+;; `line' or `lines' (approve-context.el), with :path, :side and :line
+;; for its last line and, for several lines, :start-side and
+;; :start-line for its first.  A LEFT end names a removed or context
+;; line by its old number, a RIGHT end an added or context line by its
+;; new number, as GitHub's review comments do.
+
+(defun approve-diff--range-ends (range)
+  "Return the ends of RANGE: ((START-SIDE . START-LINE) SIDE . LINE)."
+  (cons (cons (or (plist-get range :start-side) (plist-get range :side))
+              (or (plist-get range :start-line) (plist-get range :line)))
+        (cons (plist-get range :side) (plist-get range :line))))
+
+(defun approve-diff--end-p (end kind old new)
+  "Return non-nil if the line of KIND with numbers OLD and NEW is END.
+END is (SIDE . LINE)."
+  (if (equal (car end) "LEFT")
+      (and (memq kind '(del ctx)) (eql old (cdr end)))
+    (and (memq kind '(add ctx)) (eql new (cdr end)))))
+
+(defun approve-diff--take-range (ends items line-of)
+  "Return the ITEMS from the first to the last end of ENDS, or nil.
+LINE-OF returns (KIND OLD NEW) of an item.  Nil when the first end
+is missing, or the last one does not follow it."
+  (let ((state 'before) (taken nil))
+    (while (and items (not (eq state 'done)))
+      (let ((item (pop items)))
+        (pcase-let ((`(,kind ,old ,new) (funcall line-of item)))
+          (when (and (eq state 'before) (approve-diff--end-p (car ends) kind old new))
+            (setq state 'in))
+          (when (eq state 'in)
+            (push item taken)
+            (when (approve-diff--end-p (cdr ends) kind old new)
+              (setq state 'done))))))
+    (and (eq state 'done) (nreverse taken))))
+
+(defun approve-diff-range-lines (range)
+  "Return the lines of RANGE in its file's patch, in order.
+Each is (KIND OLD NEW TEXT), as in `approve-diff-hunk-lines'.  Nil
+when RANGE is not within one hunk of the patch in the store.
+
+Example:
+  (approve-diff-range-lines \='(:path \"a.go\" :side \"RIGHT\" :line 14
+                              :start-side \"LEFT\" :start-line 13))
+  => ((del 13 nil \"…\") (del 14 nil \"…\") (add nil 13 \"…\") (add nil 14 \"…\"))"
+  (let ((ends (approve-diff--range-ends range))
+        (patch (alist-get 'patch (approve-diff-file-entry (plist-get range :path)))))
+    (seq-some (lambda (hunk)
+                (approve-diff--take-range ends (approve-diff-hunk-lines hunk)
+                                          #'identity))
+              (approve-diff-parse patch))))
+
+(defun approve-diff--file-section (path)
+  "Return the section of the diff of PATH in the current buffer, or nil."
+  (when-let* ((diff (and magit-root-section
+                         (seq-find (lambda (section)
+                                     (eq (oref section type) 'approve-diff-section))
+                                   (oref magit-root-section children)))))
+    (seq-find (lambda (section) (equal (oref section value) path))
+              (oref diff children))))
+
+(defun approve-diff-range-positions (range)
+  "Return where each line of RANGE starts in the current buffer, in order.
+Only diff lines count, not the threads under them.  Nil when the
+range is not drawn: its file's body was never expanded, or the
+buffer has no such lines."
+  (when-let* ((file (approve-diff--file-section (plist-get range :path))))
+    (let ((starts nil))
+      (save-excursion
+        (goto-char (or (oref file content) (oref file end)))
+        (while (< (point) (oref file end))
+          (when (get-text-property (point) 'approve-line)
+            (push (point) starts))
+          (forward-line 1)))
+      (approve-diff--take-range
+       (approve-diff--range-ends range) (nreverse starts)
+       (lambda (start)
+         (let ((line (get-text-property start 'approve-line)))
+           (list (plist-get line :kind) (plist-get line :old) (plist-get line :new))))))))
+
 (provide 'approve-diff)
 
 ;;; approve-diff.el ends here

@@ -8,7 +8,9 @@
 ;;; Code:
 
 (require 'buttercup)
+(require 'approve)
 (require 'approve-input)
+(require 'approve-test-helpers "helpers")
 
 (defvar test-input--source nil
   "The buffer inputs are opened from.")
@@ -171,5 +173,48 @@ header line's form."
         (expect (approve-input-commit) :to-throw 'user-error))
       (expect (buffer-live-p buffer) :to-be-truthy)
       (setq test-input--source (generate-new-buffer "*test-input source*")))))
+
+(defun test-input--highlighted (buffer)
+  "Return the text of the lines highlighted as a target in BUFFER."
+  (with-current-buffer buffer
+    (mapcar (lambda (overlay)
+              (string-trim (approve-render-strip-decorations
+                            (buffer-substring (overlay-start overlay)
+                                              (overlay-end overlay)))))
+            (sort (seq-filter (lambda (overlay)
+                                (eq (overlay-get overlay 'face) 'approve-target))
+                              (overlays-in (point-min) (point-max)))
+                  (lambda (a b) (< (overlay-start a) (overlay-start b)))))))
+
+(describe "The lines a comment is on"
+  :var (pr)
+  (before-all
+    (approve-test-with-fixture "medium"
+      (setq pr (approve-test-open-pr "medium"))
+      (with-current-buffer pr
+        (magit-section-show (approve-test-find-section 'approve-file-section
+                                                       "internal/parser/parser.go")))))
+  (after-all
+    (kill-buffer pr))
+  (before-each
+    (switch-to-buffer pr)
+    (delete-other-windows))
+  (after-each
+    (test-input--kill-inputs))
+
+  (it "stay highlighted in the PR buffer, across redraws, until the input closes"
+    (let ((buffer (with-current-buffer pr
+                    (approve-input-read
+                     :lines '(:kind lines :path "internal/parser/parser.go"
+                                    :start-side "RIGHT" :start-line 13
+                                    :side "RIGHT" :line 14))))
+          (lines '("if err != nil {" "return nil, fmt.Errorf(\"lookup 14: %w\", err)")))
+      (expect (test-input--highlighted pr) :to-equal lines)
+      (with-current-buffer pr
+        (approve-pr-redraw))
+      (expect (test-input--highlighted pr) :to-equal lines)
+      (with-current-buffer buffer
+        (approve-input-abort))
+      (expect (test-input--highlighted pr) :to-be nil))))
 
 ;;; test-approve-input.el ends here

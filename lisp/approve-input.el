@@ -49,6 +49,9 @@
 ;;   drops its drafts (decision D02 allows that).
 ;; - The header line says what the text is for and where it goes, and
 ;;   names the keys.
+;; - The lines a comment is on (:lines, a range as approve-diff.el
+;;   reads them) stay highlighted in the buffer it was opened from,
+;;   across its redraws, until the text is sent or aborted.
 ;; - Opening the same target twice shows the buffer already open.
 ;;
 ;; Layer rules: this is the input layer, beside the buffers.  It keeps
@@ -64,6 +67,7 @@
 (require 'approve-session)
 (require 'approve-faces)
 (require 'approve-render)
+(require 'approve-diff)
 
 ;;; Options
 
@@ -115,6 +119,14 @@ in the window of the pull request instead:
 
 (defvar-local approve-input--done nil
   "Non-nil once the text was sent or aborted.")
+
+(defvar-local approve-input--lines nil
+  "The range of diff lines the text is about, or nil.
+A context plist of kind `line' or `lines', as approve-diff.el reads
+ranges.")
+
+(defvar-local approve-input--overlays nil
+  "Overlays highlighting `approve-input--lines' in the source buffer.")
 
 ;;; Modes
 
@@ -207,18 +219,53 @@ the right edge."
 
 ;;; Opening
 
+(defun approve-input--open-from (source)
+  "Return the input buffers opened from SOURCE and not done yet."
+  (seq-filter (lambda (buffer)
+                (with-current-buffer buffer
+                  (and (derived-mode-p 'approve-input-mode)
+                       (not approve-input--done)
+                       (eq approve-input--source source))))
+              (buffer-list)))
+
 (defun approve-input--find (source target)
   "Return the live input buffer opened from SOURCE for TARGET, or nil."
   (and target
        (seq-find (lambda (buffer)
-                   (with-current-buffer buffer
-                     (and (derived-mode-p 'approve-input-mode)
-                          (not approve-input--done)
-                          (eq approve-input--source source)
-                          (equal approve-input--target target))))
-                 (buffer-list))))
+                   (equal (buffer-local-value 'approve-input--target buffer) target))
+                 (approve-input--open-from source))))
 
-(cl-defun approve-input-read (&key prompt context target name initial
+;;; Highlighting the lines
+
+(defun approve-input--unhighlight ()
+  "Remove the highlight of this input's lines."
+  (mapc #'delete-overlay approve-input--overlays)
+  (setq approve-input--overlays nil))
+
+(defun approve-input--highlight ()
+  "Highlight this input's lines in its source buffer, where they are drawn."
+  (approve-input--unhighlight)
+  (when (and approve-input--lines (buffer-live-p approve-input--source))
+    (let ((lines approve-input--lines))
+      (setq approve-input--overlays
+            (with-current-buffer approve-input--source
+              (mapcar (lambda (start)
+                        (let ((overlay (make-overlay
+                                        start (save-excursion
+                                                (goto-char start)
+                                                (line-beginning-position 2)))))
+                          (overlay-put overlay 'face 'approve-target)
+                          overlay))
+                      (approve-diff-range-positions lines)))))))
+
+(defun approve-input--rehighlight ()
+  "Highlight the lines of the inputs open from this buffer again.
+A redraw draws the lines anew, so it runs after each one."
+  (dolist (buffer (approve-input--open-from (current-buffer)))
+    (with-current-buffer buffer
+      (approve-input--highlight))))
+
+(cl-defun approve-input-read (&key prompt context target name initial lines
                                    single-line allow-empty (commit-label "send")
                                    on-commit on-abort)
   "Open a buffer to write text in, and return it.
@@ -233,6 +280,11 @@ becomes the draft of TARGET (in the session of the current buffer)
 until the caller drops it with `approve-input-clear-draft'.  When an
 input for TARGET is already open, it is shown instead.  With no
 TARGET, no draft is kept.
+
+LINES is the range of diff lines the text is about, a context plist
+of kind `line' or `lines' (from `approve-context-at-point').  They
+stay highlighted in the current buffer until the text is sent or
+aborted.
 
 SINGLE-LINE asks for one line (a title): RET sends it, and only its
 first line counts.  ALLOW-EMPTY lets an empty text be sent (a review
@@ -265,10 +317,13 @@ Example:
                 approve-input--commit-label commit-label
                 approve-input--allow-empty allow-empty
                 approve-input--on-commit on-commit
-                approve-input--on-abort on-abort)
+                approve-input--on-abort on-abort
+                approve-input--lines lines)
           (when single-line
             (approve-input-single-line-mode 1))
-          (insert (or draft initial "")))
+          (insert (or draft initial ""))
+          (approve-input--highlight))
+        (add-hook 'approve-pr-redraw-hook #'approve-input--rehighlight nil t)
         (pop-to-buffer buffer approve-input-display-action)
         (when draft
           (message "Approve: your draft is back"))
@@ -290,6 +345,7 @@ single-line input, the first line, trimmed."
   (let ((buffer (current-buffer))
         (source-window approve-input--source-window))
     (setq approve-input--done t)
+    (approve-input--unhighlight)
     (when-let* ((window (get-buffer-window buffer)))
       (quit-restore-window window 'kill))
     (when (buffer-live-p buffer)
@@ -330,7 +386,9 @@ Writing for the same target again starts from the draft."
         (funcall on-abort)))))
 
 (defun approve-input--killed ()
-  "Keep the text of an input buffer killed without sending or aborting."
+  "Keep the text of an input buffer killed without sending or aborting.
+The highlight of its lines goes away in any case."
+  (approve-input--unhighlight)
   (unless approve-input--done
     (setq approve-input--done t)
     (approve-input--keep-draft (approve-input-text))))

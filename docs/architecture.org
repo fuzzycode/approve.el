@@ -384,6 +384,12 @@ Every context also carries =:url= when one exists (for =o= and copying).
   request loses nothing.  A blank text, or the unchanged =:initial=, drops
   the draft.  Killing the PR buffer drops drafts (D02 allows this).
   An input already open for a target is shown again rather than doubled.
+- =:lines= is the range of diff lines the text is about (a =line= or
+  =lines= context).  They stay highlighted (=approve-target=, an overlay
+  per line) in the buffer the input was opened from, put back after each
+  redraw, until the text is sent or aborted.  =approve-diff-range-positions=
+  finds where a range is drawn, =approve-diff-range-lines= its lines in the
+  patch.
 - Evil users start in insert state (=approve-evil.el=).
 - Completion at point: =@user= (mentionable users), =#123= (issues/PRs in the
   repo, by search), =:emoji:=.

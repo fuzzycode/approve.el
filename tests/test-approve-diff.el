@@ -351,6 +351,61 @@
                 :to-equal "    +\tif err != nil {"))
       (approve-pr-redraw))))
 
+(defconst test-diff--range
+  '(:kind lines :path "internal/parser/parser.go"
+          :start-side "LEFT" :start-line 13 :side "RIGHT" :line 16)
+  "Two removed and four added lines of parser.go; a thread is on the 15th.")
+
+(describe "Ranges of lines in the medium PR"
+  :var (buffer)
+  (before-all
+    (approve-test-with-fixture "medium"
+      (setq buffer (approve-test-open-pr "medium"))))
+  (after-all
+    (kill-buffer buffer))
+
+  (it "come from the patch, from the first end to the last"
+    (with-current-buffer buffer
+      (expect (approve-diff-range-lines test-diff--range)
+              :to-equal '((del 13 nil "\tif err := oldStep(ctx, 13); err != nil {")
+                          (del 14 nil "\t\treturn nil, err")
+                          (add nil 13 "\tif err != nil {")
+                          (add nil 14 "\t\treturn nil, fmt.Errorf(\"lookup 14: %w\", err)")
+                          (add nil 15 "\t}")
+                          (add nil 16 "\tmetrics.Inc(\"step_16\")")))
+      (expect (approve-diff-range-lines '(:path "internal/parser/parser.go"
+                                                :side "LEFT" :line 11))
+              :to-equal '((ctx 11 11 "\tcount += 11")))))
+
+  (it "are nil when they are not in one hunk, or run backwards"
+    (with-current-buffer buffer
+      (expect (approve-diff-range-lines '(:path "internal/parser/parser.go"
+                                                :start-side "RIGHT" :start-line 13
+                                                :side "RIGHT" :line 60))
+              :to-be nil)
+      (expect (approve-diff-range-lines '(:path "internal/parser/parser.go"
+                                                :start-side "RIGHT" :start-line 16
+                                                :side "RIGHT" :line 13))
+              :to-be nil)))
+
+  (it "are found where they are drawn, without the threads under them"
+    (with-current-buffer buffer
+      (expect (approve-diff-range-positions test-diff--range) :to-be nil)
+      (magit-section-show (approve-test-find-section 'approve-file-section
+                                                     "internal/parser/parser.go"))
+      (let ((starts (approve-diff-range-positions test-diff--range)))
+        (expect (length starts) :to-equal 6)
+        (expect (mapcar (lambda (start)
+                          (plist-get (get-text-property start 'approve-line) :kind))
+                        starts)
+                :to-equal '(del del add add add add))
+        (expect (string-trim (approve-render-strip-decorations
+                              (buffer-substring (car (last starts))
+                                                (save-excursion
+                                                  (goto-char (car (last starts)))
+                                                  (line-end-position)))))
+                :to-equal "metrics.Inc(\"step_16\")")))))
+
 (describe "The diff of the large PR"
   (it "says when GitHub sent no patch because the file is too large"
     (approve-test-with-fixture "large"
