@@ -16,6 +16,8 @@
 ;; - `approve-test-wait-for' runs timers until async callbacks are done.
 ;; - `approve-test-fixture-data' gives a GraphQL response's data
 ;;   directly, for tests that load the store without the API.
+;; - Outside those, `approve-test-offline-transport' fails every
+;;   request, so no test reaches GitHub.
 ;;
 ;; Load it with (require 'approve-test-helpers "helpers"); tests/ is
 ;; on the load path.
@@ -30,6 +32,17 @@
 
 (defvar approve-test--fixtures (make-hash-table :test #'equal)
   "Scenarios read so far, by name.")
+
+(defun approve-test-offline-transport (request)
+  "Fail REQUEST without touching the network, as no test may (D19).
+It is the transport of every test that does not bind its own, so a
+request no test answers, such as a prefetch, fails quietly instead
+of reaching GitHub."
+  (let ((timer (run-at-time 0 nil (plist-get request :on-failure)
+                            (list :error '(error "No network in tests")))))
+    (lambda () (cancel-timer timer))))
+
+(setq approve-api-transport #'approve-test-offline-transport)
 
 (defconst approve-test-graphql-directory
   (expand-file-name "../graphql"
