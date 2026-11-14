@@ -101,7 +101,7 @@ Mockups: input buffer, dispatch, submit review, pending review section, keys.
       context, target highlight, completion (=@=, =#=, =:emoji:=), =C-c C-s=
       suggestion, =C-c C-p= preview.
 - [X] Action pipeline (F00) as one macro or function the commands share.
-- [ ] Mutations: viewed, review (add/thread/reply/submit/delete/update),
+- [X] Mutations: viewed, review (add/thread/reply/submit/delete/update),
       comment edits and deletes, resolve, conversation comment.
 - [ ] =approve-review.el=: find and track the pending review; start, add,
       submit, discard (F05, F09).

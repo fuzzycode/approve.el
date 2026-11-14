@@ -53,13 +53,14 @@
 ;;   applies to it, else a `user-error' saying what it needs.
 ;; - `approve-action-run' says why not when the viewer may not act,
 ;;   asks for the text when there is :input, then marks the target in
-;;   flight and calls :send, which starts the mutations (the operations
-;;   patch the store with what GitHub returns).  Once GitHub confirms,
-;;   :done makes the list edits, the draft goes, the mark goes, and
-;;   every buffer of the PR is redrawn, point kept.  When GitHub
-;;   refuses, the mark goes, the echo area gives GitHub's message, and
-;;   the text stays a draft for a retry.  Nothing changes on screen
-;;   before GitHub confirms (decision D14).
+;;   flight and calls :send, which starts the mutations
+;;   (approve-mutations.el: they patch the store with what GitHub
+;;   returns and make the list edits, decision D35).  Once GitHub
+;;   confirms, :done does what else the command needs, the draft goes,
+;;   the mark goes, and every buffer of the PR is redrawn, point kept.
+;;   When GitHub refuses, the mark goes, the echo area gives GitHub's
+;;   message, and the text stays a draft for a retry.  Nothing changes
+;;   on screen before GitHub confirms (decision D14).
 ;; - A mark says what to show as waiting for GitHub: the heading of a
 ;;   section, (section TYPE VALUE), or diff lines, (lines RANGE).  It
 ;;   is dimmed (`approve-inflight') with a loading icon after it, by
@@ -281,13 +282,15 @@ list of:
 
 SEND starts the change: it is called with the text (nil without
 INPUT), a CALLBACK and an ERRORBACK, in the PR buffer.  It queues
-the mutations (approve-mutations.el), whose answers patch the store,
-then calls CALLBACK with a result once GitHub has confirmed them
-all, or ERRORBACK with the error (a condition from approve-api).
+the mutations (approve-mutations.el), which patch the store with
+GitHub's answers and make the list edits, then calls CALLBACK with a
+result once GitHub has confirmed them all, or ERRORBACK with the
+error (a condition from approve-api).
 
 On success, the draft of the input goes, DONE (if non-nil) is called
-with the result to make list edits (`approve-model-append-ref'…),
-the marks go and every buffer of the PR is redrawn, point kept.  On
+with the result for what else the command needs (the store is
+up to date by then), the marks go and every buffer of the PR is
+redrawn, point kept.  On
 failure, the marks go and the echo area says WHAT could not be done
 and why, such as \"Approve: could not resolve the thread: …\"; the
 text stays a draft.

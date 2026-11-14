@@ -1,0 +1,10 @@
+${include:fragments/pull-request-review-thread.graphql}
+
+# F07: unresolve a review thread.
+mutation UnresolveReviewThread($threadId: ID!) {
+  unresolveReviewThread(input: {threadId: $threadId}) {
+    thread {
+      ...PullRequestReviewThreadFields
+    }
+  }
+}

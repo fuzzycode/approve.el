@@ -5,8 +5,8 @@ ${include:fragments/reaction-group.graphql}
 # is aliased (commentCount) because the pending review selects the plain
 # comments list (store contract: one response name per shape).  The commit
 # a review was made on is selected only for the viewer's latest review
-# (PullRequestFields): in the timeline, a nullable review commit would clash
-# with PullRequestCommit's non-null commit.
+# (PullRequestReviewStateFields): in the timeline, a nullable review commit
+# would clash with PullRequestCommit's non-null commit.
 fragment PullRequestReviewFields on PullRequestReview {
   __typename
   id

@@ -1,0 +1,7 @@
+# F08: delete a conversation comment; approve-mutations.el removes it from
+# the store.
+mutation DeleteIssueComment($commentId: ID!) {
+  deleteIssueComment(input: {id: $commentId}) {
+    clientMutationId
+  }
+}

@@ -1,0 +1,10 @@
+${include:fragments/pull-request-review-comment.graphql}
+
+# F08: edit a comment in a review thread, pending or published.
+mutation UpdatePullRequestReviewComment($commentId: ID!, $body: String!) {
+  updatePullRequestReviewComment(input: {pullRequestReviewCommentId: $commentId, body: $body}) {
+    pullRequestReviewComment {
+      ...PullRequestReviewCommentFields
+    }
+  }
+}

@@ -501,6 +501,28 @@ The check list carries HAS-NEXT and CURSOR."
                                         '(:approve-ref "User" "U_bob"))
               :to-throw 'approve-model-not-found))
 
+    (it "edit a list's nodes with a function, keeping a connection's counts"
+      (let ((pr (approve-model-root-ref)))
+        (approve-model-edit-list pr 'reviewThreads #'reverse)
+        (expect (test-approve-model--ids (approve-pr-threads))
+                :to-equal '("PRRT_3" "PRRT_2" "PRRT_1"))
+        (approve-model-edit-list pr 'reviewThreads #'cdr)
+        (expect (approve-model-total-count (approve-pr-field 'reviewThreads))
+                :to-equal 2)
+        (expect (approve-model-page-info (approve-model-raw-field pr 'reviewThreads))
+                :not :to-be nil)))
+
+    (it "read a field as stored, its refs unresolved"
+      (let ((thread '(:approve-ref "PullRequestReviewThread" "PRRT_1")))
+        (expect (approve-model-nodes (approve-model-raw-field thread 'comments))
+                :to-equal '((:approve-ref "PullRequestReviewComment" "PRRC_1")
+                            (:approve-ref "PullRequestReviewComment" "PRRC_2")))
+        (expect (approve-model-raw-field thread 'path) :to-equal "lisp/a.el")
+        (expect (approve-model-raw-field '(:approve-ref "User" "U_nobody") 'login)
+                :to-be nil)
+        (expect (approve-model-raw-field "PRRT_1" 'path)
+                :to-throw 'approve-model-invalid-ref)))
+
     (it "delete an entity from the store"
       (expect (approve-model-delete '(:approve-ref "Label" "LA_1"))
               :to-be-truthy)

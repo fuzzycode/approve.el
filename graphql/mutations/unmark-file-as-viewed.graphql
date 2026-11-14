@@ -1,0 +1,11 @@
+# F04: mark a file not viewed.  Files have no id, so the answer is only the
+# pull request's; approve-mutations.el sets the file's viewerViewedState
+# itself.
+mutation UnmarkFileAsViewed($pullRequestId: ID!, $path: String!) {
+  unmarkFileAsViewed(input: {pullRequestId: $pullRequestId, path: $path}) {
+    pullRequest {
+      __typename
+      id
+    }
+  }
+}

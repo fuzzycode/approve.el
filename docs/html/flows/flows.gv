@@ -138,7 +138,7 @@ now    [label="addPullRequestReview\n(event: COMMENT, threads: [target])\n→ pu
 add    [label="addPullRequestReviewThread\n(pullRequestId, target, body)\n→ joins the pending review, or starts one" @api];
 null   [label="thread null?" @dec];
 nerr   [label="error: that line takes no comment\n(GitHub says nothing) · draft kept" @err];
-patch  [label="patch thread · comment · review\nappend to PR.reviewThreads · set pending ref\nredraw: thread under its line, counts" @ok];
+patch  [label="patch thread · comment · review · review state\nappend to PR.reviewThreads · pending review: GitHub's answer\nredraw: thread under its line, counts" @ok];
 u -> reg; reg -> range [@yes]; reg -> line [@no];
 range -> rvalid; rvalid -> rerr [@no]; rvalid -> tline [@yes];
 line -> tline [@yes]; line -> file [@no];

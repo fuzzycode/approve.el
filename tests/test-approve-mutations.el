@@ -1,0 +1,502 @@
+;;; test-approve-mutations.el --- Tests for the mutations -*- lexical-binding: t; -*-
+
+;;; Commentary:
+
+;; Each mutation on the medium PR's store, through the mutation queue to
+;; a fake transport that answers as GitHub would: what goes to GitHub,
+;; and what the store holds once GitHub has answered (decision D35).
+
+;;; Code:
+
+(require 'buttercup)
+(require 'approve-mutations)
+(require 'approve-test-helpers "helpers")
+
+(defconst test-mutations--pr "PR_kwDOPCDj7SnvM_RcFp"
+  "The node id of the medium PR.")
+
+(defconst test-mutations--pending "PRR_kwDO5qcMmbrbgz7Ae3"
+  "The viewer's pending review in the medium PR.")
+
+(defconst test-mutations--pending-comments
+  '(("PRRC_kwDO9c1eOb8Z8RBSbC" . "PRRT_kwDOVCEPcVKg5CpjSd")
+    ("PRRC_kwDO5ZpVeKUvCvYor_" . "PRRT_kwDO79Ci-laaE8gpgI")
+    ("PRRC_kwDOl56Q4g39kaERSq" . "PRRT_kwDOdQlXJHIBEbMl4y"))
+  "The pending review's comments, each with the thread it starts.")
+
+(defconst test-mutations--thread "PRRT_kwDO85-qIzFQYiTYBM"
+  "A published thread of the medium PR, with three comments.")
+
+(defvar test-mutations--requests nil
+  "The requests the fake transport got, the last first.")
+
+(defvar test-mutations--answer nil
+  "A function of a request that returns the body GitHub answers with.")
+
+(defun test-mutations--transport (request)
+  "Answer REQUEST with `test-mutations--answer', on a timer."
+  (push request test-mutations--requests)
+  (let ((timer (run-at-time 0 nil (plist-get request :on-success)
+                            (funcall test-mutations--answer request) nil)))
+    (lambda () (cancel-timer timer))))
+
+(defun test-mutations--answer-with (data)
+  "Make GitHub answer the next requests with DATA."
+  (setq test-mutations--answer (lambda (_request) `((data . ,(copy-tree data))))))
+
+(defun test-mutations--load ()
+  "Fill the current buffer's store with the medium PR."
+  (approve-model-init (approve-test-fixture-meta "medium"))
+  (dolist (query '("queries/pull-request.graphql" "queries/pull-request-files.graphql"
+                   "queries/pull-request-threads.graphql"
+                   "queries/pull-request-timeline.graphql"))
+    (approve-model-load (copy-tree (let-alist (approve-test-fixture-data "medium" query)
+                                     .repository.pullRequest))
+                        t)))
+
+(defmacro test-mutations--with-pr (&rest body)
+  "Run BODY in a buffer holding the medium PR, GitHub being the fake."
+  (declare (indent 0) (debug t))
+  `(let ((approve-api-transport #'test-mutations--transport)
+         (approve-graphql-directory approve-test-graphql-directory)
+         (approve-api-timeout nil)
+         (inhibit-message t)
+         (test-mutations--requests nil)
+         (test-mutations--answer nil))
+     (with-temp-buffer
+       (test-mutations--load)
+       ,@body)))
+
+(defun test-mutations--run (function &rest args)
+  "Call the mutation FUNCTION with ARGS; return how it ended.
+That is (t . RESULT) when it called its callback, (nil . ERROR) when
+its errorback."
+  (let ((outcome nil))
+    (apply function (append args
+                            (list :callback (lambda (result) (setq outcome (cons t result)))
+                                  :errorback (lambda (err) (setq outcome (cons nil err))))))
+    (approve-test-wait-for (lambda () outcome))
+    outcome))
+
+(defun test-mutations--sent ()
+  "Return the query file and the variables of the last request, sorted."
+  (let ((request (car test-mutations--requests)))
+    (list (plist-get request :name)
+          (sort (copy-sequence (plist-get request :variables))
+                (lambda (a b) (string< (car a) (car b)))))))
+
+(defun test-mutations--ref (typename id)
+  "Return the ref to TYPENAME ID."
+  (approve-model-make-ref typename id))
+
+(defun test-mutations--ids (field &optional ref)
+  "Return the ids of the nodes in FIELD of REF (default: the PR), in order."
+  (mapcar #'approve-model-ref-id
+          (approve-model-nodes (approve-model-raw-field (or ref (approve-model-root-ref))
+                                                        field))))
+
+(defun test-mutations--total (field &optional ref)
+  "Return the totalCount of the list in FIELD of REF (default: the PR)."
+  (approve-model-total-count
+   (approve-model-raw-field (or ref (approve-model-root-ref)) field)))
+
+(defun test-mutations--comment (id &rest fields)
+  "Return a review comment ID of the pending review, with FIELDS, an alist."
+  `((__typename . "PullRequestReviewComment") (id . ,id) ,@fields))
+
+(defun test-mutations--review-state (&rest pending-comments)
+  "Return the PR's review state as GitHub answers it.
+With PENDING-COMMENTS, ids of comments, the pending review has them;
+without, there is none."
+  `((__typename . "PullRequest") (id . ,test-mutations--pr)
+    (pendingReviews
+     (nodes
+      ,@(and pending-comments
+             `(((__typename . "PullRequestReview") (id . ,test-mutations--pending)
+                (state . "PENDING")
+                (comments (totalCount . ,(length pending-comments))
+                          (pageInfo (hasNextPage) (endCursor . "x"))
+                          (nodes ,@(mapcar #'test-mutations--comment
+                                           pending-comments))))))))))
+
+(defun test-mutations--thread-answer (id comment review &rest fields)
+  "Return a thread ID with one COMMENT of REVIEW, and FIELDS, an alist."
+  `((__typename . "PullRequestReviewThread") (id . ,id) ,@fields
+    (comments (totalCount . 1) (pageInfo (hasNextPage) (endCursor . "x"))
+              (nodes ,(test-mutations--comment
+                       comment `(pullRequestReview (__typename . "PullRequestReview")
+                                                   (id . ,review)))))))
+
+(describe "The mutations"
+  (it "mark a file viewed, then not viewed, once GitHub has"
+    (test-mutations--with-pr
+      (test-mutations--answer-with
+       `((markFileAsViewed (pullRequest (__typename . "PullRequest") (id . ,test-mutations--pr)))))
+      (expect (test-mutations--run #'approve-mutation-set-file-viewed "README.md" t)
+              :to-equal '(t . "VIEWED"))
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/mark-file-as-viewed.graphql"
+                          ((path . "README.md") (pullRequestId . ,test-mutations--pr))))
+      (let ((states (mapcar (lambda (file) (alist-get 'viewerViewedState file))
+                            (approve-pr-files))))
+        (expect (seq-take states 4) :to-equal '("VIEWED" "DISMISSED" "VIEWED" "VIEWED")))
+      (expect (test-mutations--run #'approve-mutation-set-file-viewed "README.md" nil)
+              :to-equal '(t . "UNVIEWED"))
+      (expect (car (test-mutations--sent)) :to-equal "mutations/unmark-file-as-viewed.graphql")
+      (expect (alist-get 'viewerViewedState
+                         (seq-find (lambda (file) (equal (alist-get 'path file) "README.md"))
+                                   (approve-pr-files)))
+              :to-equal "UNVIEWED")
+      (expect (length (approve-pr-files)) :to-equal 30)))
+
+  (it "refuse before sending when no pull request has loaded"
+    (let ((approve-api-transport #'test-mutations--transport)
+          (test-mutations--requests nil))
+      (with-temp-buffer
+        (expect (approve-mutation-set-file-viewed "a.el" t) :to-throw 'error)
+        (expect test-mutations--requests :to-be nil))))
+
+  (describe "approve-mutation-add-thread"
+    (it "comments on a range; the thread joins the pending review GitHub answers with"
+      (test-mutations--with-pr
+        (test-mutations--answer-with
+         `((addPullRequestReviewThread
+            (thread ,@(test-mutations--thread-answer
+                       "PRRT_new" "PRRC_new" test-mutations--pending
+                       '(path . "internal/parser/parser.go") '(line . 14))
+                    (pullRequest ,@(apply #'test-mutations--review-state
+                                          (append (mapcar #'car test-mutations--pending-comments)
+                                                  '("PRRC_new"))))))))
+        (expect (test-mutations--run
+                 #'approve-mutation-add-thread
+                 '(:kind lines :path "internal/parser/parser.go" :side "RIGHT" :line 14
+                         :start-side "RIGHT" :start-line 13 :url "https://x")
+                 "Can this fail?")
+                :to-equal `(t . ,(test-mutations--ref "PullRequestReviewThread" "PRRT_new")))
+        (expect (test-mutations--sent)
+                :to-equal `("mutations/add-pull-request-review-thread.graphql"
+                            ((body . "Can this fail?") (line . 14)
+                             (path . "internal/parser/parser.go")
+                             (pullRequestId . ,test-mutations--pr) (side . "RIGHT")
+                             (startLine . 13) (startSide . "RIGHT") (subjectType . "LINE"))))
+        (expect (car (last (test-mutations--ids 'reviewThreads))) :to-equal "PRRT_new")
+        (expect (test-mutations--total 'reviewThreads) :to-equal 21)
+        (expect (alist-get 'id (car (last (approve-pr-threads-for-file
+                                           "internal/parser/parser.go"))))
+                :to-equal "PRRT_new")
+        (expect (mapcar (lambda (comment) (alist-get 'id comment))
+                        (approve-model-nodes (alist-get 'comments (approve-pr-pending-review))))
+                :to-equal (append (mapcar #'car test-mutations--pending-comments) '("PRRC_new")))
+        (expect (approve-model-raw-field (test-mutations--ref "PullRequestReviewThread" "PRRT_new")
+                                         'pullRequest)
+                :to-be nil)))
+
+    (it "sends one line without a start, and a whole file as a FILE thread"
+      (test-mutations--with-pr
+        (test-mutations--answer-with
+         `((addPullRequestReviewThread
+            (thread ,@(test-mutations--thread-answer "PRRT_new" "PRRC_new" test-mutations--pending)
+                    (pullRequest ,@(test-mutations--review-state "PRRC_new"))))))
+        (dolist (target '((:kind line :path "a.go" :side "LEFT" :line 7 :old 7 :new nil)
+                          (:kind lines :path "a.go" :side "LEFT" :line 7
+                                 :start-side "LEFT" :start-line 7)))
+          (test-mutations--run #'approve-mutation-add-thread target "One line")
+          (expect (cadr (test-mutations--sent))
+                  :to-equal `((body . "One line") (line . 7) (path . "a.go")
+                              (pullRequestId . ,test-mutations--pr) (side . "LEFT")
+                              (subjectType . "LINE"))))
+        (test-mutations--run #'approve-mutation-add-thread
+                             '(:kind file :path "a.go" :viewed "VIEWED") "The file")
+        (expect (cadr (test-mutations--sent))
+                :to-equal `((body . "The file") (path . "a.go")
+                            (pullRequestId . ,test-mutations--pr) (subjectType . "FILE")))))
+
+    (it "fails, changing nothing, when GitHub answers with no thread"
+      (test-mutations--with-pr
+        (test-mutations--answer-with '((addPullRequestReviewThread (thread))))
+        (let ((outcome (test-mutations--run #'approve-mutation-add-thread
+                                            '(:path "a.go" :side "RIGHT" :line 900) "Here")))
+          (expect (car outcome) :to-be nil)
+          (expect (cdr outcome) :to-equal '(approve-mutation-refused "that line takes no comment"))
+          (expect (approve-api-error-message (cdr outcome)) :to-equal "that line takes no comment"))
+        (expect (test-mutations--total 'reviewThreads) :to-equal 20))))
+
+  (describe "approve-mutation-add-reply"
+    (it "adds a published reply to its thread, and its review to the conversation"
+      (test-mutations--with-pr
+        (test-mutations--answer-with
+         `((addPullRequestReviewThreadReply
+            (comment (__typename . "PullRequestReviewComment") (id . "PRRC_reply")
+                     (state . "SUBMITTED") (body . "Done")
+                     (pullRequestReview (__typename . "PullRequestReview") (id . "PRR_reply")
+                                        (state . "COMMENTED") (bodyHTML . ""))
+                     (pullRequest ,@(test-mutations--review-state))))))
+        (let ((thread (test-mutations--ref "PullRequestReviewThread" test-mutations--thread)))
+          (expect (test-mutations--run #'approve-mutation-add-reply test-mutations--thread "Done")
+                  :to-equal `(t . ,(test-mutations--ref "PullRequestReviewComment" "PRRC_reply")))
+          (expect (test-mutations--sent)
+                  :to-equal `("mutations/add-pull-request-review-thread-reply.graphql"
+                              ((body . "Done") (threadId . ,test-mutations--thread))))
+          (expect (car (last (test-mutations--ids 'comments thread))) :to-equal "PRRC_reply")
+          (expect (test-mutations--total 'comments thread) :to-equal 4)
+          (expect (car (last (test-mutations--ids 'timelineItems))) :to-equal "PRR_reply")
+          (expect (test-mutations--total 'timelineItems) :to-equal 41)
+          (expect (approve-pr-pending-review) :to-be nil))))
+
+    (it "keeps a pending reply out of the conversation; it joins the pending review"
+      (test-mutations--with-pr
+        (test-mutations--answer-with
+         `((addPullRequestReviewThreadReply
+            (comment ,@(test-mutations--comment
+                        "PRRC_reply" '(state . "PENDING")
+                        `(pullRequestReview (__typename . "PullRequestReview")
+                                            (id . ,test-mutations--pending)
+                                            (state . "PENDING")))
+                     (pullRequest ,@(apply #'test-mutations--review-state
+                                           (append (mapcar #'car test-mutations--pending-comments)
+                                                   '("PRRC_reply"))))))))
+        (test-mutations--run #'approve-mutation-add-reply test-mutations--thread "Later")
+        (expect (car (last (test-mutations--ids 'comments (test-mutations--ref
+                                                           "PullRequestReviewThread"
+                                                           test-mutations--thread))))
+                :to-equal "PRRC_reply")
+        (expect (test-mutations--total 'timelineItems) :to-equal 40)
+        (expect (length (approve-model-nodes (alist-get 'comments (approve-pr-pending-review))))
+                :to-equal 4))))
+
+  (it "resolve and unresolve a thread"
+    (test-mutations--with-pr
+      (let ((thread (test-mutations--ref "PullRequestReviewThread" test-mutations--thread)))
+        (dolist (resolved '(t nil))
+          (test-mutations--answer-with
+           `((,(if resolved 'resolveReviewThread 'unresolveReviewThread)
+              (thread (__typename . "PullRequestReviewThread") (id . ,test-mutations--thread)
+                      (isResolved . ,resolved)))))
+          (expect (test-mutations--run (if resolved
+                                           #'approve-mutation-resolve-thread
+                                         #'approve-mutation-unresolve-thread)
+                                       test-mutations--thread)
+                  :to-equal (cons t thread))
+          (expect (test-mutations--sent)
+                  :to-equal `(,(if resolved
+                                   "mutations/resolve-review-thread.graphql"
+                                 "mutations/unresolve-review-thread.graphql")
+                              ((threadId . ,test-mutations--thread))))
+          (expect (approve-model-raw-field thread 'isResolved) :to-be resolved)
+          (expect (test-mutations--total 'comments thread) :to-equal 3)))))
+
+  (describe "approve-mutation-add-review"
+    (it "sends comments on lines, keeping the new threads of that review"
+      (test-mutations--with-pr
+        (test-mutations--answer-with
+         `((addPullRequestReview
+            (pullRequestReview
+             (__typename . "PullRequestReview") (id . "PRR_single") (state . "COMMENTED")
+             (pullRequest ,@(test-mutations--review-state)
+                          (addedThreads
+                           (nodes ,(test-mutations--thread-answer "PRRT_other" "PRRC_other"
+                                                                  "PRR_other")
+                                  ,(test-mutations--thread-answer "PRRT_single" "PRRC_single"
+                                                                  "PRR_single"))))))))
+        (expect (test-mutations--run #'approve-mutation-add-review
+                                     :event "COMMENT"
+                                     :threads '((:path "README.md" :side "RIGHT" :line 3
+                                                       :body "Typo")))
+                :to-equal `(t . ,(test-mutations--ref "PullRequestReview" "PRR_single")))
+        (expect (test-mutations--sent)
+                :to-equal `("mutations/add-pull-request-review.graphql"
+                            ((event . "COMMENT") (pullRequestId . ,test-mutations--pr)
+                             (threadCount . 1)
+                             (threads . [((body . "Typo") (path . "README.md") (line . 3)
+                                          (side . "RIGHT"))]))))
+        (expect (last (test-mutations--ids 'reviewThreads)) :to-equal '("PRRT_single"))
+        (expect (car (last (test-mutations--ids 'timelineItems))) :to-equal "PRR_single")
+        (expect (approve-pr-field 'addedThreads) :to-be nil)
+        (expect (approve-model-raw-field (test-mutations--ref "PullRequestReview" "PRR_single")
+                                         'pullRequest)
+                :to-be nil)))
+
+    (it "sends a verdict alone, asking for no threads"
+      (test-mutations--with-pr
+        (test-mutations--answer-with
+         `((addPullRequestReview
+            (pullRequestReview (__typename . "PullRequestReview") (id . "PRR_ok")
+                               (state . "APPROVED")
+                               (pullRequest ,@(test-mutations--review-state)
+                                            (addedThreads (nodes)))))))
+        (test-mutations--run #'approve-mutation-add-review :event "APPROVE" :body "LGTM")
+        (expect (test-mutations--sent)
+                :to-equal `("mutations/add-pull-request-review.graphql"
+                            ((body . "LGTM") (event . "APPROVE")
+                             (pullRequestId . ,test-mutations--pr) (threadCount . 0))))
+        (expect (test-mutations--total 'reviewThreads) :to-equal 20)
+        (expect (car (last (test-mutations--ids 'timelineItems))) :to-equal "PRR_ok")))
+
+    (it "refuses a comment on a whole file before sending"
+      (test-mutations--with-pr
+        (expect (approve-mutation-add-review :event "COMMENT"
+                                             :threads '((:path "a.go" :body "File")))
+                :to-throw 'error)
+        (expect test-mutations--requests :to-be nil))))
+
+  (it "submit the pending review: it is no longer pending and joins the conversation once"
+    (test-mutations--with-pr
+      (test-mutations--answer-with
+       `((submitPullRequestReview
+          (pullRequestReview
+           (__typename . "PullRequestReview") (id . ,test-mutations--pending)
+           (state . "APPROVED")
+           (comments (totalCount . 3) (pageInfo (hasNextPage) (endCursor . "x"))
+                     (nodes ,@(mapcar (lambda (comment)
+                                        (test-mutations--comment (car comment)
+                                                                 '(state . "SUBMITTED")))
+                                      test-mutations--pending-comments)))
+           (pullRequest (reviewDecision . "APPROVED")
+                        ,@(test-mutations--review-state))))))
+      (expect (approve-pr-pending-review) :not :to-be nil)
+      (expect (approve-pr-field 'reviewDecision) :to-equal "CHANGES_REQUESTED")
+      (dotimes (_ 2)
+        (expect (test-mutations--run #'approve-mutation-submit-review "APPROVE")
+                :to-equal `(t . ,(test-mutations--ref "PullRequestReview"
+                                                      test-mutations--pending))))
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/submit-pull-request-review.graphql"
+                          ((event . "APPROVE") (pullRequestId . ,test-mutations--pr))))
+      (expect (approve-pr-pending-review) :to-be nil)
+      (expect (approve-pr-field 'reviewDecision) :to-equal "APPROVED")
+      (expect (approve-model-get "PullRequestReviewComment" (caar test-mutations--pending-comments)
+                                 'state)
+              :to-equal "SUBMITTED")
+      (expect (seq-count (lambda (id) (equal id test-mutations--pending))
+                         (test-mutations--ids 'timelineItems))
+              :to-equal 1)))
+
+  (it "discard the pending review: its threads and replies leave the store's lists"
+    (test-mutations--with-pr
+      (let ((thread (test-mutations--ref "PullRequestReviewThread" test-mutations--thread)))
+        ;; A pending reply on a published thread first.
+        (test-mutations--answer-with
+         `((addPullRequestReviewThreadReply
+            (comment ,@(test-mutations--comment
+                        "PRRC_reply" '(state . "PENDING")
+                        `(pullRequestReview (__typename . "PullRequestReview")
+                                            (id . ,test-mutations--pending)))
+                     (pullRequest ,@(apply #'test-mutations--review-state
+                                           (append (mapcar #'car test-mutations--pending-comments)
+                                                   '("PRRC_reply"))))))))
+        (test-mutations--run #'approve-mutation-add-reply test-mutations--thread "Later")
+        (expect (test-mutations--total 'comments thread) :to-equal 4)
+        (test-mutations--answer-with
+         `((deletePullRequestReview (pullRequestReview (__typename . "PullRequestReview")
+                                                       (id . ,test-mutations--pending)))))
+        (expect (test-mutations--run #'approve-mutation-delete-review test-mutations--pending)
+                :to-equal `(t . ,(test-mutations--ref "PullRequestReview"
+                                                      test-mutations--pending)))
+        (expect (test-mutations--sent)
+                :to-equal `("mutations/delete-pull-request-review.graphql"
+                            ((reviewId . ,test-mutations--pending))))
+        (expect (approve-pr-pending-review) :to-be nil)
+        (dolist (comment test-mutations--pending-comments)
+          (expect (test-mutations--ids 'reviewThreads) :not :to-contain (cdr comment)))
+        (expect (test-mutations--total 'reviewThreads) :to-equal 17)
+        (expect (test-mutations--ids 'comments thread) :not :to-contain "PRRC_reply")
+        (expect (test-mutations--total 'comments thread) :to-equal 3))))
+
+  (it "delete a review comment; the pending review's last one takes the review along"
+    (test-mutations--with-pr
+      (test-mutations--answer-with '((deletePullRequestReviewComment (clientMutationId))))
+      ;; A published reply: its thread stays.
+      (let ((thread (test-mutations--ref "PullRequestReviewThread" test-mutations--thread)))
+        (expect (test-mutations--run #'approve-mutation-delete-review-comment
+                                     "PRRC_kwDOjbJkqIaS7rYCer")
+                :to-equal `(t . ,(test-mutations--ref "PullRequestReviewComment"
+                                                      "PRRC_kwDOjbJkqIaS7rYCer")))
+        (expect (test-mutations--sent)
+                :to-equal '("mutations/delete-pull-request-review-comment.graphql"
+                            ((commentId . "PRRC_kwDOjbJkqIaS7rYCer"))))
+        (expect (test-mutations--ids 'comments thread)
+                :to-equal '("PRRC_kwDOk4pUe_h6k_jiHs" "PRRC_kwDOW1CBXUSEPg3qZA"))
+        (expect (test-mutations--ids 'reviewThreads) :to-contain test-mutations--thread))
+      ;; The pending comments: each takes its thread, the last the review.
+      (pcase-dolist (`(,comment . ,thread) test-mutations--pending-comments)
+        (expect (approve-pr-pending-review) :not :to-be nil)
+        (test-mutations--run #'approve-mutation-delete-review-comment comment)
+        (expect (test-mutations--ids 'reviewThreads) :not :to-contain thread))
+      (expect (approve-pr-pending-review) :to-be nil)
+      (expect (test-mutations--total 'reviewThreads) :to-equal 17)))
+
+  (it "edit a review comment, a review and a conversation comment"
+    (test-mutations--with-pr
+      (pcase-dolist (`(,function ,mutation ,field ,typename ,id ,query ,key)
+                     '((approve-mutation-update-review-comment
+                        updatePullRequestReviewComment pullRequestReviewComment
+                        "PullRequestReviewComment" "PRRC_kwDOk4pUe_h6k_jiHs"
+                        "mutations/update-pull-request-review-comment.graphql" commentId)
+                       (approve-mutation-update-review
+                        updatePullRequestReview pullRequestReview
+                        "PullRequestReview" "PRR_kwDOSkZtjrqLxYfRz7"
+                        "mutations/update-pull-request-review.graphql" reviewId)
+                       (approve-mutation-update-issue-comment
+                        updateIssueComment issueComment
+                        "IssueComment" "IC_kwDOVM-W6WgSu2tHHg"
+                        "mutations/update-issue-comment.graphql" commentId)))
+        (test-mutations--answer-with
+         `((,mutation (,field (__typename . ,typename) (id . ,id) (body . "New")
+                              (bodyHTML . "<p>New</p>")))))
+        (expect (test-mutations--run function id "New")
+                :to-equal `(t . ,(test-mutations--ref typename id)))
+        (expect (test-mutations--sent) :to-equal `(,query ((body . "New") (,key . ,id))))
+        (expect (approve-model-get typename id 'bodyHTML) :to-equal "<p>New</p>"))))
+
+  (it "add a conversation comment at the end of the conversation, and delete one"
+    (test-mutations--with-pr
+      (test-mutations--answer-with
+       '((addComment (commentEdge (node (__typename . "IssueComment") (id . "IC_new")
+                                        (body . "Hi"))))))
+      (expect (test-mutations--run #'approve-mutation-add-comment "Hi")
+              :to-equal `(t . ,(test-mutations--ref "IssueComment" "IC_new")))
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/add-comment.graphql"
+                          ((body . "Hi") (subjectId . ,test-mutations--pr))))
+      (expect (car (last (test-mutations--ids 'timelineItems))) :to-equal "IC_new")
+      (expect (test-mutations--total 'timelineItems) :to-equal 41)
+      (test-mutations--answer-with '((deleteIssueComment (clientMutationId))))
+      (test-mutations--run #'approve-mutation-delete-issue-comment "IC_kwDOVM-W6WgSu2tHHg")
+      (expect (test-mutations--sent)
+              :to-equal '("mutations/delete-issue-comment.graphql"
+                          ((commentId . "IC_kwDOVM-W6WgSu2tHHg"))))
+      (expect (test-mutations--ids 'timelineItems) :not :to-contain "IC_kwDOVM-W6WgSu2tHHg")
+      (expect (test-mutations--total 'timelineItems) :to-equal 40)))
+
+  (it "give GitHub's error to the errorback, changing nothing"
+    (test-mutations--with-pr
+      (setq test-mutations--answer
+            (lambda (_request)
+              '((data (resolveReviewThread))
+                (errors ((type . "FORBIDDEN")
+                         (message . "Resource not accessible by integration"))))))
+      (let ((outcome (test-mutations--run #'approve-mutation-resolve-thread
+                                          test-mutations--thread)))
+        (expect (car outcome) :to-be nil)
+        (expect (approve-api-error-message (cdr outcome))
+                :to-equal "Resource not accessible by integration"))
+      (expect (approve-model-raw-field (test-mutations--ref "PullRequestReviewThread"
+                                                            test-mutations--thread)
+                                       'isResolved)
+              :to-be nil)))
+
+  (it "give a failure to read GitHub's answer to the errorback, and log it"
+    (test-mutations--with-pr
+      (spy-on 'approve-log-condition)
+      (test-mutations--answer-with
+       `((resolveReviewThread (thread (id . ,test-mutations--thread) (isResolved . t)))))
+      (let ((outcome (test-mutations--run #'approve-mutation-resolve-thread
+                                          test-mutations--thread)))
+        (expect (car outcome) :to-be nil)
+        (expect (car (cdr outcome)) :to-be 'approve-api-error)
+        (expect (approve-api-error-message (cdr outcome)) :to-match "see \\*approve-log\\*"))
+      (expect 'approve-log-condition :to-have-been-called))))
+
+(provide 'test-approve-mutations)
+
+;;; test-approve-mutations.el ends here

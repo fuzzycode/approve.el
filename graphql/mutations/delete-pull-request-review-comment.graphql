@@ -1,0 +1,8 @@
+# F08: delete a comment in a review thread.  Deleting the last comment of the
+# pending review deletes the review (D32); approve-mutations.el removes the
+# comment, and what it leaves empty, from the store itself.
+mutation DeletePullRequestReviewComment($commentId: ID!) {
+  deletePullRequestReviewComment(input: {id: $commentId}) {
+    clientMutationId
+  }
+}

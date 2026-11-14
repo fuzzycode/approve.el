@@ -1,0 +1,74 @@
+${include:fragments/actor.graphql}
+${include:fragments/pull-request-review.graphql}
+${include:fragments/pull-request-review-comment.graphql}
+
+# The PR's review state: who is asked to review, each reviewer's latest
+# verdict and the decision they make, the viewer's latest review, and the
+# viewer's pending review with its comments.  The core selects it with the
+# rest of the PR.  The mutations that change it (a thread, a reply, a review
+# added or submitted) select it on their pull request too, so the store takes
+# GitHub's word for it rather than tracking it by hand (D35).
+fragment PullRequestReviewStateFields on PullRequest {
+  reviewRequests(first: 100) {
+    nodes {
+      __typename
+      id
+      asCodeOwner
+      requestedReviewer {
+        __typename
+        ... on Node {
+          id
+        }
+        ...ActorFields
+        ... on Team {
+          slug
+          combinedSlug
+          url
+        }
+        ... on EnterpriseTeam {
+          slug
+          combinedSlug
+        }
+      }
+    }
+  }
+  latestOpinionatedReviews(first: 100) {
+    nodes {
+      __typename
+      id
+      state
+      submittedAt
+      author {
+        ...ActorFields
+      }
+    }
+  }
+  reviewDecision
+  viewerLatestReview {
+    __typename
+    id
+    state
+    submittedAt
+    commit {
+      __typename
+      id
+      oid
+      abbreviatedOid
+    }
+  }
+  pendingReviews: reviews(states: PENDING, first: 1) {
+    nodes {
+      ...PullRequestReviewFields
+      comments(first: 100) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          ...PullRequestReviewCommentFields
+        }
+      }
+    }
+  }
+}

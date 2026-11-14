@@ -69,7 +69,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, markdown preview     |   1–3 |
 | =approve-metadata.el=      | Repository metadata fetched once per session (D24): mentionable users, recent   |     2 |
 |                            | issues and PRs, emoji; later labels, assignable users, milestones               |       |
-| =approve-mutations.el=     | All mutations ([[*API map][API map]])                                                         |   2–5 |
+| =approve-mutations.el=     | All mutations ([[*API map][API map]]): patch the store, make the list edits (D35)             |   2–5 |
 | =approve-faces.el=         | Every face, inheriting from magit/built-in                                      |     1 |
 | =approve-icons.el=         | =approve-icon=: semantic name → nerd-icons or Unicode                           |     1 |
 | =approve-html.el=          | =bodyHTML= → text with shr and custom tag handlers                              |     1 |
@@ -140,7 +140,11 @@ The store from approve-v2 (D10), with a few additions.
   store layout so it can change.
 - List edits for creations and deletions:
   =(approve-model-append-ref OWNER-REF FIELD REF)=,
-  =(approve-model-remove-ref OWNER-REF FIELD REF)=.
+  =(approve-model-remove-ref OWNER-REF FIELD REF)=, and
+  =(approve-model-edit-list OWNER-REF FIELD FUNCTION)= for anything else
+  (a file's viewed state).  The mutations make them, after patching the
+  store with GitHub's answer ([[file:decisions.org::*D35 Mutations keep the store true: GitHub's answer, then list edits][D35]]); =approve-model-raw-field= reads
+  the store as it is stored, refs unresolved, for walking it cheaply.
 - The PR buffer and the split diff buffer share one store: the diff buffer
   points to its PR buffer (=approve-model-store-buffer=), and every model
   function reads and writes the store and session there.
@@ -439,8 +443,9 @@ Every command that changes something on GitHub runs the action pipeline
     :why-not (unless (plist-get context :can-resolve) "You can't resolve this thread")
     :input nil                                       or approve-input-read's arguments
     :marks `((section approve-thread-section ,id))   what waits for GitHub
-    :send (lambda (text callback errorback) …)       queue the mutations
-    :done (lambda (result) …)))                      list edits, before the redraw
+    :send (lambda (_text callback errorback)         queue the mutations
+            (approve-mutation-resolve-thread id :callback callback :errorback errorback))
+    :done (lambda (result) …)))                      anything else, before the redraw
 #+end_example
 
 - =approve-action-context= is the context at point when the command
@@ -451,9 +456,11 @@ Every command that changes something on GitHub runs the action pipeline
   the text when there is =:input= (aborting stops there, keeping the
   draft).  It marks =:marks= in flight and calls =:send= in the PR buffer
   with the text (or nil), a callback and an errorback.  =:send= queues the
-  mutations through the operations, whose answers patch the store, and
+  mutations through the operations (=approve-mutations.el=), which patch
+  the store with GitHub's answers and make the list edits ([[file:decisions.org::*D35 Mutations keep the store true: GitHub's answer, then list edits][D35]]), and
   calls the callback with a result once GitHub has confirmed them all.
-- On success the input's draft goes, =:done= runs with the result, then
+- On success the input's draft goes, =:done= runs with the result (for
+  what is not the store's, such as where point goes), then
   the marks go and every buffer of the PR redraws, point kept.  On failure
   the marks go and the echo area says what could not be done and GitHub's
   message (and when a rate limit resets); the text stays a draft.  The

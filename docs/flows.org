@@ -45,6 +45,9 @@ show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutation
 * F00 The action pipeline
 Every command that changes something on GitHub runs this pipeline.  Code
 lives in =approve-actions.el=; each command supplies the parts marked ✱.
+Its mutations (=approve-mutations.el=) patch the store with GitHub's answer
+and make the list edits that follow from it ([[file:decisions.org::*D35 Mutations keep the store true: GitHub's answer, then list edits][D35]]), so a command never
+edits the store itself.
 
 #+begin_example
  [user] key or menu suffix
@@ -77,7 +80,7 @@ lives in =approve-actions.el=; each command supplies the parts marked ✱.
                     ▼
  ┌─────────────────────────────────────┐
  │ patch store with returned fragment  │
- │ ✱ list edits (append/remove refs)   │
+ │ list edits (append/remove refs)     │
  │ clear draft · clear mark            │
  │ redraw (all buffers of this PR),    │
  │ restore point                       │
@@ -242,9 +245,9 @@ line selection), or a whole file.
         │                                          no comment"), draft kept
         ▼                                                              ▼
  ┌─────────────────────────────────────────────────────────────────────┐
- │ patch store: thread, comment, review                                │
+ │ patch store: thread, comment, review, the PR's review state         │
  │ append thread ref to PR.reviewThreads                               │
- │ set pending review ref (if new)                                     │
+ │ pending review: as GitHub's answer has it (new or not, D35)         │
  │ redraw: thread under its line, "Your pending review", counts        │
  └─────────────────────────────────────────────────────────────────────┘
 #+end_example

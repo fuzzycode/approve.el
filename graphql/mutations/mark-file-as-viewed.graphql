@@ -1,0 +1,10 @@
+# F04: mark a file viewed.  Files have no id, so the answer is only the pull
+# request's; approve-mutations.el sets the file's viewerViewedState itself.
+mutation MarkFileAsViewed($pullRequestId: ID!, $path: String!) {
+  markFileAsViewed(input: {pullRequestId: $pullRequestId, path: $path}) {
+    pullRequest {
+      __typename
+      id
+    }
+  }
+}

@@ -4,14 +4,14 @@ ${include:fragments/label.graphql}
 ${include:fragments/milestone.graphql}
 ${include:fragments/ref.graphql}
 ${include:fragments/reaction-group.graphql}
-${include:fragments/pull-request-review.graphql}
-${include:fragments/pull-request-review-comment.graphql}
+${include:fragments/pull-request-review-state.graphql}
 
 # The PR core: what the header, metadata rows, status line, description,
-# header line and "Your pending review" show.  The long lists (files,
-# threads, timeline, commits, check contexts) come from their own queries;
-# here they are only counted, under aliases, so loading this never replaces
-# a list another query loaded (store contract point 3).
+# header line and "Your pending review" show.  The review state has a
+# fragment of its own, which the review mutations select too.  The long lists
+# (files, threads, timeline, commits, check contexts) come from their own
+# queries; here they are only counted, under aliases, so loading this never
+# replaces a list another query loaded (store contract point 3).
 fragment PullRequestFields on PullRequest {
   __typename
   id
@@ -81,41 +81,7 @@ fragment PullRequestFields on PullRequest {
   milestone {
     ...MilestoneFields
   }
-  reviewRequests(first: 100) {
-    nodes {
-      __typename
-      id
-      asCodeOwner
-      requestedReviewer {
-        __typename
-        ... on Node {
-          id
-        }
-        ...ActorFields
-        ... on Team {
-          slug
-          combinedSlug
-          url
-        }
-        ... on EnterpriseTeam {
-          slug
-          combinedSlug
-        }
-      }
-    }
-  }
-  latestOpinionatedReviews(first: 100) {
-    nodes {
-      __typename
-      id
-      state
-      submittedAt
-      author {
-        ...ActorFields
-      }
-    }
-  }
-  reviewDecision
+  ...PullRequestReviewStateFields
   mergeable
   mergeStateStatus
   statusCheckRollup {
@@ -164,31 +130,4 @@ fragment PullRequestFields on PullRequest {
   viewerCanEnableAutoMerge
   viewerCanDisableAutoMerge
   viewerCanMergeAsAdmin
-  viewerLatestReview {
-    __typename
-    id
-    state
-    submittedAt
-    commit {
-      __typename
-      id
-      oid
-      abbreviatedOid
-    }
-  }
-  pendingReviews: reviews(states: PENDING, first: 1) {
-    nodes {
-      ...PullRequestReviewFields
-      comments(first: 100) {
-        totalCount
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        nodes {
-          ...PullRequestReviewCommentFields
-        }
-      }
-    }
-  }
 }

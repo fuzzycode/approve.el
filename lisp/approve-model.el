@@ -498,6 +498,23 @@ Signal `approve-model-not-found' when no root is set."
   (approve-model--with-store
     (and (approve-model--entity typename id) t)))
 
+(defun approve-model-raw-field (ref field)
+  "Return FIELD of the entity REF points to as stored, or nil.
+Nothing is resolved: refs stay refs and a connection stays a
+connection (read its nodes with `approve-model-nodes').  So it is
+cheap, for code that walks the store to edit it, such as finding
+the threads that hold a comment.  Nil when the entity is not in the
+store.  Don't change the value: edit lists with
+`approve-model-edit-list'.
+
+Example:
+  (approve-model-raw-field comment-ref \='pullRequestReview)
+  => (:approve-ref \"PullRequestReview\" \"PRR_1\")"
+  (unless (approve-model-ref-p ref)
+    (signal 'approve-model-invalid-ref (list ref)))
+  (approve-model--with-store
+    (alist-get field (approve-model--raw ref))))
+
 ;;; Changing the store
 
 (defun approve-model--set-field (ref field value)
@@ -516,11 +533,25 @@ Signal `approve-model-not-found' if the entity is not stored."
                (append entity (list (cons field value))))
              (approve-model--type-table typename))))
 
-(defun approve-model--edit-list (owner-ref field function)
+(defun approve-model-edit-list (owner-ref field function)
   "Replace the nodes in FIELD of OWNER-REF with FUNCTION's result.
-FUNCTION gets the nodes and returns the new nodes.  A connection
-keeps its `pageInfo', and its `totalCount' moves by the change in
-length.  Return the new value of FIELD."
+FUNCTION gets the nodes as stored (refs, or alists for nodes that
+are no entities, such as the PR's files) and returns the new nodes;
+it must not change the list it gets.  A connection keeps its
+`pageInfo', and its `totalCount' moves by the change in length.
+Return the new value of FIELD.  Signal `approve-model-not-found' if
+the owner is not in the store.  To add or remove a ref, use
+`approve-model-append-ref' and `approve-model-remove-ref'.
+
+Example, a file marked viewed:
+  (approve-model-edit-list
+   (approve-model-root-ref) \='files
+   (lambda (files)
+     (mapcar (lambda (file)
+               (if (equal (alist-get \='path file) \"a.el\")
+                   (cons \='(viewerViewedState . \"VIEWED\") file)
+                 file))
+             files)))"
   (unless (approve-model-ref-p owner-ref)
     (signal 'approve-model-invalid-ref (list owner-ref)))
   (approve-model--with-store
@@ -552,11 +583,11 @@ there.  Return the new value of FIELD.  Signal
 Example, after a reply was created:
   (approve-model-append-ref thread-ref \\='comments
                             (approve-model-patch comment))"
-  (approve-model--edit-list owner-ref field
-                            (lambda (nodes)
-                              (if (member ref nodes)
-                                  nodes
-                                (append nodes (list ref))))))
+  (approve-model-edit-list owner-ref field
+                           (lambda (nodes)
+                             (if (member ref nodes)
+                                 nodes
+                               (append nodes (list ref))))))
 
 (defun approve-model-remove-ref (owner-ref field ref)
   "Remove REF from the list in FIELD of the entity OWNER-REF points to.
@@ -564,8 +595,8 @@ FIELD holds a plain list or a connection; a connection's
 `totalCount' shrinks by the number of refs removed.  Return the new
 value of FIELD.  Signal `approve-model-not-found' if the owner is
 not in the store."
-  (approve-model--edit-list owner-ref field
-                            (lambda (nodes) (remove ref nodes))))
+  (approve-model-edit-list owner-ref field
+                           (lambda (nodes) (remove ref nodes))))
 
 (defun approve-model-delete (ref)
   "Remove the entity REF points to from the store.

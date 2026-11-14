@@ -1,0 +1,11 @@
+# F09: discard the viewer's pending review, with its threads and comments.
+# A query right after may still list them (D32), so approve-mutations.el
+# removes them from the store itself.
+mutation DeletePullRequestReview($reviewId: ID!) {
+  deletePullRequestReview(input: {pullRequestReviewId: $reviewId}) {
+    pullRequestReview {
+      __typename
+      id
+    }
+  }
+}

@@ -1,0 +1,10 @@
+${include:fragments/issue-comment.graphql}
+
+# F08: edit a conversation comment.
+mutation UpdateIssueComment($commentId: ID!, $body: String!) {
+  updateIssueComment(input: {id: $commentId, body: $body}) {
+    issueComment {
+      ...IssueCommentFields
+    }
+  }
+}

@@ -1,0 +1,556 @@
+;;; approve-mutations.el --- Change a pull request on GitHub, keeping the store true -*- lexical-binding: t; -*-
+
+;; Copyright (c) 2026 Björn Larsson
+
+;; Author: Björn Larsson <develop@bjornlarsson.net>
+;; URL: https://github.com/fuzzycode/approve.el
+
+;; This file is not part of GNU Emacs.
+
+;; Permission is hereby granted, free of charge, to any person obtaining a copy
+;; of this software and associated documentation files (the "Software"), to deal
+;; in the Software without restriction, including without limitation the rights
+;; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+;; copies of the Software, and to permit persons to whom the Software is
+;; furnished to do so, subject to the following conditions:
+
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+;; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+;; SOFTWARE.
+
+;;; Commentary:
+
+;; The changes Approve makes on GitHub, one function per mutation in
+;; graphql/mutations/ (docs/architecture.org, "API map"):
+;;
+;;   `approve-mutation-set-file-viewed'         F04  viewed, or not
+;;   `approve-mutation-add-thread'              F05  comment on lines or a file
+;;   `approve-mutation-add-reply'               F07  reply to a thread
+;;   `approve-mutation-resolve-thread'          F07  resolve a thread
+;;   `approve-mutation-unresolve-thread'        F07  unresolve it
+;;   `approve-mutation-add-review'              F05, F09  a single comment, or a
+;;                                                   verdict with nothing pending
+;;   `approve-mutation-submit-review'           F09  submit the pending review
+;;   `approve-mutation-delete-review'           F09  discard it
+;;   `approve-mutation-update-review'           F08  edit a review's body
+;;   `approve-mutation-update-review-comment'   F08  edit a comment in a thread
+;;   `approve-mutation-delete-review-comment'   F08  delete it
+;;   `approve-mutation-add-comment'             F10  comment in the conversation
+;;   `approve-mutation-update-issue-comment'    F08  edit such a comment
+;;   `approve-mutation-delete-issue-comment'    F08  delete it
+;;
+;; Each one queues its mutation (`approve-api-mutate': one at a time,
+;; decision D15) for the PR of the current buffer's store.  Once GitHub
+;; has made the change, it keeps the store true (decision D35):
+;;
+;; - It patches the store with GitHub's answer, the changed object
+;;   through the fragments the queries use (D08).  The mutations that
+;;   change the PR's review state (a thread, a reply, a review added or
+;;   submitted) select that state too (PullRequestReviewStateFields), so
+;;   the pending review, the verdicts and the review requests are
+;;   GitHub's word, not Approve's guess.
+;; - It makes the list edits that follow: a new thread joins the PR's
+;;   threads, a reply its thread, a published review and a comment the
+;;   conversation.  A deletion is list edits alone, since GitHub may
+;;   still list what was deleted right after (D32): a deleted comment
+;;   leaves its thread, a thread left empty leaves the PR, and a pending
+;;   review left without comments goes too.
+;;
+;; Then it calls CALLBACK with the ref of the entity it changed.
+;; ERRORBACK gets an approve-api error: GitHub's, or
+;; `approve-mutation-refused' when GitHub answered without an error but
+;; made no change (a comment on a line outside the hunks).  The
+;; commands give theirs (approve-actions.el), and redraw.
+;;
+;; Layer rules: this is the operations layer.  It calls approve-api and
+;; writes the store; it never touches the text of a buffer and knows
+;; nothing of commands.  Callbacks run in the buffer that made the
+;; request (approve-api), so the store they write is that buffer's.
+
+;;; Code:
+
+(require 'cl-lib)
+(require 'seq)
+(require 'subr-x)
+(require 'approve-api)
+(require 'approve-api-queue)
+(require 'approve-log)
+(require 'approve-model)
+(require 'approve-queries)
+
+(define-error 'approve-mutation-refused "GitHub did not make the change"
+  'approve-api-error)
+
+;;; Sending
+
+(defun approve-mutation--pull-request-id ()
+  "Return the node id of the PR of the current store.
+Signal an error when it has not loaded."
+  (if-let* ((root (approve-model-root-ref)))
+      (approve-model-ref-id root)
+    (error "The pull request has not loaded")))
+
+(defun approve-mutation--variables (variables)
+  "Return the alist VARIABLES without the ones whose value is nil.
+GraphQL takes a missing optional variable as null, where approve-api
+would send nil as false."
+  (seq-remove (lambda (variable) (null (cdr variable))) variables))
+
+(defun approve-mutation--apply (apply data)
+  "Return (t . RESULT) of calling APPLY with DATA, or (nil . ERROR).
+An approve-api error APPLY signals is the error.  Any other is a bug:
+it is logged, and the error says where to look."
+  (condition-case err
+      (cons t (funcall apply data))
+    (approve-api-error (cons nil err))
+    (error
+     (approve-log-condition "Applying the answer to a mutation" err)
+     (cons nil (list 'approve-api-error
+                     (format "%s (see %s)" (error-message-string err)
+                             approve-log-buffer-name))))))
+
+(cl-defun approve-mutation--send (query variables &key progress apply callback errorback)
+  "Queue the mutation QUERY with VARIABLES, then APPLY GitHub's answer.
+VARIABLES whose value is nil are left out.  APPLY is called with the
+answer's data in the buffer that made the request: it makes the
+store true and returns the result for CALLBACK.  An error it signals
+goes to ERRORBACK instead, as GitHub's errors do; without ERRORBACK,
+`approve-api-default-errorback' shows it.  PROGRESS is the
+echo-area text while the mutation runs."
+  (let ((errorback (or errorback #'approve-api-default-errorback)))
+    (approve-api-mutate
+     query (approve-mutation--variables variables)
+     :host (approve-query-host)
+     :progress progress
+     :errorback errorback
+     :callback (lambda (data)
+                 (pcase-let ((`(,ok . ,result) (approve-mutation--apply apply data)))
+                   (cond ((not ok) (funcall errorback result))
+                         (callback (funcall callback result))))))))
+
+(defun approve-mutation--answer (data mutation field &optional refusal)
+  "Return FIELD of the answer to MUTATION in DATA, the data of a response.
+When it is null, GitHub made no change: signal
+`approve-mutation-refused' with REFUSAL, a message saying why."
+  (or (alist-get field (alist-get mutation data))
+      (signal 'approve-mutation-refused
+              (list (or refusal (format "GitHub's answer has no %s" field))))))
+
+;;; The store
+
+(defun approve-mutation--without (object &rest fields)
+  "Return OBJECT, an alist, without FIELDS."
+  (seq-remove (lambda (field) (memq (car field) fields)) object))
+
+(defun approve-mutation--patch (object)
+  "Patch the store with OBJECT, an entity in an answer; return its ref.
+The pull request in its `pullRequest' field, selected for the PR's
+review state, is patched on its own and left out of the entity: an
+entity holding the PR would read the whole PR whenever it is read.
+The PR's `addedThreads' (see `approve-mutation-add-review') are left
+out too: they are no list of the PR."
+  (when-let* ((pull-request (alist-get 'pullRequest object)))
+    (approve-model-patch (approve-mutation--without pull-request 'addedThreads)))
+  (approve-model-patch (approve-mutation--without object 'pullRequest)))
+
+(defun approve-mutation--stored-p (ref)
+  "Return non-nil if the entity REF points to is in the store."
+  (approve-model-has-entity-p (approve-model-ref-type ref) (approve-model-ref-id ref)))
+
+(defun approve-mutation--nodes (ref field)
+  "Return the nodes in FIELD of the entity REF points to, as stored."
+  (approve-model-nodes (approve-model-raw-field ref field)))
+
+(defun approve-mutation--remove (owner field ref)
+  "Remove REF from the list in FIELD of OWNER, a ref, if it is there.
+Return non-nil if it was."
+  (when (member ref (approve-mutation--nodes owner field))
+    (approve-model-remove-ref owner field ref)
+    t))
+
+(defun approve-mutation--empty-p (ref field)
+  "Return non-nil if the list in FIELD of REF has no nodes, loaded or not."
+  (let ((value (approve-model-raw-field ref field)))
+    (and (null (approve-model-nodes value))
+         (not (approve-model-truncated-p value)))))
+
+(defun approve-mutation--publish (review)
+  "Add REVIEW, a ref, to the PR's conversation, unless it is pending.
+A pending review joins the conversation once submitted; one that is
+there already stays where it is."
+  (when (and (approve-model-ref-p review)
+             (not (equal (approve-model-raw-field review 'state) "PENDING")))
+    (approve-model-append-ref (approve-model-root-ref) 'timelineItems review)))
+
+(defun approve-mutation--drop-comments (thread comments)
+  "Remove COMMENTS, refs, from THREAD; drop THREAD when it is left empty."
+  (dolist (comment comments)
+    (approve-mutation--remove thread 'comments comment))
+  (when (approve-mutation--empty-p thread 'comments)
+    (approve-mutation--remove (approve-model-root-ref) 'reviewThreads thread)))
+
+(defun approve-mutation--forget-review (review)
+  "Remove REVIEW, a ref, and its comments from the PR's lists.
+Its comments leave their threads, the threads they leave empty leave
+the PR, and the review leaves the pending reviews and the
+conversation."
+  (let ((root (approve-model-root-ref)))
+    (dolist (thread (approve-mutation--nodes root 'reviewThreads))
+      (when-let* ((comments
+                   (seq-filter (lambda (comment)
+                                 (equal (approve-model-raw-field comment 'pullRequestReview)
+                                        review))
+                               (approve-mutation--nodes thread 'comments))))
+        (approve-mutation--drop-comments thread comments)))
+    (approve-mutation--remove root 'pendingReviews review)
+    (approve-mutation--remove root 'timelineItems review)))
+
+(defun approve-mutation--forget-review-comment (comment)
+  "Remove COMMENT, a ref to a review comment, from the PR's lists.
+It leaves its threads, and a thread left empty leaves the PR.  When
+its review is pending, it leaves the review's comments, and a review
+left without any is forgotten: GitHub deletes it (decision D32)."
+  (let ((review (approve-model-raw-field comment 'pullRequestReview)))
+    (dolist (thread (seq-filter (lambda (thread)
+                                  (member comment (approve-mutation--nodes thread 'comments)))
+                                (approve-mutation--nodes (approve-model-root-ref)
+                                                         'reviewThreads)))
+      (approve-mutation--drop-comments thread (list comment)))
+    (when (and (approve-model-ref-p review)
+               (equal (approve-model-raw-field review 'state) "PENDING")
+               (approve-mutation--remove review 'comments comment)
+               (approve-mutation--empty-p review 'comments))
+      (approve-mutation--forget-review review))))
+
+;;; Files
+
+(cl-defun approve-mutation-set-file-viewed (path viewed &key callback errorback)
+  "Mark the changed file PATH viewed, or not viewed when VIEWED is nil.
+Once GitHub has, the file's `viewerViewedState' in the store is
+\"VIEWED\" or \"UNVIEWED\", and CALLBACK gets that state.  ERRORBACK
+gets the error otherwise.  (Flow F04.)
+
+Example:
+  (approve-mutation-set-file-viewed \"lisp/a.el\" t :callback #\\='ignore)"
+  (let ((state (if viewed "VIEWED" "UNVIEWED")))
+    (approve-mutation--send
+     (if viewed
+         "mutations/mark-file-as-viewed.graphql"
+       "mutations/unmark-file-as-viewed.graphql")
+     `((pullRequestId . ,(approve-mutation--pull-request-id)) (path . ,path))
+     :progress (format "Marking %s %s" path (if viewed "viewed" "not viewed"))
+     :apply (lambda (_data)
+              (approve-model-edit-list
+               (approve-model-root-ref) 'files
+               (lambda (files)
+                 (mapcar (lambda (file)
+                           (if (equal (alist-get 'path file) path)
+                               (cons (cons 'viewerViewedState state)
+                                     (approve-mutation--without file 'viewerViewedState))
+                             file))
+                         files)))
+              state)
+     :callback callback :errorback errorback)))
+
+;;; Threads
+
+(defun approve-mutation--target (target)
+  "Return the GraphQL fields of TARGET, the lines a comment is on.
+TARGET is a plist (:path P :line N :side S :start-line N :start-side
+S), as a `line' or `lines' context is.  Without :start-line, or with
+the start the same as the end, it is one line.  Without :line, it is
+the whole file at :path (which only a thread can be on)."
+  (let* ((line (plist-get target :line))
+         (side (plist-get target :side))
+         (start-line (plist-get target :start-line))
+         (start-side (or (plist-get target :start-side) side)))
+    (approve-mutation--variables
+     `((path . ,(plist-get target :path))
+       (line . ,line)
+       (side . ,side)
+       ,@(when (and start-line
+                    (not (and (eql start-line line) (equal start-side side))))
+           `((startLine . ,start-line) (startSide . ,start-side)))))))
+
+(cl-defun approve-mutation-add-thread (target body &key callback errorback)
+  "Comment BODY on TARGET: a line, a range of lines or a whole file.
+TARGET is a plist (:path P :line N :side S :start-line N :start-side
+S); a `line', `lines' or `file' context will do.  Without :line, the
+comment is on the whole file.  The thread joins the viewer's pending
+review, or starts one (decision D32).
+
+Once GitHub has it, the thread is the last of the PR's threads, the
+PR's review state is GitHub's (with the pending review), and
+CALLBACK gets the thread's ref.  ERRORBACK gets the error otherwise:
+`approve-mutation-refused' when the line takes no comment (it is
+outside the hunks, and GitHub answers with no thread).  (Flows F05,
+F06.)
+
+Example:
+  (approve-mutation-add-thread
+   \\='(:path \"a.go\" :side \"RIGHT\" :line 14 :start-side \"RIGHT\" :start-line 13)
+   \"Can this fail?\" :callback #\\='ignore)"
+  (approve-mutation--send
+   "mutations/add-pull-request-review-thread.graphql"
+   `((pullRequestId . ,(approve-mutation--pull-request-id))
+     (body . ,body)
+     (subjectType . ,(if (plist-get target :line) "LINE" "FILE"))
+     ,@(approve-mutation--target target))
+   :progress "Adding the comment"
+   :apply (lambda (data)
+            (let ((thread (approve-mutation--patch
+                           (approve-mutation--answer data 'addPullRequestReviewThread 'thread
+                                                     "that line takes no comment"))))
+              (approve-model-append-ref (approve-model-root-ref) 'reviewThreads thread)
+              thread))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-add-reply (thread-id body &key callback errorback)
+  "Reply BODY to the review thread THREAD-ID.
+The reply joins the viewer's pending review, or is published at
+once, as a review of its own, when none is pending (decision D32).
+
+Once GitHub has it, the reply is the last comment of its thread, a
+published reply's review is the last of the conversation, the PR's
+review state is GitHub's, and CALLBACK gets the reply's ref.
+ERRORBACK gets the error otherwise.  (Flow F07.)"
+  (approve-mutation--send
+   "mutations/add-pull-request-review-thread-reply.graphql"
+   `((threadId . ,thread-id) (body . ,body))
+   :progress "Sending the reply"
+   :apply (lambda (data)
+            (let ((comment (approve-mutation--patch
+                            (approve-mutation--answer data 'addPullRequestReviewThreadReply
+                                                      'comment)))
+                  (thread (approve-model-make-ref "PullRequestReviewThread" thread-id)))
+              (when (approve-mutation--stored-p thread)
+                (approve-model-append-ref thread 'comments comment))
+              (approve-mutation--publish (approve-model-raw-field comment 'pullRequestReview))
+              comment))
+   :callback callback :errorback errorback))
+
+(defun approve-mutation--thread-state (query mutation thread-id progress callback errorback)
+  "Run QUERY, the MUTATION that resolves or unresolves THREAD-ID.
+PROGRESS, CALLBACK and ERRORBACK are as for `approve-mutation--send';
+CALLBACK gets the thread's ref."
+  (approve-mutation--send
+   query `((threadId . ,thread-id))
+   :progress progress
+   :apply (lambda (data)
+            (approve-mutation--patch (approve-mutation--answer data mutation 'thread)))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-resolve-thread (thread-id &key callback errorback)
+  "Resolve the review thread THREAD-ID.
+Once GitHub has, the thread in the store is resolved and CALLBACK
+gets its ref.  ERRORBACK gets the error otherwise.  (Flow F07.)"
+  (approve-mutation--thread-state "mutations/resolve-review-thread.graphql"
+                                  'resolveReviewThread thread-id "Resolving the thread"
+                                  callback errorback))
+
+(cl-defun approve-mutation-unresolve-thread (thread-id &key callback errorback)
+  "Unresolve the review thread THREAD-ID.
+Once GitHub has, the thread in the store is unresolved and CALLBACK
+gets its ref.  ERRORBACK gets the error otherwise.  (Flow F07.)"
+  (approve-mutation--thread-state "mutations/unresolve-review-thread.graphql"
+                                  'unresolveReviewThread thread-id "Unresolving the thread"
+                                  callback errorback))
+
+;;; Reviews
+
+(defun approve-mutation--draft-thread (thread)
+  "Return THREAD, a target plist with :body, as a DraftPullRequestReviewThread."
+  (unless (plist-get thread :line)
+    (error "A comment in a new review must be on lines: %S" thread))
+  `((body . ,(plist-get thread :body)) ,@(approve-mutation--target thread)))
+
+(defun approve-mutation--thread-in-review-p (thread review)
+  "Return non-nil if THREAD, from an answer, was started in REVIEW, a ref."
+  (let-alist thread
+    (equal (alist-get 'id (alist-get 'pullRequestReview (car .comments.nodes)))
+           (approve-model-ref-id review))))
+
+(cl-defun approve-mutation-add-review (&key event body threads callback errorback)
+  "Add a review of the PR: a verdict, a body, comments on lines.
+EVENT is \"APPROVE\", \"REQUEST_CHANGES\" or \"COMMENT\", which
+publishes the review, or nil, which leaves it pending.  BODY is its
+text, or nil.  THREADS are comments on lines, each a target plist
+\(see `approve-mutation-add-thread') with the comment's :body; a
+comment on a whole file can't be one.  GitHub refuses a review while
+the viewer has a pending one (decision D32).
+
+Once GitHub has it, the review and its threads are in the store, the
+threads the last of the PR's, a published review the last of the
+conversation, the PR's review state is GitHub's, and CALLBACK gets
+the review's ref.  ERRORBACK gets the error otherwise.  (Flows F05,
+a single comment, and F09.)
+
+Example, a single comment:
+  (approve-mutation-add-review
+   :event \"COMMENT\"
+   :threads \\='((:path \"a.go\" :side \"RIGHT\" :line 14 :body \"Why?\")))"
+  (approve-mutation--send
+   "mutations/add-pull-request-review.graphql"
+   `((pullRequestId . ,(approve-mutation--pull-request-id))
+     (event . ,event)
+     (body . ,body)
+     (threads . ,(and threads (vconcat (mapcar #'approve-mutation--draft-thread threads))))
+     (threadCount . ,(length threads)))
+   :progress (if event "Sending the review" "Starting a review")
+   :apply (lambda (data)
+            (let* ((answer (approve-mutation--answer data 'addPullRequestReview
+                                                     'pullRequestReview))
+                   (added (let-alist answer .pullRequest.addedThreads.nodes))
+                   (review (approve-mutation--patch answer)))
+              (dolist (thread added)
+                (when (approve-mutation--thread-in-review-p thread review)
+                  (approve-model-append-ref (approve-model-root-ref) 'reviewThreads
+                                            (approve-model-patch thread))))
+              (approve-mutation--publish review)
+              review))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-submit-review (event &key body callback errorback)
+  "Submit the viewer's pending review with EVENT.
+EVENT is \"APPROVE\", \"REQUEST_CHANGES\" or \"COMMENT\".  BODY, when
+non-nil, is the review's text; without it, a body the review was
+made with stays.  GitHub finds the review from the PR (decision
+D32).
+
+Once GitHub has it, the review and its comments are no longer
+pending, the review is the last of the conversation (unless it was
+there), the PR's review state is GitHub's (with no pending review),
+and CALLBACK gets the review's ref.  ERRORBACK gets the error
+otherwise.  (Flow F09.)"
+  (approve-mutation--send
+   "mutations/submit-pull-request-review.graphql"
+   `((pullRequestId . ,(approve-mutation--pull-request-id))
+     (event . ,event)
+     (body . ,body))
+   :progress "Submitting the review"
+   :apply (lambda (data)
+            (let ((review (approve-mutation--patch
+                           (approve-mutation--answer data 'submitPullRequestReview
+                                                     'pullRequestReview))))
+              (approve-mutation--publish review)
+              review))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-delete-review (review-id &key callback errorback)
+  "Discard the pending review REVIEW-ID, with its threads and comments.
+Once GitHub has, the review has left the PR's pending reviews, its
+comments their threads, and the threads they left empty the PR;
+CALLBACK gets the review's ref.  These are list edits, as a query
+right after may still list them (decision D32).  ERRORBACK gets the
+error otherwise.  (Flow F09.)"
+  (approve-mutation--send
+   "mutations/delete-pull-request-review.graphql"
+   `((reviewId . ,review-id))
+   :progress "Discarding the review"
+   :apply (lambda (_data)
+            (let ((review (approve-model-make-ref "PullRequestReview" review-id)))
+              (approve-mutation--forget-review review)
+              review))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-update-review (review-id body &key callback errorback)
+  "Make BODY the text of the review REVIEW-ID.
+GitHub refuses it for a pending review made without a body (decision
+D32).  Once GitHub has it, the store holds the new text and CALLBACK
+gets the review's ref.  ERRORBACK gets the error otherwise.  (Flow
+F08.)"
+  (approve-mutation--send
+   "mutations/update-pull-request-review.graphql"
+   `((reviewId . ,review-id) (body . ,body))
+   :progress "Saving the review"
+   :apply (lambda (data)
+            (approve-mutation--patch
+             (approve-mutation--answer data 'updatePullRequestReview 'pullRequestReview)))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-update-review-comment (comment-id body &key callback errorback)
+  "Make BODY the text of the review comment COMMENT-ID.
+Once GitHub has it, the store holds the new text and CALLBACK gets the
+comment's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
+  (approve-mutation--send
+   "mutations/update-pull-request-review-comment.graphql"
+   `((commentId . ,comment-id) (body . ,body))
+   :progress "Saving the comment"
+   :apply (lambda (data)
+            (approve-mutation--patch
+             (approve-mutation--answer data 'updatePullRequestReviewComment
+                                       'pullRequestReviewComment)))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-delete-review-comment (comment-id &key callback errorback)
+  "Delete the review comment COMMENT-ID.
+Once GitHub has, the comment has left its thread, a thread it left
+empty the PR, and a pending review it left without comments the PR
+too, as GitHub deletes it (decision D32).  CALLBACK gets the
+comment's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
+  (approve-mutation--send
+   "mutations/delete-pull-request-review-comment.graphql"
+   `((commentId . ,comment-id))
+   :progress "Deleting the comment"
+   :apply (lambda (_data)
+            (let ((comment (approve-model-make-ref "PullRequestReviewComment" comment-id)))
+              (approve-mutation--forget-review-comment comment)
+              comment))
+   :callback callback :errorback errorback))
+
+;;; The conversation
+
+(cl-defun approve-mutation-add-comment (body &key callback errorback)
+  "Comment BODY in the conversation of the PR.
+Once GitHub has it, the comment is the last of the conversation and
+CALLBACK gets its ref.  ERRORBACK gets the error otherwise.  (Flow
+F10.)"
+  (approve-mutation--send
+   "mutations/add-comment.graphql"
+   `((subjectId . ,(approve-mutation--pull-request-id)) (body . ,body))
+   :progress "Sending the comment"
+   :apply (lambda (data)
+            (let ((comment (approve-mutation--patch
+                            (alist-get 'node (approve-mutation--answer data 'addComment
+                                                                       'commentEdge)))))
+              (approve-model-append-ref (approve-model-root-ref) 'timelineItems comment)
+              comment))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-update-issue-comment (comment-id body &key callback errorback)
+  "Make BODY the text of the conversation comment COMMENT-ID.
+Once GitHub has it, the store holds the new text and CALLBACK gets the
+comment's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
+  (approve-mutation--send
+   "mutations/update-issue-comment.graphql"
+   `((commentId . ,comment-id) (body . ,body))
+   :progress "Saving the comment"
+   :apply (lambda (data)
+            (approve-mutation--patch
+             (approve-mutation--answer data 'updateIssueComment 'issueComment)))
+   :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-delete-issue-comment (comment-id &key callback errorback)
+  "Delete the conversation comment COMMENT-ID.
+Once GitHub has, the comment has left the conversation and CALLBACK
+gets its ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
+  (approve-mutation--send
+   "mutations/delete-issue-comment.graphql"
+   `((commentId . ,comment-id))
+   :progress "Deleting the comment"
+   :apply (lambda (_data)
+            (let ((comment (approve-model-make-ref "IssueComment" comment-id)))
+              (approve-mutation--remove (approve-model-root-ref) 'timelineItems comment)
+              comment))
+   :callback callback :errorback errorback))
+
+(provide 'approve-mutations)
+
+;;; approve-mutations.el ends here

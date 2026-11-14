@@ -258,9 +258,9 @@
 <!-- patch -->
 <g id="F05-node20" class="node ok">
 <title>patch</title>
-<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M596.29,-53.64C596.29,-53.64 303.12,-53.64 303.12,-53.64 297.12,-53.64 291.12,-47.64 291.12,-41.64 291.12,-41.64 291.12,-12 291.12,-12 291.12,-6 297.12,0 303.12,0 303.12,0 596.29,0 596.29,0 602.29,0 608.29,-6 608.29,-12 608.29,-12 608.29,-41.64 608.29,-41.64 608.29,-47.64 602.29,-53.64 596.29,-53.64"/>
-<text xml:space="preserve" text-anchor="middle" x="449.71" y="-38.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">patch thread · comment · review</text>
-<text xml:space="preserve" text-anchor="middle" x="449.71" y="-23.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">append to PR.reviewThreads · set pending ref</text>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M650.29,-53.64C650.29,-53.64 249.13,-53.64 249.13,-53.64 243.12,-53.64 237.13,-47.64 237.13,-41.64 237.13,-41.64 237.13,-12 237.13,-12 237.13,-6 243.13,0 249.13,0 249.13,0 650.29,0 650.29,0 656.29,0 662.29,-6 662.29,-12 662.29,-12 662.29,-41.64 662.29,-41.64 662.29,-47.64 656.29,-53.64 650.29,-53.64"/>
+<text xml:space="preserve" text-anchor="middle" x="449.71" y="-38.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">patch thread · comment · review · review state</text>
+<text xml:space="preserve" text-anchor="middle" x="449.71" y="-23.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">append to PR.reviewThreads · pending review: GitHub&#39;s answer</text>
 <text xml:space="preserve" text-anchor="middle" x="449.71" y="-8.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">redraw: thread under its line, counts</text>
 </g>
 <!-- now&#45;&gt;patch -->
@@ -284,16 +284,16 @@
 <!-- nerr -->
 <g id="F05-node19" class="node err">
 <title>nerr</title>
-<path fill="#2a273f" stroke="#eb6f92" stroke-width="1.4" d="M867.54,-46.14C867.54,-46.14 641.88,-46.14 641.88,-46.14 635.88,-46.14 629.88,-40.14 629.88,-34.14 629.88,-34.14 629.88,-19.5 629.88,-19.5 629.88,-13.5 635.88,-7.5 641.88,-7.5 641.88,-7.5 867.54,-7.5 867.54,-7.5 873.54,-7.5 879.54,-13.5 879.54,-19.5 879.54,-19.5 879.54,-34.14 879.54,-34.14 879.54,-40.14 873.54,-46.14 867.54,-46.14"/>
-<text xml:space="preserve" text-anchor="middle" x="754.71" y="-31.37" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">error: that line takes no comment</text>
-<text xml:space="preserve" text-anchor="middle" x="754.71" y="-16.37" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">(GitHub says nothing) · draft kept</text>
+<path fill="#2a273f" stroke="#eb6f92" stroke-width="1.4" d="M921.54,-46.14C921.54,-46.14 695.88,-46.14 695.88,-46.14 689.88,-46.14 683.88,-40.14 683.88,-34.14 683.88,-34.14 683.88,-19.5 683.88,-19.5 683.88,-13.5 689.88,-7.5 695.88,-7.5 695.88,-7.5 921.54,-7.5 921.54,-7.5 927.54,-7.5 933.54,-13.5 933.54,-19.5 933.54,-19.5 933.54,-34.14 933.54,-34.14 933.54,-40.14 927.54,-46.14 921.54,-46.14"/>
+<text xml:space="preserve" text-anchor="middle" x="808.71" y="-31.37" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">error: that line takes no comment</text>
+<text xml:space="preserve" text-anchor="middle" x="808.71" y="-16.37" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">(GitHub says nothing) · draft kept</text>
 </g>
 <!-- null&#45;&gt;nerr -->
 <g id="F05-edge21" class="edge yes">
 <title>null&#45;&gt;nerr</title>
-<path fill="none" stroke="#908caa" stroke-width="1.2" d="M692.85,-94.86C704.16,-82.61 719.11,-66.4 731.48,-52.99"/>
-<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="733.15,-54.8 736.09,-47.99 729.54,-51.48 733.15,-54.8"/>
-<text xml:space="preserve" text-anchor="middle" x="729.57" y="-71.64" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M704.89,-94.65C724.73,-81.88 751.11,-64.9 772.32,-51.24"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="773.5,-53.4 778.06,-47.55 770.85,-49.28 773.5,-53.4"/>
+<text xml:space="preserve" text-anchor="middle" x="758.19" y="-71.64" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
 </g>
 <!-- null&#45;&gt;patch -->
 <g id="F05-edge22" class="edge no">

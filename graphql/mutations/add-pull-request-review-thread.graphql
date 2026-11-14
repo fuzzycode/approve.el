@@ -1,0 +1,40 @@
+${include:fragments/pull-request-review-thread.graphql}
+${include:fragments/pull-request-review-state.graphql}
+
+# F05: comment on a line, a range of lines or a whole file (subjectType
+# FILE, no line).  Sent with the pull request's id, never a review's: the
+# thread joins the viewer's pending review, or starts one (D32).  The answer
+# is the new thread and the PR's review state, with that pending review.  A
+# null thread means the line takes no comment (it is outside the hunks).
+mutation AddPullRequestReviewThread(
+  $pullRequestId: ID!
+  $body: String!
+  $path: String!
+  $line: Int
+  $side: DiffSide
+  $startLine: Int
+  $startSide: DiffSide
+  $subjectType: PullRequestReviewThreadSubjectType
+) {
+  addPullRequestReviewThread(
+    input: {
+      pullRequestId: $pullRequestId
+      body: $body
+      path: $path
+      line: $line
+      side: $side
+      startLine: $startLine
+      startSide: $startSide
+      subjectType: $subjectType
+    }
+  ) {
+    thread {
+      ...PullRequestReviewThreadFields
+      pullRequest {
+        __typename
+        id
+        ...PullRequestReviewStateFields
+      }
+    }
+  }
+}

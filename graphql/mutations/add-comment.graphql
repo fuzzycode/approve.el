@@ -1,0 +1,12 @@
+${include:fragments/issue-comment.graphql}
+
+# F10: a comment in the conversation of the pull request ($subjectId).
+mutation AddComment($subjectId: ID!, $body: String!) {
+  addComment(input: {subjectId: $subjectId, body: $body}) {
+    commentEdge {
+      node {
+        ...IssueCommentFields
+      }
+    }
+  }
+}

@@ -26,6 +26,14 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   |-----------------------------+-----------------------------------------------------------|
   | =mentionable-users.graphql= | who can be =@mentioned=, pages of 100 (=$owner=, =$name=) |
   | =recent-refs.graphql=       | the 100 issues and PRs updated last (=$search=)           |
+- =mutations/= :: one mutation per file, named after GitHub's mutation in
+  kebab case (=resolve-review-thread.graphql=); =approve-mutations.el= has
+  one function per file.  Each returns the changed object through its
+  fragment, and the ones that change the PR's review state (a thread, a
+  reply, a review added or submitted) also select
+  =pullRequest { ...PullRequestReviewStateFields }=, the fragment the core
+  spreads for the same fields ([[file:../docs/decisions.org::*D35 Mutations keep the store true: GitHub's answer, then list edits][D35]]).  Deletions select nothing: GitHub
+  may still list what was deleted right after ([[file:../docs/decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).
 
 * Includes
 =${include:fragments/user.graphql}= is replaced by that file, relative to
@@ -35,6 +43,8 @@ the fragments it uses, at the top, and is complete on its own.
 
 GitHub rejects a query that defines a fragment it doesn't use, so a query
 includes only fragments it spreads (directly or through another fragment).
+The same holds for variables.  Tests never send the files, so
+=tests/test-approve-graphql.el= checks both for every query and mutation.
 
 =CheckRunFields= and =StatusContextFields= use the operation's =$number=
 (for =isRequired=); only a query that declares =$number: Int!= can use them.
@@ -60,8 +70,13 @@ The store depends on these (store contract):
    - =mergeCommit: commit= on =MergedEvent= in the timeline: GraphQL
      rejects one response name with two types there
      (=PullRequestCommit.commit= is non-null).
+   - =addedThreads: reviewThreads(last: $threadCount)= in
+     =add-pull-request-review.graphql=: the threads a review just made,
+     which =approve-mutations.el= appends to the PR's threads; it never
+     goes into the store as a field.
 4. Field names otherwise stay as GitHub spells them.
-5. Every query selects =rateLimit { cost remaining resetAt }=.
+5. Every query selects =rateLimit { cost remaining resetAt }=.  Mutations
+   can't: =rateLimit= is a field of =Query= alone.
 
 Keep selections to what the buffers show ([[file:../docs/ui.org][ui.org]]): every field costs
 time on every load.  Nested connections multiply GitHub's rate-limit cost:
@@ -70,7 +85,10 @@ to 51 points, so reactions select only =totalCount=.
 
 * Trying a query by hand
 Expand the includes, then run the result with the GitHub CLI (read-only
-queries only; never paste a mutation into a test run):
+queries only; never paste a mutation into a test run).  A mutation's text
+can be checked against the schema without changing anything by sending it
+with made-up node ids (=-f threadId=X_bogus=): GitHub validates the
+document, then answers "Could not resolve to a node".
 #+begin_src sh
 perl -e 'sub x{my$f=shift;return""if$s{$f}++;open my$h,"<","graphql/$f"or die"$f: $!\n";local$/;my$t=<$h>;$t=~s/\$\{include:([^}]+)\}/x($1)/ge;$t}print x(shift)' \
   queries/pull-request-threads.graphql > /tmp/query.graphql

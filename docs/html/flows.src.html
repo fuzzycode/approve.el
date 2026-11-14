@@ -74,8 +74,9 @@ callbacks run in the buffer that made the request.</p>
 
 <section class="shot" id="F00">
 <h2>F00 The action pipeline <span class="ref">every write · Phase 2</span></h2>
-<p>Each command supplies only its checks, its input prompt, its mutation and its list edits. Nothing changes on
-screen until GitHub confirms (D14); mutations run one at a time (D15).</p>
+<p>Each command supplies only its checks, its input prompt and its mutation, which patches the store with
+GitHub's answer and makes the list edits (D35). Nothing changes on screen until GitHub confirms (D14);
+mutations run one at a time (D15).</p>
 <div class="flow">
 <!-- svg F00 -->
 </div>

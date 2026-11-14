@@ -1,0 +1,11 @@
+${include:fragments/pull-request-review.graphql}
+
+# F08: edit a review's body.  GitHub refuses it on a pending review made
+# without a body (D32).
+mutation UpdatePullRequestReview($reviewId: ID!, $body: String!) {
+  updatePullRequestReview(input: {pullRequestReviewId: $reviewId, body: $body}) {
+    pullRequestReview {
+      ...PullRequestReviewFields
+    }
+  }
+}

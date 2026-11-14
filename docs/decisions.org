@@ -350,6 +350,40 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   pending review to GitHub means a review started in the browser is
   continued without Approve knowing its id.
 
+** D35 Mutations keep the store true: GitHub's answer, then list edits
+- Status :: accepted (2026-11-14, by the author)
+- Decision :: Each mutation function in =approve-mutations.el= queues its
+  mutation and, once GitHub has answered, makes the store true by itself;
+  commands never edit the store.
+  - It patches the store with the changed object GitHub returns, through
+    the fragments the queries use ([[*D08 GraphQL files with fragment includes][D08]]).
+  - The mutations that change the PR's review state (a thread, a reply, a
+    review added or submitted) also select that state on their pull
+    request: one fragment, =PullRequestReviewStateFields= (review
+    requests, latest verdicts, review decision, the viewer's latest and
+    pending review), which the core query spreads too.  So whether a
+    review is pending, and with which comments, is GitHub's word.
+  - It makes the list edits that follow from the answer: a new thread
+    joins the PR's threads, a reply its thread, a published review and a
+    conversation comment the conversation.
+  - A deletion is list edits alone, as GitHub may still list what was
+    deleted right after ([[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): a deleted comment leaves its thread,
+    a thread left empty leaves the PR, a pending review left without
+    comments (or discarded) leaves it with its comments.
+  - It calls its callback with the ref of the entity it changed, and its
+    errorback with an approve-api error, also when GitHub answers without
+    an error but made no change (=approve-mutation-refused=, such as a
+    null thread).  An action's =:done= is left for what is not the
+    store's.
+- Why :: A list edit follows from what GitHub did, not from the command
+  that asked: a reply joins its thread whichever key sent it.  In the
+  operations layer, next to the queries that load the same lists, the
+  store's layout stays out of the commands, as the selectors keep it out
+  of the renderers.  Asking GitHub for the review state, rather than
+  tracking it by hand, finds a pending review started in the browser and
+  costs one nested selection; deletions can't ask, because GitHub's answer
+  may be stale then.
+
 * Rendering
 ** D13 Full redraw, point restored by section ident
 - Status :: accepted (revisit if measurements say so)
