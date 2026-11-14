@@ -44,7 +44,9 @@
 ;; - A line with threads becomes an `approve-line-section' (value:
 ;;   (PATH SIDE LINE)): the line is its heading, with a speech bubble
 ;;   and the count at the right edge, and its threads are its body, so
-;;   folding the line folds them away.  Lines whose threads are all
+;;   folding the line folds them away.  The bubble is an overlay's
+;;   before-string on the line's newline, not text, so moving up and
+;;   down never puts point in it.  Lines whose threads are all
 ;;   resolved start folded.  Threads do not fold by themselves.
 ;;   `approve-toggle-threads' (T) folds or unfolds every thread at
 ;;   once, and lines drawn later follow (the session's :threads).
@@ -508,29 +510,34 @@ and otherwise when they are settled (`approve-diff--settled-p')."
     ('shown nil)
     (_ (approve-diff--settled-p threads))))
 
-(defun approve-diff--with-threads (text threads)
-  "Return TEXT, a diff line, with a speech bubble for its THREADS.
+(defun approve-diff--bubble (threads face)
+  "Return the speech bubble for THREADS, on a diff line whose face is FACE.
 The bubble and the number of unresolved threads (or of all, dim,
 when all are resolved) end at the page's right edge, as the counts
-of the file headings do.  They have the line's background, are part
-of the line for commands, and copying leaves them out."
-  (let* ((end (1- (length text)))
-         (face (get-text-property end 'face text))
-         (count (approve-sections-thread-count
-                 (cons (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
-                                  threads)
-                       (length threads))))
-         (bubble (approve-render-decoration
-                  (approve-face-add
-                   (concat " " (propertize " " 'display
-                                           `(space :align-to ,(- approve-page-width
-                                                                 (string-width count))))
-                           count)
-                   face)))
-         (line (concat (substring text 0 end) bubble (substring text end))))
-    (when-let* ((place (get-text-property 0 'approve-line text)))
-      (put-text-property 0 (length line) 'approve-line place line))
-    line))
+of the file headings do, on the line's background.  The cursor, at
+the end of the line, is drawn where the bubble starts."
+  (let ((count (approve-sections-thread-count
+                (cons (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
+                                 threads)
+                      (length threads)))))
+    (approve-face-add
+     (concat (propertize " " 'cursor t)
+             (propertize " " 'display
+                         `(space :align-to ,(- approve-page-width (string-width count))))
+             count)
+     face)))
+
+(defun approve-diff--insert-bubble (threads)
+  "Show the bubble of THREADS on the line just inserted, before its newline.
+It is an overlay's before-string, not text: moving up and down never
+puts point in it, copying leaves it out, and it goes with the line
+when the buffer is redrawn (the overlay evaporates)."
+  (let* ((newline (1- (point)))
+         (overlay (make-overlay newline (point) nil t)))
+    (overlay-put overlay 'evaporate t)
+    (overlay-put overlay 'approve-bubble t)
+    (overlay-put overlay 'before-string
+                 (approve-diff--bubble threads (get-text-property newline 'face)))))
 
 (defun approve-diff--insert-hunk (path hunk width index &optional fontified)
   "Insert HUNK of PATH: its header, lines, and the threads under lines.
@@ -559,7 +566,8 @@ their code with syntax faces, or is nil."
             ;; and its bubble says they are there.
             (magit-insert-section (approve-line-section (list path side number)
                                                         (approve-diff--folded-p threads))
-              (magit-insert-heading (approve-diff--with-threads text threads))
+              (magit-insert-heading text)
+              (approve-diff--insert-bubble threads)
               (approve-diff--insert-threads threads gutter))))))))
 
 (defun approve-diff--insert-thread-group (value title threads hide &optional note)

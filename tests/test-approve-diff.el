@@ -243,24 +243,33 @@
         (let ((section (approve-test-find-section
                         'approve-line-section '("internal/parser/parser.go" "RIGHT" 15))))
           (expect (approve-test-section-text section)
-                  :to-match "\\`.*\t} +💬 1\n +╭─ @carol-example")
+                  :to-match "\\`.*\t}\n +╭─ @carol-example")
           (expect (oref (car (oref section children)) type) :to-be 'approve-thread-section))))
 
     (it "marks a line with threads with a bubble at the right edge"
       (with-current-buffer test-diff--buffer
-        (let ((line (approve-test-find-section
-                     'approve-line-section '("internal/parser/parser.go" "RIGHT" 15))))
-          (goto-char (oref line start))
-          (let* ((eol (line-end-position))
-                 (match (text-property-search-forward
-                         'display nil (lambda (_ value) (eq (car-safe value) 'space)) t))
-                 (column (plist-get (cdr (prop-match-value match)) :align-to)))
-            (expect (+ column (string-width (buffer-substring (prop-match-end match) eol)))
-                    :to-equal approve-page-width)
-            ;; The bubble is the line's for commands, and copying leaves it out.
-            (expect (get-text-property (1- eol) 'approve-line)
-                    :to-equal (get-text-property (oref line start) 'approve-line))
-            (expect (filter-buffer-substring (oref line start) eol) :to-equal "\t}")))))
+        (let* ((line (approve-test-find-section
+                      'approve-line-section '("internal/parser/parser.go" "RIGHT" 15)))
+               (eol (save-excursion (goto-char (oref line start)) (line-end-position)))
+               (overlays (seq-filter (lambda (overlay) (overlay-get overlay 'approve-bubble))
+                                     (overlays-in eol (1+ eol))))
+               (bubble (overlay-get (car overlays) 'before-string))
+               (stretch (get-text-property 1 'display bubble)))
+          (expect (length overlays) :to-be 1)
+          (expect (substring-no-properties bubble 2) :to-equal "💬 1")
+          (expect (+ (plist-get (cdr stretch) :align-to) (string-width (substring bubble 2)))
+                  :to-equal approve-page-width)
+          ;; It has the line's background.
+          (expect (get-text-property eol 'face) :not :to-be nil)
+          (expect (get-text-property 0 'face bubble)
+                  :to-equal (get-text-property eol 'face))
+          ;; It is no text: moving up and down never stops in it, and
+          ;; copying leaves it out.  The cursor at the end of the line
+          ;; is drawn where it starts.
+          (expect (buffer-substring-no-properties (oref line start) (1+ eol))
+                  :not :to-match "💬")
+          (expect (filter-buffer-substring (oref line start) eol) :to-equal "\t}")
+          (expect (get-text-property 0 'cursor bubble) :to-be t))))
 
     (it "starts lines folded whose threads are all resolved"
       (with-current-buffer test-diff--buffer

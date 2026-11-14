@@ -183,6 +183,8 @@ Notes:
   edge (unresolved ones; all of them, dim, when all are resolved).  The
   line folds its threads: =TAB= on it, or anywhere in them, folds them
   away, and only the bubble is left.  Threads don't fold one by one.
+  The bubble isn't text (it is drawn before the line's end), so moving
+  up and down never puts point in it, and copying leaves it out.
   Lines whose threads are all resolved start folded; so does "On this
   file" when its threads are.  Outdated threads (line gone from the diff)
   are collected under the file: "▸ Outdated (2)".  =T= folds every thread in
