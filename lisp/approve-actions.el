@@ -93,10 +93,12 @@
   "Return the context at point, if a command for KINDS applies to it.
 KINDS is a list of context kinds, such as (thread review-comment), a
 function that takes the context and returns non-nil when it applies,
-or nil for any context.  When the context is not one of them, signal
-a `user-error' with NEEDS, which says what the command needs, such
-as \"Put point on a thread\".  Signal one too when no pull request
-has loaded here.
+or nil for any context.  When the command does not apply to what is
+at point (the author of a comment, a link in it), it applies to the
+section around point if it can (the comment).  Else signal a
+`user-error' with NEEDS, which says what the command needs, such as
+\"Put point on a thread\".  Signal one too when no pull request has
+loaded here.
 
 Example:
   (approve-action-context \\='(file) \"Put point on a file\")
@@ -105,12 +107,13 @@ Example:
     (user-error (if (derived-mode-p 'approve-pr-mode)
                     "Wait until the pull request has loaded"
                   "Not in an Approve pull request buffer")))
-  (let ((context (approve-context-at-point)))
-    (unless (cond ((null kinds) t)
-                  ((functionp kinds) (funcall kinds context))
-                  (t (memq (plist-get context :kind) kinds)))
-      (user-error "%s" (or needs "That command does not apply here")))
-    context))
+  (let ((applies (lambda (context)
+                   (cond ((null kinds) t)
+                         ((functionp kinds) (funcall kinds context))
+                         (t (memq (plist-get context :kind) kinds))))))
+    (or (seq-find applies (delq nil (list (approve-context-at-point)
+                                          (approve-context-of-sections))))
+        (user-error "%s" (or needs "That command does not apply here")))))
 
 ;;; Marks of the actions in flight
 

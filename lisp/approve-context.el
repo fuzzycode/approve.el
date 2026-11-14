@@ -222,6 +222,14 @@ THREAD-ID is the id of its thread, for review comments."
             section (oref section parent)))
     context))
 
+(defun approve-context-of-sections (&optional pos)
+  "Return the context of the innermost meaningful section at POS, or nil.
+POS is point by default.  It is what `approve-context-at-point' gives
+when nothing more specific (a region, a thing, a diff line, a link)
+is at POS: a command that does not apply to a thing, such as the
+author of a comment, applies to the section around it, the comment."
+  (approve-context--from-sections (or pos (point))))
+
 (defun approve-context-at-point (&optional pos)
   "Return what is at POS (default: point) in an Approve buffer, as a plist.
 :kind says what it is; the table in docs/architecture.org (\"Context

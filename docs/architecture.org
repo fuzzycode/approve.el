@@ -449,9 +449,11 @@ Every command that changes something on GitHub runs the action pipeline
 #+end_example
 
 - =approve-action-context= is the context at point when the command
-  applies to its kind (a list of kinds, or a predicate), else a
-  =user-error= with what the command needs.  It also refuses where no
-  pull request has loaded.
+  applies to its kind (a list of kinds, or a predicate), else the context
+  of the section around point if the command applies to that (on a
+  comment's =@author=, =r= replies to the comment), else a =user-error=
+  with what the command needs.  It also refuses where no pull request has
+  loaded.
 - =approve-action-run= signals =:why-not= as a =user-error=, then asks for
   the text when there is =:input= (aborting stops there, keeping the
   draft).  It marks =:marks= in flight and calls =:send= in the PR buffer

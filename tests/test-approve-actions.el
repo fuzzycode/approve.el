@@ -122,6 +122,19 @@ ICON is non-nil when the loading icon follows the line."
         (expect (approve-action-context #'ignore "Put point on a thread")
                 :to-throw 'user-error '("Put point on a thread"))))
 
+    (it "applies to the section around point when not to the thing at point"
+      (with-current-buffer pr
+        (goto-char (oref (approve-test-find-section 'approve-issue-comment-section
+                                                    "IC_kwDOVM-W6WgSu2tHHg")
+                         start))
+        (search-forward "@bob-example")
+        (backward-char 2)
+        (expect (plist-get (approve-context-at-point) :kind) :to-be 'user)
+        (expect (plist-get (approve-action-context '(issue-comment)) :kind)
+                :to-be 'issue-comment)
+        (expect (plist-get (approve-action-context '(user issue-comment)) :kind)
+                :to-be 'user)))
+
     (it "refuses where no pull request has loaded"
       (with-temp-buffer
         (expect (approve-action-context) :to-throw 'user-error
