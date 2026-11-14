@@ -514,18 +514,23 @@ and otherwise when they are settled (`approve-diff--settled-p')."
   "Return the speech bubble for THREADS, on a diff line whose face is FACE.
 The bubble and the number of unresolved threads (or of all, dim,
 when all are resolved) end at the page's right edge, as the counts
-of the file headings do, on the line's background.  The cursor, at
-the end of the line, is drawn where the bubble starts."
-  (let ((count (approve-sections-thread-count
-                (cons (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
-                                 threads)
-                      (length threads)))))
-    (approve-face-add
-     (concat (propertize " " 'cursor t)
-             (propertize " " 'display
-                         `(space :align-to ,(- approve-page-width (string-width count))))
-             count)
-     face)))
+of the file headings do.  It takes the line's background, not its
+colour (`approve-diff-bubble'): a bubble on a removed line is no
+more alarming than one on an added line.  An overlay string would
+else take the colour of the text under it.  The cursor, at the end
+of the line, is drawn where the bubble starts."
+  (let* ((count (approve-sections-thread-count
+                 (cons (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
+                                  threads)
+                       (length threads))))
+         (background (approve-face-background face))
+         (bubble (concat (propertize " " 'cursor t)
+                         (propertize " " 'display
+                                     `(space :align-to ,(- approve-page-width
+                                                           (string-width count))))
+                         count)))
+    (approve-face-add (if background (approve-face-add bubble background) bubble)
+                      'approve-diff-bubble)))
 
 (defun approve-diff--insert-bubble (threads)
   "Show the bubble of THREADS on the line just inserted, before its newline.

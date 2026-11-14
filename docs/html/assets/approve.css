@@ -179,6 +179,7 @@ section.shot code, .lead code, .card code {
 .t { color: var(--fg); font-weight: 700; }            /* approve-title */
 .fh { color: var(--fg); font-weight: 700; }           /* magit-diff-file-heading */
 .d { color: var(--shadow); }                          /* shadow / approve-dim */
+.bubble { color: var(--fg); }                         /* a bubble: the line's background only */
 .m { color: var(--muted); }                           /* comments, hashes, dates */
 .u { color: var(--gold); }                            /* magit-log-author */
 .ok { color: var(--foam); }                           /* success */

@@ -12,6 +12,11 @@
 (require 'approve)
 (require 'approve-test-helpers "helpers")
 
+(defface test-diff--red-line
+  '((t :background "#ffeeee" :foreground "red"))
+  "A face of a line with a background and a colour of its own, as a removed line has."
+  :group 'approve)
+
 (describe "approve-diff-parse"
   (it "reads hunks with old and new line numbers"
     (let ((hunks (approve-diff-parse
@@ -259,10 +264,14 @@
           (expect (substring-no-properties bubble 2) :to-equal "💬 1")
           (expect (+ (plist-get (cdr stretch) :align-to) (string-width (substring bubble 2)))
                   :to-equal approve-page-width)
-          ;; It has the line's background.
+          ;; It has the line's background only (`approve-face-background',
+          ;; which batch Emacs's faces don't have), and a colour of its own.
           (expect (get-text-property eol 'face) :not :to-be nil)
           (expect (get-text-property 0 'face bubble)
-                  :to-equal (get-text-property eol 'face))
+                  :to-equal (if-let* ((background (approve-face-background
+                                                   (get-text-property eol 'face))))
+                                (list background 'approve-diff-bubble)
+                              'approve-diff-bubble))
           ;; It is no text: moving up and down never stops in it, and
           ;; copying leaves it out.  The cursor at the end of the line
           ;; is drawn where it starts.
@@ -270,6 +279,22 @@
                   :not :to-match "💬")
           (expect (filter-buffer-substring (oref line start) eol) :to-equal "\t}")
           (expect (get-text-property 0 'cursor bubble) :to-be t))))
+
+    (it "gives a bubble the line's background, not its colour"
+      ;; An overlay string takes the colour of the text under it, so the
+      ;; bubble's own face gives it one.
+      (let* ((threads (list '((isResolved))))
+             (bubble (approve-diff--bubble threads 'test-diff--red-line))
+             (resolved (approve-diff--bubble (list '((isResolved . t)))
+                                             'test-diff--red-line)))
+        (expect (get-text-property 0 'face bubble)
+                :to-equal '((:background "#ffeeee") approve-diff-bubble))
+        (expect (get-text-property (1- (length bubble)) 'face bubble)
+                :to-equal '((:background "#ffeeee") approve-diff-bubble))
+        (expect (get-text-property (1- (length resolved)) 'face resolved)
+                :to-equal '(approve-dim (:background "#ffeeee") approve-diff-bubble))
+        (expect (get-text-property 0 'face (approve-diff--bubble threads 'approve-dim))
+                :to-be 'approve-diff-bubble)))
 
     (it "starts lines folded whose threads are all resolved"
       (with-current-buffer test-diff--buffer

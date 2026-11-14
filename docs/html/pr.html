@@ -154,7 +154,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
 <p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
 <div class="s">
-<p class="hd add">       <span class="ln">    42</span>  +          (retries approve-api-retries))                              <i data-i="comment">💬</i> 2</p>
+<p class="hd add">       <span class="ln">    42</span>  +          (retries approve-api-retries))                              <span class="bubble"><i data-i="comment">💬</i> 2</span></p>
 <div class="sb">
 <p>                 <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ────────────────────────────────────────</span></p>
 <p>                 <span class="d">│</span> Should this be configurable per call?</p>
@@ -252,8 +252,9 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
     (outdated ones too); the Diff heading sums the unresolved ones. A moved file reads
     <code>internal/engine/{queue.go → scheduler.go}</code>, as in git's diffstat; a path too long for its room loses whole
     directories in the middle (<code>internal/…/page.tmpl</code>).</li>
-  <li>A diff line with threads has a speech bubble and their count at the right edge (dim when all are resolved). The
-    line folds its threads (click it, or <code>TAB</code> on it or in them); only the bubble stays. Lines whose threads are
+  <li>A diff line with threads has a speech bubble and their count at the right edge (dim when all are resolved), on the
+    line's background but not in its colour. The line folds its threads (click it, or <code>TAB</code> on it or in
+    them); only the bubble stays. Lines whose threads are
     all resolved start folded, as does Outdated. <code>T</code> folds every thread in the diff, or unfolds them all (<code>zM</code> / <code>zR</code> in evil),
     and files expanded later follow. Key hints (<code>r reply · R resolve</code>) can be turned off.</li>
 </ul>

@@ -180,9 +180,11 @@ Notes:
   would each put a right border in another column.  Closing it (padding to
   the box width, a =│= copying leaves out) can come later for text lines.
 - A line with threads has a speech bubble and their count at the right
-  edge (unresolved ones; all of them, dim, when all are resolved).  The
-  line folds its threads: =TAB= on it, or anywhere in them, folds them
-  away, and only the bubble is left.  Threads don't fold one by one.
+  edge (unresolved ones; all of them, dim, when all are resolved).  It
+  takes the line's background but not its colour, so a bubble on a
+  removed line looks like any other.  The line folds its threads: =TAB=
+  on it, or anywhere in them, folds them away, and only the bubble is
+  left.  Threads don't fold one by one.
   The bubble isn't text (it is drawn before the line's end), so moving
   up and down never puts point in it, and copying leaves it out.
   Lines whose threads are all resolved start folded; so does "On this
@@ -703,6 +705,7 @@ inherit:
 | =approve-new= / =approve-dismissed=              | =warning=                                    | New since your review     |
 | =approve-diff-added/removed/context=             | =magit-diff-added/removed/context=           | Diff lines                |
 | =approve-diff-hunk-heading=                      | =magit-diff-hunk-heading=                    | =@@= lines                |
+| =approve-diff-bubble=                            | =default=                                    | Thread bubbles on lines   |
 | =approve-diff-file-heading=                      | =magit-diff-file-heading=                    | File headings             |
 | =approve-line-number=                            | =line-number=                                | Diff line numbers         |
 | =approve-target=                                 | =region=                                     | Lines being commented on  |

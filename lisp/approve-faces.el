@@ -44,6 +44,7 @@
 ;;; Code:
 
 (require 'color)
+(require 'seq)
 (require 'magit-section)
 ;; The faces inherit from magit's, which are in magit.el and the
 ;; libraries it loads (magit-diff, magit-log).  Without them they would
@@ -336,6 +337,13 @@ what changed since the viewer last looked."
   "Face of context lines."
   :group 'approve-faces)
 
+(defface approve-diff-bubble
+  '((t :inherit default))
+  "Face of the speech bubble on a diff line with threads.
+It gives the bubble its colour; the line gives its background, so
+a bubble on a removed line is not red."
+  :group 'approve-faces)
+
 (defface approve-diff-refine-added
   '((t :inherit diff-refine-added))
   "Face of the words that changed in an added line."
@@ -453,6 +461,22 @@ it to colour an icon or a part that has a face of its own."
                            (get-text-property pos 'face string) string)
         (setq pos next)))
     string))
+
+(defun approve-face-background (face)
+  "Return a face holding only the background of FACE, or nil.
+FACE is a face or a list of them; the first with a background, in
+the current theme, gives it.  Nil when none has one.  Use it to put
+text on the background of a line without taking its colours, such
+as a bubble on a removed line, which would else be red.  It is the
+theme's colour now: text drawn with it follows a theme change at
+the next redraw.
+
+Example: (approve-face-background \='approve-diff-removed)
+         => (:background \"#4a3a58\")"
+  (when-let* ((background (seq-some (lambda (face)
+                                      (and (facep face) (face-background face nil t)))
+                                    (ensure-list face))))
+    (list :background background)))
 
 (defun approve-face-region (start end face)
   "Add FACE under the faces of the text between START and END.
