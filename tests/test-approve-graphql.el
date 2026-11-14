@@ -9,6 +9,7 @@
 ;;; Code:
 
 (require 'buttercup)
+(require 'cl-lib)
 (require 'approve-graphql)
 
 (defvar test-approve-graphql--directory nil
@@ -197,5 +198,33 @@
             (expect (approve-graphql--default-directory lisp)
                     :to-equal (expand-file-name "graphql" lisp)))
         (delete-directory root t)))))
+
+(defun test-approve-graphql--names (regexp text)
+  "Return the first groups of REGEXP's matches in TEXT, sorted, each once."
+  (let ((names nil)
+        (start 0))
+    (while (string-match regexp text start)
+      (cl-pushnew (match-string 1 text) names :test #'equal)
+      (setq start (match-end 0)))
+    (sort names #'string<)))
+
+(describe "The graphql files"
+  ;; GitHub refuses a document that defines a fragment or a variable it
+  ;; doesn't use, and one that uses one it doesn't define.  Tests never
+  ;; send them, so check that here, for every query and mutation.
+  (it "use each fragment and variable they define, and define each they use"
+    (dolist (file (directory-files-recursively approve-graphql-directory
+                                               "\\.graphql\\'"))
+      (unless (string-match-p "/fragments/" file)
+        (let ((text (replace-regexp-in-string "#.*" "" (approve-graphql-load file))))
+          (expect (cons file (test-approve-graphql--names
+                              "\\.\\.\\.\\([A-Za-z_]+\\)" (replace-regexp-in-string
+                                                         "\\.\\.\\. *on " "" text)))
+                  :to-equal (cons file (test-approve-graphql--names
+                                        "fragment +\\([A-Za-z_]+\\)" text)))
+          (expect (cons file (test-approve-graphql--names
+                              "\\$\\([A-Za-z]+\\)[^:A-Za-z0-9_]" text))
+                  :to-equal (cons file (test-approve-graphql--names
+                                        "\\$\\([A-Za-z]+\\) *:" text))))))))
 
 ;;; test-approve-graphql.el ends here
