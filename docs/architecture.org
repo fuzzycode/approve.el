@@ -125,6 +125,7 @@ The store from approve-v2 (D10), with a few additions.
  │   :inflight  target idents with a mutation in flight                  │
  │   :drafts    target → unsent text (survives C-c C-k, lost on kill)    │
  │   :layout    single | split                                           │
+ │   :threads   folded | shown, once T folded or unfolded every thread   │
  └───────────────────────────────────────────────────────────────────────┘
 #+end_example
 

@@ -356,6 +356,68 @@
           :start-side "LEFT" :start-line 13 :side "RIGHT" :line 16)
   "Two removed and four added lines of parser.go; a thread is on the 15th.")
 
+(defun test-diff--folds (path)
+  "Return whether each section folding threads in the diff of PATH is hidden.
+The value is a list of (TYPE . HIDDEN), in buffer order."
+  (let ((folds nil))
+    (magit-map-sections
+     (lambda (section)
+       (when (memq (oref section type) '(approve-line-section approve-file-threads-section))
+         (push (cons (oref section type) (and (oref section hidden) t)) folds)))
+     (approve-test-find-section 'approve-file-section path))
+    (nreverse folds)))
+
+(describe "Folding every thread in the diff"
+  :var (buffer)
+  (before-each
+    (approve-test-with-fixture "medium"
+      (setq buffer (approve-test-open-pr "medium")))
+    (with-current-buffer buffer
+      (magit-section-show (approve-test-find-section 'approve-file-section
+                                                     "internal/parser/parser.go"))))
+  (after-each
+    (kill-buffer buffer))
+
+  (it "folds every line's threads and the file's groups; T again unfolds them all"
+    (with-current-buffer buffer
+      (let ((inhibit-message t))
+        (expect (key-binding (kbd "T")) :to-be #'approve-toggle-threads)
+        (expect (mapcar #'cdr (test-diff--folds "internal/parser/parser.go"))
+                :to-contain nil)
+        (approve-toggle-threads)
+        (expect (seq-uniq (mapcar #'cdr (test-diff--folds "internal/parser/parser.go")))
+                :to-equal '(t))
+        ;; Resolved and outdated threads, folded at first, unfold too.
+        (approve-toggle-threads)
+        (expect (seq-uniq (mapcar #'cdr (test-diff--folds "internal/parser/parser.go")))
+                :to-equal '(nil)))))
+
+  (it "holds for files expanded later, and across redraws"
+    (with-current-buffer buffer
+      (let ((inhibit-message t))
+        (approve-fold-threads)
+        (magit-section-show (approve-test-find-section 'approve-file-section
+                                                       "internal/engine/engine.go"))
+        (expect (seq-uniq (mapcar #'cdr (test-diff--folds "internal/engine/engine.go")))
+                :to-equal '(t))
+        (approve-pr-redraw)
+        (expect (seq-uniq (mapcar #'cdr (test-diff--folds "internal/parser/parser.go")))
+                :to-equal '(t))
+        (approve-unfold-threads)
+        (magit-section-show (approve-test-find-section 'approve-file-section
+                                                       "pkg/api/client.go"))
+        (expect (seq-uniq (mapcar #'cdr (test-diff--folds "pkg/api/client.go")))
+                :to-equal '(nil)))))
+
+  (it "moves point out of a thread it folds, onto the thread's line"
+    (with-current-buffer buffer
+      (let ((inhibit-message t))
+        (goto-char (point-min))
+        (search-forward "Done, it is reused now.")
+        (approve-fold-threads)
+        (expect (get-text-property (point) 'approve-line) :not :to-be nil)
+        (expect (oref (magit-current-section) type) :to-be 'approve-line-section)))))
+
 (describe "Ranges of lines in the medium PR"
   :var (buffer)
   (before-all

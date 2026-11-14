@@ -46,6 +46,8 @@
 ;;   and the count at the right edge, and its threads are its body, so
 ;;   folding the line folds them away.  Lines whose threads are all
 ;;   resolved start folded.  Threads do not fold by themselves.
+;;   `approve-toggle-threads' (T) folds or unfolds every thread at
+;;   once, and lines drawn later follow (the session's :threads).
 ;;   File-level threads are under "On this file" (folded when all are
 ;;   resolved), and threads whose line is no longer in the diff under
 ;;   "Outdated".
@@ -63,6 +65,7 @@
 (require 'subr-x)
 (require 'magit-section)
 (require 'approve-model)
+(require 'approve-session)
 (require 'approve-faces)
 (require 'approve-icons)
 (require 'approve-render)
@@ -495,6 +498,16 @@ Such threads start folded away."
                              (approve-thread-pending-p first)))))
                threads))
 
+(defun approve-diff--folded-p (threads)
+  "Return non-nil if a line's (or a file's) THREADS start folded.
+\\<approve-pr-mode-map>That is when \\[approve-toggle-threads] folded every thread (the
+session's :threads is `folded'), not when it unfolded them (`shown'),
+and otherwise when they are settled (`approve-diff--settled-p')."
+  (pcase (approve-session-get :threads)
+    ('folded t)
+    ('shown nil)
+    (_ (approve-diff--settled-p threads))))
+
 (defun approve-diff--with-threads (text threads)
   "Return TEXT, a diff line, with a speech bubble for its THREADS.
 The bubble and the number of unresolved threads (or of all, dim,
@@ -545,7 +558,7 @@ their code with syntax faces, or is nil."
             ;; The line is the heading of its threads: it folds them,
             ;; and its bubble says they are there.
             (magit-insert-section (approve-line-section (list path side number)
-                                                        (approve-diff--settled-p threads))
+                                                        (approve-diff--folded-p threads))
               (magit-insert-heading (approve-diff--with-threads text threads))
               (approve-diff--insert-threads threads gutter))))))))
 
@@ -570,7 +583,7 @@ HIDE collapses it at first; NOTE is dim text on the right."
                                            (approve-diff--line-keys hunks))))
     (let ((on-file (plist-get index :file)))
       (approve-diff--insert-thread-group 'file "On this file" on-file
-                                         (approve-diff--settled-p on-file)))
+                                         (approve-diff--folded-p on-file)))
     (cond
      (hunks
       (let ((width (approve-diff--number-width hunks))
@@ -601,7 +614,8 @@ HIDE collapses it at first; NOTE is dim text on the right."
                          ""))
                (list :kind 'load-diff :path path))
               "\n")))
-    (approve-diff--insert-thread-group 'outdated "Outdated" (plist-get index :outdated) t
+    (approve-diff--insert-thread-group 'outdated "Outdated" (plist-get index :outdated)
+                                       (not (eq (approve-session-get :threads) 'shown))
                                        "threads on lines no longer in the diff")
     (approve-render-prefix start (point) "    ")))
 

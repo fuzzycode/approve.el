@@ -34,6 +34,8 @@
 ;;   y     `approve-copy'       copy its URL, sha, path:line or name
 ;;   ] u   `approve-next-unviewed-file'      [ u  previous
 ;;   ] t   `approve-next-thread'             [ t  previous (unresolved)
+;;   TAB   `approve-section-toggle'          fold the section, or a line's threads
+;;   T     `approve-toggle-threads'          fold or unfold every thread in the diff
 ;;
 ;; and the jumps the `approve-jump' transient (j) offers, defined in
 ;; approve-menus.el.  Moving into a file's diff or a thread expands
@@ -51,6 +53,7 @@
 (require 'browse-url)
 (require 'magit-section)
 (require 'approve-model)
+(require 'approve-session)
 (require 'approve-context)
 (require 'approve-pr)
 (require 'approve-sections)
@@ -311,6 +314,61 @@ threads of its line (or its group); on another diff line, its hunk."
   (magit-section-toggle (or (approve-nav--foldable-section)
                             (user-error "Nothing to fold here"))))
 
+(defconst approve-nav--thread-folds '(approve-line-section approve-file-threads-section)
+  "Sections that fold threads: diff lines, \"On this file\" and \"Outdated\".")
+
+(defun approve-nav--thread-fold-p (section)
+  "Return non-nil if SECTION folds threads."
+  (memq (oref section type) approve-nav--thread-folds))
+
+(defun approve-nav--set-threads (state)
+  "Fold every thread in the diff when STATE is `folded', else unfold them.
+The choice holds for lines drawn later too: it is the session's
+:threads, which the diff reads, and no line keeps a folding of its
+own."
+  (approve-session-put :threads state)
+  (setq magit-section-visibility-cache
+        (seq-remove (lambda (entry) (memq (car (caar entry)) approve-nav--thread-folds))
+                    magit-section-visibility-cache))
+  ;; Point in a thread about to be folded goes to its line.
+  (when (eq state 'folded)
+    (let ((section (magit-current-section)))
+      (while (and section (not (approve-nav--thread-fold-p section)))
+        (setq section (oref section parent)))
+      (when (and section (> (point) (oref section content)))
+        (goto-char (oref section start)))))
+  (when magit-root-section
+    (magit-map-sections (lambda (section)
+                          (when (approve-nav--thread-fold-p section)
+                            (if (eq state 'folded)
+                                (magit-section-hide section)
+                              (magit-section-show section))))
+                        magit-root-section)))
+
+(defun approve-fold-threads ()
+  "Fold every thread in the diff, leaving each line's speech bubble.
+Files expanded later show theirs folded too, until
+\\<approve-pr-mode-map>\\[approve-toggle-threads] or `approve-unfold-threads'."
+  (interactive)
+  (approve-nav--set-threads 'folded)
+  (message "Folded every thread in the diff"))
+
+(defun approve-unfold-threads ()
+  "Unfold every thread in the diff, resolved and outdated ones too.
+Files expanded later show theirs unfolded too."
+  (interactive)
+  (approve-nav--set-threads 'shown)
+  (message "Unfolded every thread in the diff"))
+
+(defun approve-toggle-threads ()
+  "Fold every thread in the diff, or unfold them all if they are folded.
+The choice holds for files expanded later.  \\<approve-pr-mode-map>\\[approve-section-toggle] still folds
+the threads of one line."
+  (interactive)
+  (if (eq (approve-session-get :threads) 'folded)
+      (approve-unfold-threads)
+    (approve-fold-threads)))
+
 (defun approve-nav--toggle-or (message)
   "Toggle the section at point if it has a body, else say MESSAGE.
 The section is the one `approve-section-toggle' folds."
@@ -397,6 +455,7 @@ With a prefix argument URL, copy its URL instead."
 (keymap-set approve-pr-mode-map "[ u" #'approve-previous-unviewed-file)
 (keymap-set approve-pr-mode-map "] t" #'approve-next-thread)
 (keymap-set approve-pr-mode-map "[ t" #'approve-previous-thread)
+(keymap-set approve-pr-mode-map "T" #'approve-toggle-threads)
 
 (provide 'approve-nav)
 

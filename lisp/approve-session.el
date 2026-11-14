@@ -54,6 +54,8 @@
 :inflight  list of target idents with a mutation in flight (a set)
 :drafts    alist of target → unsent text
 :layout    `single' or `split'
+:threads   `folded' or `shown' once every thread of the diff was
+           folded or unfolded at once, else nil
 Read and change it with `approve-session-get' and friends; they use
 the session of `approve-model-owner-buffer'.")
 

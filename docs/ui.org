@@ -185,7 +185,8 @@ Notes:
   away, and only the bubble is left.  Threads don't fold one by one.
   Lines whose threads are all resolved start folded; so does "On this
   file" when its threads are.  Outdated threads (line gone from the diff)
-  are collected under the file: "▸ Outdated (2)".
+  are collected under the file: "▸ Outdated (2)".  =T= folds every thread in
+  the diff, or unfolds them all, and files expanded later follow ([[*Keys][Keys]]).
 - A pending comment says "✎ Pending" (=approve-pending=) where a published
   one says when it was written, so the two can't be mistaken.  Only that
   label is coloured: the comment has no background.
@@ -387,7 +388,7 @@ a single line).  Evil users start in insert state.
   X Discard pending review   + React                  A Request reviewers   L Layout
   V Review range…            C Conversation comment   M Milestone           ! Doctor
                                                       D Draft / ready       K Details (eldoc)
-                                                      w Subscription
+                                                      w Subscription        T Fold all threads
                                                       m Merge / close…
 #+end_example
 
@@ -640,6 +641,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Refresh (=C-u=: clear caches) | =g=           | =gr=                  | any                       |
 | Bury / back                   | =q=           | =q=                   | any                       |
 | Toggle section                | =TAB=         | =TAB= =za=            | section                   |
+| Fold / unfold every thread    | =T=           | =zM= =zm= / =zR= =zr= | any                       |
 | Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k= | any                       |
 | Visit thing at point          | =RET=         | =RET=                 | file, line, link, commit… |
 | Open in browser               | =o=           | =go=                  | any (thing or PR)         |
@@ -669,6 +671,13 @@ is nothing to visit) folds the section at point, except inside the diff: on a
 diff line with threads it folds the threads, and in a thread it folds the
 threads of its line (or its group, "On this file" or "Outdated"); on a
 line without threads it folds the hunk.
+
+=T= (=approve-toggle-threads=) folds every thread in the diff down to its
+line's bubble, "On this file" and "Outdated" included, or unfolds them all
+when they are folded, resolved and outdated ones too.  The choice holds for
+files expanded later and across =g=, until it is turned again; =TAB= still
+folds one line.  Evil users fold all with =zM= (or =zm=) and unfold all with
+=zR= (or =zr=), as in vim.
 
 Input buffers: =C-c C-c= send, =C-c C-k= abort, =C-c C-s= suggestion, =C-c C-p=
 preview, =C-c @= mention (same in every state).
