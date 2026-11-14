@@ -32,4 +32,9 @@ for each kind of task.
   updates. Tick the roadmap task in the same commit.
 - A changed mockup or flow is changed in its org file and in its HTML view
   (`docs/html/`); `make docs` rebuilds the flow diagrams (graphviz).
-- The shell is fish: wrap loops and heredocs in `bash -c '…'`.
+- The shell is fish: wrap loops in `bash -c '…'`. Fish has no heredocs:
+  write text to a file first (`git commit -F /tmp/msg.txt`).
+- Every command runs under `timeout`, so nothing can hang the session:
+  `timeout 600 make test > /tmp/test.log 2>&1`, `timeout 60 emacs --batch …`,
+  `timeout 60 gh api …`. Give the tool call a timeout too, and read long
+  output from a file. See docs/development.org, "Working as an agent".

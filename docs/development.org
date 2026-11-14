@@ -14,6 +14,15 @@ predictable.
    change.
 5. Tick the task in [[file:roadmap.org][roadmap.org]], and update any doc the change affects, in
    the same commit.
+6. Never let a command wait without a limit: an agent can't press =C-g=.
+   Run every build, test, lint, Emacs and network command under
+   =timeout= (=timeout 600 make test=, =timeout 60 emacs --batch …=,
+   =timeout 60 gh api …=), give the tool its own timeout too, and send
+   long output to a file to read the end of (=> /tmp/test.log 2>&1=).  A
+   test file that doesn't load, an Emacs waiting for input (a passphrase,
+   a =y-or-n-p=) or a request that never answers then fails in time
+   instead of hanging the session.  Run one test file alone with
+   =timeout 120 cask exec emacs -Q --batch -L lisp -L tests -L . -l buttercup -l tests/test-x.el -f buttercup-run=.
 
 * Repository layout
 #+begin_example
@@ -54,7 +63,9 @@ dependencies that Emacs lacks from Cask, replays the fixture PRs and sends
 other URLs to GitHub (=approve-dev-offline-fallback=).  Loading it again
 reloads everything and redraws the open PR buffers.
 
-The shell is fish: wrap loops in =bash -c '…'=.
+The shell is fish: wrap loops in =bash -c '…'=.  Fish has no heredocs
+(=<<EOF=): write the text to a file first (a commit message: =git commit
+-F /tmp/msg.txt=).
 
 * Emacs Lisp conventions
 - =lexical-binding: t= in every file.  Full package headers; a Commentary that
