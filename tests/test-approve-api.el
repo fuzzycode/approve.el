@@ -459,7 +459,15 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
     (test-approve-api--with-fake
       (let* ((entered nil)
              (debug-on-error t)
-             (debugger (lambda (&rest args) (push args entered) nil)))
+             (debugger (lambda (&rest args)
+                         ;; Emacs enters no debugger again until an input
+                         ;; event has come; batch has none, so a stand-in
+                         ;; that does not count one, as ert's and
+                         ;; buttercup's do, would keep buttercup from
+                         ;; catching any later failure.
+                         (setq num-nonmacro-input-events (1+ num-nonmacro-input-events))
+                         (push args entered)
+                         nil)))
         (approve-api-rest "GET" "/x" :callback (lambda (_) (error "Bug in callback")))
         (test-approve-api--succeed '((ok . t)))
         (expect (car entered) :to-equal '(error (error "Bug in callback")))
