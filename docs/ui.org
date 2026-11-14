@@ -191,6 +191,13 @@ Notes:
   file" when its threads are.  Outdated threads (line gone from the diff)
   are collected under the file: "▸ Outdated (2)".  =T= folds every thread in
   the diff, or unfolds them all, and files expanded later follow ([[*Keys][Keys]]).
+- Thread marks (💬 N: the bubbles, the counts of the file headings and of
+  the file list) are neutral, except one counting a thread that asks for
+  changes: an unresolved thread started in a review that requested
+  changes, while that review is its author's latest verdict.  That mark
+  is red (=approve-thread-mark-changes-requested=), and turns neutral
+  when the thread is resolved, the review dismissed, or its author
+  approves later ([[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]).
 - A pending comment says "✎ Pending" (=approve-pending=) where a published
   one says when it was written, so the two can't be mistaken.  Only that
   label is coloured: the comment has no background.
@@ -706,6 +713,7 @@ inherit:
 | =approve-diff-added/removed/context=             | =magit-diff-added/removed/context=           | Diff lines                |
 | =approve-diff-hunk-heading=                      | =magit-diff-hunk-heading=                    | =@@= lines                |
 | =approve-diff-bubble=                            | =default=                                    | Thread bubbles on lines   |
+| =approve-thread-mark-changes-requested=          | =error=                                      | Marks asking for changes  |
 | =approve-diff-file-heading=                      | =magit-diff-file-heading=                    | File headings             |
 | =approve-line-number=                            | =line-number=                                | Diff line numbers         |
 | =approve-target=                                 | =region=                                     | Lines being commented on  |

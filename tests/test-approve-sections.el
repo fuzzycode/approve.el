@@ -164,6 +164,32 @@
       (expect (test-sections--text 'approve-file-entry-section "internal/engine/legacy.go")
               :to-match "\\`  internal/engine/legacy.go +\\+0  −38  ▒▒▒▒ "))
 
+    (it "marks red the threads that ask for changes, and only those (D34)"
+      ;; carol's latest verdict requests changes; her thread on parser.go
+      ;; is on the whole file, so the file list's mark is red and the
+      ;; diff heading's, which counts threads on lines, is not.
+      (with-current-buffer test-sections--buffer
+        (let ((red (lambda (type path)
+                     (let ((section (approve-test-find-section type path)))
+                       (seq-some (lambda (pos)
+                                   (memq 'approve-thread-mark-changes-requested
+                                         (ensure-list (get-text-property pos 'face))))
+                                 (number-sequence (oref section start)
+                                                  (1- (or (oref section content)
+                                                          (oref section end)))))))))
+          (expect (funcall red 'approve-file-entry-section "internal/parser/parser.go")
+                  :to-be-truthy)
+          (expect (funcall red 'approve-file-section "internal/parser/parser.go")
+                  :not :to-be-truthy)
+          (expect (seq-filter (lambda (file)
+                                (funcall red 'approve-file-entry-section
+                                         (alist-get 'path file)))
+                              (approve-pr-files))
+                  :to-equal (list (seq-find (lambda (file)
+                                              (equal (alist-get 'path file)
+                                                     "internal/parser/parser.go"))
+                                            (approve-pr-files)))))))
+
     (it "leaves out which files are viewed, which the diff's headings say"
       (with-current-buffer test-sections--buffer
         (let ((section (approve-test-find-section 'approve-file-entry-section

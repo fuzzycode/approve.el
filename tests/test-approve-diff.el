@@ -296,6 +296,29 @@
         (expect (get-text-property 0 'face (approve-diff--bubble threads 'approve-dim))
                 :to-be 'approve-diff-bubble)))
 
+    (it "makes a bubble red when one of its threads asks for changes (D34)"
+      (let* ((threads (list '((id . "a") (isResolved)) '((id . "b") (isResolved))))
+             (bubble (approve-diff--bubble threads 'test-diff--red-line '("b"))))
+        (expect (get-text-property (1- (length bubble)) 'face bubble)
+                :to-equal '(approve-thread-mark-changes-requested (:background "#ffeeee")
+                                                                  approve-diff-bubble))
+        (expect (get-text-property 0 'face bubble)
+                :to-equal '((:background "#ffeeee") approve-diff-bubble))
+        (setq bubble (approve-diff--bubble threads 'test-diff--red-line '("c")))
+        (expect (get-text-property (1- (length bubble)) 'face bubble)
+                :to-equal '((:background "#ffeeee") approve-diff-bubble))))
+
+    (it "indexes the threads that ask for changes"
+      ;; In the medium PR, carol's standing request has one thread: on
+      ;; parser.go as a whole.
+      (with-current-buffer test-diff--buffer
+        (let ((index (approve-diff-thread-index
+                      (approve-pr-threads-for-file "internal/parser/parser.go")
+                      (make-hash-table :test #'equal))))
+          (expect (length (plist-get index :file)) :to-equal 1)
+          (expect (plist-get index :asking)
+                  :to-equal (list (alist-get 'id (car (plist-get index :file))))))))
+
     (it "starts lines folded whose threads are all resolved"
       (with-current-buffer test-diff--buffer
         (let ((folded 0) (open 0))

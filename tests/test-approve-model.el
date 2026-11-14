@@ -622,6 +622,29 @@ The check list carries HAS-NEXT and CURSOR."
           (approve-model-set-meta :viewer "bob")
           (expect (funcall logins) :to-equal '("alice" "carol" "ci-bot"))))
 
+      (it "approve-pr-threads-asking-for-changes follows a standing request"
+        (expect (approve-pr-change-requests) :to-be nil)
+        (expect (approve-pr-threads-asking-for-changes) :to-be nil)
+        ;; carol's latest verdict requests changes: her unresolved threads ask.
+        (approve-model-patch '((__typename . "PullRequestReview") (id . "PRR_done")
+                               (state . "CHANGES_REQUESTED")))
+        (expect (approve-pr-change-requests) :to-equal '("PRR_done"))
+        (expect (approve-pr-threads-asking-for-changes)
+                :to-equal '(((id . "PRRT_1") (path . "lisp/a.el") (subjectType . "LINE"))
+                            ((id . "PRRT_2") (path . "lisp/b.el") (subjectType . "LINE"))))
+        ;; Resolving a thread settles it.
+        (approve-model-patch '((__typename . "PullRequestReviewThread") (id . "PRRT_2")
+                               (isResolved . t)))
+        (expect (test-approve-model--ids (approve-pr-threads-asking-for-changes))
+                :to-equal '("PRRT_1"))
+        ;; A later verdict of hers replaces the request.
+        (approve-model-patch
+         `((__typename . "PullRequest") (id . "PR_1")
+           (latestOpinionatedReviews
+            . ((nodes . (((__typename . "PullRequestReview") (id . "PRR_later")
+                          (state . "APPROVED"))))))))
+        (expect (approve-pr-threads-asking-for-changes) :to-be nil))
+
       (it "approve-pr-viewer-can maps lisp names to viewerCan fields"
         (expect (approve-pr-viewer-can 'update) :to-be t)
         (expect (approve-pr-viewer-can 'react) :to-be t)

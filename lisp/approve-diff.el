@@ -224,20 +224,21 @@ The directories both share are written once:
                 (substring old shared) (substring new shared))
       (format "%s → %s" old new))))
 
-(defun approve-diff--file-heading (file entry &optional threads width)
+(defun approve-diff--file-heading (file entry &optional threads width asking)
   "Return the heading of the diff of FILE (from GraphQL) and its REST ENTRY.
 It is the viewed mark (`approve-sections-viewed-mark'), an icon of
 the change (`approve-diff--change-icon') and the path; the size is
 in the file list.  THREADS, (UNRESOLVED . TOTAL) of the threads on
 the file's lines or nil, is counted at the page's right edge,
 padded on the left to WIDTH columns, so the counts of all headings
-line up.  A path too long for its room loses directories in the
-middle (`approve-render-shorten-path')."
+line up; red with ASKING, when one of them asks for changes.  A path
+too long for its room loses directories in the middle
+\(`approve-render-shorten-path')."
   (let-alist file
     (let* ((old (alist-get 'previous_filename entry))
            (marks (concat (approve-sections-viewed-mark .viewerViewedState) " "
                           (approve-diff--change-icon .changeType) " "))
-           (count (approve-sections-thread-count threads))
+           (count (approve-sections-thread-count threads asking))
            (count (if (string-empty-p count) count
                     (approve-render-pad count (or width 0) t)))
            (room (- approve-page-width
@@ -260,8 +261,10 @@ middle (`approve-render-shorten-path')."
   "Sort THREADS of one file by where they go in its diff.
 LINES is a hash table of the (SIDE . LINE) pairs the diff shows.
 Return a plist: :file (file-level threads), :outdated (threads whose
-line is not in the diff) and :lines, a hash table from (SIDE . LINE)
-to the threads drawn under that line, in order."
+line is not in the diff), :lines, a hash table from (SIDE . LINE)
+to the threads drawn under that line, in order, and :asking, the ids
+of the threads that ask for changes that still stand
+\(`approve-pr-threads-asking-for-changes')."
   (let ((index (make-hash-table :test #'equal))
         (file nil) (outdated nil))
     (dolist (thread threads)
@@ -271,7 +274,9 @@ to the threads drawn under that line, in order."
                 ((and .line (gethash key lines))
                  (puthash key (append (gethash key index) (list thread)) index))
                 (t (push thread outdated))))))
-    (list :file (nreverse file) :outdated (nreverse outdated) :lines index)))
+    (list :file (nreverse file) :outdated (nreverse outdated) :lines index
+          :asking (mapcar (lambda (thread) (alist-get 'id thread))
+                          (approve-pr-threads-asking-for-changes)))))
 
 (defun approve-diff--line-keys (hunks)
   "Return a hash table of the (SIDE . LINE) pairs HUNKS show."
@@ -510,19 +515,24 @@ and otherwise when they are settled (`approve-diff--settled-p')."
     ('shown nil)
     (_ (approve-diff--settled-p threads))))
 
-(defun approve-diff--bubble (threads face)
+(defun approve-diff--bubble (threads face &optional asking)
   "Return the speech bubble for THREADS, on a diff line whose face is FACE.
 The bubble and the number of unresolved threads (or of all, dim,
 when all are resolved) end at the page's right edge, as the counts
 of the file headings do.  It takes the line's background, not its
 colour (`approve-diff-bubble'): a bubble on a removed line is no
 more alarming than one on an added line.  An overlay string would
-else take the colour of the text under it.  The cursor, at the end
-of the line, is drawn where the bubble starts."
+else take the colour of the text under it.  It is red
+\(`approve-thread-mark-changes-requested') when one of THREADS asks
+for changes that still stand: its id is in ASKING (decision D34).
+The cursor, at the end of the line, is drawn where the bubble
+starts."
   (let* ((count (approve-sections-thread-count
                  (cons (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
                                   threads)
-                       (length threads))))
+                       (length threads))
+                 (seq-some (lambda (thread) (member (alist-get 'id thread) asking))
+                           threads)))
          (background (approve-face-background face))
          (bubble (concat (propertize " " 'cursor t)
                          (propertize " " 'display
@@ -532,17 +542,18 @@ of the line, is drawn where the bubble starts."
     (approve-face-add (if background (approve-face-add bubble background) bubble)
                       'approve-diff-bubble)))
 
-(defun approve-diff--insert-bubble (threads)
+(defun approve-diff--insert-bubble (threads &optional asking)
   "Show the bubble of THREADS on the line just inserted, before its newline.
-It is an overlay's before-string, not text: moving up and down never
-puts point in it, copying leaves it out, and it goes with the line
-when the buffer is redrawn (the overlay evaporates)."
+ASKING is as for `approve-diff--bubble'.  The bubble is an overlay's
+before-string, not text: moving up and down never puts point in it,
+copying leaves it out, and it goes with the line when the buffer is
+redrawn (the overlay evaporates)."
   (let* ((newline (1- (point)))
          (overlay (make-overlay newline (point) nil t)))
     (overlay-put overlay 'evaporate t)
     (overlay-put overlay 'approve-bubble t)
     (overlay-put overlay 'before-string
-                 (approve-diff--bubble threads (get-text-property newline 'face)))))
+                 (approve-diff--bubble threads (get-text-property newline 'face) asking))))
 
 (defun approve-diff--insert-hunk (path hunk width index &optional fontified)
   "Insert HUNK of PATH: its header, lines, and the threads under lines.
@@ -572,7 +583,7 @@ their code with syntax faces, or is nil."
             (magit-insert-section (approve-line-section (list path side number)
                                                         (approve-diff--folded-p threads))
               (magit-insert-heading text)
-              (approve-diff--insert-bubble threads)
+              (approve-diff--insert-bubble threads (plist-get index :asking))
               (approve-diff--insert-threads threads gutter))))))))
 
 (defun approve-diff--insert-thread-group (value title threads hide &optional note)
@@ -638,6 +649,7 @@ The heading says how many files the viewer has viewed and how many
 threads on lines are unresolved; each file's heading counts its own."
   (let* ((files (approve-pr-files))
          (counts (approve-sections-thread-counts 'line))
+         (asking (approve-sections-asking-paths 'line))
          (width (apply #'max 0 (mapcar (lambda (file)
                                          (string-width (approve-sections-thread-count
                                                         (gethash (alist-get 'path file)
@@ -664,7 +676,8 @@ threads on lines are unresolved; each file's heading counts its own."
               (magit-insert-heading
                 approve-sections-indentation
                 (approve-diff--file-heading file (approve-diff-file-entry path)
-                                           (gethash path counts) width))
+                                           (gethash path counts) width
+                                           (member path asking)))
               (magit-insert-section-body
                 (approve-diff--insert-file-body file))))))
       (insert "\n"))))

@@ -344,6 +344,15 @@ It gives the bubble its colour; the line gives its background, so
 a bubble on a removed line is not red."
   :group 'approve-faces)
 
+(defface approve-thread-mark-changes-requested
+  '((t :inherit error))
+  "Face of a thread mark (💬 N) counting a thread that asks for changes.
+That is an unresolved thread started in a review that requested
+changes, while that review is its author's latest verdict (decision
+D34).  The marks are the bubbles of diff lines and the counts of
+file headings and of the file list."
+  :group 'approve-faces)
+
 (defface approve-diff-refine-added
   '((t :inherit diff-refine-added))
   "Face of the words that changed in an added line."

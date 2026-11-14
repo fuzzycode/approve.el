@@ -705,6 +705,38 @@ once; the viewer is left out."
                              people)))
         (if first (cons first (delq first people)) people)))))
 
+(defun approve-pr-change-requests ()
+  "Return the ids of the reviews whose request for changes still stands.
+They are the reviews in the PR's `latestOpinionatedReviews' (each
+reviewer's latest verdict) whose state is \"CHANGES_REQUESTED\".  A
+reviewer who approved later, or a dismissed review, has none."
+  (delq nil (mapcar (lambda (review)
+                      (and (equal (alist-get 'state review) "CHANGES_REQUESTED")
+                           (alist-get 'id review)))
+                    (approve-pr-list-fields 'latestOpinionatedReviews '(id state)))))
+
+(defun approve-pr-threads-asking-for-changes ()
+  "Return the review threads that ask for changes that still stand.
+A thread does when it is unresolved and its first comment was
+written in a review of `approve-pr-change-requests' (decision D34).
+Each is an alist of `id', `path' and `subjectType', in store order.
+It reads the store without resolving it, so it is cheap enough for
+every redraw."
+  (approve-model--with-store
+    (when-let* ((requests (approve-pr-change-requests)))
+      (let ((found nil))
+        (dolist (node (approve-model-nodes (approve-model--root-field 'reviewThreads)))
+          (let* ((thread (approve-model--raw node))
+                 (first (car (approve-model-nodes (alist-get 'comments thread))))
+                 (review (and first (alist-get 'pullRequestReview
+                                               (approve-model--raw first)))))
+            (when (and (not (alist-get 'isResolved thread))
+                       (approve-model-ref-p review)
+                       (member (approve-model-ref-id review) requests))
+              (push (list (assq 'id thread) (assq 'path thread) (assq 'subjectType thread))
+                    found))))
+        (nreverse found)))))
+
 (defun approve-model--viewer-can-field (what)
   "Return the field name `viewerCan<What>' for the symbol WHAT.
 Example: `merge-as-admin' => `viewerCanMergeAsAdmin'."

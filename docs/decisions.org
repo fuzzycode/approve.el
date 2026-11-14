@@ -190,6 +190,23 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   ("fuzzycode reviewed") looked alike, so the one person seemed to have two
   names.
 
+** D34 A thread mark is red only while it asks for changes
+- Status :: accepted (2026-11-14, by the author)
+- Decision :: Thread marks (💬 N: the bubble of a diff line, the counts of
+  the diff's file headings and of the file list) are neutral.  A bubble
+  takes its line's background, never its colour.  A mark is red
+  (=approve-thread-mark-changes-requested=) when it counts a thread that
+  asks for changes: one that is unresolved and was started in a review
+  that requested changes, while that review is still its author's latest
+  verdict (=latestOpinionatedReviews=).  Resolving the thread, dismissing
+  the review, or the reviewer approving later makes the mark neutral.
+- Why :: A bubble on a removed line was red only because the line was,
+  and on an added line it had the added colour: a comment looked
+  alarming, or not, by where it sat.  Red now means one thing, what
+  blocks the pull request, which is worth finding at a glance.  A request
+  the reviewer has since withdrawn by approving blocks nothing, though
+  GitHub keeps the old review's state.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)

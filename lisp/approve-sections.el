@@ -640,6 +640,17 @@ included, which the diff's headings count."
                      table)))))
     table))
 
+(defun approve-sections-asking-paths (kind)
+  "Return the paths with a thread of KIND that asks for changes.
+KIND is as for `approve-sections-thread-counts'.  A thread asks for
+changes while it is unresolved and the review it started in still
+requests them (`approve-pr-threads-asking-for-changes', D34)."
+  (delete-dups
+   (delq nil (mapcar (lambda (thread)
+                       (let-alist thread
+                         (and (eq (equal .subjectType "FILE") (eq kind 'file)) .path)))
+                     (approve-pr-threads-asking-for-changes)))))
+
 (defun approve-sections-unresolved (counts &optional what)
   "Return \"N unresolved WHAT threads\" from COUNTS, or nil when N is 0.
 COUNTS is a table from `approve-sections-thread-counts'; WHAT, such
@@ -681,13 +692,16 @@ as \"file\", goes before \"thread\"."
   "Return how many of FILES the viewer marked as viewed."
   (seq-count (lambda (file) (equal (alist-get 'viewerViewedState file) "VIEWED")) files))
 
-(defun approve-sections-thread-count (counts)
+(defun approve-sections-thread-count (counts &optional asking)
   "Return the thread mark of a file from COUNTS, (UNRESOLVED . TOTAL).
 It is the unresolved count, or the total, dim, when all are resolved;
-empty without threads."
+empty without threads.  With ASKING, one of them asks for changes
+that still stand, and the mark is red
+\(`approve-thread-mark-changes-requested', decision D34)."
   (cond ((null counts) "")
         ((> (car counts) 0)
-         (concat (approve-icon 'comment) " " (format "%d" (car counts))))
+         (let ((mark (concat (approve-icon 'comment) " " (format "%d" (car counts)))))
+           (if asking (approve-face-add mark 'approve-thread-mark-changes-requested) mark)))
         (t (approve-face (concat (approve-icon 'comment) " " (format "%d" (cdr counts)))
                          'approve-dim))))
 
@@ -698,6 +712,7 @@ threads on lines, and say which files the viewer viewed."
   (let* ((connection (approve-pr-field 'files))
          (files (approve-pr-files))
          (counts (approve-sections-thread-counts 'file))
+         (asking (approve-sections-asking-paths 'file))
          (largest (apply #'max 0 (mapcar (lambda (file)
                                            (+ (alist-get 'additions file)
                                               (alist-get 'deletions file)))
@@ -730,7 +745,8 @@ threads on lines, and say which files the viewer viewed."
                     (approve-render-pad (approve-sections--bar .additions .deletions largest)
                                         approve-diffstat-width)
                     "  "
-                    (approve-sections-thread-count (gethash .path counts))
+                    (approve-sections-thread-count (gethash .path counts)
+                                                   (member .path asking))
                     "\n"))))
       (let ((start (point)))
         (cond

@@ -257,6 +257,10 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
     them); only the bubble stays. Lines whose threads are
     all resolved start folded, as does Outdated. <code>T</code> folds every thread in the diff, or unfolds them all (<code>zM</code> / <code>zR</code> in evil),
     and files expanded later follow. Key hints (<code>r reply · R resolve</code>) can be turned off.</li>
+  <li>Thread marks (<i data-i="comment">💬</i> N: the bubbles, the counts of file headings and of the file list) are neutral,
+    except one counting a thread that asks for changes: unresolved, started in a review that requested changes, while
+    that review is its author's latest verdict. That mark is <span class="er">red</span>, until the thread is resolved, the review
+    dismissed, or its author approves (D34).</li>
 </ul>
 </section>
 
