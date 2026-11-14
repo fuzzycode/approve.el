@@ -222,7 +222,7 @@ without, there is none."
         (expect (test-mutations--total 'reviewThreads) :to-equal 20))))
 
   (describe "approve-mutation-add-reply"
-    (it "adds a published reply to its thread, and its review to the conversation"
+    (it "adds a published reply to its thread; its review stays out of the conversation"
       (test-mutations--with-pr
         (test-mutations--answer-with
          `((addPullRequestReviewThreadReply
@@ -239,8 +239,9 @@ without, there is none."
                               ((body . "Done") (threadId . ,test-mutations--thread))))
           (expect (car (last (test-mutations--ids 'comments thread))) :to-equal "PRRC_reply")
           (expect (test-mutations--total 'comments thread) :to-equal 4)
-          (expect (car (last (test-mutations--ids 'timelineItems))) :to-equal "PRR_reply")
-          (expect (test-mutations--total 'timelineItems) :to-equal 41)
+          ;; GitHub's timeline never lists a review that holds a reply alone.
+          (expect (test-mutations--ids 'timelineItems) :not :to-contain "PRR_reply")
+          (expect (test-mutations--total 'timelineItems) :to-equal 40)
           (expect (approve-pr-pending-review) :to-be nil))))
 
     (it "keeps a pending reply out of the conversation; it joins the pending review"
@@ -402,10 +403,11 @@ without, there is none."
         (expect (test-mutations--ids 'comments thread) :not :to-contain "PRRC_reply")
         (expect (test-mutations--total 'comments thread) :to-equal 3))))
 
-  (it "delete a review comment; the pending review's last one takes the review along"
+  (it "delete a review comment; a review left with no comment and no body goes too"
     (test-mutations--with-pr
       (test-mutations--answer-with '((deletePullRequestReviewComment (clientMutationId))))
-      ;; A published reply: its thread stays.
+      ;; A published reply: its thread stays; its review, which has no
+      ;; body and no comment left, is deleted by GitHub.
       (let ((thread (test-mutations--ref "PullRequestReviewThread" test-mutations--thread)))
         (expect (test-mutations--run #'approve-mutation-delete-review-comment
                                      "PRRC_kwDOjbJkqIaS7rYCer")
@@ -416,7 +418,14 @@ without, there is none."
                             ((commentId . "PRRC_kwDOjbJkqIaS7rYCer"))))
         (expect (test-mutations--ids 'comments thread)
                 :to-equal '("PRRC_kwDOk4pUe_h6k_jiHs" "PRRC_kwDOW1CBXUSEPg3qZA"))
-        (expect (test-mutations--ids 'reviewThreads) :to-contain test-mutations--thread))
+        (expect (test-mutations--ids 'reviewThreads) :to-contain test-mutations--thread)
+        (expect (test-mutations--ids 'timelineItems) :not :to-contain "PRR_kwDOHuf84-IhbwNOnj")
+        (expect (test-mutations--total 'timelineItems) :to-equal 39))
+      ;; A comment of a review with a body: the review stays, counting one less.
+      (let ((review (test-mutations--ref "PullRequestReview" "PRR_kwDOLL0E04LyFJdf5U")))
+        (test-mutations--run #'approve-mutation-delete-review-comment "PRRC_kwDOvNUASM_gTiHG6o")
+        (expect (test-mutations--ids 'timelineItems) :to-contain "PRR_kwDOLL0E04LyFJdf5U")
+        (expect (approve-model-raw-field review 'commentCount) :to-equal '((totalCount . 4))))
       ;; The pending comments: each takes its thread, the last the review.
       (pcase-dolist (`(,comment . ,thread) test-mutations--pending-comments)
         (expect (approve-pr-pending-review) :not :to-be nil)

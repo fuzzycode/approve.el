@@ -26,7 +26,10 @@ task only needs the files it touches.
   =~/.authinfo.gpg= could not be decrypted at the time).
 - The fixtures in =tests/fixtures/= are synthetic for now, generated in the
   exact shape of GitHub's responses; replace them with recordings
-  (=approve-dev-record=) when real PRs are chosen.
+  (=approve-dev-record=) when real PRs are chosen.  One known difference:
+  their timelines list the reviews that hold a reply alone, which
+  GitHub's never does (D35), so the conversation's folding of such
+  reviews only ever runs on fixtures.
 - Phase 2 (Review) started on 2026-11-13, with Phase 1's real-PR checks
   still open.  Done: =approve-input.el= (input buffers with drafts per
   target, the header line, the target lines highlighted, =C-c C-s=
@@ -38,7 +41,8 @@ task only needs the files it touches.
   the mutations (=approve-mutations.el=, one per file in
   =graphql/mutations/=: viewed, threads, replies, resolve, reviews added,
   submitted, discarded and edited, comments edited and deleted,
-  conversation comments; each makes the store true itself).
+  conversation comments; each makes the store true itself).  They are
+  checked live on the scratch repository by =dev/scratch.el=.
   Decided on the way: D33 (people as =@login=), D34 (thread marks are red
   only while they ask for changes), D35 (mutations patch the store with
   GitHub's answer, including the PR's review state, and make the list

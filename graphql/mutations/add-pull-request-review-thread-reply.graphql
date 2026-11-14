@@ -4,8 +4,9 @@ ${include:fragments/pull-request-review-state.graphql}
 
 # F07: reply to a thread.  Without a review id, the reply joins the viewer's
 # pending review, or is published at once, as a review of its own, when none
-# is pending (D32).  The answer is the reply, its review (so a published one
-# can join the conversation) and the PR's review state.
+# is pending (D32); GitHub's timeline never lists such a review.  The answer
+# is the reply, its review (whose body and count say whether deleting the
+# reply deletes it, D35) and the PR's review state.
 mutation AddPullRequestReviewThreadReply($threadId: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) {
     comment {

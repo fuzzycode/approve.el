@@ -364,7 +364,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     pending review), which the core query spreads too.  So whether a
     review is pending, and with which comments, is GitHub's word.
   - It makes the list edits that follow from the answer: a new thread
-    joins the PR's threads, a reply its thread, a published review and a
+    joins the PR's threads, a reply its thread, a submitted review and a
     conversation comment the conversation.
   - A deletion is list edits alone, as GitHub may still list what was
     deleted right after ([[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): a deleted comment leaves its thread,
@@ -375,6 +375,18 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     an error but made no change (=approve-mutation-refused=, such as a
     null thread).  An action's =:done= is left for what is not the
     store's.
+- Amended (2026-11-14) :: Found on the scratch repository by
+  =dev/scratch.el=, which runs every mutation on PR #8 and compares the
+  store with the PR loaded anew:
+  - GitHub's timeline never lists a review that holds a reply alone (one
+    a reply published at once makes), though =reviews= does.  Such a
+    review stays out of the store's conversation.
+  - Deleting the last comment of a review without a body deletes the
+    review, submitted or pending; a review with a body stays.  So a
+    deleted comment also leaves its review's =commentCount=, and a review
+    left with neither comments nor a body leaves the PR's lists.
+  - Right after a discard, a query can still list the review for a few
+    seconds ([[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]); the list edits are right at once.
 - Why :: A list edit follows from what GitHub did, not from the command
   that asked: a reply joins its thread whichever key sent it.  In the
   operations layer, next to the queries that load the same lists, the

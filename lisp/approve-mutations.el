@@ -57,11 +57,13 @@
 ;;   the pending review, the verdicts and the review requests are
 ;;   GitHub's word, not Approve's guess.
 ;; - It makes the list edits that follow: a new thread joins the PR's
-;;   threads, a reply its thread, a published review and a comment the
-;;   conversation.  A deletion is list edits alone, since GitHub may
+;;   threads, a reply its thread, a submitted review and a comment the
+;;   conversation (not a review that holds a reply alone: GitHub never
+;;   lists those).  A deletion is list edits alone, since GitHub may
 ;;   still list what was deleted right after (D32): a deleted comment
-;;   leaves its thread, a thread left empty leaves the PR, and a pending
-;;   review left without comments goes too.
+;;   leaves its thread and its review's count, a thread left empty
+;;   leaves the PR, and a review left with neither comments nor a body
+;;   goes too, as GitHub deletes it.
 ;;
 ;; Then it calls CALLBACK with the ref of the entity it changed.
 ;; ERRORBACK gets an approve-api error: GitHub's, or
@@ -212,11 +214,27 @@ conversation."
     (approve-mutation--remove root 'pendingReviews review)
     (approve-mutation--remove root 'timelineItems review)))
 
+(defun approve-mutation--take-from-review (review comment)
+  "Take COMMENT, a ref, from the comments of REVIEW, a ref, and its count.
+Return how many comments REVIEW has left, or nil when the store
+doesn't know."
+  (when (approve-mutation--stored-p review)
+    (approve-mutation--remove review 'comments comment)
+    (if-let* ((count (alist-get 'totalCount (approve-model-raw-field review 'commentCount))))
+        (let ((left (max 0 (1- count))))
+          (approve-model-patch `((__typename . ,(approve-model-ref-type review))
+                                 (id . ,(approve-model-ref-id review))
+                                 (commentCount (totalCount . ,left))))
+          left)
+      (and (approve-model-raw-field review 'comments)
+           (length (approve-mutation--nodes review 'comments))))))
+
 (defun approve-mutation--forget-review-comment (comment)
   "Remove COMMENT, a ref to a review comment, from the PR's lists.
-It leaves its threads, and a thread left empty leaves the PR.  When
-its review is pending, it leaves the review's comments, and a review
-left without any is forgotten: GitHub deletes it (decision D32)."
+It leaves its threads, and a thread left empty leaves the PR.  It
+leaves its review's comments and count too, and a review left with
+neither comments nor a body is forgotten, pending or submitted:
+GitHub deletes it (decision D35)."
   (let ((review (approve-model-raw-field comment 'pullRequestReview)))
     (dolist (thread (seq-filter (lambda (thread)
                                   (member comment (approve-mutation--nodes thread 'comments)))
@@ -224,9 +242,8 @@ left without any is forgotten: GitHub deletes it (decision D32)."
                                                          'reviewThreads)))
       (approve-mutation--drop-comments thread (list comment)))
     (when (and (approve-model-ref-p review)
-               (equal (approve-model-raw-field review 'state) "PENDING")
-               (approve-mutation--remove review 'comments comment)
-               (approve-mutation--empty-p review 'comments))
+               (eql (approve-mutation--take-from-review review comment) 0)
+               (string-blank-p (or (approve-model-raw-field review 'body) "")))
       (approve-mutation--forget-review review))))
 
 ;;; Files
@@ -316,10 +333,11 @@ Example:
   "Reply BODY to the review thread THREAD-ID.
 The reply joins the viewer's pending review, or is published at
 once, as a review of its own, when none is pending (decision D32).
+GitHub's conversation never lists such a review, which holds only
+the reply (decision D35), so it stays out of the store's too.
 
-Once GitHub has it, the reply is the last comment of its thread, a
-published reply's review is the last of the conversation, the PR's
-review state is GitHub's, and CALLBACK gets the reply's ref.
+Once GitHub has it, the reply is the last comment of its thread, the
+PR's review state is GitHub's, and CALLBACK gets the reply's ref.
 ERRORBACK gets the error otherwise.  (Flow F07.)"
   (approve-mutation--send
    "mutations/add-pull-request-review-thread-reply.graphql"
@@ -332,7 +350,6 @@ ERRORBACK gets the error otherwise.  (Flow F07.)"
                   (thread (approve-model-make-ref "PullRequestReviewThread" thread-id)))
               (when (approve-mutation--stored-p thread)
                 (approve-model-append-ref thread 'comments comment))
-              (approve-mutation--publish (approve-model-raw-field comment 'pullRequestReview))
               comment))
    :callback callback :errorback errorback))
 
@@ -491,9 +508,10 @@ comment's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
 
 (cl-defun approve-mutation-delete-review-comment (comment-id &key callback errorback)
   "Delete the review comment COMMENT-ID.
-Once GitHub has, the comment has left its thread, a thread it left
-empty the PR, and a pending review it left without comments the PR
-too, as GitHub deletes it (decision D32).  CALLBACK gets the
+Once GitHub has, the comment has left its thread and its review's
+count, a thread it left empty the PR, and a review it left with
+neither comments nor a body the PR too, as GitHub deletes it,
+pending or submitted (decisions D32, D35).  CALLBACK gets the
 comment's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
   (approve-mutation--send
    "mutations/delete-pull-request-review-comment.graphql"
