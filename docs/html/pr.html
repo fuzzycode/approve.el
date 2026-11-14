@@ -38,7 +38,7 @@ Mockups follow <a href="../ui.org">ui.org</a>; the org file is the source of tru
 <section class="shot" id="single">
 <h2>Single layout <span class="ref">ui.org › PR buffer — single layout · D05</span></h2>
 <p>Everything in one buffer. Diff bodies are inserted lazily, so collapsed files cost nothing.
-Point is on <span class="u">bob</span>, so eldoc shows who he is in the echo area; <code>K</code> would show
+Point is on <span class="u">@bob</span>, so eldoc shows who he is in the echo area; <code>K</code> would show
 everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).</p>
 
 <div class="emacs">
@@ -46,12 +46,12 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="win">
 <div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                                 <span class="ok"><i data-i="open">●</i> Open</span></div>
 <div class="buf">
-<p><span class="m">Author</span>      <span class="u">alice</span></p>
+<p><span class="m">Author</span>      <span class="u">@alice</span></p>
 <p><span class="m">Repository</span>  fuzzycode/approve</p>
 <p><span class="m">Branch</span>      <span class="pi">feature/retry</span> <span class="d">→</span> <span class="pi">main</span></p>
 <p><span class="m">Opened</span>      3 days ago <span class="d">· updated</span> 2 hours ago</p>
-<p><span class="m">Reviewers</span>   <span class="ok"><i data-i="approved">✓</i></span> <span class="u"><span class="cursor">b</span>ob</span>   <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>   <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span>   <span class="d"><i data-i="requested">○</i></span> <span class="u">@fuzzycode/core</span></p>
-<p><span class="m">Assignees</span>   <span class="u">alice</span></p>
+<p><span class="m">Reviewers</span>   <span class="ok"><i data-i="approved">✓</i></span> <span class="u"><span class="cursor">@</span>bob</span>  <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">@dave</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">@fuzzycode/core</span></p>
+<p><span class="m">Assignees</span>   <span class="u">@alice</span></p>
 <p><span class="m">Labels</span>      <span class="lbl" style="background:#a2eeef;color:#1d1b2c">enhancement</span>  <span class="lbl" style="background:#5319e7;color:#fff">api</span></p>
 <p><span class="m">Milestone</span>   v0.3</p>
 <p><span class="m">Issues</span>      <span class="link">#1200</span> Retry failing requests</p>
@@ -96,32 +96,32 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="s closed">
 <p class="hd"><span class="tog"></span> <span class="h">Commits (4)</span>     <span class="wa">2 new since your review</span></p>
 <div class="sb">
-<p>    <span class="m">a1b2c3d</span>  Add retry option                   <span class="u">alice</span>   <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span></p>
-<p>    <span class="m">b2c3d4e</span>  Fix typo                           <span class="u">alice</span>   <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span>   <span class="d">← your review</span></p>
-<p>  <span class="wa">┃</span> <span class="m">d4e5f6a</span>  Handle 502 responses               <span class="u">alice</span>   <span class="d">1 day ago</span>      <span class="er"><i data-i="check-failure">✗</i></span>   <span class="wa">new</span></p>
-<p>  <span class="wa">┃</span> <span class="m">e5f6a7b</span>  Add tests                          <span class="u">alice</span>   <span class="d">5 hours ago</span>    <span class="wa"><i data-i="check-pending">◐</i></span>   <span class="wa">new</span></p>
+<p>    <span class="m">a1b2c3d</span>  Add retry option                   <span class="u">@alice</span>  <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span></p>
+<p>    <span class="m">b2c3d4e</span>  Fix typo                           <span class="u">@alice</span>  <span class="d">3 days ago</span>     <span class="ok"><i data-i="check-success">✓</i></span>   <span class="d">← your review</span></p>
+<p>  <span class="wa">┃</span> <span class="m">d4e5f6a</span>  Handle 502 responses               <span class="u">@alice</span>  <span class="d">1 day ago</span>      <span class="er"><i data-i="check-failure">✗</i></span>   <span class="wa">new</span></p>
+<p>  <span class="wa">┃</span> <span class="m">e5f6a7b</span>  Add tests                          <span class="u">@alice</span>  <span class="d">5 hours ago</span>    <span class="wa"><i data-i="check-pending">◐</i></span>   <span class="wa">new</span></p>
 </div>
 </div>
 
 <div class="s">
 <p class="hd"><span class="tog"></span> <span class="h">Conversation (6)</span></p>
 <div class="sb">
-<p>  <span class="u">alice</span> <span class="d">opened this 3 days ago</span></p>
+<p>  <span class="u">@alice</span> <span class="d">opened this 3 days ago</span></p>
 <p>  <span class="d">│</span></p>
-<p>  <span class="d">├</span> <i data-i="commented">💬</i> <span class="u">bob</span> commented <span class="d">· 2 days ago</span>                                    <span class="k">r</span> <span class="d">quote ·</span> <span class="k">+</span> <span class="d">react</span></p>
+<p>  <span class="d">├</span> <i data-i="commented">💬</i> <span class="u">@bob</span> commented <span class="d">· 2 days ago</span>                                    <span class="k">r</span> <span class="d">quote ·</span> <span class="k">+</span> <span class="d">react</span></p>
 <p>  <span class="d">│</span>   Looks good overall, a few nits inline.</p>
 <p>  <span class="d">│</span>   <i data-i="reaction-thumbs-up">👍</i> 1</p>
 <p>  <span class="d">│</span></p>
-<p>  <span class="d">├</span> <span class="ok"><i data-i="approved">✓</i></span> <span class="u">bob</span> <span class="ok">approved</span> <span class="d">· 2 days ago · 3 comments on code</span></p>
+<p>  <span class="d">├</span> <span class="ok"><i data-i="approved">✓</i></span> <span class="u">@bob</span> <span class="ok">approved</span> <span class="d">· 2 days ago · 3 comments on code</span></p>
 <p>  <span class="d">│</span></p>
-<p>  <span class="d">├</span> <i data-i="push">↑</i> <span class="u">alice</span> pushed 2 commits <span class="d">· 1 day ago</span></p>
+<p>  <span class="d">├</span> <i data-i="push">↑</i> <span class="u">@alice</span> pushed 2 commits <span class="d">· 1 day ago</span></p>
 <p>  <span class="d">│</span>     <span class="m">d4e5f6a</span>  Handle 502 responses</p>
 <p>  <span class="d">│</span>     <span class="m">e5f6a7b</span>  Add tests</p>
 <p>  <span class="d">│</span></p>
-<p>  <span class="d">├</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span> <span class="er">requested changes</span> <span class="d">· 5 hours ago</span></p>
+<p>  <span class="d">├</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span> <span class="er">requested changes</span> <span class="d">· 5 hours ago</span></p>
 <p>  <span class="d">│</span>   Please add a test for the retry limit.</p>
 <p>  <span class="d">│</span></p>
-<p>  <span class="d">├</span> <i data-i="label">🏷</i> <span class="u">alice</span> added <span class="lbl" style="background:#5319e7;color:#fff">api</span> <span class="d">· 5 hours ago</span></p>
+<p>  <span class="d">├</span> <i data-i="label">🏷</i> <span class="u">@alice</span> added <span class="lbl" style="background:#5319e7;color:#fff">api</span> <span class="d">· 5 hours ago</span></p>
 <p>  <span class="d">│</span></p>
 <p>  <span class="d">╰</span> <span class="k">C</span> <span class="d">comment on this pull request</span></p>
 </div>
@@ -156,10 +156,10 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="s">
 <p class="hd add">       <span class="ln">    42</span>  +          (retries approve-api-retries))                              <i data-i="comment">💬</i> 2</p>
 <div class="sb">
-<p>                 <span class="d">╭─</span> <span class="u">bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────</span></p>
+<p>                 <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ────────────────────────────────────────</span></p>
 <p>                 <span class="d">│</span> Should this be configurable per call?</p>
 <p>                 <span class="d">│</span></p>
-<p>                 <span class="d">│</span> <span class="u">alice</span> <span class="d">· 1 day ago</span></p>
+<p>                 <span class="d">│</span> <span class="u">@alice</span> <span class="d">· 1 day ago</span></p>
 <p>                 <span class="d">│</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
 <p>                 <span class="d">│</span> <i data-i="reaction-thumbs-up">👍</i> 1</p>
 <p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────</span></p>
@@ -184,7 +184,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="s closed">
 <p class="hd">       <span class="ln">101 106</span>        (approve-api--retry request-id)                                 <span class="d"><i data-i="comment">💬</i> 1</span></p>
 <div class="sb">
-<p>                 <span class="d">╭─ dave · 1 day ago · resolved by alice ───────────────────────</span></p>
+<p>                 <span class="d">╭─ @dave · 1 day ago · resolved by @alice ─────────────────────</span></p>
 <p>                 <span class="d">│ Typo: "recieve".</span></p>
 <p>                 <span class="d">╰─</span> <span class="k">R</span> <span class="d">unresolve ──────────────────────────────────────────────</span></p>
 </div>
@@ -215,7 +215,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="s">
 <p class="hd">    <span class="tog"></span> <span class="h">On this file (1)</span></p>
 <div class="sb">
-<p>        <span class="d">╭─</span> <span class="u">dave</span> <span class="d">· 1 day ago ─────────────────────────────────────────────</span></p>
+<p>        <span class="d">╭─</span> <span class="u">@dave</span> <span class="d">· 1 day ago ────────────────────────────────────────────</span></p>
 <p>        <span class="d">│</span> Could this file be split in two?</p>
 <p>        <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ───────────────────────────────────────────</span></p>
 </div>
@@ -223,8 +223,8 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="s closed">
 <p class="hd">    <span class="tog"></span> <span class="h">Outdated (2)</span>                         <span class="d">threads on lines no longer in the diff</span></p>
 <div class="sb">
-<p>        <span class="wa">outdated</span> <span class="d">·</span> <span class="u">carol</span> <span class="d">on line 33:</span> Why not use <span class="code">string-match-p</span>?</p>
-<p>        <span class="wa">outdated</span> <span class="d">·</span> <span class="u">bob</span> <span class="d">on line 58:</span> Nit: docstring.</p>
+<p>        <span class="wa">outdated</span> <span class="d">·</span> <span class="u">@carol</span> <span class="d">on line 33:</span> Why not use <span class="code">string-match-p</span>?</p>
+<p>        <span class="wa">outdated</span> <span class="d">·</span> <span class="u">@bob</span> <span class="d">on line 58:</span> Nit: docstring.</p>
 </div>
 </div>
 </div>
@@ -270,10 +270,10 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <div class="win">
 <div class="hl"><span class="t">#1234 Add retry logic to the Graph…</span>  <span class="ok"><i data-i="open">●</i> Open</span></div>
 <div class="buf">
-<p><span class="m">Author</span>      <span class="u">alice</span></p>
+<p><span class="m">Author</span>      <span class="u">@alice</span></p>
 <p><span class="m">Branch</span>      <span class="pi">feature/retry</span> <span class="d">→</span> <span class="pi">main</span></p>
 <p></p>
-<p><span class="m">Reviewers</span>  <span class="ok"><i data-i="approved">✓</i></span> <span class="u">bob</span>  <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span></p>
+<p><span class="m">Reviewers</span>  <span class="ok"><i data-i="approved">✓</i></span> <span class="u">@bob</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span> <span class="d"><i data-i="requested">○</i></span> <span class="u">@dave</span></p>
 <p><span class="m">Status</span>     <span class="er"><i data-i="changes-requested">✗</i> Changes requested</span></p>
 <p></p>
 <p><span class="tog"></span> <span class="h">Your pending review</span> (3)</p>
@@ -299,7 +299,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p class="del">    <span class="ln">41    </span>-        (timeout approve-api-…</p>
 <p class="add">    <span class="ln">    41</span>+        (timeout approve-api-…</p>
 <p class="add">    <span class="ln">    42</span>+        (retries approve-api-…</p>
-<p>         <span class="d">╭─</span> <span class="u">bob</span> <span class="d">· 2 days ago ─────────</span></p>
+<p>         <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ────────</span></p>
 <p>         <span class="d">│</span> Should this be configurable</p>
 <p>         <span class="d">│</span> per call?</p>
 <p>         <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ──────</span></p>

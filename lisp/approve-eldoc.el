@@ -235,10 +235,7 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
 
 (defun approve-eldoc--git-actor (actor)
   "Return the Git ACTOR (author or committer) as text."
-  (let-alist actor
-    (if .user.login
-        (approve-face .user.login 'approve-user)
-      (approve-face (or .name "?") 'approve-user))))
+  (approve-render-git-actor actor))
 
 (defun approve-eldoc-describe-commit (context details)
   "Describe the commit of CONTEXT, with DETAILS from GitHub if fetched."
@@ -276,8 +273,9 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
              (approve-eldoc--row "Signature"
                                  (and .signature
                                       (if .signature.isValid
-                                          (format "valid (%s)" (or .signature.signer.login
-                                                                   (downcase .signature.state)))
+                                          (format "valid (%s)" (if .signature.signer.login
+                                                                   (concat "@" .signature.signer.login)
+                                                                 (downcase .signature.state)))
                                         (downcase (or .signature.state "invalid")))))
              (approve-eldoc--row "Changes" (and .additions
                                                 (format "%s files, +%d −%d"
@@ -285,6 +283,28 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
                                                         .additions .deletions)))))
           (approve-eldoc--row "Checks" (approve-eldoc--check-mark .statusCheckRollup))
           "\n" (approve-eldoc--link (or (plist-get context :url) .url)) "\n"))))))
+
+(defun approve-eldoc-describe-git-actor (context _details)
+  "Describe the Git author of CONTEXT, a commit's author with no account.
+GitHub links a commit to an account by its author's e-mail; when no
+account has that e-mail (verified), GitHub only knows the name Git
+wrote, and so does Approve."
+  (let* ((thing (plist-get context :thing))
+         (name (approve-face (or (plist-get thing :name) "?") 'approve-user))
+         (email (plist-get thing :email))
+         (note (approve-face "no GitHub account" 'approve-dim)))
+    (list
+     :echo (string-trim-right
+            (approve-eldoc--title name (and email (format "<%s>" email)) note))
+     :doc
+     (concat
+      (approve-eldoc--title name (and email (format "<%s>" email)))
+      "\n"
+      (approve-face
+       (concat "The commit's author as Git wrote it.  GitHub links a commit to an\n"
+               "account by its author's e-mail, and no account has this one\n"
+               "verified, so there is no @login to show.\n")
+       'approve-dim)))))
 
 (defun approve-eldoc--ref-key (context)
   "Return the (OWNER REPO NUMBER) of the #123 reference of CONTEXT."
@@ -312,7 +332,8 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
      (concat
       (approve-eldoc--title number (and title (approve-face title 'bold)))
       (approve-eldoc--row "State" (and state (approve-eldoc--state state type)))
-      (approve-eldoc--row "Author" (let-alist details .author.login))
+      (approve-eldoc--row "Author" (let-alist details
+                                     (and .author.login (concat "@" .author.login))))
       (approve-eldoc--row "Labels" (mapconcat (lambda (label)
                                                 (let-alist label
                                                   (approve-face (format " %s " .name)
@@ -398,7 +419,7 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
       (let* ((comments (approve-model-nodes .comments))
              (count (or (approve-model-total-count .comments) (length comments)))
              (state (cond (.isResolved (if .resolvedBy
-                                           (format "resolved by %s" .resolvedBy.login)
+                                           (format "resolved by @%s" .resolvedBy.login)
                                          "resolved"))
                           ((or .isOutdated (null .line))
                            (format "outdated (was line %s)" (or .originalLine "?")))
@@ -441,7 +462,8 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
   (when-let* ((group (seq-find (lambda (group) (equal (alist-get 'content group) content))
                                (alist-get 'reactionGroups details))))
     (let-alist group
-      (let ((names (mapcar (lambda (node) (alist-get 'login node)) .reactors.nodes)))
+      (let ((names (mapcar (lambda (node) (concat "@" (alist-get 'login node)))
+                           .reactors.nodes)))
         (concat (string-join names ", ")
                 (if (> .reactors.totalCount (length names))
                     (format " and %d more" (- .reactors.totalCount (length names)))
@@ -525,6 +547,7 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
     (team . approve-eldoc-describe-team)
     (label . approve-eldoc-describe-label)
     (commit . approve-eldoc-describe-commit)
+    (git-actor . approve-eldoc-describe-git-actor)
     (ref . approve-eldoc-describe-ref)
     (check . approve-eldoc-describe-check)
     (file . approve-eldoc-describe-file)

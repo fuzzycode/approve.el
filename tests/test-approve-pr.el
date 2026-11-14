@@ -93,7 +93,7 @@
                       approve-commits-section approve-files-section))
         (expect (approve-test-find-section type) :to-be-truthy))
       (expect (approve-test-section-text (approve-test-find-section 'approve-header-section))
-              :to-match "\\`Author      alice-example")
+              :to-match "\\`Author      @alice-example")
       (expect (length (oref (approve-test-find-section 'approve-files-section) children))
               :to-equal 30)))
 

@@ -306,7 +306,7 @@ is a later idea ([[file:roadmap.org::*Ideas][roadmap]]).
      ◇ viewerCanReply? ◇──no──▶ user-error
         │ yes
         ▼
- input buffer "Reply to bob on approve-api.el:42"
+ input buffer "Reply to @bob on approve-api.el:42"
  (C-u r: quote the comment at point; region: quote the region)
         │ C-c C-c
         ▼
@@ -354,7 +354,7 @@ the mutation:
  ◇ viewerCanUpdate? ◇──no──▶ user-error     ◇ viewerCanDelete? ◇──no──▶ user-error
    │ yes                                      │ yes
    ▼                                          ▼
- input prefilled with the raw markdown      ◇ y-or-n-p "Delete bob's… comment?" ◇──n──▶ stop
+ input prefilled with the raw markdown      ◇ y-or-n-p "Delete @bob's… comment?" ◇──n──▶ stop
  (fetch `body' if only bodyHTML is loaded)    │ y
    │ C-c C-c                                  ▼
    ▼                                        mutation → remove ref from its list

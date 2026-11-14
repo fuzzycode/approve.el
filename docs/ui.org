@@ -16,6 +16,9 @@ Design rules for every buffer:
   shows only once its command exists, so the read-only Phase 1 shows few.
 - No line exceeds =fill-column= + the indent; long text is wrapped (=shr=
   fills to =approve-fill-column=, default 80).
+- People are written =@login=, as GitHub writes mentions ([[file:decisions.org::*D33 People are written as @login][D33]]); their names
+  are in eldoc.  A commit's author whose e-mail GitHub links to no account
+  is the name Git wrote, without an =@=.
 
 * PR buffer — single layout (default)
 Buffer name: =*approve: fuzzycode/approve#1234*=.  The header line is in
@@ -25,12 +28,12 @@ Buffer name: =*approve: fuzzycode/approve#1234*=.  The header line is in
 The first line is the header line (see [[*Header line][Header line]]); it stays in view.
 #+begin_example
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
- Author      alice
+ Author      @alice
  Repository  fuzzycode/approve
  Branch      feature/retry → main
  Opened      3 days ago · updated 2 hours ago
- Reviewers   ✓ bob   ✗ carol   ○ dave   ○ @fuzzycode/core
- Assignees   alice
+ Reviewers   ✓ @bob   ✗ @carol   ○ @dave   ○ @fuzzycode/core
+ Assignees   @alice
  Labels      enhancement  api
  Milestone   v0.3
  Issues      #1200 Retry failing requests
@@ -78,22 +81,22 @@ Notes:
  ▸ Checks (9)      ◐ 7 passed · 1 failed · 1 running
  ▸ Commits (4)     2 new since your review
  ▾ Conversation (6)
-   alice opened this 3 days ago
+   @alice opened this 3 days ago
    │
-   ├ 💬 bob commented · 2 days ago                                       r quote · + react
+   ├ 💬 @bob commented · 2 days ago                                      r quote · + react
    │   Looks good overall, a few nits inline.
    │   👍 1
    │
-   ├ ✓ bob approved · 2 days ago · 3 comments on code
+   ├ ✓ @bob approved · 2 days ago · 3 comments on code
    │
-   ├ ↑ alice pushed 2 commits · 1 day ago
+   ├ ↑ @alice pushed 2 commits · 1 day ago
    │     d4e5f6a  Handle 502 responses
    │     e5f6a7b  Add tests
    │
-   ├ ✗ carol requested changes · 5 hours ago
+   ├ ✗ @carol requested changes · 5 hours ago
    │   Please add a test for the retry limit.
    │
-   ├ 🏷 alice added api · 5 hours ago
+   ├ 🏷 @alice added api · 5 hours ago
    │
    ╰ C comment on this pull request
 #+end_example
@@ -123,10 +126,10 @@ Notes:
         41      -          (timeout approve-api-timeout))
             41  +          (timeout approve-api-timeout)
             42  +          (retries approve-api-retries))                           💬 2
-                  ╭─ bob · 2 days ago ─────────────────────────────────────────
+                  ╭─ @bob · 2 days ago ────────────────────────────────────────
                   │ Should this be configurable per call?
                   │
-                  │ alice · 1 day ago
+                  │ @alice · 1 day ago
                   │ Good idea, done in d4e5f6a.
                   │ 👍 1
                   ╰─ r reply · R resolve ───────────────────────────────────────
@@ -189,7 +192,7 @@ Notes:
 
 ** Threads: suggestions, file-level, outdated
 #+begin_example
-                  ╭─ carol · 5 hours ago ──────────────────────────────────────
+                  ╭─ @carol · 5 hours ago ─────────────────────────────────────
                   │ Use `cl-incf` here:
                   │ ┌ Suggested change ─────────────────────────────────────────
                   │ │ -      (setq count (1+ count))
@@ -199,7 +202,7 @@ Notes:
 
    ▾ ↻ ~ lisp/approve-graphql.el                                                    💬 2
      ▾ On this file (1)
-         ╭─ dave · 1 day ago ─────────────────────────────────────────────────
+         ╭─ @dave · 1 day ago ────────────────────────────────────────────────
          │ Could this file be split in two?
          ╰─ r reply · R resolve ───────────────────────────────────────────────
      ▸ Outdated (2)                         threads on lines no longer in the diff
@@ -291,9 +294,9 @@ other failure of the core query (a timeout, a 502).
  Approve — pull requests                                  @bjornlarsson · 10:42 · g refresh
 
  ▾ Needs my review (3)
-   ● #1234  Add retry logic to the GraphQL client      fuzzycode/approve  alice  2h  ◐  ✗
-   ● #88    Fix crash when opening empty files          org/editor         erin   1d  ✓  ·
-     #87    Draft: new theme                            org/editor         frank  3d  ·  ◌
+   ● #1234  Add retry logic to the GraphQL client      fuzzycode/approve  @alice  2h  ◐  ✗
+   ● #88    Fix crash when opening empty files          org/editor         @erin   1d  ✓  ·
+     #87    Draft: new theme                            org/editor         @frank  3d  ·  ◌
  ▾ My pull requests (2)
      #1230  Normalize GraphQL connections              fuzzycode/approve  me     5h  ✓  ✓
      #1229  Docs: architecture                          fuzzycode/approve  me     1d  ✗  💬
@@ -316,8 +319,8 @@ renderer in one section.
 #+begin_example
  Search: is:pr is:open review-requested:@me repo:org/editor      12 results · s refine
 
-   ● #88    Fix crash when opening empty files          org/editor   erin   1d  ✓  ·
-     #87    Draft: new theme                            org/editor   frank  3d  ·  ◌
+   ● #88    Fix crash when opening empty files          org/editor   @erin   1d  ✓  ·
+     #87    Draft: new theme                            org/editor   @frank  3d  ·  ◌
      …
    ▸ Load 20 more
 #+end_example
@@ -366,7 +369,7 @@ buffer until the input is committed or aborted.
 | =C-c @=   | Insert a mention (completing-read over the people, PR's first) |
 | =M-TAB=   | Complete =@user=, =#123=, =:emoji:= at point                   |
 
-The header-line text names the action: "Comment on…", "Reply to bob on…",
+The header-line text names the action: "Comment on…", "Reply to @bob on…",
 "Edit comment", "Edit description", "Review body — Approve", "New title"
 (single line).  Its right end names the keys: send and abort, then suggest
 while the text is on code and has no suggestion yet, else preview (not for
@@ -458,10 +461,10 @@ candidates are annotated:
 * Commits section with a range
 #+begin_example
  ▾ Commits (4)                             showing: since your last review · V change
-     a1b2c3d  Add retry option                   alice   3 days ago     ✓
-     b2c3d4e  Fix typo                           alice   3 days ago     ✓   ← your review
-   ┃ d4e5f6a  Handle 502 responses               alice   1 day ago      ✗   new
-   ┃ e5f6a7b  Add tests                          alice   5 hours ago    ◐   new
+     a1b2c3d  Add retry option                   @alice   3 days ago     ✓
+     b2c3d4e  Fix typo                           @alice   3 days ago     ✓   ← your review
+   ┃ d4e5f6a  Handle 502 responses               @alice   1 day ago      ✗   new
+   ┃ e5f6a7b  Add tests                          @alice   5 hours ago    ◐   new
 #+end_example
 
 When a range is active, the Diff section heading says so ("Diff · since your
@@ -493,7 +496,7 @@ Failing and running checks come first.  =RET= opens the details URL.
  ▌ 40     (let* ((request-id (approve-api--generate-request-id))
  ▌ 41            (timeout approve-api-timeout)
  ▌ 42            (retries approve-api-retries))                                     💬 2
-          ╭─ bob · 2 days ago ──────────────────────────────────────────────
+          ╭─ @bob · 2 days ago ─────────────────────────────────────────────
           │ Should this be configurable per call?
           ╰─ r reply · R resolve ───────────────────────────────────────────
           ╭─ ✎ Pending · you ───────────────────────────────────────────────
@@ -544,13 +547,14 @@ eldoc function ([[file:decisions.org::*D27 Extended information through eldoc: o
  @fuzzycode — Björn Larsson
  @fuzzycode/core — team · K for its members
  enhancement — New feature or request
- d4e5f6a — Handle 502 responses — alice · 2026-11-07 14:02 · ✓ checks
+ d4e5f6a — Handle 502 responses — @alice · 2026-11-07 14:02 · ✓ checks
  #1200 — Retry failing requests — open issue
  lint — failure — "3 files would be reformatted" · required
  lisp/approve-api.el — modified +120 −30 — ✓ viewed · 2 threads
  thread — outdated (was line 33) — 2 comments · K shows the original code
  👍 3 — you and 2 others · 🎉 1
  2 days ago — 2026-11-06 09:12
+ Björn Larsson — <develop@example.com> — no GitHub account
 #+end_example
 
 The echo line shows only what is already loaded ([[file:decisions.org::*D29 Echo lines show what the store holds; names and emails wait for K][D29]]): a person's public
@@ -565,9 +569,9 @@ side window.  The echo area keeps the one-line version.
  ┌ *approve: fuzzycode/approve#1234* ─────┬ *eldoc* ───────────────────────────────────────┐
  │ #1234 Add retry logic to the Graph…    │ @bob — Bob Smith (he/him)                      │
  │                                        │ bob@example.com                                │
- │ Reviewers  ✓ bob ← point  ✗ carol      │                                                │
- │            ○ dave  ○ @fuzzycode/core   │ Tools, build systems and coffee.               │
- │ Assignees  alice                       │ Company   @acme                                │
+ │ Reviewers  ✓ @bob ← point  ✗ @carol    │                                                │
+ │            ○ @dave  ○ @fuzzycode/core  │ Tools, build systems and coffee.               │
+ │ Assignees  @alice                      │ Company   @acme                                │
  │ Labels     enhancement  api            │ Location  Gothenburg                           │
  │                                        │ Status    🌴 On holiday until Monday (busy)    │
  │ ▾ Your pending review (3)              │                                                │
@@ -593,8 +597,8 @@ written on (GitHub keeps it as the comment's =diffHunk=):
  -    (if (string-match "\\.graphql" path)
  +    (if (string-suffix-p ".graphql" path)
 
- carol · 3 days ago: Why not use string-match-p?
- bob · 2 days ago:   It's gone in the next commit anyway.
+ @carol · 3 days ago: Why not use string-match-p?
+ @bob · 2 days ago:   It's gone in the next commit anyway.
 #+end_example
 
 ** What gets extended information
@@ -613,6 +617,7 @@ written on (GitHub keeps it as the comment's =diffHunk=):
 | Date                      | relative — absolute                      | —                                                                      |
 | Milestone                 | title — due date — progress              | description                                                            |
 | Branch ref                | owner:branch — fork or not               | ahead/behind the base                                                  |
+| Git author, no account    | name — <email> — no GitHub account       | why there is no =@login=                                               |
 
 * Keys
 Keys are a draft to check in Phases 1–2.  Principles:

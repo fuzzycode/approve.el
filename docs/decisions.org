@@ -175,6 +175,21 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   names made the threads query cost 51 points instead of 1.  [[*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]] keeps the
   echo line instant, so it can only show what is already loaded.
 
+** D33 People are written as @login
+- Status :: accepted (2026-11-14, by the author)
+- Decision :: Wherever Approve shows a GitHub account (an author,
+  reviewer, assignee, commenter, who merged or resolved, who reacted) it
+  writes =@login=, as GitHub writes mentions, never the account's name;
+  names are in eldoc.  Teams were =@org/team= already.  A commit's author
+  whose e-mail GitHub links to no account has no login: it is the name Git
+  wrote, without an =@=, and eldoc says why (=git-actor=).  Copying a person
+  copies the login alone.
+- Why :: The =@= says at once that this is a GitHub account and nothing
+  else, and it is how people are used to seeing them.  Before it, an
+  unlinked commit author ("Björn Larsson pushed 1 commit") and an account
+  ("fuzzycode reviewed") looked alike, so the one person seemed to have two
+  names.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)

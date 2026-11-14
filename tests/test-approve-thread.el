@@ -59,11 +59,11 @@
   (it "draws a box: the first author in the heading, a bar left of the comments"
     (test-thread--with-inserted (car test-thread--threads)
       (let ((lines (test-thread--lines)))
-        (expect (car lines) :to-match "\\`╭─ carol-example · 2 days ago ─+\\'")
+        (expect (car lines) :to-match "\\`╭─ @carol-example · 2 days ago ─+\\'")
         (expect (string-width (car lines)) :to-equal (approve-thread-width))
         (expect (nth 1 lines) :to-equal "│ This allocates on every call; hoist the buffer out of the loop.")
         (expect (nth 2 lines) :to-equal "│")
-        (expect (nth 3 lines) :to-match "\\`│ alice-example · 2 days ago")
+        (expect (nth 3 lines) :to-match "\\`│ @alice-example · 2 days ago")
         (expect (car (last lines)) :to-match "\\`╰─+\\'"))))
 
   (it "makes a section for the thread and one for each comment"
@@ -97,7 +97,7 @@
                                  (lambda (thread)
                                    (approve-thread-pending-p
                                     (car (approve-model-nodes (alist-get 'comments thread))))))
-      (expect (car (test-thread--lines)) :to-match "\\`╭─ ✎ Pending · vera-example ─")
+      (expect (car (test-thread--lines)) :to-match "\\`╭─ ✎ Pending · @vera-example ─")
       (search-forward "Pending")
       (expect (ensure-list (get-text-property (1- (point)) 'face)) :to-contain 'approve-pending)
       (search-forward "branch reachable")
@@ -110,6 +110,6 @@
 
   (it "names the thread's first author and words in its summary"
     (expect (substring-no-properties (approve-thread-summary (car test-thread--threads)))
-            :to-match "\\`carol-example: This allocates on every call; .*…\\'")))
+            :to-match "\\`@carol-example: This allocates on every call; .*…\\'")))
 
 ;;; test-approve-thread.el ends here

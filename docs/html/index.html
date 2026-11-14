@@ -32,16 +32,16 @@ The org files stay the source of truth (D21); when they change, these pages foll
 <div class="win">
 <div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                 <span class="ok"><i data-i="open">●</i> Open</span></div>
 <div class="buf">
-<p><span class="m">Author</span>      <span class="u">alice</span></p>
+<p><span class="m">Author</span>      <span class="u">@alice</span></p>
 <p><span class="m">Branch</span>      <span class="pi">feature/retry</span> <span class="d">→</span> <span class="pi">main</span></p>
-<p><span class="m">Reviewers</span>   <span class="ok"><i data-i="approved">✓</i></span> <span class="u">bob</span>   <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">carol</span>   <span class="d"><i data-i="requested">○</i></span> <span class="u">dave</span></p>
+<p><span class="m">Reviewers</span>   <span class="ok"><i data-i="approved">✓</i></span> <span class="u">@bob</span>  <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">@dave</span></p>
 <p></p>
 <p><span class="tog"></span> <span class="h">Your pending review</span> (3)                            <span class="k">S</span> <span class="d">submit</span></p>
 <p class="hunk">    ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
 <p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
 <p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
 <p class="add">       <span class="ln">    42</span>  +          (retries approve-api-retries))</p>
-<p>                 <span class="d">╭─</span> <span class="u">bob</span> <span class="d">· 2 days ago ──────────────────────────────</span></p>
+<p>                 <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ─────────────────────────────</span></p>
 <p>                 <span class="d">│</span> Should this be configurable per call?</p>
 <p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ──────────────────────────</span></p>
 </div>

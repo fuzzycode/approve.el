@@ -61,7 +61,7 @@ FETCH as for `approve-eldoc-describe'."
       (expect (test-eldoc--echo "enhancement")
               :to-equal " enhancement  — New feature or request")
       (expect (test-eldoc--echo "dd4ac8a")
-              :to-match "\\`dd4ac8a — Add the new parser — alice-example · 2026-10-01 ")
+              :to-match "\\`dd4ac8a — Add the new parser — @alice-example · 2026-10-01 ")
       (expect (test-eldoc--echo "#12")
               :to-equal "#12 — The parser is slow on large inputs — open issue")
       (expect (test-eldoc--echo "v1.2") :to-match "\\`v1.2 — due "))
@@ -88,6 +88,19 @@ FETCH as for `approve-eldoc-describe'."
 
     (it "give a date in full"
       (expect (test-eldoc--echo "3 days ago") :to-match "\\`3 days ago — 2026-10-01 ")))
+
+  (describe "a commit's author GitHub links to no account"
+    (it "says so, with the name and e-mail Git wrote"
+      (let* ((context (with-temp-buffer
+                        (insert (approve-render-git-actor
+                                 '((name . "Mona Lisa") (email . "mona@example.com"))))
+                        (approve-context-at-point (point-min))))
+             (description (approve-eldoc-describe context)))
+        (expect (plist-get context :kind) :to-be 'git-actor)
+        (expect (plist-get context :value) :to-equal "Mona Lisa <mona@example.com>")
+        (expect (substring-no-properties (plist-get description :echo))
+                :to-equal "Mona Lisa — <mona@example.com> — no GitHub account")
+        (expect (plist-get description :doc) :to-match "no account has this one"))))
 
   (describe "the eldoc function"
     (it "calls back with the doc and the echo line, and says nothing elsewhere"

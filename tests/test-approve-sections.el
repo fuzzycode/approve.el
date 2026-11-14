@@ -42,7 +42,7 @@
   (describe "header"
     (it "shows the author, repository, branches and dates as rows; the title is in the header line"
       (let ((lines (split-string (test-sections--text 'approve-header-section) "\n")))
-        (expect (nth 0 lines) :to-equal "Author      alice-example")
+        (expect (nth 0 lines) :to-equal "Author      @alice-example")
         (expect (nth 1 lines) :to-equal "Repository  acme-example/rocket")
         (expect (nth 2 lines) :to-equal "Branch      parser-rewrite → main")
         (expect (nth 3 lines) :to-equal "Opened      3 days ago · updated 23 hours ago")
@@ -57,7 +57,7 @@
         (let ((approve-render-now approve-test-now))
           (let ((dates (approve-sections--dates)))
             (expect (substring-no-properties dates)
-                    :to-equal "3 days ago · updated 2 hours ago · merged 1 hour ago by bob-example")
+                    :to-equal "3 days ago · updated 2 hours ago · merged 1 hour ago by @bob-example")
             ;; Dates look like the other rows' values; only the words are dim.
             (expect (get-text-property 0 'face dates) :to-be 'default)
             (expect (get-text-property (string-search "updated" dates) 'face dates)
@@ -73,11 +73,11 @@
 
     (it "shows reviewers with their verdicts, then who is asked"
       (expect (test-sections--text 'approve-meta-section 'reviewers)
-              :to-equal "Reviewers   ✓ bob-example   ✗ carol-example   ○ dave-example   ○ @acme-example/core\n"))
+              :to-equal "Reviewers   ✓ @bob-example   ✗ @carol-example   ○ @dave-example   ○ @acme-example/core\n"))
 
     (it "shows assignees, labels, milestone, closing issues and status"
       (expect (test-sections--text 'approve-meta-section 'assignees)
-              :to-equal "Assignees   alice-example\n")
+              :to-equal "Assignees   @alice-example\n")
       (expect (test-sections--text 'approve-meta-section 'labels)
               :to-equal "Labels       enhancement   area: parser \n")
       (expect (test-sections--text 'approve-meta-section 'milestone)
@@ -179,19 +179,19 @@
     (it "starts with who opened the PR and ends the line"
       (let ((lines (split-string (test-sections--text 'approve-conversation-section) "\n" t)))
         (expect (car lines) :to-equal "Conversation (30)")
-        (expect (nth 1 lines) :to-equal "  alice-example opened this 3 days ago")
+        (expect (nth 1 lines) :to-equal "  @alice-example opened this 3 days ago")
         (expect (car (last lines)) :to-equal "  ╰")))
 
     (it "folds runs of commits and of labels"
       (let ((text (test-sections--text 'approve-conversation-section)))
-        (expect text :to-match "  ├ ↑ alice-example pushed 2 commits · 3 days ago\n  │     dd4ac8a  Add the new parser\n  │     6fa7df8  Rename")
-        (expect text :to-match "  ├ 🏷 alice-example added  enhancement   area: parser  · 3 days ago")))
+        (expect text :to-match "  ├ ↑ @alice-example pushed 2 commits · 3 days ago\n  │     dd4ac8a  Add the new parser\n  │     6fa7df8  Rename")
+        (expect text :to-match "  ├ 🏷 @alice-example added  enhancement   area: parser  · 3 days ago")))
 
     (it "shows comments and reviews with their verdict, body and code comments"
       (let ((text (test-sections--text 'approve-conversation-section)))
-        (expect text :to-match "  ├ 💬 bob-example commented · 3 days ago\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
-        (expect text :to-match "  ├ ✓ bob-example approved · 1 day ago · 2 comments on code\n  │   Looks good to me.")
-        (expect text :to-match "  ├ ✗ carol-example requested changes · 1 day ago · 1 comment on code")))
+        (expect text :to-match "  ├ 💬 @bob-example commented · 3 days ago\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
+        (expect text :to-match "  ├ ✓ @bob-example approved · 1 day ago · 2 comments on code\n  │   Looks good to me.")
+        (expect text :to-match "  ├ ✗ @carol-example requested changes · 1 day ago · 1 comment on code")))
 
     (it "shows events in words"
       (let ((text (test-sections--text 'approve-conversation-section)))

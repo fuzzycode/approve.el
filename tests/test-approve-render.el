@@ -85,6 +85,27 @@
                 :to-equal "  body\n")
         (expect (magit-section-at 1) :to-be child)))))
 
+(describe "People"
+  (it "are written @login, carrying who they are"
+    (let ((text (approve-render-user '((__typename . "User") (id . "U_1")
+                                       (login . "octocat") (name . "Mona")))))
+      (expect (substring-no-properties text) :to-equal "@octocat")
+      (expect (get-text-property 0 'approve-thing text)
+              :to-equal '(:kind user :login "octocat" :name "Mona" :type "User"
+                                :id "U_1" :url nil))
+      (expect (substring-no-properties (approve-render-user nil)) :to-equal "@ghost")))
+
+  (it "who wrote a commit are its account, else Git's name without an @"
+    (expect (substring-no-properties
+             (approve-render-git-actor '((name . "Mona Lisa") (email . "mona@example.com")
+                                         (user (login . "octocat")))))
+            :to-equal "@octocat")
+    (let ((text (approve-render-git-actor '((name . "Mona Lisa")
+                                            (email . "mona@example.com")))))
+      (expect (substring-no-properties text) :to-equal "Mona Lisa")
+      (expect (get-text-property 0 'approve-thing text)
+              :to-equal '(:kind git-actor :name "Mona Lisa" :email "mona@example.com")))))
+
 (describe "approve-render-reactions-text"
   :var (saved)
   (before-each

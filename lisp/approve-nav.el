@@ -369,7 +369,7 @@ computed from the file's versions.  Elsewhere, toggle the section."
                   (format "%s:%s" (plist-get context :path) end)
                 (format "%s:%s-%s" (plist-get context :path) start end))))
     ('file (plist-get context :path))
-    ((or 'commit 'user 'team 'label 'branch 'milestone)
+    ((or 'commit 'user 'team 'label 'branch 'milestone 'git-actor)
      (format "%s" (plist-get context :value)))
     ('ref (format "#%s" (plist-get context :value)))
     (_ (plist-get context :url))))

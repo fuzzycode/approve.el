@@ -243,7 +243,7 @@
         (let ((section (approve-test-find-section
                         'approve-line-section '("internal/parser/parser.go" "RIGHT" 15))))
           (expect (approve-test-section-text section)
-                  :to-match "\\`.*\t} +💬 1\n +╭─ carol-example")
+                  :to-match "\\`.*\t} +💬 1\n +╭─ @carol-example")
           (expect (oref (car (oref section children)) type) :to-be 'approve-thread-section))))
 
     (it "marks a line with threads with a bubble at the right edge"

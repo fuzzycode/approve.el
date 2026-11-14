@@ -369,6 +369,7 @@ then walks up the sections from point to the first one that means something.
 | Team, =#123=, milestone,   | =team= =ref= =milestone=        | =:value :url= (=:thing=: what was drawn, for     |
 | branch, date, reactions    | =branch= =date= =reactions=     | eldoc)                                           |
 | Link in a comment          | =link=                          | =:value :url=                                    |
+| Commit author, no account  | =git-actor=                     | =:value= (=Name <email>=, D33)                   |
 | Metadata row, pending      | =meta= =pending-review= =event= | =:row= / =:review-id= / =:id=                    |
 | review, timeline event     |                                 |                                                  |
 | Anything else              | =pr=                            |                                                  |

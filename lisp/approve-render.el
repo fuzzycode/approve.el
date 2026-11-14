@@ -78,17 +78,31 @@ THING is a plist with :kind and what identifies it."
   (propertize text 'approve-thing thing))
 
 (defun approve-render-user (actor &optional face)
-  "Return the login of ACTOR, a user, bot or organization, as text.
-FACE defaults to `approve-user'.  The text carries ACTOR as a thing
-of kind `user'.  A missing actor (a deleted account) is \"ghost\",
-as GitHub shows it."
+  "Return ACTOR, a user, bot or organization, as text: @login.
+People are written as GitHub writes them in comments, with an @, so
+a login is never mistaken for anything else (decision D33).  FACE
+defaults to `approve-user'.  The text carries ACTOR as a thing of
+kind `user'.  A missing actor (a deleted account) is @ghost, as
+GitHub shows it."
   (let ((login (or (alist-get 'login actor) "ghost")))
-    (approve-thing (approve-face login (or face 'approve-user))
+    (approve-thing (approve-face (concat "@" login) (or face 'approve-user))
                    (list :kind 'user :login login
                          :name (alist-get 'name actor)
                          :type (alist-get '__typename actor)
                          :id (alist-get 'id actor)
                          :url (alist-get 'url actor)))))
+
+(defun approve-render-git-actor (actor)
+  "Return ACTOR, the Git author or committer of a commit, as text.
+When GitHub links its e-mail to an account, it is that account,
+as @login (`approve-render-user').  Else it is the name Git wrote,
+without an @, carrying a thing of kind `git-actor' (with :name and
+:email), so eldoc can say why there is no account."
+  (let-alist actor
+    (if .user
+        (approve-render-user .user)
+      (approve-thing (approve-face (or .name "?") 'approve-user)
+                     (list :kind 'git-actor :name .name :email .email)))))
 
 ;;; Dates
 

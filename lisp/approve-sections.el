@@ -572,11 +572,8 @@ The checks themselves load when the section is first expanded."
     (- (length commits) position 1)))
 
 (defun approve-sections--commit-author (commit)
-  "Return the author of COMMIT: the GitHub user, else the Git name."
-  (let-alist commit
-    (if .author.user
-        (approve-render-user .author.user)
-      (approve-face (or .author.name "?") 'approve-user))))
+  "Return the author of COMMIT: the GitHub account, else the Git name."
+  (approve-render-git-actor (alist-get 'author commit)))
 
 (defun approve-sections--commit-line (commit reviewed new)
   "Return the line of COMMIT; REVIEWED if the viewer reviewed it, NEW if after."
@@ -586,7 +583,9 @@ The checks themselves load when the section is first expanded."
                            (list :kind 'commit :oid .oid :url .url))
             "  "
             (approve-render-pad (approve-render-truncate (or .messageHeadline "") 44) 46)
-            (approve-render-pad (approve-sections--commit-author commit) 14)
+            (approve-render-pad (approve-render-truncate (approve-sections--commit-author commit)
+                                                         15)
+                                16)
             (approve-render-pad (approve-render-date .committedDate) 14)
             (if .statusCheckRollup
                 (approve-sections--rollup-icon .statusCheckRollup.state)

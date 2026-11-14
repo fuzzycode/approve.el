@@ -313,10 +313,7 @@ which only the viewer sees, are left out."
           (magit-insert-heading
             (concat branch
                     (approve-icon 'push) " "
-                    (let ((author (let-alist (car commits) .author)))
-                      (if (alist-get 'user author)
-                          (approve-render-user (alist-get 'user author))
-                        (approve-face (or (alist-get 'name author) "?") 'approve-user)))
+                    (approve-render-git-actor (let-alist (car commits) .author))
                     (approve-face (format " pushed %d commit%s" (length commits)
                                           (if (cdr commits) "s" ""))
                                   'approve-dim)
