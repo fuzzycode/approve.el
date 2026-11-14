@@ -192,10 +192,16 @@
               :to-equal (list 'normal approve-pr-mode-map "g r" 'approve-pr-refresh))
       (expect (seq-find (lambda (b) (equal (nth 2 b) "g y")) bound)
               :to-equal (list 'normal approve-pr-mode-map "g y" 'approve-copy))
-      ;; No key, or first key of a sequence, may be an evil motion or
-      ;; operator; j and k stay motions, by screen line.
-      (dolist (key '("h" "l" "w" "b" "e" "v" "V" "y" "d" "c" "n" "N" "/"))
+      ;; No key may be an evil motion, search, visual selection or yank,
+      ;; nor start with one.  An operator (c d) may be a key of its own,
+      ;; as change and delete have nothing to do in a read-only buffer
+      ;; (docs/ui.org, "Keys"), but never start a sequence; j and k
+      ;; stay motions, by screen line.
+      (dolist (key '("h" "l" "w" "b" "e" "v" "V" "y" "n" "N" "/"))
         (expect (seq-find (lambda (b) (equal (car (split-string (nth 2 b))) key)) bound)
+                :to-be nil))
+      (dolist (key '("c" "d"))
+        (expect (seq-find (lambda (b) (string-prefix-p (concat key " ") (nth 2 b))) bound)
                 :to-be nil))
       (expect (mapcar (lambda (key) (nth 3 (seq-find (lambda (b) (equal (nth 2 b) key)) bound)))
                       '("j" "k" "<down>" "<up>"))

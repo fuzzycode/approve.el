@@ -426,7 +426,8 @@ An edited description says so right after its heading."
           (list (approve-sections-title "Description")
                 (and .lastEditedAt (approve-render-edited
                                     `((lastEditedAt . ,.lastEditedAt))))))
-         (approve-render-hints '("e" approve-edit "edit"))))
+         ;; Shown once Phase 4 defines the command that edits it.
+         (approve-render-hints '("e" approve-edit-description "edit"))))
       (let ((start (point)))
         (cond
          ((not (approve-model-root-ref))

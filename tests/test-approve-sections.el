@@ -206,7 +206,7 @@
       (let ((lines (split-string (test-sections--text 'approve-conversation-section) "\n" t)))
         (expect (car lines) :to-equal "Conversation (30)")
         (expect (nth 1 lines) :to-equal "  @alice-example opened this 3 days ago")
-        (expect (car (last lines)) :to-equal "  ╰")))
+        (expect (car (last lines)) :to-equal "  ╰ C comment on this pull request")))
 
     (it "folds runs of commits and of labels"
       (let ((text (test-sections--text 'approve-conversation-section)))
@@ -215,7 +215,7 @@
 
     (it "shows comments and reviews with their verdict, body and code comments"
       (let ((text (test-sections--text 'approve-conversation-section)))
-        (expect text :to-match "  ├ 💬 @bob-example commented · 3 days ago\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
+        (expect text :to-match "  ├ 💬 @bob-example commented · 3 days ago +r quote\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
         (expect text :to-match "  ├ ✓ @bob-example approved · 1 day ago · 2 comments on code\n  │   Looks good to me.")
         (expect text :to-match "  ├ ✗ @carol-example requested changes · 1 day ago · 1 comment on code")))
 

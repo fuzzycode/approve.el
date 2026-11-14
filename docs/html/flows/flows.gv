@@ -110,7 +110,7 @@ mark   [label="markFileAsViewed" @api];
 pipe   [label="via F00 (no text)" @goto, href="#F00"];
 patch  [label="patch viewerViewedState · redraw"];
 adv    [label="just marked viewed?" @dec];
-next   [label="collapse the file · if approve-viewed-advance:\npoint to the next unviewed file" @ok];
+next   [label="collapse the file · if v was in its diff and\napprove-viewed-advance: point to the next unviewed file" @ok];
 stay   [label="file shows · not viewed" @ok];
 note   [label="DISMISSED = GitHub saw new changes\nsince you viewed it (↻)" @note];
 u -> st; st -> unmark [label=" VIEWED"]; st -> mark [label=" UNVIEWED /\n DISMISSED"];

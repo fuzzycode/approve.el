@@ -42,13 +42,19 @@ task only needs the files it touches.
   =graphql/mutations/=: viewed, threads, replies, resolve, reviews added,
   submitted, discarded and edited, comments edited and deleted,
   conversation comments; each makes the store true itself).  They are
-  checked live on the scratch repository by =dev/scratch.el=.
+  checked live on the scratch repository by =dev/scratch.el=.  The keys
+  came next, ahead of the menus, so whole reviews can be tried by hand:
+  =v c s r R e k C= (=approve-commands.el=), =S= (the submit transient) and
+  =X= with the pending review's rules (=approve-review.el=), and evil's
+  keys, visual state included.  =e= on the title and description waits
+  for Phase 4.
   Decided on the way: D33 (people as =@login=), D34 (thread marks are red
   only while they ask for changes), D35 (mutations patch the store with
   GitHub's answer, including the PR's review state, and make the list
   edits).
-- Next step: =approve-review.el= (the pending review: start, add, submit,
-  discard, with D32's checks), then the rest of [[file:roadmap.org::*Phase 2 — Review][Phase 2]].  SP1 is
+- Next step: the dispatch transient (=?=), then the rest of [[file:roadmap.org::*Phase 2 — Review][Phase 2]]:
+  the pending review section and header line counts, change detection, the
+  split layout.  SP1 is
   done ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): comments, replies, submit and discard need only the PR's
   id, and GitHub's silent or misleading answers are checked by Approve.
   Writes are tried on the scratch repository ([[file:development.org::*Scratch repository][development.org]]).

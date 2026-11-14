@@ -28,10 +28,16 @@
 ;;; Commentary:
 
 ;; The transients of Approve (decision D06; docs/ui.org,
-;; "Transients").  For now the jump menu, `approve-jump' (j): the
-;; sections of the PR, the next work (unviewed files, unresolved
-;; threads) and any changed file by name.  Suffixes that do not apply
-;; are shown dimmed, so the menu never changes shape.
+;; "Transients"):
+;;
+;;   j  `approve-jump'           the sections of the PR, the next work
+;;                               (unviewed files, unresolved threads)
+;;                               and any changed file by name
+;;   S  `approve-submit-review'  a verdict for the pending review, its
+;;                               body, or discarding it (flow F09)
+;;
+;; Suffixes that do not apply are shown dimmed, so a menu never
+;; changes shape.
 ;;
 ;; Layer rules: this is the entry points and menus layer.  It only
 ;; arranges commands defined below it.
@@ -39,9 +45,12 @@
 ;;; Code:
 
 (require 'transient)
+(require 'subr-x)
 (require 'approve-model)
 (require 'approve-pr)
 (require 'approve-nav)
+(require 'approve-review)
+(require 'approve-faces)
 
 (defun approve-menus--no-pending-review-p ()
   "Return non-nil if the viewer has no pending review."
@@ -67,6 +76,53 @@
     ("/" "File…" approve-jump-file)]])
 
 (keymap-set approve-pr-mode-map "j" #'approve-jump)
+
+;;; Submit review (S)
+
+(defun approve-menus--submit-heading ()
+  "Return the heading of the submit menu: the PR and the pending review."
+  (format "Submit review  #%s  %s" (approve-pr-field 'number)
+          (propertize (if (approve-pr-pending-review)
+                          (concat "pending: " (approve-review-summary))
+                        (approve-review-summary))
+                      'face 'approve-dim)))
+
+(defun approve-menus--body-description ()
+  "Return the body suffix's description, with the start of the body."
+  (if-let* ((body (approve-review-body)))
+      (format "Edit body…  %s"
+              (propertize (format "\"%s\"" (truncate-string-to-width
+                                             (car (split-string body "\n")) 40 nil nil "…"))
+                          'face 'approve-dim))
+    "Edit body…"))
+
+(defun approve-menus--approve-inapt-p ()
+  "Return non-nil if the viewer may not approve."
+  (approve-review-why-not-verdict "APPROVE"))
+
+(defun approve-menus--request-changes-inapt-p ()
+  "Return non-nil if the viewer may not request changes."
+  (approve-review-why-not-verdict "REQUEST_CHANGES"))
+
+;;;###autoload (autoload 'approve-submit-review "approve-menus" nil t)
+(transient-define-prefix approve-submit-review ()
+  "Submit your review of the pull request, or discard it (flow F09).
+A verdict asks for the review's body, starting from its draft; with
+\\[universal-argument] before it, the review is submitted without a body.  With no pending
+review, a verdict adds a review and submits it at once."
+  [:description approve-menus--submit-heading
+   ["Verdict"
+    ("a" "Approve" approve-submit-approve :inapt-if approve-menus--approve-inapt-p)
+    ("r" "Request changes" approve-submit-request-changes
+     :inapt-if approve-menus--request-changes-inapt-p)
+    ("c" "Comment" approve-submit-comment)]
+   ["Body"
+    ("e" approve-edit-review-body :description approve-menus--body-description)]
+   ["Other"
+    ("X" "Discard pending review" approve-discard-review
+     :inapt-if approve-menus--no-pending-review-p)]])
+
+(keymap-set approve-pr-mode-map "S" #'approve-submit-review)
 
 (provide 'approve-menus)
 

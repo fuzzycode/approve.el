@@ -103,10 +103,13 @@ Mockups: input buffer, dispatch, submit review, pending review section, keys.
 - [X] Action pipeline (F00) as one macro or function the commands share.
 - [X] Mutations: viewed, review (add/thread/reply/submit/delete/update),
       comment edits and deletes, resolve, conversation comment.
-- [ ] =approve-review.el=: find and track the pending review; start, add,
-      submit, discard (F05, F09).
-- [ ] Commands: =v c s r R e k C S X= with evil equivalents (=approve-evil.el=).
-- [ ] =approve-menus.el=: dispatch and submit transients.
+- [X] Commands: =v c s r R e k C S X= with evil equivalents (=approve-evil.el=,
+      visual state for ranges), in =approve-commands.el=; the pending review's
+      rules in =approve-review.el= (comment, single comment, submit, discard;
+      F05, F09; tracking is the mutations', D35) and the submit transient.
+      Moved ahead of the menus to try whole reviews by hand.  =e= on the title
+      and description waits for Phase 4.
+- [ ] =approve-menus.el=: dispatch transient.
 - [ ] "Your pending review" section; header line counts.
 - [ ] Change detection (D23).
 - [ ] Split layout and =L= (F18).

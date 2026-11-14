@@ -64,7 +64,7 @@
         (expect (nth 1 lines) :to-equal "│ This allocates on every call; hoist the buffer out of the loop.")
         (expect (nth 2 lines) :to-equal "│")
         (expect (nth 3 lines) :to-match "\\`│ @alice-example · 2 days ago")
-        (expect (car (last lines)) :to-match "\\`╰─+\\'"))))
+        (expect (car (last lines)) :to-match "\\`╰─ r reply · R resolve ─+\\'"))))
 
   (it "makes a section for the thread and one for each comment"
     (let ((thread (car test-thread--threads)))

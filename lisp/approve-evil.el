@@ -30,7 +30,10 @@
 ;; Bindings for evil's normal state in Approve buffers (decision D17;
 ;; docs/ui.org, "Keys").  They never shadow motions, search, visual
 ;; selection or yank: Approve's single-letter keys move to g-, y- and
-;; capital-letter keys instead.
+;; capital-letter keys instead.  Keys that would edit text in a file
+;; buffer (c s r R x D C S X i) are free in a read-only buffer, so the
+;; commands that change the pull request take them; in visual state,
+;; c s r C act on the selection.
 ;;
 ;; j, k and the arrow keys move by screen line, as magit's own motions do
 ;; (`line-move-visual'): moving by logical line from a collapsed
@@ -75,14 +78,37 @@
     ("[u" . approve-previous-unviewed-file)
     ("]t" . approve-next-thread)
     ("[t" . approve-previous-thread)
+    ("x" . approve-toggle-viewed)
+    ("c" . approve-comment)
+    ("s" . approve-suggest)
+    ("r" . approve-reply)
+    ("R" . approve-resolve)
+    ("i" . approve-edit)
+    ("D" . approve-delete)
+    ("C" . approve-comment-on-pr)
+    ("S" . approve-submit-review)
+    ("X" . approve-discard-review)
     ("q" . quit-window))
   "Keys of `approve-pr-mode' in evil's normal state: (KEY . COMMAND).")
 
+(defconst approve-evil-visual-bindings
+  '(("c" . approve-comment)
+    ("s" . approve-suggest)
+    ("r" . approve-reply)
+    ("C" . approve-comment-on-pr))
+  "Keys of `approve-pr-mode' in evil's visual state: (KEY . COMMAND).
+They act on the selection: a comment or suggestion on the selected
+lines of the diff (\\`V' picks them), or a reply or conversation
+comment quoting the selected text.")
+
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.
-Input buffers start in insert state."
+Also `approve-evil-visual-bindings' in its visual state.  Input
+buffers start in insert state."
   (dolist (binding approve-evil-pr-bindings)
     (evil-define-key* 'normal approve-pr-mode-map (kbd (car binding)) (cdr binding)))
+  (dolist (binding approve-evil-visual-bindings)
+    (evil-define-key* 'visual approve-pr-mode-map (kbd (car binding)) (cdr binding)))
   (evil-set-initial-state 'approve-input-mode 'insert))
 
 (approve-evil-setup)

@@ -12,7 +12,8 @@ callbacks it was given.
  │ Entry points & menus     approve.el · approve-menus.el                   │
  │   M-x commands, transients, keymaps, evil bindings                       │
  ├──────────────────────────────────────────────────────────────────────────┤
- │ Actions                  approve-actions.el · approve-review.el          │
+ │ Actions                  approve-actions.el · approve-commands.el ·      │
+ │                          approve-review.el                               │
  │   context at point → validate → (input) → mutation → patch → redraw      │
  ├───────────────────────────────┬──────────────────────────────────────────┤
  │ Buffers                       │ Input                                    │
@@ -86,11 +87,14 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-eldoc.el=         | Eldoc: one-line =:echo= from the store, full details for the eldoc buffer,      |     1 |
 |                            | lazy detail queries, session cache, =approve-show-details= (=K=)                |       |
 | =approve-input.el=         | Input buffers: =gfm-mode= derived, commit/abort, drafts, completion, preview    |     2 |
-| =approve-review.el=        | Pending review lifecycle: find, start, add, submit, discard                     |     2 |
-| =approve-actions.el=       | The action pipeline (F00); commands: comment, reply, resolve, edit, delete,     |   2–5 |
-|                            | react, viewed, metadata, merge                                                  |       |
-| =approve-menus.el=         | Transients: jump (1); dispatch, submit, merge, metadata, range                  |   1–5 |
-| =approve-evil.el=          | Evil normal-state bindings (required by the modes when evil is loaded)          |     1 |
+| =approve-review.el=        | The pending review's rules (D22, D32): where a comment goes, submit or add a    |     2 |
+|                            | review, what GitHub refuses; =S='s verdicts and body, =X= (discard)             |       |
+| =approve-actions.el=       | The action pipeline (F00) and =approve-action-context=                          |     2 |
+| =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–5 |
+|                            | delete, conversation comment; later react, metadata, merge                      |       |
+| =approve-menus.el=         | Transients: jump (1), submit (2); dispatch, merge, metadata, range              |   1–5 |
+| =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
+|                            | loaded)                                                                         |       |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |
 | =approve-dashboard.el=     | Dashboard buffer from =approve-dashboard-sections=                              |     3 |
 | =approve-search.el=        | Search buffer and search-filter transient                                       |     3 |
@@ -432,8 +436,9 @@ Every context also carries =:url= when one exists (for =o= and copying).
 
 * Actions
 Every command that changes something on GitHub runs the action pipeline
-([[file:flows.org::*F00 The action pipeline][F00]]), in =approve-actions.el=.  A command supplies its own parts
-(the ✱ of F00) and nothing else:
+([[file:flows.org::*F00 The action pipeline][F00]]), in =approve-actions.el=; the commands are in =approve-commands.el=
+and, for the pending review as a whole, =approve-review.el=.  A command
+supplies its own parts (the ✱ of F00) and nothing else:
 
 #+begin_example
  (let* ((context (approve-action-context '(thread) "Put point on a thread"))

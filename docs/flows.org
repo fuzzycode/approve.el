@@ -194,8 +194,9 @@ No network.  This is mostly magit-section plus jumps.
         ▼
  ┌──────────────────────────────────────────┐
  │ marking viewed collapses the file and,   │
- │ when approve-viewed-advance is t, moves  │
- │ point to the next unviewed file          │
+ │ when v was pressed in its diff and       │
+ │ approve-viewed-advance is t (default),   │
+ │ moves point to the next unviewed file    │
  └──────────────────────────────────────────┘
 #+end_example
 
