@@ -87,7 +87,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 |                            | lazy detail queries, session cache, =approve-show-details= (=K=)                |       |
 | =approve-input.el=         | Input buffers: =gfm-mode= derived, commit/abort, drafts, completion, preview    |     2 |
 | =approve-review.el=        | Pending review lifecycle: find, start, add, submit, discard                     |     2 |
-| =approve-actions.el=       | Commands: comment, reply, resolve, edit, delete, react, viewed, metadata, merge |   2–5 |
+| =approve-actions.el=       | The action pipeline (F00); commands: comment, reply, resolve, edit, delete,     |   2–5 |
+|                            | react, viewed, metadata, merge                                                  |       |
 | =approve-menus.el=         | Transients: jump (1); dispatch, submit, merge, metadata, range                  |   1–5 |
 | =approve-evil.el=          | Evil normal-state bindings (required by the modes when evil is loaded)          |     1 |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |
@@ -122,7 +123,7 @@ The store from approve-v2 (D10), with a few additions.
  │ approve-session        UI state, never sent anywhere:                 │
  │   :loading   set of section keys still loading                        │
  │   :errors    section key → error                                      │
- │   :inflight  target idents with a mutation in flight                  │
+ │   :inflight  the actions in flight, (N . MARKS): what each one marks  │
  │   :drafts    target → unsent text (survives C-c C-k, lost on kill)    │
  │   :layout    single | split                                           │
  │   :threads   folded | shown, once T folded or unfolded every thread   │
@@ -424,6 +425,46 @@ Every context also carries =:url= when one exists (for =o= and copying).
   the end of its last line; =:suggest= starts the text with it (F06).  On
   removed lines alone, or with no lines, it says why it can't.  The header
   line offers it while the text is on code and has no suggestion yet.
+
+* Actions
+Every command that changes something on GitHub runs the action pipeline
+([[file:flows.org::*F00 The action pipeline][F00]]), in =approve-actions.el=.  A command supplies its own parts
+(the ✱ of F00) and nothing else:
+
+#+begin_example
+ (let* ((context (approve-action-context '(thread) "Put point on a thread"))
+        (id (plist-get context :thread-id)))
+   (approve-action-run
+    :what "resolve the thread"                       for "could not resolve the thread: …"
+    :why-not (unless (plist-get context :can-resolve) "You can't resolve this thread")
+    :input nil                                       or approve-input-read's arguments
+    :marks `((section approve-thread-section ,id))   what waits for GitHub
+    :send (lambda (text callback errorback) …)       queue the mutations
+    :done (lambda (result) …)))                      list edits, before the redraw
+#+end_example
+
+- =approve-action-context= is the context at point when the command
+  applies to its kind (a list of kinds, or a predicate), else a
+  =user-error= with what the command needs.  It also refuses where no
+  pull request has loaded.
+- =approve-action-run= signals =:why-not= as a =user-error=, then asks for
+  the text when there is =:input= (aborting stops there, keeping the
+  draft).  It marks =:marks= in flight and calls =:send= in the PR buffer
+  with the text (or nil), a callback and an errorback.  =:send= queues the
+  mutations through the operations, whose answers patch the store, and
+  calls the callback with a result once GitHub has confirmed them all.
+- On success the input's draft goes, =:done= runs with the result, then
+  the marks go and every buffer of the PR redraws, point kept.  On failure
+  the marks go and the echo area says what could not be done and GitHub's
+  message (and when a rate limit resets); the text stays a draft.  The
+  marks go even when =:send= or =:done= signals.
+- A mark is =(section TYPE VALUE)=, the heading of each section of TYPE
+  with VALUE, or =(lines RANGE)=, the diff lines of a =line= or =lines=
+  context.  Marked lines take =approve-inflight=, and the loading icon
+  follows the heading, or the last of the lines.  They are overlays, put
+  back after each redraw (=approve-pr-redraw-hook=), so renderers know
+  nothing of them.  Each action keeps its own entry in the session's
+  =:inflight=, so two actions on one target don't clear each other.
 
 * Extended information (eldoc)
 [[file:decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]; mockups in [[file:ui.org::*Eldoc][ui.org › Eldoc]]; flow in [[file:flows.org::*F20 Look up details][F20]].

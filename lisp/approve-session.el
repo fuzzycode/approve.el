@@ -51,7 +51,9 @@
   "Plist of UI state that is never sent anywhere.
 :loading   list of section keys still loading (a set)
 :errors    alist of section key → error
-:inflight  list of target idents with a mutation in flight (a set)
+:inflight  the actions in flight, each (N . MARKS): a number of its own
+           and what it marks as waiting for GitHub (a set;
+           approve-actions.el)
 :drafts    alist of target → unsent text
 :layout    `single' or `split'
 :threads   `folded' or `shown' once every thread of the diff was

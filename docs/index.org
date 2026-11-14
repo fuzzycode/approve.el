@@ -31,9 +31,11 @@ task only needs the files it touches.
   still open.  Done: =approve-input.el= (input buffers with drafts per
   target, the header line, the target lines highlighted, =C-c C-s=
   suggestions, =C-c C-p= preview, completion of =@user=, =#123= and
-  =:emoji:=) and =approve-metadata.el= (D24, now accepted: repository
-  metadata fetched once per session).
-- Next step: the action pipeline (F00), then the rest of [[file:roadmap.org::*Phase 2 — Review][Phase 2]].  SP1 is
+  =:emoji:=), =approve-metadata.el= (D24, now accepted: repository
+  metadata fetched once per session), and the action pipeline (F00,
+  =approve-actions.el=: context, checks, input, in-flight marks, the
+  mutation, then the draft dropped and a redraw, or GitHub's message).
+- Next step: the mutations (=approve-mutations.el=), then the rest of [[file:roadmap.org::*Phase 2 — Review][Phase 2]].  SP1 is
   done ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): comments, replies, submit and discard need only the PR's
   id, and GitHub's silent or misleading answers are checked by Approve.
   Writes are tried on the scratch repository ([[file:development.org::*Scratch repository][development.org]]).
