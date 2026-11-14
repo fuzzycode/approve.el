@@ -28,6 +28,8 @@ for each kind of task.
 - Evil is optional: never `require` it; bindings go in `approve-evil.el`.
 - Tests: buttercup, no network, fixtures in `tests/fixtures/`.
   `make build`, `make test` and `make lint` must pass before a commit.
+  After changing a mutation, also run the live check on the scratch
+  repository, `dev/scratch.el` (docs/development.org, "Scratch repository").
 - Conventional commits, one logical change each, with its tests and doc
   updates. Tick the roadmap task in the same commit.
 - A changed mockup or flow is changed in its org file and in its HTML view

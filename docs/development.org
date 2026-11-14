@@ -38,6 +38,7 @@ predictable.
  │   └── test-<module>.el  one per lisp module
  ├── dev/                  not packaged
  │   ├── load.el           loads this checkout into a running Emacs
+ │   ├── scratch.el        live check of the writes on the scratch repository
  │   └── try.el            init file of =make try=
  ├── docs/                 these docs
  │   └── html/             HTML views: mockups (hand-written) and flows (graphviz)
@@ -148,6 +149,22 @@ repository: commands under development, spikes, recording fixtures.
   (=bot-pr.yml=, run by hand) opens another; =bot.yml= leaves a bot comment.
 - Operations can be tried there by hand with =gh api graphql=
   ([[file:../graphql/README.org][graphql/README.org]]).
+- =dev/scratch.el= is the live check of the writes: it runs every function
+  of =approve-mutations.el= on #8, in order (viewed, comments on a line, a
+  range and the file, replies, edits, deletes, submit, resolve, a single
+  comment, discards, conversation comments), and after each one compares
+  the store with #8 loaded anew from GitHub.  Run it after changing a
+  mutation or what keeps the store true after one:
+  #+begin_src sh
+  timeout 900 cask exec emacs -Q --batch -L lisp -l dev/scratch.el \
+    -f approve-scratch-run-batch > /tmp/scratch.log 2>&1
+  grep -E '^(PASS|FAIL|ERROR)' /tmp/scratch.log
+  #+end_src
+  It sends requests through the =gh= CLI (=approve-scratch-gh-transport=),
+  so it needs =gh auth login= with write access, not ghub's token.  It
+  refuses to start while the viewer has a pending review on #8, and
+  deletes what it wrote except the reviews it submitted (GitHub keeps
+  those).  Add a step for each new mutation.
 
 * Debugging
 - =M-x approve-dev-offline-mode= serves fixtures instead of GitHub.
