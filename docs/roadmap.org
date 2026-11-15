@@ -95,7 +95,7 @@ through shr asynchronously, and what happens when a signed URL has expired
 
 * Phase 2 — Review
 The core of the tool: everything needed to do a full review.
-Implements F00, F04–F10, F17 (change detection), F18.
+Implements F00, F04–F10, F17 (change detection).
 Mockups: input buffer, dispatch, submit review, pending review section, keys.
 - [X] =approve-input.el=: port approve-v2's, add targets/drafts, header-line
       context, target highlight, completion (=@=, =#=, =:emoji:=), =C-c C-s=
@@ -117,7 +117,6 @@ Mockups: input buffer, dispatch, submit review, pending review section, keys.
       and edits with the store, as =updatedAt= can't tell the viewer's own
       writes from others'.
 - [ ] =approve-menus.el=: dispatch transient.  Moved after change detection.
-- [ ] Split layout and =L= (F18).
 - Done when :: a whole review can be done on a real PR from Emacs: mark files
   viewed, comment on a line, a range and a file, suggest, reply, resolve,
   edit, delete, and submit approve / request changes / comment.  The browser
@@ -199,7 +198,13 @@ Mockups: commits with range, review range transient, file view.
   changed file can be read whole with syntax highlighting.
 
 * Phase 7 — Notifications, polish, release
-Implements F19.
+Implements F18, F19.
+- [ ] Split layout and =L= (F18, [[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]]).  Moved from Phase 2 (2026-11-15):
+      nothing before it needs it, and after Phase 6 the diff buffer gets
+      the review range in its heading at once.  Until then, code that
+      works on a PR buffer reads and writes through the shared store and
+      session (=approve-model-store-buffer=) and updates every buffer of the
+      PR (=approve-action--buffers=), so the diff buffer can join later.
 - [ ] =approve-notifications.el= and the filter transient.
 - [ ] Dashboard unread marks ([[file:decisions.org::*Open questions][Q6]]).
 - [ ] =approve-doctor=.
