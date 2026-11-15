@@ -300,7 +300,7 @@ The pending review over its life:
 
 Rendering: GitHub's =bodyHTML= turns the block into a small diff, which
 =approve-html= draws as "Suggested change" ([[file:ui.org::*Threads: suggestions, file-level, outdated][mockup]]).  Applying suggestions
-is a later idea ([[file:roadmap.org::*Ideas][roadmap]]).
+comes in Phase 5 ([[file:roadmap.org::*SP7 Applying suggestions][SP7]]).
 
 * F07 Reply to a thread; resolve or unresolve
 #+begin_example

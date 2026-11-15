@@ -182,12 +182,35 @@ Implements F08 (title, description), F11, F12.
 - Done when :: everything in GitHub's PR sidebar can be changed from Emacs.
 
 * Phase 5 — Merge and checks
-Implements F13, F16 in full.
+Implements F13, F16 in full, and applying suggestions (a flow written
+with SP7's answers).
+- [ ] Apply suggestions (SP7 first): a command on a suggestion, and a batch
+      of them in one commit, as GitHub's "Commit suggestion" and "Add
+      suggestion to batch"; its key is chosen then.  API-only (D03): the files at the head, the
+      suggested lines spliced in, =createCommitOnBranch= with
+      =expectedHeadOid=, the threads resolved, the PR loaded again.  Dimmed
+      without =viewerCanApplySuggestion=.  Moved here from Ideas
+      (2026-11-15): it is the author's way to merge, like the rest of
+      this phase.
 - [ ] Merge transient: methods allowed by the repository, commit title/body,
       delete branch, auto-merge, merge queue, update branch, close/reopen.
 - [ ] Checks: lazy contexts, required marks, ordering, details URL.
 - Done when :: a PR can be taken from "review requested" to merged without
   the browser.
+
+** SP7 Applying suggestions
+GitHub has no API for its "Commit suggestion" button.  On the scratch
+repository, find out and note in [[file:decisions.org][decisions.org]]:
+- What commit message and =Co-authored-by= trailer GitHub's button
+  writes, and where the suggester's e-mail comes from (their noreply
+  address needs the user's =databaseId=).
+- Whether =createCommitOnBranch= can write to a fork's branch that allows
+  edits from maintainers, and what =viewerCanApplySuggestion= says there.
+- What GitHub does to the thread when its suggestion is committed
+  (resolved?), and whether committing through the API does the same.
+- Multi-line suggestions, an empty suggestion (deletes the lines),
+  outdated threads, and a suggestion whose lines changed since.
+- Line endings and the file's last newline, kept as they were.
 
 * Phase 6 — Iterative review and the file view
 Implements F14, F15.
@@ -220,8 +243,6 @@ Implements F18, F19.
 
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.
-- Apply suggestions from Emacs with =createCommitOnBranch= (needs the
-  full file contents, API-only).
 - AI-assisted review in the spirit of Hutch: a gptel-backed command that reads
   the PR diff through the API and proposes comments and suggestions as
   *pending* review comments, which the user edits or deletes before
