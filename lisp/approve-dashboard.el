@@ -471,16 +471,20 @@ the dashboard loads again, until it is unfolded."
 
 (defvar-keymap approve-dashboard-mode-map
   :doc "Keymap of `approve-dashboard-mode'."
-  :parent magit-section-mode-map
-  "g" #'approve-dashboard-refresh
-  "G" #'approve-dashboard-refresh-section
-  "RET" #'approve-visit
-  "<remap> <magit-section-toggle>" #'approve-section-toggle
-  "T" #'approve-dashboard-toggle-lists
-  "O" #'approve-fold-others
-  "o" #'approve-browse
-  "y" #'approve-copy
-  "K" #'approve-show-details)
+  :parent magit-section-mode-map)
+
+;; Bound here rather than in the `defvar-keymap', which leaves a map
+;; that exists as it is: loading this file again then binds new keys.
+(keymap-set approve-dashboard-mode-map "g" #'approve-dashboard-refresh)
+(keymap-set approve-dashboard-mode-map "G" #'approve-dashboard-refresh-section)
+(keymap-set approve-dashboard-mode-map "RET" #'approve-visit)
+(keymap-set approve-dashboard-mode-map "<remap> <magit-section-toggle>"
+            #'approve-section-toggle)
+(keymap-set approve-dashboard-mode-map "T" #'approve-dashboard-toggle-lists)
+(keymap-set approve-dashboard-mode-map "O" #'approve-fold-others)
+(keymap-set approve-dashboard-mode-map "o" #'approve-browse)
+(keymap-set approve-dashboard-mode-map "y" #'approve-copy)
+(keymap-set approve-dashboard-mode-map "K" #'approve-show-details)
 
 (define-derived-mode approve-dashboard-mode magit-section-mode "Approve-Dashboard"
   "Major mode of the dashboard of pull requests.
