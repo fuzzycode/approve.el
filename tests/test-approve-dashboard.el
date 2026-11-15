@@ -346,6 +346,50 @@ No pull request was opened before; the dashboard is killed after."
                     hidden)
               :to-be-truthy)))
 
+  (it "folds the list at point with zc and unfolds it with zo, from a row too"
+    (test-dashboard--with test-dashboard--two
+      (test-dashboard--open)
+      (let ((list (approve-test-find-section 'approve-dashboard-list-section "Needs my review")))
+        (test-dashboard--goto "Fix crash")
+        (approve-section-hide)
+        (expect (oref list hidden) :to-be-truthy)
+        (expect (point) :to-equal (marker-position (oref list start)))
+        (approve-section-hide)
+        (expect (oref list hidden) :to-be-truthy)
+        (approve-section-show)
+        (expect (oref list hidden) :to-be nil)
+        (approve-section-show)
+        (expect (oref list hidden) :to-be nil))))
+
+  (it "folds and unfolds every list, and T toggles them all"
+    (test-dashboard--with test-dashboard--two
+      (test-dashboard--open)
+      (let ((hidden (lambda ()
+                      (mapcar (lambda (title)
+                                (and (oref (approve-test-find-section
+                                            'approve-dashboard-list-section title)
+                                           hidden)
+                                     t))
+                              '("Needs my review" "My pull requests")))))
+        (test-dashboard--goto "#88")
+        (approve-dashboard-fold-lists)
+        (expect (funcall hidden) :to-equal '(t t))
+        (expect (approve-dashboard-lists-folded-p) :to-be-truthy)
+        (expect (buffer-substring-no-properties (line-beginning-position) (line-end-position))
+                :to-match "\\`Needs my review (2)")
+        ;; Lists stay folded when the dashboard loads again.
+        (approve-dashboard-refresh)
+        (test-dashboard--settle)
+        (expect (funcall hidden) :to-equal '(t t))
+        (approve-dashboard-unfold-lists)
+        (expect (funcall hidden) :to-equal '(nil nil))
+        (expect (keymap-lookup approve-dashboard-mode-map "T")
+                :to-be 'approve-dashboard-toggle-lists)
+        (approve-dashboard-toggle-lists)
+        (expect (funcall hidden) :to-equal '(t t))
+        (approve-dashboard-toggle-lists)
+        (expect (funcall hidden) :to-equal '(nil nil)))))
+
   (it "opens a list's search on GitHub with o on its heading, and copies it with y"
     (test-dashboard--with test-dashboard--two
       (test-dashboard--open)

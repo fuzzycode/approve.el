@@ -49,7 +49,8 @@
 ;; - RET, o, y, TAB and K are the PR buffer's commands (approve-nav.el,
 ;;   approve-eldoc.el): on a row they open, copy or describe its pull
 ;;   request; on the heading of a search, o opens the search on GitHub
-;;   and y copies it.
+;;   and y copies it.  TAB folds a list, T every list (in evil, zo zc za
+;;   one list, zM zm and zR zr every list).
 ;; - Like a PR buffer, the dashboard shows a token error once, instead
 ;;   of in every list.
 ;;
@@ -432,6 +433,39 @@ the dashboard's menu asks whether to dim it (decision D06)."
 (put 'approve-dashboard-refresh-section 'approve-preflight
      #'approve-dashboard--list-preflight)
 
+(defun approve-dashboard--list-sections ()
+  "Return the sections of the dashboard's lists, in order."
+  (and magit-root-section
+       (seq-filter (lambda (section)
+                     (eq (oref section type) 'approve-dashboard-list-section))
+                   (oref magit-root-section children))))
+
+(defun approve-dashboard-lists-folded-p ()
+  "Return non-nil if every list of the dashboard is folded."
+  (seq-every-p (lambda (section) (oref section hidden))
+               (approve-dashboard--list-sections)))
+
+(defun approve-dashboard-fold-lists ()
+  "Fold every list of the dashboard to its heading.
+Point in a list goes to its heading.  Each list stays folded when
+the dashboard loads again, until it is unfolded."
+  (interactive)
+  (approve-dashboard--check-mode)
+  (mapc #'magit-section-hide (approve-dashboard--list-sections)))
+
+(defun approve-dashboard-unfold-lists ()
+  "Unfold every list of the dashboard."
+  (interactive)
+  (approve-dashboard--check-mode)
+  (mapc #'magit-section-show (approve-dashboard--list-sections)))
+
+(defun approve-dashboard-toggle-lists ()
+  "Fold every list of the dashboard, or unfold them all if they are folded."
+  (interactive)
+  (if (approve-dashboard-lists-folded-p)
+      (approve-dashboard-unfold-lists)
+    (approve-dashboard-fold-lists)))
+
 ;;; Mode
 
 (defvar-keymap approve-dashboard-mode-map
@@ -441,6 +475,7 @@ the dashboard's menu asks whether to dim it (decision D06)."
   "G" #'approve-dashboard-refresh-section
   "RET" #'approve-visit
   "<remap> <magit-section-toggle>" #'approve-section-toggle
+  "T" #'approve-dashboard-toggle-lists
   "o" #'approve-browse
   "y" #'approve-copy
   "K" #'approve-show-details)

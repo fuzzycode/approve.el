@@ -65,6 +65,8 @@
     ("RET" . approve-visit)
     ("TAB" . approve-section-toggle)
     ("za" . approve-section-toggle)
+    ("zo" . approve-section-show)
+    ("zc" . approve-section-hide)
     ("zM" . approve-fold-threads)
     ("zm" . approve-fold-threads)
     ("zR" . approve-unfold-threads)
@@ -116,6 +118,14 @@ selection for the command picked in it.")
     ("RET" . approve-visit)
     ("TAB" . approve-section-toggle)
     ("za" . approve-section-toggle)
+    ("zo" . approve-section-show)
+    ("zc" . approve-section-hide)
+    ("zO" . approve-section-show)
+    ("zC" . approve-section-hide)
+    ("zM" . approve-dashboard-fold-lists)
+    ("zm" . approve-dashboard-fold-lists)
+    ("zR" . approve-dashboard-unfold-lists)
+    ("zr" . approve-dashboard-unfold-lists)
     ("gr" . approve-dashboard-refresh)
     ("gR" . approve-dashboard-refresh-section)
     ("go" . approve-browse)
@@ -129,7 +139,9 @@ selection for the command picked in it.")
     ("q" . quit-window))
   "Keys of `approve-dashboard-mode' in evil's normal state: (KEY . COMMAND).
 The PR buffer's keys for the same commands; G, which refreshes the
-list at point in Emacs, is evil's motion, so gR does it.")
+list at point in Emacs, is evil's motion, so gR does it.  The z keys
+fold as in vim: za, zo and zc the list at point (zO and zC too, as
+lists hold no folds), zM and zm every list; zR and zr unfold them.")
 
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.

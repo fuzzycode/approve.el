@@ -35,6 +35,8 @@
 ;;   ] u   `approve-next-unviewed-file'      [ u  previous
 ;;   ] t   `approve-next-thread'             [ t  previous (unresolved)
 ;;   TAB   `approve-section-toggle'          fold the section, or a line's threads
+;;         `approve-section-show', `approve-section-hide'  the same, one way
+;;         only (evil's zo and zc)
 ;;   T     `approve-toggle-threads'          fold or unfold every thread in the diff
 ;;
 ;; and the jumps the `approve-jump' transient (j) offers, defined in
@@ -331,10 +333,24 @@ That is the current section, or for one of
 (defun approve-section-toggle ()
   "Fold or unfold the section at point.
 On a diff line with threads, that folds its threads; in a thread, the
-threads of its line (or its group); on another diff line, its hunk."
+threads of its line (or its group); on another diff line, its hunk;
+on a row of a list of pull requests, its list."
   (interactive)
   (magit-section-toggle (or (approve-nav--foldable-section)
                             (user-error "Nothing to fold here"))))
+
+(defun approve-section-show ()
+  "Unfold the section at point, the one `approve-section-toggle' folds."
+  (interactive)
+  (magit-section-show (or (approve-nav--foldable-section)
+                          (user-error "Nothing to unfold here"))))
+
+(defun approve-section-hide ()
+  "Fold the section at point, the one `approve-section-toggle' folds.
+Point in its body goes to its heading."
+  (interactive)
+  (magit-section-hide (or (approve-nav--foldable-section)
+                          (user-error "Nothing to fold here"))))
 
 (defconst approve-nav--thread-folds '(approve-line-section approve-file-threads-section)
   "Sections that fold threads: diff lines, \"On this file\" and \"Outdated\".")

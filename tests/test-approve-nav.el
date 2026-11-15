@@ -234,6 +234,24 @@
               :to-equal (list 'normal approve-dashboard-mode-map "g R"
                               'approve-dashboard-refresh-section))
       (expect (seq-find (lambda (b) (equal (nth 2 b) "G")) bound) :to-be nil)
+      ;; z folds as in vim: zo and zc in both buffers, and in the
+      ;; dashboard zM and zR fold and unfold every list.
+      (dolist (map (list approve-pr-mode-map approve-dashboard-mode-map))
+        (expect (mapcar (lambda (key)
+                          (nth 3 (seq-find (lambda (b) (and (eq (nth 1 b) map)
+                                                            (equal (nth 2 b) key)))
+                                           bound)))
+                        '("z a" "z o" "z c"))
+                :to-equal '(approve-section-toggle approve-section-show
+                                                   approve-section-hide)))
+      (expect (mapcar (lambda (key)
+                        (nth 3 (seq-find (lambda (b)
+                                           (and (eq (nth 1 b) approve-dashboard-mode-map)
+                                                (equal (nth 2 b) key)))
+                                         bound)))
+                      '("z M" "z m" "z R" "z r"))
+              :to-equal '(approve-dashboard-fold-lists approve-dashboard-fold-lists
+                          approve-dashboard-unfold-lists approve-dashboard-unfold-lists))
       ;; No key may be an evil motion, search, visual selection or yank,
       ;; nor start with one.  An operator (c d) may be a key of its own,
       ;; as change and delete have nothing to do in a read-only buffer

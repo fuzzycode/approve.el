@@ -210,7 +210,11 @@ Those that can't run at point are dimmed."
    ["Lists"
     ("g" "Refresh all" approve-dashboard-refresh)
     ("G" "Refresh list at point" approve-dashboard-refresh-section
-     :inapt-if (lambda () (approve-action-why-not 'approve-dashboard-refresh-section)))]])
+     :inapt-if (lambda () (approve-action-why-not 'approve-dashboard-refresh-section)))
+    ("T" approve-dashboard-toggle-lists
+     :description (lambda () (if (approve-dashboard-lists-folded-p)
+                                 "Unfold all lists"
+                               "Fold all lists")))]])
 
 (keymap-set approve-dashboard-mode-map "?" #'approve-dashboard-dispatch)
 
