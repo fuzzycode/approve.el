@@ -191,7 +191,10 @@ Implements F08 (title, description), F11, F12.
       comments.  =approve-manage.el= (=t d l a A M D w=, and =#= in the
       dispatch alone), =+= and =H= in =approve-commands.el=; each checked
       live by the scratch script's =metadata= group.
-- [ ] Metadata keys on the metadata rows (=RET= on Labels edits labels).
+- [X] Metadata keys on the metadata rows (=RET= on Labels edits labels).
+      =RET= on Labels, Assignees, Reviewers and Milestone runs =l a A M=
+      (=approve-visit-row-commands=, filled by =approve-manage.el=); =o=
+      still opens the thing at point.
 - Done when :: everything in GitHub's PR sidebar can be changed from Emacs.
 
 * Phase 5 — Merge and checks

@@ -43,7 +43,9 @@
 ;;   #   `approve-toggle-lock'         lock or unlock the conversation
 ;;                                     (in the dispatch menu only)
 ;;
-;; They work anywhere in the buffer.  The title and the description are
+;; They work anywhere in the buffer, and RET on the Labels, Assignees,
+;; Reviewers and Milestone rows runs the one of the row
+;; (`approve-visit-row-commands').  The title and the description are
 ;; written in an input buffer (approve-input.el), starting from what
 ;; they are.  A picker offers the repository's
 ;; labels, people, teams or milestones (approve-metadata.el, decision
@@ -69,6 +71,7 @@
 (require 'approve-mutations)
 (require 'approve-actions)
 (require 'approve-pr)
+(require 'approve-nav)
 
 ;;; Pickers
 
@@ -616,6 +619,12 @@ only collaborators can comment.  Unlocking asks first."
                           (if locked "unlocked" "locked"))))))))
 
 ;;; Keys
+
+;; RET on these metadata rows changes them, as their keys do anywhere.
+(setf (alist-get 'labels approve-visit-row-commands) #'approve-set-labels
+      (alist-get 'assignees approve-visit-row-commands) #'approve-set-assignees
+      (alist-get 'reviewers approve-visit-row-commands) #'approve-request-reviewers
+      (alist-get 'milestone approve-visit-row-commands) #'approve-set-milestone)
 
 (keymap-set approve-pr-mode-map "t" #'approve-edit-title)
 (keymap-set approve-pr-mode-map "d" #'approve-edit-description)

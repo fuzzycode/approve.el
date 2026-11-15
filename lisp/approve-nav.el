@@ -451,6 +451,20 @@ The section is the one `approve-section-toggle' folds."
         (magit-section-toggle section)
       (message "%s" message))))
 
+(defvar approve-visit-row-commands nil
+  "Commands \\[approve-visit] runs on a metadata row: (ROW . COMMAND).
+ROW names the row, such as `labels' (see `approve-metadata-rows').
+approve-manage.el adds the rows it changes, so RET on Labels edits
+the labels; this file knows none of them.")
+
+(defun approve-nav--row-command ()
+  "Return the command of the metadata row point is on, or nil.
+Point may be on a thing of the row, such as a label: the row
+counts, not the thing."
+  (let ((context (approve-context-of-sections)))
+    (and (eq (plist-get context :kind) 'meta)
+         (alist-get (plist-get context :row) approve-visit-row-commands))))
+
 (defun approve-visit ()
   "Follow the thing at point (flow F03).
 A file goes to its diff, a pending comment or a review to its thread,
@@ -459,33 +473,40 @@ browser), a check to its details.  A commit shows in Magit from a
 local clone that has it (`approve-clone-directories'), else on
 GitHub.  A diff GitHub did not send is computed from the file's
 versions.  A row of a list of pull requests opens its pull request.
-Elsewhere, toggle the section."
+On a metadata row that can be changed, such as Labels, change it
+\(`approve-visit-row-commands'); \\[approve-browse] opens the label
+or person at point.  Elsewhere, toggle the section."
   (interactive)
-  (let ((context (approve-context-at-point)))
-    (pcase (plist-get context :kind)
-      ('file
-       (let ((section (magit-current-section)))
-         (if (eq (oref section type) 'approve-file-section)
-             (magit-section-toggle section)
-           (approve-nav-goto-file (plist-get context :path)))))
-      ('review-comment
-       (if (eq (oref (magit-current-section) type) 'approve-pending-comment-section)
-           (approve-nav-goto-thread (or (approve-nav--thread-of-comment
-                                         (plist-get context :comment-id))
-                                        (user-error "That comment's thread is not loaded")))
-         (approve-nav--toggle-or "Nothing to visit here")))
-      ('review
-       (approve-nav-goto-thread (or (approve-nav--thread-of-review
-                                     (plist-get context :review-id))
-                                    (user-error "This review has no comments on code"))))
-      ((or 'link 'ref 'check 'user 'team 'label 'milestone 'pull-request)
-       (if-let* ((url (plist-get context :url)))
-           (approve-nav--open-url url)
-         (user-error "Nothing to visit here")))
-      ('commit (approve-nav--visit-commit (plist-get context :value)
-                                          (plist-get context :url)))
-      ('load-diff (approve-pr-load-local-patch (plist-get context :path)))
-      (_ (approve-nav--toggle-or "Nothing to visit here")))))
+  (if-let* ((command (approve-nav--row-command)))
+      (call-interactively command)
+    (approve-nav--visit (approve-context-at-point))))
+
+(defun approve-nav--visit (context)
+  "Follow CONTEXT, the thing at point; see `approve-visit'."
+  (pcase (plist-get context :kind)
+    ('file
+     (let ((section (magit-current-section)))
+       (if (eq (oref section type) 'approve-file-section)
+           (magit-section-toggle section)
+         (approve-nav-goto-file (plist-get context :path)))))
+    ('review-comment
+     (if (eq (oref (magit-current-section) type) 'approve-pending-comment-section)
+         (approve-nav-goto-thread (or (approve-nav--thread-of-comment
+                                       (plist-get context :comment-id))
+                                      (user-error "That comment's thread is not loaded")))
+       (approve-nav--toggle-or "Nothing to visit here")))
+    ('review
+     (approve-nav-goto-thread (or (approve-nav--thread-of-review
+                                   (plist-get context :review-id))
+                                  (user-error "This review has no comments on code"))))
+    ((or 'link 'ref 'check 'user 'team 'label 'milestone 'pull-request)
+     (if-let* ((url (plist-get context :url)))
+         (approve-nav--open-url url)
+       (user-error "Nothing to visit here")))
+    ('commit (approve-nav--visit-commit (plist-get context :value)
+                                        (plist-get context :url)))
+    ('load-diff (approve-pr-load-local-patch (plist-get context :path)))
+    (_ (approve-nav--toggle-or "Nothing to visit here"))))
 
 (defun approve-browse ()
   "Open the thing at point on GitHub, or the pull request."

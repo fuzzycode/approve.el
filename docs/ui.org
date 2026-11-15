@@ -75,7 +75,9 @@ Notes:
   (when it was opened and updated, and merged and by whom, or closed), then
   Reviewers … Status.
 - Metadata rows are one section each (=approve-meta-*=), so each has its own
-  keys (=l= on Labels edits labels) and eldoc (label descriptions, user names).
+  keys and eldoc (label descriptions, user names): =RET= on Labels,
+  Assignees, Reviewers or Milestone changes it, as =l a A M= do anywhere,
+  and =o= opens the label, person or milestone at point.
 - Reviewer marks: ✓ approved, ✗ changes requested, 💬 commented, ○ requested
   but not reviewed yet.
 - "Your pending review" appears only when one exists.  It lists the pending
@@ -755,6 +757,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Fold / unfold every thread    | =T=           | =zM= =zm= / =zR= =zr= | any (dashboard: lists)    |
 | Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k= | any                       |
 | Visit thing at point          | =RET=         | =RET=                 | file, line, link, commit… |
+|                               |               |                       | (a metadata row: edit it) |
 | Open in browser               | =o=           | =go=                  | any (thing or PR)         |
 | Copy URL / sha / value        | =y=           | =gy=                  | any                       |
 | Comment at point (DWIM)       | =c=           | =c=                   | line, region, file, PR    |

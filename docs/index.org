@@ -74,13 +74,21 @@ task only needs the files it touches.
   dashboard (=M-x approve-dashboard=, =approve-dashboard.el=, [[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]).  The
   search buffer, =approve-at-point= and the =browse-url= handler moved to
   a new last phase, [[file:roadmap.org::*Phase 9 — More ways to find a PR][Phase 9]]: nice to have, not essential.
-- Phase 4 (Manage the PR) started on 2026-11-15 with the repository
-  metadata the pickers choose from (D24, amended): labels, assignable
-  users, open milestones and the owner's teams, cached for the session
-  like completion's lists, and =approve-metadata-wait= for the commands
-  that need one before they can ask.
-- Next step: [[file:roadmap.org::*Phase 4 — Manage the PR][Phase 4]]'s title, description, labels, assignees,
-  reviewers, milestone and the rest of GitHub's sidebar (F08, F12).
+- Phase 4 (Manage the PR) has all its tasks done (2026-11-15).  The
+  repository metadata the pickers choose from (D24, amended): labels,
+  assignable users, open milestones and the owner's teams, cached for the
+  session, and =approve-metadata-wait= for the commands that need one
+  before they can ask.  Then =approve-manage.el=: =t= and =d= (and =e= on
+  the description) edit the title and description, =l a A M= pick labels,
+  assignees, reviewers (GitHub's suggestions first) and the milestone,
+  =D= toggles draft, =w= the subscription (the token needs the
+  =notifications= scope), =#= in the dispatch locks the conversation;
+  =RET= on a metadata row edits it.  =+= reacts and =H= hides a comment
+  (=approve-commands.el=).  The scratch script's =metadata= group checks
+  them all live (=APPROVE_SCRATCH_ONLY=metadata=).  Not covered from
+  GitHub's sidebar: projects and linked issues.
+- Next step: [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]] (merge and checks), starting with SP7
+  (applying suggestions).
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

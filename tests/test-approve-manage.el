@@ -463,6 +463,36 @@
         (expect (cadr (car (test-manage--sent)))
                 :to-equal `((lockableId . ,test-manage--pr)))))))
 
+(describe "RET on the metadata rows"
+  (it "changes the labels, assignees, reviewers or milestone, even on a label"
+    (test-manage--with-pr
+      (spy-on 'approve-set-labels)
+      (spy-on 'approve-set-assignees)
+      (spy-on 'approve-request-reviewers)
+      (spy-on 'approve-set-milestone)
+      (dolist (row '((labels . approve-set-labels) (assignees . approve-set-assignees)
+                     (reviewers . approve-request-reviewers)
+                     (milestone . approve-set-milestone)))
+        (goto-char (oref (approve-test-find-section 'approve-meta-section (car row)) start))
+        (end-of-line)
+        (backward-char)
+        (call-interactively #'approve-visit)
+        (expect (cdr row) :to-have-been-called-times 1))
+      (goto-char (oref (approve-test-find-section 'approve-meta-section 'labels) start))
+      (search-forward "enhancement")
+      (expect (plist-get (approve-context-at-point) :kind) :to-be 'label)
+      (call-interactively #'approve-visit)
+      (expect 'approve-set-labels :to-have-been-called-times 2)))
+
+  (it "leaves the other rows as they were"
+    (test-manage--with-pr
+      (spy-on 'approve-nav--open-url)
+      (goto-char (oref (approve-test-find-section 'approve-meta-section 'author) start))
+      (search-forward "@alice")
+      (call-interactively #'approve-visit)
+      (expect 'approve-nav--open-url
+              :to-have-been-called-with "https://github.com/alice-example"))))
+
 (describe "The metadata keys"
   (it "bind the commands in the PR buffer"
     (dolist (binding '(("t" . approve-edit-title) ("d" . approve-edit-description)
