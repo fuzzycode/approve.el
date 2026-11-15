@@ -20,6 +20,11 @@ Design rules for every buffer:
   retry a failed load.
 - No line exceeds =fill-column= + the indent; long text is wrapped (=shr=
   fills to =approve-fill-column=, default 80).
+- What sits on the right of a line (counts and states on headings, key
+  hints, the diff's file statistics, the header line's state) ends at
+  =approve-page-width=, default 110: right of the filled text and the
+  indentation of threads.  Narrow frames or side-by-side windows can set it
+  lower, such as 88.  Mockups show intent, so theirs is closer to 80.
 - People are written =@login=, as GitHub writes mentions ([[file:decisions.org::*D33 People are written as @login][D33]]); their names
   are in eldoc.  A commit's author whose e-mail GitHub links to no account
   is the name Git wrote, without an =@=.

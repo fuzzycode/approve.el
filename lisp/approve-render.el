@@ -52,13 +52,15 @@
 
 ;;; Options
 
-(defcustom approve-page-width 88
+(defcustom approve-page-width 110
   "Column at which right-aligned text in Approve buffers ends.
 Counts, states and key hints on the right of headings line up
-there.  It is a little wider than `approve-fill-column', which
-fills text.  For a wide frame:
+there, as do the statistics of the diff's files and the header
+line's state.  It leaves room right of `approve-fill-column', which
+fills text, for the indentation of threads and their hints.  For a
+narrow frame or a side-by-side window:
 
-  (setq approve-page-width 110)"
+  (setq approve-page-width 88)"
   :type 'natnum
   :group 'approve)
 
