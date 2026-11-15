@@ -49,8 +49,9 @@
 ;; - RET, o, y, TAB and K are the PR buffer's commands (approve-nav.el,
 ;;   approve-eldoc.el): on a row they open, copy or describe its pull
 ;;   request; on the heading of a search, o opens the search on GitHub
-;;   and y copies it.  TAB folds a list, T every list (in evil, zo zc za
-;;   one list, zM zm and zR zr every list).
+;;   and y copies it.  TAB folds a list, T every list, O every list but
+;;   the one at point (in evil, zo zc za one list, zM zm and zR zr every
+;;   list, zp the others).
 ;; - Like a PR buffer, the dashboard shows a token error once, instead
 ;;   of in every list.
 ;;
@@ -476,6 +477,7 @@ the dashboard loads again, until it is unfolded."
   "RET" #'approve-visit
   "<remap> <magit-section-toggle>" #'approve-section-toggle
   "T" #'approve-dashboard-toggle-lists
+  "O" #'approve-fold-others
   "o" #'approve-browse
   "y" #'approve-copy
   "K" #'approve-show-details)

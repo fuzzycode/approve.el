@@ -361,6 +361,24 @@ No pull request was opened before; the dashboard is killed after."
         (approve-section-show)
         (expect (oref list hidden) :to-be nil))))
 
+  (it "folds every list but the one at point with O, unfolding it"
+    (test-dashboard--with test-dashboard--two
+      (test-dashboard--open)
+      (let ((mine (approve-test-find-section 'approve-dashboard-list-section "My pull requests"))
+            (needs (approve-test-find-section 'approve-dashboard-list-section "Needs my review")))
+        (test-dashboard--goto "#88")
+        (approve-fold-others)
+        (expect (oref mine hidden) :to-be-truthy)
+        (expect (oref needs hidden) :to-be nil)
+        (expect (buffer-substring-no-properties (line-beginning-position) (line-end-position))
+                :to-match "#88")
+        (approve-section-hide)
+        (goto-char (oref mine start))
+        (approve-fold-others)
+        (expect (oref mine hidden) :to-be nil)
+        (expect (oref needs hidden) :to-be-truthy)
+        (expect (keymap-lookup approve-dashboard-mode-map "O") :to-be 'approve-fold-others))))
+
   (it "folds and unfolds every list, and T toggles them all"
     (test-dashboard--with test-dashboard--two
       (test-dashboard--open)

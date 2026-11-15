@@ -190,7 +190,8 @@ Those that can't run at point, or that you may not use, are dimmed."
     ("y" "Copy URL / sha" approve-copy)
     ("j" "Jump…" approve-jump)
     ("K" "Details (eldoc)" approve-show-details)
-    ("T" approve-toggle-threads :description approve-menus--threads-description)]])
+    ("T" approve-toggle-threads :description approve-menus--threads-description)
+    ("O" "Fold all but this" approve-fold-others)]])
 
 (keymap-set approve-pr-mode-map "?" #'approve-dispatch)
 
@@ -214,7 +215,8 @@ Those that can't run at point are dimmed."
     ("T" approve-dashboard-toggle-lists
      :description (lambda () (if (approve-dashboard-lists-folded-p)
                                  "Unfold all lists"
-                               "Fold all lists")))]])
+                               "Fold all lists")))
+    ("O" "Fold other lists" approve-fold-others)]])
 
 (keymap-set approve-dashboard-mode-map "?" #'approve-dashboard-dispatch)
 

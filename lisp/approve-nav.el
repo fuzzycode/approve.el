@@ -38,12 +38,13 @@
 ;;         `approve-section-show', `approve-section-hide'  the same, one way
 ;;         only (evil's zo and zc)
 ;;   T     `approve-toggle-threads'          fold or unfold every thread in the diff
+;;   O     `approve-fold-others'             fold every section but the one at point
 ;;
 ;; and the jumps the `approve-jump' transient (j) offers, defined in
 ;; approve-menus.el.  Moving into a file's diff or a thread expands
 ;; what hides it.  This file binds its keys in `approve-pr-mode-map'.
-;; The dashboard binds RET, o, y and TAB to the same commands: on a row
-;; of a list, RET opens its pull request and TAB folds the list.
+;; The dashboard binds RET, o, y, TAB and O to the same commands: on a
+;; row of a list, RET opens its pull request and TAB folds the list.
 ;;
 ;; A commit is shown by the first of `approve-visit-commit-functions'
 ;; that can, else on GitHub.  approve.el puts `approve-clone-show-commit'
@@ -352,6 +353,41 @@ Point in its body goes to its heading."
   (magit-section-hide (or (approve-nav--foldable-section)
                           (user-error "Nothing to fold here"))))
 
+(defconst approve-nav--fold-others-within '(approve-diff-section)
+  "Sections whose own parts `approve-fold-others' folds too.
+In the diff, only the file at point stays open.")
+
+(defun approve-nav--fold-siblings (parent keep)
+  "Fold the children of PARENT that have a body, but KEEP, which unfolds.
+KEEP may be nil, to fold them all."
+  (dolist (child (oref parent children))
+    (unless (or (eq child keep) (null (oref child content)))
+      (magit-section-hide child)))
+  (when (and keep (oref keep content))
+    (magit-section-show keep)))
+
+(defun approve-fold-others ()
+  "Fold every section but the one at point, which unfolds.
+In a PR buffer, those are the top-level sections (the description,
+the conversation, the files, the diff…), and in the diff every file
+but the one at point.  In the dashboard, they are the lists.  Like
+any folding, it holds when the buffer is drawn again."
+  (interactive)
+  (unless magit-root-section
+    (user-error "Nothing to fold here"))
+  ;; The sections from the root down to the one at point.
+  (let ((path nil)
+        (section (magit-current-section)))
+    (while section
+      (push section path)
+      (setq section (oref section parent)))
+    (unless (eq (car path) magit-root-section)
+      (setq path (cons magit-root-section path)))
+    (approve-nav--fold-siblings magit-root-section (cadr path))
+    (cl-loop for (outer inner) on (cdr path)
+             when (memq (oref outer type) approve-nav--fold-others-within)
+             do (approve-nav--fold-siblings outer inner))))
+
 (defconst approve-nav--thread-folds '(approve-line-section approve-file-threads-section)
   "Sections that fold threads: diff lines, \"On this file\" and \"Outdated\".")
 
@@ -499,6 +535,7 @@ With a prefix argument URL, copy its URL instead."
 (keymap-set approve-pr-mode-map "] t" #'approve-next-thread)
 (keymap-set approve-pr-mode-map "[ t" #'approve-previous-thread)
 (keymap-set approve-pr-mode-map "T" #'approve-toggle-threads)
+(keymap-set approve-pr-mode-map "O" #'approve-fold-others)
 
 (provide 'approve-nav)
 

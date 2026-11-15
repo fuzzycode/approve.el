@@ -98,6 +98,40 @@
     (expect (keymap-lookup approve-pr-mode-map "j") :to-be 'approve-jump)
     (expect (get 'approve-jump 'transient--prefix) :to-be-truthy)))
 
+(describe "approve-fold-others"
+  (it "folds every section but the one at point, and in the diff every file but its own"
+    (test-nav--with-medium
+      (approve-nav-goto-file "README.md")
+      (approve-nav-goto-file "pkg/api/types.go")
+      (forward-line 2)
+      (approve-fold-others)
+      (let ((folded (lambda ()
+                      (mapcar (lambda (section) (oref section type))
+                              (seq-filter (lambda (section)
+                                            (and (oref section content) (oref section hidden)))
+                                          (oref magit-root-section children))))))
+        (expect (funcall folded)
+                :to-equal '(approve-pending-review-section approve-description-section
+                            approve-checks-section approve-commits-section
+                            approve-conversation-section approve-files-section))
+        (expect (oref (approve-test-find-section 'approve-file-section "pkg/api/types.go") hidden)
+                :to-be nil)
+        (expect (oref (approve-test-find-section 'approve-file-section "README.md") hidden)
+                :to-be-truthy)
+        (expect (plist-get (approve-context-at-point) :path) :to-equal "pkg/api/types.go")
+        ;; It holds when the buffer is drawn again.
+        (approve-pr-redraw)
+        (expect (oref (approve-test-find-section 'approve-description-section) hidden)
+                :to-be-truthy)
+        ;; From the description's heading, the diff folds and it opens.
+        (approve-jump-description)
+        (approve-fold-others)
+        (expect (oref (approve-test-find-section 'approve-description-section) hidden)
+                :to-be nil)
+        (expect (oref (approve-test-find-section 'approve-diff-section) hidden)
+                :to-be-truthy)
+        (expect (keymap-lookup approve-pr-mode-map "O") :to-be 'approve-fold-others)))))
+
 (describe "approve-visit"
   (it "goes from a file in the list to its diff"
     (test-nav--with-medium
@@ -234,16 +268,17 @@
               :to-equal (list 'normal approve-dashboard-mode-map "g R"
                               'approve-dashboard-refresh-section))
       (expect (seq-find (lambda (b) (equal (nth 2 b) "G")) bound) :to-be nil)
-      ;; z folds as in vim: zo and zc in both buffers, and in the
-      ;; dashboard zM and zR fold and unfold every list.
+      ;; z folds as in vim: zo and zc in both buffers, zp all but the
+      ;; section at point, and in the dashboard zM and zR fold and
+      ;; unfold every list.
       (dolist (map (list approve-pr-mode-map approve-dashboard-mode-map))
         (expect (mapcar (lambda (key)
                           (nth 3 (seq-find (lambda (b) (and (eq (nth 1 b) map)
                                                             (equal (nth 2 b) key)))
                                            bound)))
-                        '("z a" "z o" "z c"))
+                        '("z a" "z o" "z c" "z p"))
                 :to-equal '(approve-section-toggle approve-section-show
-                                                   approve-section-hide)))
+                                                   approve-section-hide approve-fold-others)))
       (expect (mapcar (lambda (key)
                         (nth 3 (seq-find (lambda (b)
                                            (and (eq (nth 1 b) approve-dashboard-mode-map)

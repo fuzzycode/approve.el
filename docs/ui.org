@@ -364,10 +364,11 @@ finds; when a list shows fewer, its last line says how many more:
 On a row, =RET= opens the PR, =o= opens it in the browser, =y= copies its
 URL, =K= shows its details (eldoc), and =TAB= folds its list.  On a list's
 heading, =o= opens its search on GitHub and =y= copies the search.  =T=
-folds every list, or unfolds them all when they are folded; a folded list
-stays folded when the dashboard loads again.  Evil folds as in vim: =za=,
-=zo= and =zc= the list at point (from its rows too), =zM= (or =zm=) every
-list, =zR= (or =zr=) unfolds them all.  =?= opens the dashboard's dispatch:
+folds every list, or unfolds them all when they are folded, and =O= every
+list but the one at point; a folded list stays folded when the dashboard
+loads again.  Evil folds as in vim: =za=, =zo= and =zc= the list at point
+(from its rows too), =zM= (or =zm=) every list, =zR= (or =zr=) unfolds
+them all, and =zp= folds the others.  =?= opens the dashboard's dispatch:
 
 #+begin_example
  Approve  Dashboard
@@ -375,7 +376,7 @@ list, =zR= (or =zr=) unfolds them all.  =?= opens the dashboard's dispatch:
   RET Open                  g Refresh all
   o   Open in browser       G Refresh list at point
   y   Copy URL / search     T Fold all lists
-  K   Details (eldoc)
+  K   Details (eldoc)       O Fold other lists
 #+end_example
 
 =s= will open search with the section's filter, once search exists
@@ -461,6 +462,7 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
                                                       D Draft / ready       ! Doctor
                                                       w Subscription        K Details (eldoc)
                                                       m Merge / close…      T Fold all threads
+                                                                            O Fold all but this
 #+end_example
 
 Suffixes that don't apply to the context, or that the viewer may not use
@@ -725,6 +727,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Bury / back                   | =q=           | =q=                   | any                       |
 | Toggle section                | =TAB=         | =TAB= =za=            | section                   |
 | Unfold / fold section         | via =TAB=     | =zo= / =zc=           | section                   |
+| Fold all but this             | =O=           | =zp=                  | any                       |
 | Fold / unfold every thread    | =T=           | =zM= =zm= / =zR= =zr= | any (dashboard: lists)    |
 | Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k= | any                       |
 | Visit thing at point          | =RET=         | =RET=                 | file, line, link, commit… |
@@ -763,6 +766,12 @@ files expanded later and across =g=, until it is turned again; =TAB= still
 folds one line.  Evil users fold all with =zM= (or =zm=) and unfold all with
 =zR= (or =zr=), as in vim; =zo= and =zc= unfold and fold what =TAB=
 toggles.  In the dashboard, the same keys fold its lists.
+
+=O= (=approve-fold-others=, =zp= in evil) folds every section but the one
+at point, which unfolds:
+the top-level sections (pending review, description, checks, commits,
+conversation, files, diff), and in the diff every file but the one at
+point.  In the dashboard it folds every list but the one at point.
 
 Input buffers: =C-c C-c= send, =C-c C-k= abort, =C-c C-s= suggestion, =C-c C-p=
 preview, =C-c @= mention (same in every state).

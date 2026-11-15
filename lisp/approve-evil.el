@@ -67,6 +67,7 @@
     ("za" . approve-section-toggle)
     ("zo" . approve-section-show)
     ("zc" . approve-section-hide)
+    ("zp" . approve-fold-others)
     ("zM" . approve-fold-threads)
     ("zm" . approve-fold-threads)
     ("zR" . approve-unfold-threads)
@@ -122,6 +123,7 @@ selection for the command picked in it.")
     ("zc" . approve-section-hide)
     ("zO" . approve-section-show)
     ("zC" . approve-section-hide)
+    ("zp" . approve-fold-others)
     ("zM" . approve-dashboard-fold-lists)
     ("zm" . approve-dashboard-fold-lists)
     ("zR" . approve-dashboard-unfold-lists)
@@ -141,7 +143,8 @@ selection for the command picked in it.")
 The PR buffer's keys for the same commands; G, which refreshes the
 list at point in Emacs, is evil's motion, so gR does it.  The z keys
 fold as in vim: za, zo and zc the list at point (zO and zC too, as
-lists hold no folds), zM and zm every list; zR and zr unfold them.")
+lists hold no folds), zM and zm every list; zR and zr unfold them.
+zp folds every list but the one at point, as in a PR buffer.")
 
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.
