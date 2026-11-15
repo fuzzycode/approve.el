@@ -54,6 +54,7 @@
 ;;   `approve-mutation-set-draft'               F12  a draft, or ready for review
 ;;   `approve-mutation-set-subscription'        F12  how the viewer hears of it
 ;;   `approve-mutation-set-locked'              lock or unlock the conversation
+;;   `approve-mutation-react'                   F11  give or take back a reaction
 ;;
 ;; Each one queues its mutation (`approve-api-mutate': one at a time,
 ;; decision D15) for the PR of the current buffer's store.  Once GitHub
@@ -602,11 +603,11 @@ before stay done."
                      (funcall callback result))))
                errorback))))
 
-(defun approve-mutation--pr-step (query variables mutation payload progress)
+(defun approve-mutation--step (query variables mutation payload progress)
   "Return a step of `approve-mutation--in-turn' that sends QUERY with VARIABLES.
-GitHub's answer to MUTATION holds the PR in its field PAYLOAD; the
-step patches the store with it and gives the PR's ref.  PROGRESS is
-the echo-area text while it runs."
+GitHub's answer to MUTATION holds what it changed, the PR or a
+comment, in its field PAYLOAD; the step patches the store with it
+and gives its ref.  PROGRESS is the echo-area text while it runs."
   (lambda (callback errorback)
     (approve-mutation--send
      query variables
@@ -628,10 +629,10 @@ nothing.  CALLBACK gets the PR's ref once GitHub confirmed both."
   (let ((pr (approve-mutation--pull-request-id)))
     (approve-mutation--in-turn
      (delq nil
-           (list (and add (approve-mutation--pr-step
+           (list (and add (approve-mutation--step
                            add-query (funcall variables pr (vconcat add))
                            (car mutations) payload (format "Adding %s" what)))
-                 (and remove (approve-mutation--pr-step
+                 (and remove (approve-mutation--step
                               remove-query (funcall variables pr (vconcat remove))
                               (cdr mutations) payload (format "Removing %s" what)))))
      :callback callback :errorback errorback)))
@@ -680,7 +681,7 @@ and CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
 
 Example:
   (approve-mutation-request-reviews :users \\='(\"U_1\") :teams \\='(\"T_1\"))"
-  (funcall (approve-mutation--pr-step
+  (funcall (approve-mutation--step
             "mutations/request-reviews.graphql"
             `((pullRequestId . ,(approve-mutation--pull-request-id))
               (userIds . ,(vconcat users))
@@ -694,7 +695,7 @@ Example:
 Once GitHub has, the PR's milestone in the store is GitHub's and
 CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
 \(Flow F12.)"
-  (funcall (approve-mutation--pr-step
+  (funcall (approve-mutation--step
             "mutations/update-pull-request.graphql"
             `((pullRequestId . ,(approve-mutation--pull-request-id))
               (milestoneId . ,(or milestone-id :null)))
@@ -706,7 +707,7 @@ CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
   "Make TITLE the title of the PR.
 Once GitHub has it, the store holds the new title and CALLBACK gets
 the PR's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
-  (funcall (approve-mutation--pr-step
+  (funcall (approve-mutation--step
             "mutations/update-pull-request.graphql"
             `((pullRequestId . ,(approve-mutation--pull-request-id)) (title . ,title))
             'updatePullRequest 'pullRequest "Saving the title")
@@ -717,7 +718,7 @@ the PR's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
 Once GitHub has it, the store holds the new text, as markdown and as
 GitHub renders it, and when it was edited; CALLBACK gets the PR's
 ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
-  (funcall (approve-mutation--pr-step
+  (funcall (approve-mutation--step
             "mutations/update-pull-request.graphql"
             `((pullRequestId . ,(approve-mutation--pull-request-id))
               ;; An empty string, not nil: nil would leave the field out.
@@ -731,7 +732,7 @@ Once GitHub has, the store says whether it is a draft, its review
 state is GitHub's (marking it ready may ask code owners for
 reviews), and CALLBACK gets the PR's ref.  ERRORBACK gets the error
 otherwise.  (Flow F12.)"
-  (funcall (approve-mutation--pr-step
+  (funcall (approve-mutation--step
             (if draft
                 "mutations/convert-pull-request-to-draft.graphql"
               "mutations/mark-pull-request-ready-for-review.graphql")
@@ -748,7 +749,7 @@ participating or mentioned) or \"IGNORED\" (never).  Once GitHub
 has it, the PR's `viewerSubscription' in the store is STATE and
 CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
 \(Flow F12.)"
-  (funcall (approve-mutation--pr-step
+  (funcall (approve-mutation--step
             "mutations/update-subscription.graphql"
             `((subscribableId . ,(approve-mutation--pull-request-id)) (state . ,state))
             'updateSubscription 'subscribable "Changing the subscription")
@@ -762,14 +763,33 @@ it is locked and why, and CALLBACK gets the PR's ref.  ERRORBACK
 gets the error otherwise."
   (let ((pr (approve-mutation--pull-request-id)))
     (funcall (if locked
-                 (approve-mutation--pr-step
+                 (approve-mutation--step
                   "mutations/lock-lockable.graphql"
                   `((lockableId . ,pr) (lockReason . ,reason))
                   'lockLockable 'lockedRecord "Locking the conversation")
-               (approve-mutation--pr-step
+               (approve-mutation--step
                 "mutations/unlock-lockable.graphql" `((lockableId . ,pr))
                 'unlockLockable 'unlockedRecord "Unlocking the conversation"))
              callback (or errorback #'approve-api-default-errorback))))
+
+;;; Reactions
+
+(cl-defun approve-mutation-react (subject-id content &key remove callback errorback)
+  "React with CONTENT to SUBJECT-ID, or take the reaction back with REMOVE.
+SUBJECT-ID is a comment, a review or the PR (its description).
+CONTENT is GitHub's name of the reaction, such as \"THUMBS_UP\" or
+\"HEART\".  Once GitHub has it, the subject's reactions in the store
+are GitHub's and CALLBACK gets the subject's ref.  ERRORBACK gets the
+error otherwise.  (Flow F11.)
+
+Example:
+  (approve-mutation-react \"IC_1\" \"HOORAY\" :callback #\\='ignore)"
+  (funcall (approve-mutation--step
+            (if remove "mutations/remove-reaction.graphql" "mutations/add-reaction.graphql")
+            `((subjectId . ,subject-id) (content . ,content))
+            (if remove 'removeReaction 'addReaction) 'subject
+            (if remove "Taking the reaction back" "Reacting"))
+           callback (or errorback #'approve-api-default-errorback)))
 
 (provide 'approve-mutations)
 

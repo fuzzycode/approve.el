@@ -82,10 +82,15 @@ after the longest of CANDIDATES."
         (concat (make-string (max 2 (- (+ width 2) (string-width candidate))) ?\s)
                 note)))))
 
-(defun approve-manage--table (candidates notes category)
+(defun approve-manage-table (candidates notes category)
   "Return a completion table of CANDIDATES, kept in their order.
 NOTES annotate them (see `approve-manage--annotator'); CATEGORY is the
-completion category, such as `approve-label'."
+completion category, such as `approve-label'.  The pickers of this
+file and the other commands that offer a choice use it.
+
+Example:
+  (completing-read \"Label: \" (approve-manage-table
+                               \\='(\"bug\") \\='((\"bug\" . \"Broken\")) \\='approve-label))"
   (let ((annotate (approve-manage--annotator candidates notes)))
     (lambda (string predicate action)
       (if (eq action 'metadata)
@@ -108,15 +113,15 @@ Example:
   (delete-dups
    (completing-read-multiple
     (format "%s: " prompt)
-    (approve-manage--table candidates notes category)
+    (approve-manage-table candidates notes category)
     nil t (and current (concat (string-join current ",") ",")))))
 
-(defun approve-manage--note (&rest parts)
+(defun approve-manage-note (&rest parts)
   "Return PARTS, strings or nil, joined by two spaces, as a dim note."
   (approve-face (string-join (delq nil parts) "  ") 'approve-dim))
 
-(defun approve-manage--current-mark (current)
-  "Return the mark of a candidate the PR has, when CURRENT, else spaces."
+(defun approve-manage-mark (current)
+  "Return the mark of a candidate the PR has, when CURRENT, else a space."
   (if current (approve-face "✓" 'approve-approved) " "))
 
 (defun approve-manage--login (actor)
@@ -203,9 +208,9 @@ viewer may not label it."
   "Return the note of LABEL in the picker: mark, colour and description.
 CURRENT is non-nil when the PR has LABEL."
   (let-alist label
-    (concat (approve-manage--current-mark current) " "
+    (concat (approve-manage-mark current) " "
             (approve-face "    " (approve-label-face .color)) " "
-            (approve-manage--note .description))))
+            (approve-manage-note .description))))
 
 (defun approve-set-labels ()
   "Choose the labels of the pull request (flow F12).
@@ -277,10 +282,10 @@ the pull request's assignees already chosen."
                   :notes (mapcar (lambda (user)
                                    (let ((login (approve-manage--login user)))
                                      (cons login
-                                           (concat (approve-manage--current-mark
+                                           (concat (approve-manage-mark
                                                     (member login had))
                                                    " "
-                                                   (approve-manage--note
+                                                   (approve-manage-note
                                                     (alist-get 'name user))))))
                                  people)))
          (ids (mapcar (lambda (user) (cons (approve-manage--login user) (alist-get 'id user)))
@@ -350,10 +355,10 @@ teams.  The PR's author is never one: GitHub refuses."
                 (unless (or (null id) (assoc candidate found)
                             (equal candidate (concat "@" author)))
                   (push (list candidate kind id
-                              (concat (approve-manage--current-mark
+                              (concat (approve-manage-mark
                                        (assoc candidate requested))
                                       " "
-                                      (apply #'approve-manage--note notes)))
+                                      (apply #'approve-manage-note notes)))
                         found))))
       (dolist (suggestion suggested)
         (let-alist suggestion
@@ -433,8 +438,8 @@ The others follow in the order they came."
   "Return the note of MILESTONE in the picker: due date and progress.
 CURRENT is non-nil when the PR is in MILESTONE."
   (let-alist milestone
-    (concat (approve-manage--current-mark current) " "
-            (approve-manage--note
+    (concat (approve-manage-mark current) " "
+            (approve-manage-note
              (if .dueOn (format "due %s" (substring .dueOn 0 10)) "no due date")
              (and .progressPercentage (format "%d%% done" (round .progressPercentage)))
              (and (equal .state "CLOSED") "closed")
@@ -460,7 +465,7 @@ The repository's open milestones are offered, those due first first."
                                  milestones)))
          (choice (completing-read
                   (format-prompt "Milestone" title)
-                  (approve-manage--table
+                  (approve-manage-table
                    titles
                    (mapcar (lambda (milestone)
                              (cons (alist-get 'title milestone)
@@ -544,13 +549,13 @@ token to have the notifications scope for it."
          (name (nth 1 (assoc current approve-manage--subscriptions)))
          (choice (completing-read
                   (format-prompt "Notifications" name)
-                  (approve-manage--table
+                  (approve-manage-table
                    (mapcar #'cadr approve-manage--subscriptions)
                    (mapcar (lambda (entry)
                              (cons (nth 1 entry)
-                                   (concat (approve-manage--current-mark
+                                   (concat (approve-manage-mark
                                             (equal (car entry) current))
-                                           " " (approve-manage--note (nth 2 entry)))))
+                                           " " (approve-manage-note (nth 2 entry)))))
                            approve-manage--subscriptions)
                    'approve-subscription)
                   nil t nil nil name))

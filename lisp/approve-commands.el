@@ -40,6 +40,8 @@
 ;;   e   `approve-edit'                F08  your comment or review body
 ;;   k   `approve-delete'              F08  your comment
 ;;   C   `approve-comment-on-pr'       F10  in the conversation, quoting
+;;   +   `approve-react'               F11  to the comment, review or
+;;                                          description at point
 ;;
 ;; S (submit) and X (discard) act on the pending review as a whole:
 ;; approve-review.el and approve-menus.el.  Evil's keys are in
@@ -69,6 +71,7 @@
 (require 'approve-review)
 (require 'approve-pr)
 (require 'approve-nav)
+(require 'approve-render)
 (require 'approve-manage)
 
 (defcustom approve-viewed-advance t
@@ -528,6 +531,91 @@ review too, as GitHub does."
                           #'approve-mutation-delete-review-comment)
                         id :callback callback :errorback errorback))))))
 
+;;; Reactions (+)
+
+(defconst approve-commands--reactions
+  '(("THUMBS_UP" . "thumbs up") ("THUMBS_DOWN" . "thumbs down") ("LAUGH" . "laugh")
+    ("HOORAY" . "hooray") ("CONFUSED" . "confused") ("HEART" . "heart")
+    ("ROCKET" . "rocket") ("EYES" . "eyes"))
+  "GitHub's reactions, in its order, with their names: (CONTENT . NAME).")
+
+(defun approve-commands--react-preflight ()
+  "Return (TYPENAME . ID) of what `approve-react' reacts to.
+Signal a `user-error' when point is on no comment, review or
+description, or the viewer may not react to it."
+  (let* ((context (approve-action-context
+                   '(issue-comment review-comment review description)
+                   "Put point on a comment, a review or the description"))
+         (entity (if (eq (plist-get context :kind) 'description)
+                     (cons "PullRequest" (approve-model-ref-id (approve-model-root-ref)))
+                   (approve-commands--comment-entity context))))
+    (unless (approve-model-get (car entity) (cdr entity) 'viewerCanReact)
+      (user-error "%s" "You can't react to this"))
+    entity))
+
+(put 'approve-react 'approve-preflight #'approve-commands--react-preflight)
+
+(defun approve-commands--reaction-note (given count)
+  "Return the note of a reaction COUNT people gave, the viewer too when GIVEN.
+Example: \"✓ you and 2 others\"."
+  (let ((others (1- count)))
+    (cond
+     (given (concat (approve-manage-mark t) " "
+                    (approve-manage-note
+                     (cond ((<= others 0) "you")
+                           ((= others 1) "you and 1 other")
+                           (t (format "you and %d others" others))))))
+     ((> count 0) (concat "  " (approve-manage-note
+                                (if (= count 1) "1 person" (format "%d people" count))))))))
+
+(defun approve-commands--react-prompt (typename id)
+  "Return the prompt for reacting to TYPENAME ID."
+  (pcase typename
+    ("PullRequest" "React to the description: ")
+    ("PullRequestReview" (format "React to @%s's review: "
+                                 (approve-commands--author typename id)))
+    (_ (format "React to @%s's comment: " (approve-commands--author typename id)))))
+
+(defun approve-react ()
+  "React to the comment, review or description at point (flow F11).
+Choose one of GitHub's reactions; one you gave already, marked ✓,
+is taken back."
+  (interactive)
+  (pcase-let* ((`(,typename . ,id) (approve-commands--react-preflight))
+               (groups (approve-model-get typename id 'reactionGroups))
+               (candidates
+                (mapcar (lambda (reaction)
+                          (let ((group (seq-find (lambda (group)
+                                                   (equal (alist-get 'content group)
+                                                          (car reaction)))
+                                                 groups)))
+                            (list (concat (approve-render-reaction-icon (car reaction)) "  "
+                                          (cdr reaction))
+                                  (car reaction)
+                                  (alist-get 'viewerHasReacted group)
+                                  (or (let-alist group .reactors.totalCount) 0))))
+                        approve-commands--reactions))
+               (choice (completing-read
+                        (approve-commands--react-prompt typename id)
+                        (approve-manage-table
+                         (mapcar #'car candidates)
+                         (mapcar (lambda (candidate)
+                                   (cons (car candidate)
+                                         (approve-commands--reaction-note (nth 2 candidate)
+                                                                          (nth 3 candidate))))
+                                 candidates)
+                         'approve-reaction)
+                        nil t))
+               (`(,_ ,content ,given ,_) (assoc choice candidates)))
+    (approve-action-run
+     :what (if given "take the reaction back" "react")
+     :marks (if (equal typename "PullRequest")
+                '((section approve-description-section nil))
+              (approve-commands--comment-marks typename id))
+     :send (lambda (_text callback errorback)
+             (approve-mutation-react id content :remove given
+                                     :callback callback :errorback errorback)))))
+
 ;;; The conversation (C)
 
 (defun approve-commands--conversation-preflight ()
@@ -573,6 +661,7 @@ to the comment once GitHub has it."
 (keymap-set approve-pr-mode-map "e" #'approve-edit)
 (keymap-set approve-pr-mode-map "k" #'approve-delete)
 (keymap-set approve-pr-mode-map "C" #'approve-comment-on-pr)
+(keymap-set approve-pr-mode-map "+" #'approve-react)
 
 (provide 'approve-commands)
 

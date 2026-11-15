@@ -190,6 +190,8 @@ Those that can't run at point, or that you may not use, are dimmed."
      :inapt-if (lambda () (approve-action-why-not 'approve-edit)))
     ("k" "Delete at point" approve-delete
      :inapt-if (lambda () (approve-action-why-not 'approve-delete)))
+    ("+" "React" approve-react
+     :inapt-if (lambda () (approve-action-why-not 'approve-react)))
     ("C" "Conversation comment" approve-comment-on-pr
      :inapt-if (lambda () (approve-action-why-not 'approve-comment-on-pr)))]
    ["Pull request"

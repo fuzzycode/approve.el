@@ -1,0 +1,15 @@
+${include:fragments/reaction-group.graphql}
+
+# F11: react to a comment, a review or the description.  The answer is the
+# subject's reactions, all of them.
+mutation AddReaction($subjectId: ID!, $content: ReactionContent!) {
+  addReaction(input: {subjectId: $subjectId, content: $content}) {
+    subject {
+      __typename
+      id
+      reactionGroups {
+        ...ReactionGroupFields
+      }
+    }
+  }
+}

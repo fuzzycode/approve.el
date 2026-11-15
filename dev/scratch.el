@@ -186,7 +186,8 @@ it is resolved and its comments with their states; the pending review
 and its comments; the reviews and comments of the conversation, in
 order; the review decision; the labels, assignees, milestone, review
 requests, title and description; whether it is a draft, how the viewer
-hears of it, and whether its conversation is locked."
+hears of it, whether its conversation is locked, and the reactions to
+its description."
   `((viewed . ,(mapcar (lambda (file)
                          (cons (alist-get 'path file) (alist-get 'viewerViewedState file)))
                        (approve-pr-files)))
@@ -218,6 +219,10 @@ hears of it, and whether its conversation is locked."
     (draft . ,(approve-pr-field 'isDraft))
     (subscription . ,(approve-pr-field 'viewerSubscription))
     (locked . ,(list (approve-pr-field 'locked) (approve-pr-field 'activeLockReason)))
+    (reactions . ,(mapcar (lambda (group)
+                            (let-alist group
+                              (list .content .viewerHasReacted .reactors.totalCount)))
+                          (approve-pr-field 'reactionGroups)))
     (requested . ,(mapcar (lambda (request)
                             (let-alist (alist-get 'requestedReviewer request)
                               (or .login .combinedSlug)))
@@ -564,6 +569,14 @@ assignees, milestone or review requests."
                              (approve-scratch--run #'approve-mutation-set-subscription
                                                    subscription))
         (approve-scratch--compare "the subscription back" store)))
+    ;; F11: a reaction to the description, given and taken back.
+    (let ((pr (approve-model-ref-id (approve-model-root-ref))))
+      (approve-scratch--ok "react to the description"
+                           (approve-scratch--run #'approve-mutation-react pr "EYES"))
+      (approve-scratch--compare "a reaction" store)
+      (approve-scratch--ok "take the reaction back"
+                           (approve-scratch--run #'approve-mutation-react pr "EYES" :remove t))
+      (approve-scratch--compare "no reaction" store))
     ;; Lock the conversation with a reason, then unlock it.
     (approve-scratch--ok "lock the conversation"
                          (approve-scratch--run #'approve-mutation-set-locked t

@@ -30,10 +30,11 @@
 ;; Bindings for evil's normal state in Approve buffers (decision D17;
 ;; docs/ui.org, "Keys").  They never shadow motions, search, visual
 ;; selection or yank: Approve's single-letter keys move to g-, y- and
-;; capital-letter keys instead.  The one exception is ?, evil's search
+;; capital-letter keys instead.  The exceptions are ?, evil's search
 ;; backward, which opens the dispatch menu as in evil-collection's
-;; Magit, in visual state too, so its commands act on the selection:
-;; / still searches.  Keys that would edit text in a file
+;; Magit, in visual state too, so its commands act on the selection
+;; (/ still searches), and +, a line motion that j and RET do too,
+;; which reacts.  Keys that would edit text in a file
 ;; buffer (c s r R x D C S X i) are free in a read-only buffer, so the
 ;; commands that change the pull request take them; in visual state,
 ;; c s r C act on the selection, and ? opens the dispatch menu on it.
@@ -93,6 +94,7 @@
     ("i" . approve-edit)
     ("D" . approve-delete)
     ("C" . approve-comment-on-pr)
+    ("+" . approve-react)
     ("S" . approve-submit-review)
     ("X" . approve-discard-review)
     ("?" . approve-dispatch)

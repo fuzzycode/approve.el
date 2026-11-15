@@ -474,8 +474,8 @@ do: "Fold all threads", or "Unfold all threads" once they are folded; =#=
 no key in the buffer: it is seldom used.
 
 The mockup is the whole menu; the menu lists only the commands that exist.
-Today that is Review without =V=, Comments without =+=, the Pull request
-column but =m=, and Buffer without =L= and =!=; the rest join with the
+Today that is Review without =V=, the Pull request column without =m=,
+and Buffer without =L= and =!=; the rest join with the
 phases that add their commands ([[file:roadmap.org][roadmap]]).
 
 ** Submit review (=S=)

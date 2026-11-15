@@ -219,7 +219,7 @@
 
     (it "shows comments and reviews with their verdict, body and code comments"
       (let ((text (test-sections--text 'approve-conversation-section)))
-        (expect text :to-match "  ├ 💬 @bob-example commented · 3 days ago +r quote\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
+        (expect text :to-match "  ├ 💬 @bob-example commented · 3 days ago +r quote · \\+ react\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
         (expect text :to-match "  ├ ✓ @bob-example approved · 1 day ago · 2 comments on code\n  │   Looks good to me.")
         (expect text :to-match "  ├ ✗ @carol-example requested changes · 1 day ago · 1 comment on code")))
 

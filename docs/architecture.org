@@ -102,7 +102,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 |                            | review, what GitHub refuses; =S='s verdicts and body, =X= (discard)             |       |
 | =approve-actions.el=       | The action pipeline (F00) and =approve-action-context=                          |     2 |
 | =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–5 |
-|                            | delete, conversation comment; later react, merge                                |       |
+|                            | delete, conversation comment, react; later merge                                |       |
 | =approve-manage.el=        | Commands that manage the PR (F08, F12): title, description, labels, assignees,  |     4 |
 |                            | reviewers, milestone (pickers over the repository's metadata), draft or ready,  |       |
 |                            | subscription, lock                                                              |       |

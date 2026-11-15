@@ -441,6 +441,69 @@ The threads of parser.go are drawn once its diff is expanded."
         (expect (approve-test-find-section 'approve-issue-comment-section "IC_kwDOVM-W6WgSu2tHHg")
                 :to-be nil))))
 
+  (describe "+ (approve-react)"
+    (it "offers GitHub's reactions with their counts, and gives one, then takes it back"
+      (test-commands--with-pr
+        (let ((offered nil)
+              (given nil))
+          (spy-on 'completing-read :and-call-fake
+                  (lambda (_prompt table &rest _)
+                    (setq offered (all-completions "" table))
+                    (seq-find (lambda (candidate) (string-suffix-p " heart" candidate))
+                              offered)))
+          (setq test-commands--answer
+                (lambda (request)
+                  (setq given (not given))
+                  `((,(if (string-match-p "add-reaction" (plist-get request :name))
+                          'addReaction
+                        'removeReaction)
+                     (subject (__typename . "IssueComment") (id . "IC_kwDOVM-W6WgSu2tHHg")
+                              (reactionGroups
+                               ((content . "THUMBS_UP") (viewerHasReacted)
+                                (reactors (totalCount . 1)))
+                               ((content . "HEART") (viewerHasReacted . ,given)
+                                (reactors (totalCount . ,(if given 1 0))))))))))
+          (test-commands--goto-section 'approve-issue-comment-section "IC_kwDOVM-W6WgSu2tHHg")
+          (call-interactively #'approve-react)
+          (test-commands--wait)
+          (expect (length offered) :to-equal 8)
+          (expect (test-commands--sent)
+                  :to-equal '("mutations/add-reaction.graphql"
+                              ((content . "HEART") (subjectId . "IC_kwDOVM-W6WgSu2tHHg"))))
+          (expect (approve-test-section-text
+                   (approve-test-find-section 'approve-issue-comment-section
+                                              "IC_kwDOVM-W6WgSu2tHHg"))
+                  :to-match "1 +[^ ]+ 1")
+          (test-commands--goto-section 'approve-issue-comment-section "IC_kwDOVM-W6WgSu2tHHg")
+          (call-interactively #'approve-react)
+          (test-commands--wait)
+          (expect (car (test-commands--sent)) :to-equal "mutations/remove-reaction.graphql"))))
+
+    (it "reacts to the description, as the pull request"
+      (test-commands--with-pr
+        (spy-on 'completing-read :and-call-fake
+                (lambda (_prompt table &rest _)
+                  (seq-find (lambda (candidate) (string-suffix-p " rocket" candidate))
+                            (all-completions "" table))))
+        (setq test-commands--answer
+              (lambda (_request)
+                '((addReaction (subject (__typename . "PullRequest")
+                                        (id . "PR_kwDOPCDj7SnvM_RcFp")
+                                        (reactionGroups))))))
+        (approve-nav-goto-section 'approve-description-section)
+        (call-interactively #'approve-react)
+        (test-commands--wait)
+        (expect (test-commands--sent)
+                :to-equal '("mutations/add-reaction.graphql"
+                            ((content . "ROCKET") (subjectId . "PR_kwDOPCDj7SnvM_RcFp"))))))
+
+    (it "needs a comment, a review or the description"
+      (test-commands--with-pr
+        (approve-nav-goto-section 'approve-checks-section)
+        (expect (call-interactively #'approve-react)
+                :to-throw 'user-error
+                '("Put point on a comment, a review or the description")))))
+
   (describe "C (approve-comment-on-pr)"
     (it "comments in the conversation, quoting the region, and goes to the comment"
       (test-commands--with-pr
@@ -554,7 +617,7 @@ The threads of parser.go are drawn once its diff is expanded."
                        ("s" . approve-suggest) ("r" . approve-reply) ("R" . approve-resolve)
                        ("e" . approve-edit) ("k" . approve-delete)
                        ("C" . approve-comment-on-pr) ("S" . approve-submit-review)
-                       ("X" . approve-discard-review)))
+                       ("X" . approve-discard-review) ("+" . approve-react)))
       (expect (keymap-lookup approve-pr-mode-map (car binding)) :to-be (cdr binding))))
 
   (it "bind evil's keys for them, in normal and visual state"
@@ -567,7 +630,7 @@ The threads of parser.go are drawn once its diff is expanded."
                          ("s" . approve-suggest) ("r" . approve-reply) ("R" . approve-resolve)
                          ("i" . approve-edit) ("D" . approve-delete)
                          ("C" . approve-comment-on-pr) ("S" . approve-submit-review)
-                         ("X" . approve-discard-review)))
+                         ("X" . approve-discard-review) ("+" . approve-react)))
         (expect (member (list 'normal (car binding) (cdr binding)) bound) :to-be-truthy))
       (dolist (binding '(("c" . approve-comment) ("s" . approve-suggest)
                          ("r" . approve-reply) ("C" . approve-comment-on-pr)))

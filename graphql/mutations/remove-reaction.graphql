@@ -1,0 +1,15 @@
+${include:fragments/reaction-group.graphql}
+
+# F11: take a reaction back from a comment, a review or the description.
+# The answer is the subject's reactions, all of them.
+mutation RemoveReaction($subjectId: ID!, $content: ReactionContent!) {
+  removeReaction(input: {subjectId: $subjectId, content: $content}) {
+    subject {
+      __typename
+      id
+      reactionGroups {
+        ...ReactionGroupFields
+      }
+    }
+  }
+}
