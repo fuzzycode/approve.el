@@ -184,8 +184,8 @@ That is (t . RESULT) or (nil . ERROR)."
 An alist of: the files' viewed states; the threads, each with whether
 it is resolved and its comments with their states; the pending review
 and its comments; the reviews and comments of the conversation, in
-order; the review decision; the labels, assignees, milestone and
-review requests."
+order; the review decision; the labels, assignees, milestone, review
+requests, title and description."
   `((viewed . ,(mapcar (lambda (file)
                          (cons (alist-get 'path file) (alist-get 'viewerViewedState file)))
                        (approve-pr-files)))
@@ -212,6 +212,8 @@ review requests."
     (assignees . ,(mapcar (lambda (user) (alist-get 'login user))
                           (approve-pr-field 'assignees)))
     (milestone . ,(alist-get 'title (approve-pr-field 'milestone)))
+    (title . ,(approve-pr-field 'title))
+    (body . ,(approve-pr-field 'body))
     (requested . ,(mapcar (lambda (request)
                             (let-alist (alist-get 'requestedReviewer request)
                               (or .login .combinedSlug)))
@@ -475,9 +477,26 @@ looked at again twice, a few seconds apart, as for the store."
 
 (defun approve-scratch--metadata-steps (store)
   "Run the checks of the PR's metadata in STORE, a buffer holding the scratch PR.
-Each change is undone after it: #8 keeps no labels, assignees,
-milestone or review requests."
+Each change is undone after it: #8 keeps its title and description,
+and no labels, assignees, milestone or review requests."
   (with-current-buffer store
+    ;; F08: the title and the description, changed and put back.
+    (let ((title (approve-pr-field 'title))
+          (body (approve-pr-field 'body)))
+      (approve-scratch--ok "edit the title"
+                           (approve-scratch--run #'approve-mutation-set-title
+                                                 (concat title " (edited)")))
+      (approve-scratch--compare "a new title" store)
+      (approve-scratch--ok "put the title back"
+                           (approve-scratch--run #'approve-mutation-set-title title))
+      (approve-scratch--ok "edit the description"
+                           (approve-scratch--run #'approve-mutation-set-description
+                                                 (concat body "\n\n"
+                                                         (approve-scratch--text "description"))))
+      (approve-scratch--compare "a new description" store)
+      (approve-scratch--ok "put the description back"
+                           (approve-scratch--run #'approve-mutation-set-description body))
+      (approve-scratch--compare "the title and description back" store))
     (let ((bug (approve-scratch--named 'labels "bug"))
           (docs (approve-scratch--named 'labels "documentation"))
           (viewer (approve-scratch--viewer-id))

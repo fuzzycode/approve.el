@@ -473,7 +473,7 @@ do: "Fold all threads", or "Unfold all threads" once they are folded.
 
 The mockup is the whole menu; the menu lists only the commands that exist.
 Today that is Review without =V=, Comments without =+=, the Pull request
-column's =l a A M=, and Buffer without =L= and =!=; the rest join with the
+column's =t d l a A M=, and Buffer without =L= and =!=; the rest join with the
 phases that add their commands ([[file:roadmap.org][roadmap]]).
 
 ** Submit review (=S=)
@@ -758,7 +758,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Suggest change                | =s=           | =s=                   | line, region (new side)   |
 | Reply / quote                 | =r=           | =r=                   | thread, comment           |
 | Resolve / unresolve           | =R=           | =R=                   | thread                    |
-| Edit at point                 | =e=           | =i=                   | own comment, title, body  |
+| Edit at point                 | =e=           | =i=                   | own comment, description  |
 | Delete at point               | =k=           | =D=                   | own comment               |
 | React                         | =+=           | =+=                   | comment, description      |
 | Toggle viewed                 | =v=           | =x=                   | file                      |

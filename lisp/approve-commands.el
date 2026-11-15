@@ -69,6 +69,7 @@
 (require 'approve-review)
 (require 'approve-pr)
 (require 'approve-nav)
+(require 'approve-manage)
 
 (defcustom approve-viewed-advance t
   "Whether marking a file viewed in the diff moves to the next one.
@@ -444,14 +445,13 @@ not resolve it (or unresolve it, when it is resolved)."
 
 (defun approve-commands--edit-preflight ()
   "Return the context `approve-edit' acts on.
-Signal a `user-error' when point is on no comment or review, on the
-description (not editable yet), or on text the viewer may not edit."
+Signal a `user-error' when point is on no comment, review or
+description, or on text the viewer may not edit."
   (let* ((context (approve-action-context
                    '(issue-comment review-comment review pending-review description)
-                   "Put point on a comment or a review you wrote")))
+                   "Put point on a comment or a review you wrote, or the description")))
     (pcase (plist-get context :kind)
-      ('description (user-error "Approve can't edit the description yet; %s opens it on GitHub"
-                                (substitute-command-keys "\\[approve-browse]")))
+      ('description (approve-manage--update-preflight))
       ('pending-review nil)
       (_ (pcase-let ((`(,typename . ,id) (approve-commands--comment-entity context)))
            (unless (approve-model-get typename id 'viewerCanUpdate)
@@ -467,29 +467,32 @@ description (not editable yet), or on text the viewer may not edit."
   "Edit your comment or review body at point (flow F08).
 The text starts as you wrote it; sending it unchanged sends nothing.
 On the pending review, write the body you will submit it with
-\(`approve-edit-review-body')."
+\(`approve-edit-review-body'); on the description, edit it
+\(`approve-edit-description')."
   (interactive)
   (let ((context (approve-commands--edit-preflight)))
-    (if (eq (plist-get context :kind) 'pending-review)
-        (approve-edit-review-body)
-      (pcase-let* ((`(,typename . ,id) (approve-commands--comment-entity context))
-                   (review (equal typename "PullRequestReview"))
-                   (body (approve-commands--body typename id)))
-        (approve-action-run
-         :what (if review "edit the review" "edit the comment")
-         :input (list :prompt (if review "Edit the review" "Edit the comment")
-                      :target (list 'edit id) :name (format "edit %s" id)
-                      :initial body)
-         :marks (approve-commands--comment-marks typename id)
-         :send (lambda (text callback errorback)
-                 (if (equal text (string-trim-right body))
-                     (progn (message "Approve: the text is unchanged")
-                            (funcall callback nil))
-                   (funcall (pcase typename
-                              ("IssueComment" #'approve-mutation-update-issue-comment)
-                              ("PullRequestReview" #'approve-mutation-update-review)
-                              (_ #'approve-mutation-update-review-comment))
-                            id text :callback callback :errorback errorback))))))))
+    (pcase (plist-get context :kind)
+      ('pending-review (approve-edit-review-body))
+      ('description (approve-edit-description))
+      (_
+       (pcase-let* ((`(,typename . ,id) (approve-commands--comment-entity context))
+                    (review (equal typename "PullRequestReview"))
+                    (body (approve-commands--body typename id)))
+         (approve-action-run
+          :what (if review "edit the review" "edit the comment")
+          :input (list :prompt (if review "Edit the review" "Edit the comment")
+                       :target (list 'edit id) :name (format "edit %s" id)
+                       :initial body)
+          :marks (approve-commands--comment-marks typename id)
+          :send (lambda (text callback errorback)
+                  (if (equal text (string-trim-right body))
+                      (progn (message "Approve: the text is unchanged")
+                             (funcall callback nil))
+                    (funcall (pcase typename
+                               ("IssueComment" #'approve-mutation-update-issue-comment)
+                               ("PullRequestReview" #'approve-mutation-update-review)
+                               (_ #'approve-mutation-update-review-comment))
+                             id text :callback callback :errorback errorback)))))))))
 
 (defun approve-commands--delete-preflight ()
   "Return (TYPENAME . ID) of the comment `approve-delete' acts on.

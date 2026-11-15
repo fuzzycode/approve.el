@@ -27,16 +27,21 @@
 
 ;;; Commentary:
 
-;; The commands of a PR buffer that change what GitHub shows in the
-;; sidebar of a pull request (docs/flows.org, F12; docs/ui.org,
-;; "Metadata pickers"), each a run of the action pipeline (F00):
+;; The commands of a PR buffer that change what GitHub shows at the top
+;; and in the sidebar of a pull request (docs/flows.org, F08 and F12;
+;; docs/ui.org, "Metadata pickers"), each a run of the action pipeline
+;; (F00):
 ;;
+;;   t   `approve-edit-title'          the title, on one line
+;;   d   `approve-edit-description'    the description (e on it too)
 ;;   l   `approve-set-labels'          the labels
 ;;   a   `approve-set-assignees'       who is assigned
 ;;   A   `approve-request-reviewers'   who is asked for a review
 ;;   M   `approve-set-milestone'       the milestone, or none
 ;;
-;; They work anywhere in the buffer.  A picker offers the repository's
+;; They work anywhere in the buffer.  The title and the description are
+;; written in an input buffer (approve-input.el), starting from what
+;; they are.  A picker offers the repository's
 ;; labels, people, teams or milestones (approve-metadata.el, decision
 ;; D24), fetched the first time and waited for.  The ones the pull
 ;; request has are chosen already, and every candidate says what it
@@ -121,6 +126,62 @@ Example:
 (defun approve-manage--ids (chosen pairs)
   "Return the ids of CHOSEN, candidates, from PAIRS, an alist (CANDIDATE . ID)."
   (delq nil (mapcar (lambda (candidate) (cdr (assoc candidate pairs))) chosen)))
+
+;;; Title and description (t, d)
+
+(defun approve-manage--update-preflight ()
+  "Return the context where the title or description can be edited.
+Signal a `user-error' when the pull request has not loaded, or the
+viewer may not edit it."
+  (prog1 (approve-action-context)
+    (unless (approve-pr-viewer-can 'update)
+      (user-error "%s" "You can't edit this pull request"))))
+
+(put 'approve-edit-title 'approve-preflight #'approve-manage--update-preflight)
+(put 'approve-edit-description 'approve-preflight #'approve-manage--update-preflight)
+
+(defun approve-manage--markdown (text)
+  "Return TEXT, markdown from GitHub, with Unix line ends and no trailing space."
+  (string-trim-right (replace-regexp-in-string "\r\n" "\n" (or text ""))))
+
+(defun approve-edit-title ()
+  "Edit the title of the pull request, on one line (flow F08).
+It starts as it is; sending it unchanged sends nothing."
+  (interactive)
+  (approve-manage--update-preflight)
+  (let ((title (approve-pr-field 'title))
+        (number (approve-pr-field 'number)))
+    (approve-action-run
+     :what "save the title"
+     :input (list :prompt "New title" :context (format "#%s" number)
+                  :target '(title) :name (format "title #%s" number)
+                  :initial title :single-line t :commit-label "save")
+     :send (lambda (text callback errorback)
+             (if (equal text title)
+                 (progn (approve-manage--unchanged "the title")
+                        (funcall callback nil))
+               (approve-mutation-set-title text :callback callback :errorback errorback))))))
+
+(defun approve-edit-description ()
+  "Edit the description of the pull request (flow F08).
+It starts from its markdown; sending it unchanged sends nothing, and
+sending it empty empties it."
+  (interactive)
+  (approve-manage--update-preflight)
+  (let ((body (approve-manage--markdown (approve-pr-field 'body)))
+        (number (approve-pr-field 'number)))
+    (approve-action-run
+     :what "save the description"
+     :input (list :prompt "Edit the description" :context (format "#%s" number)
+                  :target '(description) :name (format "description #%s" number)
+                  :initial body :allow-empty t :commit-label "save")
+     :marks '((section approve-description-section nil))
+     :send (lambda (text callback errorback)
+             (if (equal text body)
+                 (progn (approve-manage--unchanged "the description")
+                        (funcall callback nil))
+               (approve-mutation-set-description text
+                                                 :callback callback :errorback errorback))))))
 
 ;;; Labels (l)
 
@@ -419,6 +480,8 @@ The repository's open milestones are offered, those due first first."
 
 ;;; Keys
 
+(keymap-set approve-pr-mode-map "t" #'approve-edit-title)
+(keymap-set approve-pr-mode-map "d" #'approve-edit-description)
 (keymap-set approve-pr-mode-map "l" #'approve-set-labels)
 (keymap-set approve-pr-mode-map "a" #'approve-set-assignees)
 (keymap-set approve-pr-mode-map "A" #'approve-request-reviewers)

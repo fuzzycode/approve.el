@@ -116,7 +116,7 @@
   (describe "description"
     (it "shows the rendered body and its reactions"
       (expect (test-sections--text 'approve-description-section)
-              :to-equal (concat "Description\n"
+              :to-equal (concat "Description  e edit\n"
                                 "  Rewrites the parser for speed and renames the queue to a scheduler.\n\n"
                                 "  The lexer fixes come in a follow-up commit.\n\n"
                                 "  Fixes #12.\n\n  👍 3  🚀 1\n\n")))

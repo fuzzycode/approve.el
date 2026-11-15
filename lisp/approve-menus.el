@@ -185,6 +185,10 @@ Those that can't run at point, or that you may not use, are dimmed."
     ("C" "Conversation comment" approve-comment-on-pr
      :inapt-if (lambda () (approve-action-why-not 'approve-comment-on-pr)))]
    ["Pull request"
+    ("t" "Title" approve-edit-title
+     :inapt-if (lambda () (approve-action-why-not 'approve-edit-title)))
+    ("d" "Description" approve-edit-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-edit-description)))
     ("l" "Labels" approve-set-labels
      :inapt-if (lambda () (approve-action-why-not 'approve-set-labels)))
     ("a" "Assignees" approve-set-assignees

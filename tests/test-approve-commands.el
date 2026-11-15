@@ -390,13 +390,38 @@ The threads of parser.go are drawn once its diff is expanded."
                  (approve-test-find-section 'approve-issue-comment-section "IC_kwDOVM-W6WgSu2tHHg"))
                 :to-match "Looking now")))
 
-    (it "refuses what the viewer may not edit, and the description for now"
+    (it "refuses what the viewer may not edit"
       (test-commands--with-pr
         (test-commands--goto-section 'approve-comment-section "PRRC_kwDOk4pUe_h6k_jiHs")
         (expect (call-interactively #'approve-edit)
                 :to-throw 'user-error '("You can't edit this comment"))
+        (approve-model-patch '((__typename . "PullRequest") (id . "PR_kwDOPCDj7SnvM_RcFp")
+                               (viewerCanUpdate)))
         (approve-nav-goto-section 'approve-description-section)
-        (expect (call-interactively #'approve-edit) :to-throw 'user-error))))
+        (expect (call-interactively #'approve-edit)
+                :to-throw 'user-error '("You can't edit this pull request"))))
+
+    (it "edits the description from its markdown, on the description"
+      (test-commands--with-pr
+        (setq test-commands--answer
+              (lambda (_)
+                '((updatePullRequest
+                   (pullRequest (__typename . "PullRequest") (id . "PR_kwDOPCDj7SnvM_RcFp")
+                                (body . "Faster.") (bodyHTML . "<p>Faster.</p>")
+                                (lastEditedAt . "2026-10-04T10:00:00Z"))))))
+        (approve-nav-goto-section 'approve-description-section)
+        (call-interactively #'approve-edit)
+        (expect (with-current-buffer (test-commands--input) (buffer-string))
+                :to-match "\\`Rewrites the parser for speed")
+        (with-current-buffer (test-commands--input)
+          (erase-buffer))
+        (test-commands--send "Faster.")
+        (expect (test-commands--sent)
+                :to-equal '("mutations/update-pull-request.graphql"
+                            ((body . "Faster.") (pullRequestId . "PR_kwDOPCDj7SnvM_RcFp"))))
+        (expect (approve-test-section-text
+                 (approve-test-find-section 'approve-description-section))
+                :to-match "Description · edited[^z-a]*Faster\\."))))
 
   (describe "k (approve-delete)"
     (it "deletes the comment at point after asking"

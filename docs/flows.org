@@ -343,12 +343,13 @@ comes in Phase 5 ([[file:roadmap.org::*SP7 Applying suggestions][SP7]]).
 
 * F08 Edit or delete own text
 =e= edits and =k= deletes whatever own text is at point.  The context decides
-the mutation:
+the mutation.  The title is in the header line, never at point: =t= edits it
+from anywhere, and =d= the description.
 
 | Context         | Edit (=e=)                                    | Delete (=k=)                             |
 |-----------------+-----------------------------------------------+------------------------------------------|
-| title           | =updatePullRequest(title)=, single-line input | —                                        |
-| description     | =updatePullRequest(body)=                     | —                                        |
+| title (=t=)     | =updatePullRequest(title)=, single-line input | —                                        |
+| description     | =updatePullRequest(body)= (=d= too)           | —                                        |
 | issue-comment   | =updateIssueComment=                          | =deleteIssueComment=                     |
 | review-comment  | =updatePullRequestReviewComment=              | =deletePullRequestReviewComment=         |
 | review (body)   | =updatePullRequestReview=                     | — (dismiss is a separate command)        |

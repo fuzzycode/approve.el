@@ -49,6 +49,8 @@
 ;;   `approve-mutation-set-assignees'           F12  assign and unassign people
 ;;   `approve-mutation-request-reviews'         F12  who is asked for a review
 ;;   `approve-mutation-set-milestone'           F12  the milestone, or none
+;;   `approve-mutation-set-title'               F08  the title
+;;   `approve-mutation-set-description'         F08  the description
 ;;
 ;; Each one queues its mutation (`approve-api-mutate': one at a time,
 ;; decision D15) for the PR of the current buffer's store.  Once GitHub
@@ -695,6 +697,29 @@ CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
               (milestoneId . ,(or milestone-id :null)))
             'updatePullRequest 'pullRequest
             (if milestone-id "Setting the milestone" "Taking the milestone away"))
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-title (title &key callback errorback)
+  "Make TITLE the title of the PR.
+Once GitHub has it, the store holds the new title and CALLBACK gets
+the PR's ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
+  (funcall (approve-mutation--pr-step
+            "mutations/update-pull-request.graphql"
+            `((pullRequestId . ,(approve-mutation--pull-request-id)) (title . ,title))
+            'updatePullRequest 'pullRequest "Saving the title")
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-description (body &key callback errorback)
+  "Make BODY, markdown, the description of the PR; an empty BODY empties it.
+Once GitHub has it, the store holds the new text, as markdown and as
+GitHub renders it, and when it was edited; CALLBACK gets the PR's
+ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
+  (funcall (approve-mutation--pr-step
+            "mutations/update-pull-request.graphql"
+            `((pullRequestId . ,(approve-mutation--pull-request-id))
+              ;; An empty string, not nil: nil would leave the field out.
+              (body . ,(or body "")))
+            'updatePullRequest 'pullRequest "Saving the description")
            callback (or errorback #'approve-api-default-errorback)))
 
 (provide 'approve-mutations)

@@ -98,8 +98,12 @@
             (pr (approve-test-open-pr "medium")))
        (approve-metadata-clear-cache)
        (unwind-protect
-           (with-current-buffer pr
-             ,@body)
+           (progn
+             (switch-to-buffer pr)
+             (delete-other-windows)
+             (with-current-buffer pr
+               ,@body))
+         (test-manage--kill-inputs)
          (approve-metadata-clear-cache)
          (kill-buffer pr)))))
 
@@ -144,9 +148,79 @@
   "Return the text of the metadata ROW."
   (approve-test-section-text (approve-test-find-section 'approve-meta-section row)))
 
+(defun test-manage--input ()
+  "Return the open input buffer, or nil."
+  (seq-find (lambda (buffer) (string-prefix-p "*approve-input" (buffer-name buffer)))
+            (buffer-list)))
+
+(defun test-manage--kill-inputs ()
+  "Kill every input buffer, keeping no draft."
+  (dolist (buffer (buffer-list))
+    (when (string-prefix-p "*approve-input" (buffer-name buffer))
+      (with-current-buffer buffer
+        (setq approve-input--done t))
+      (kill-buffer buffer))))
+
 (describe "The metadata commands"
   (before-each
     (spy-on 'message))
+
+  (describe "t (approve-edit-title)"
+    (it "edits the title on one line, and the header line shows it"
+      (test-manage--with-pr
+        (setq test-manage--answer
+              (lambda (_request)
+                `((updatePullRequest
+                   (pullRequest (__typename . "PullRequest") (id . ,test-manage--pr)
+                                (title . "Rewrite the parser"))))))
+        (call-interactively #'approve-edit-title)
+        (let ((input (test-manage--input)))
+          (expect (with-current-buffer input (buffer-string))
+                  :to-equal "Rewrite the parser and engine scheduler")
+          (expect (buffer-local-value 'approve-input-single-line-mode input) :to-be-truthy)
+          (with-current-buffer input
+            (erase-buffer)
+            (insert "Rewrite the parser")
+            (approve-input-commit)))
+        (test-manage--wait)
+        (expect (test-manage--sent)
+                :to-equal `(("mutations/update-pull-request.graphql"
+                             ((pullRequestId . ,test-manage--pr)
+                              (title . "Rewrite the parser")))))
+        (expect approve-pr--header-line :to-match "#202 Rewrite the parser")
+        (expect approve-pr--header-line :not :to-match "scheduler")))
+
+    (it "sends nothing when the title is unchanged, and needs the right to edit"
+      (test-manage--with-pr
+        (call-interactively #'approve-edit-title)
+        (with-current-buffer (test-manage--input)
+          (approve-input-commit))
+        (test-manage--wait)
+        (expect test-manage--requests :to-be nil)
+        (approve-model-patch `((__typename . "PullRequest") (id . ,test-manage--pr)
+                               (viewerCanUpdate)))
+        (expect (call-interactively #'approve-edit-title)
+                :to-throw 'user-error '("You can't edit this pull request")))))
+
+  (describe "d (approve-edit-description)"
+    (it "empties the description when sent empty"
+      (test-manage--with-pr
+        (setq test-manage--answer
+              (lambda (_request)
+                `((updatePullRequest
+                   (pullRequest (__typename . "PullRequest") (id . ,test-manage--pr)
+                                (body . "") (bodyHTML . ""))))))
+        (call-interactively #'approve-edit-description)
+        (with-current-buffer (test-manage--input)
+          (erase-buffer)
+          (approve-input-commit))
+        (test-manage--wait)
+        (expect (test-manage--sent)
+                :to-equal `(("mutations/update-pull-request.graphql"
+                             ((body . "") (pullRequestId . ,test-manage--pr)))))
+        (expect (approve-test-section-text
+                 (approve-test-find-section 'approve-description-section))
+                :to-match "No description provided"))))
 
   (describe "l (approve-set-labels)"
     (it "offers the repository's labels, the PR's chosen, and changes them"
@@ -297,7 +371,8 @@
 
 (describe "The metadata keys"
   (it "bind the commands in the PR buffer"
-    (dolist (binding '(("l" . approve-set-labels) ("a" . approve-set-assignees)
+    (dolist (binding '(("t" . approve-edit-title) ("d" . approve-edit-description)
+                       ("l" . approve-set-labels) ("a" . approve-set-assignees)
                        ("A" . approve-request-reviewers) ("M" . approve-set-milestone)))
       (expect (keymap-lookup approve-pr-mode-map (car binding)) :to-be (cdr binding)))))
 

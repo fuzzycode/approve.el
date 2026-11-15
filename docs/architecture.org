@@ -103,8 +103,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-actions.el=       | The action pipeline (F00) and =approve-action-context=                          |     2 |
 | =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–5 |
 |                            | delete, conversation comment; later react, merge                                |       |
-| =approve-manage.el=        | Commands that manage the PR (F12): labels, assignees, reviewers, milestone, and |     4 |
-|                            | their pickers over the repository's metadata                                    |       |
+| =approve-manage.el=        | Commands that manage the PR (F08, F12): title, description, labels, assignees,  |     4 |
+|                            | reviewers, milestone, and their pickers over the repository's metadata          |       |
 | =approve-menus.el=         | Transients: jump (1), submit and dispatch (2); merge, metadata, range           |   1–5 |
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
 |                            | loaded)                                                                         |       |
