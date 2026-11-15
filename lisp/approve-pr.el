@@ -119,6 +119,11 @@ run.  The sections that need such data add entries.")
 (defvar approve-pr-redraw-hook nil
   "Hook run in a PR buffer after each redraw.")
 
+(defvar approve-pr-load-hook nil
+  "Hook run in a PR buffer when its loading plan starts.
+That is a first load and each refresh (`approve-pr-load').  Use it to
+forget what the data being loaded makes stale.")
+
 (defvar approve-pr-clear-cache-functions (list #'approve-html-clear-cache)
   "Functions that forget session caches, run by \\[universal-argument] \\[approve-pr-refresh].")
 
@@ -285,13 +290,14 @@ Each page schedules a redraw."
 With REFRESH, each query replaces its data once it has all of it,
 and lazily loaded data that was loaded before is loaded again."
   (approve-session-put :fatal nil)
+  (run-hooks 'approve-pr-load-hook)
   (dolist (entry approve-query-plan)
     (approve-pr-run-query (car entry) refresh))
   (when refresh
     (dolist (loader approve-pr-lazy-loaders)
       (when (approve-pr-loaded-p (car loader))
         (approve-pr-run-query (car loader) t))))
-  (approve-pr--update-header-line)
+  (approve-pr-update-header-line)
   (approve-pr-schedule-redraw))
 
 (defun approve-pr-refresh (&optional clear-caches)
@@ -470,7 +476,7 @@ the buffer, and collapsed sections stay collapsed (decision D13)."
                               (vertical-motion (- (max 0 (1- rows))) window)
                               (point))
                             t)))))
-  (approve-pr--update-header-line)
+  (approve-pr-update-header-line)
   (approve-pr--fetch-images)
   (run-hooks 'approve-pr-redraw-hook))
 
@@ -517,11 +523,14 @@ for notices, such as changes on GitHub; the state is on the right.")
                         (and (approve-pr-loading-p (car entry)) (cdr entry)))
                       names))))
 
-(defun approve-pr--update-header-line ()
+(defun approve-pr-update-header-line ()
   "Compute the header line of the current PR buffer.
 It is the number and title, what is still loading and the parts of
 `approve-pr-header-line-functions', with the state on the right.  It
-stays in view while the buffer scrolls."
+stays in view while the buffer scrolls.  A redraw computes it; call
+this for a change that shows only there."
+  ;; Redisplay draws the header line anew only when told to.
+  (force-mode-line-update)
   (setq approve-pr--header-line
         (let* ((loaded (approve-model-root-ref))
                (badge (if loaded

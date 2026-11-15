@@ -107,7 +107,7 @@
   (it "cuts a long title so the state still shows"
     (test-pr--with-medium
       (let ((approve-page-width 40))
-        (approve-pr--update-header-line)
+        (approve-pr-update-header-line)
         (let ((line (substring-no-properties approve-pr--header-line)))
           (expect line :to-match "… +.? ?Open\\'")
           (expect (string-width (car (split-string line "…"))) :to-be-less-than 40)))))

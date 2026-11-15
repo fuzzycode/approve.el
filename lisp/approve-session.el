@@ -58,6 +58,11 @@
 :layout    `single' or `split'
 :threads   `folded' or `shown' once every thread of the diff was
            folded or unfolded at once, else nil
+:changes   what differs on GitHub from the store, found by the last
+           check for changes, or nil (approve-changes.el)
+:checking  non-nil while a check for changes is out
+:checked   when the last check was sent or the last load started,
+           as a float time
 Read and change it with `approve-session-get' and friends; they use
 the session of `approve-model-owner-buffer'.")
 

@@ -18,6 +18,8 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   | =pull-request-commits.graphql=  | =commits=, pages of 100                        |
   | =pull-request-checks.graphql=   | status rollup's check runs and statuses, pages |
   All take =$owner=, =$name=, =$number=; the paged ones also =$after=.
+  =pull-request-changes.graphql= is change detection ([[file:../docs/decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]): it
+  never goes into the store, Approve compares it with the store.
 - =queries/details/= :: eldoc's lazy details ([[file:../docs/decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]); they don't go into the
   store.
 - =queries/metadata/= :: repository metadata, fetched once per session and

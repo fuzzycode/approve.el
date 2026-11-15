@@ -264,10 +264,33 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   the same reason.
 
 ** D23 Remote changes are announced, never auto-applied
-- Status :: proposed
+- Status :: accepted (2026-11-15), amended the same day
 - Decision :: A cheap query (=updatedAt=, =headRefOid=) runs when the PR buffer
   gets focus (throttled) and on an optional timer.  If something changed, the
   header line says so and =g= refreshes.  The buffer never redraws by itself.
+- Amended (2026-11-15) :: The query compares with the store, not
+  =updatedAt=.  Tried on the scratch repository: =updatedAt= doesn't move
+  for viewed files, pending comments, discarding a pending review,
+  resolving or reactions, and moves for conversation comments (added,
+  edited, deleted).  So the viewer's own published writes would look like
+  changes, and taking GitHub's =updatedAt= as known after them would hide
+  what others did meanwhile.  Instead the check
+  (=queries/pull-request-changes.graphql=, =approve-changes.el=) asks for
+  the head and commit count, the title, state, draft state and the
+  description's last edit, and the 20 newest conversation comments and
+  reviews by id and last edit.  What GitHub has that the store lacks, or
+  holds older, is a change.  The writes made from Approve are in the store
+  already (D35), so they never count.  The header line says what is new:
+  "updated on GitHub — g to refresh · 2 new commits · 1 new comment".
+  The check runs when a PR buffer's window is selected or its frame gets
+  the focus, at most once a minute (=approve-focus-check-interval=), and
+  every five minutes for the PR buffers a window shows
+  (=approve-poll-interval=, nil turns it off).  It waits while the PR
+  loads, a query failed or a write is in flight, and an answer that
+  arrives after the store changed is dropped (=approve-model-version=).
+  It misses label, assignee and reviewer edits (Phase 4 can add them),
+  resolves and reactions, and replies in a thread beyond its first 50
+  comments look like new reviews.
 - Why :: Content must not move under the reader's cursor.
 
 ** D24 Repository metadata is fetched lazily and cached per session

@@ -1,0 +1,42 @@
+# Change detection (D23): what tells whether the pull request changed on
+# GitHub since Approve loaded it.  It never goes into the store: Approve
+# compares it with the store (approve-changes.el).  The head and the commit
+# count, the fields of the PR that others edit, and the newest conversation
+# comments and reviews by id and last edit.  The writes made from Approve are
+# in the store already (D35), so they never look like changes.  commitCount
+# is the core's alias, so the two read alike.
+query PullRequestChanges($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      __typename
+      id
+      headRefOid
+      title
+      state
+      isDraft
+      lastEditedAt
+      commitCount: commits {
+        totalCount
+      }
+      comments(last: 20) {
+        nodes {
+          __typename
+          id
+          lastEditedAt
+        }
+      }
+      reviews(last: 20) {
+        nodes {
+          __typename
+          id
+          lastEditedAt
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

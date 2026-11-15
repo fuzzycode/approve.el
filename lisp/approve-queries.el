@@ -35,6 +35,9 @@
 ;;   `approve-query-list'      files, threads, timeline, commits, checks
 ;;   `approve-query-patches'   the patch text of each file (REST)
 ;;
+;; Change detection (`approve-query-changes') asks GitHub without
+;; loading the store: its caller compares the answer with the store.
+;;
 ;; The PR is the one in the store's meta data (`approve-model-meta').
 ;; `approve-query-plan' lists the plan, so the buffer that loads can
 ;; run it and track each query under its key.
@@ -281,6 +284,27 @@ the error of a failed fetch."
             (funcall callback))))))))
 
 ;;; Markdown
+
+(cl-defun approve-query-changes (&key callback errorback)
+  "Ask GitHub what tells whether the PR changed since it was loaded.
+That is change detection (decision D23, docs/flows.org F17).
+CALLBACK is called with the pullRequest of
+queries/pull-request-changes.graphql: its head, commit count, title,
+state, draft state, last edit, and the newest conversation comments
+and reviews with their last edits.  It does not go into the store:
+the caller compares it with the store.  ERRORBACK is called with
+the error."
+  (approve-api-graphql
+   "queries/pull-request-changes.graphql" (approve-query-variables)
+   :host (approve-query-host)
+   :progress nil
+   :errorback errorback
+   :callback (lambda (data)
+               (if-let* ((pull-request (approve-query--pull-request data)))
+                   (when callback
+                     (funcall callback pull-request))
+                 (funcall (or errorback #'approve-api-default-errorback)
+                          (list 'approve-api-not-found "Pull request not found"))))))
 
 (cl-defun approve-query-markdown (text &key callback errorback)
   "Render TEXT, GitHub-flavoured markdown, as GitHub shows a comment.

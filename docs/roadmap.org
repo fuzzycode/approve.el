@@ -112,7 +112,10 @@ Mockups: input buffer, dispatch, submit review, pending review section, keys.
 - [X] "Your pending review" section.  Drawn since Phase 1, with =RET=, =e=,
       =k=, =S= and =X= on it from the commands; the counts it once put in
       the header line live in the sections (the header line names the PR).
-- [ ] Change detection (D23).
+- [X] Change detection (D23): =approve-changes.el=.  D23 accepted and
+      amended: the check compares GitHub's newest comments, reviews, head
+      and edits with the store, as =updatedAt= can't tell the viewer's own
+      writes from others'.
 - [ ] =approve-menus.el=: dispatch transient.  Moved after change detection.
 - [ ] Split layout and =L= (F18).
 - Done when :: a whole review can be done on a real PR from Emacs: mark files

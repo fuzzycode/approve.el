@@ -293,6 +293,13 @@ A colour, not a background, like `approve-dismissed': both say
 what changed since the viewer last looked."
   :group 'approve-faces)
 
+(defface approve-updated
+  '((t :inherit approve-new))
+  "Face of the header line's notice that the PR changed on GitHub.
+It is what changed since the buffer was loaded, as `approve-new' is
+what changed since the viewer's last review (decision D23)."
+  :group 'approve-faces)
+
 ;;; Threads and the conversation
 
 (defface approve-thread-border

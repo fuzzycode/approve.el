@@ -327,7 +327,8 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <section class="shot" id="header-line">
 <h2>Header line <span class="ref">ui.org › Header line · D23</span></h2>
 <p>Always visible while scrolling: the number, title and state. Counts live in their sections. The second form
-appears when change detection sees new commits or comments on GitHub; the buffer never redraws by itself. The
+appears when change detection finds that the PR changed on GitHub, and says what is new (commits, comments,
+reviews); your own writes never count, and the buffer never redraws by itself: <code>g</code> loads the changes. The
 third is the first moment, before the title has loaded.</p>
 <div class="emacs">
 <div class="win stack">

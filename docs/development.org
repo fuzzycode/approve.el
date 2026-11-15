@@ -153,8 +153,10 @@ repository: commands under development, spikes, recording fixtures.
   of =approve-mutations.el= on #8, in order (viewed, comments on a line, a
   range and the file, replies, edits, deletes, submit, resolve, a single
   comment, discards, conversation comments), and after each one compares
-  the store with #8 loaded anew from GitHub.  Run it after changing a
-  mutation or what keeps the store true after one:
+  the store with #8 loaded anew from GitHub, and checks that change
+  detection finds nothing new there (D23: Approve's own writes never
+  count).  Run it after changing a mutation, what keeps the store true
+  after one, or what change detection compares:
   #+begin_src sh
   timeout 900 cask exec emacs -Q --batch -L lisp -l dev/scratch.el \
     -f approve-scratch-run-batch > /tmp/scratch.log 2>&1

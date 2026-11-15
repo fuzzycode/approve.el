@@ -10,8 +10,10 @@
 ;; holds with the pull request loaded anew from GitHub.  So it checks
 ;; what the unit tests can only assume: GitHub's answers have the shape
 ;; the mutations read, and the store they leave is GitHub's truth
-;; (decision D35).  It cleans up what it can; reviews it submitted stay
-;; (GitHub deletes only pending ones).
+;; (decision D35).  After each one, change detection must also find
+;; nothing new on GitHub: Approve's own writes never count (D23).  It
+;; cleans up what it can; reviews it submitted stay (GitHub deletes
+;; only pending ones).
 ;;
 ;;   timeout 900 cask exec emacs -Q --batch -L lisp -l dev/scratch.el \
 ;;     -f approve-scratch-run-batch
@@ -34,6 +36,7 @@
 (require 'approve-model)
 (require 'approve-queries)
 (require 'approve-mutations)
+(require 'approve-changes)
 
 (defconst approve-scratch-repository '("fuzzycode" . "test-approve")
   "The only repository this script writes to.")
@@ -230,7 +233,32 @@ apart, as GitHub may answer a query with what it had a moment ago."
                           (alist-get key ours) (alist-get key theirs)))
                 (seq-remove (lambda (key) (equal (alist-get key ours) (alist-get key theirs)))
                             (mapcar #'car ours))
-                "\n     "))))
+                "\n     ")))
+  (approve-scratch--unchanged what store))
+
+(defun approve-scratch--unchanged (what store)
+  "Check that change detection finds nothing new on GitHub after WHAT.
+The writes were made through Approve, so STORE holds them (decision
+D35) and they must not count as changes (D23).  A difference is
+looked at again twice, a few seconds apart, as for the store."
+  (with-current-buffer store
+    (let ((tries 0)
+          answer changes)
+      (while (progn
+               (setq answer nil)
+               (approve-query-changes
+                :callback (lambda (remote) (setq answer (cons t remote)))
+                :errorback (lambda (err) (setq answer (cons nil err))))
+               (approve-scratch--wait (lambda () answer) "the change check")
+               (setq changes (if (car answer)
+                                 (approve-changes-compare (cdr answer))
+                               (approve-api-error-message (cdr answer))))
+               (cl-incf tries)
+               (and changes (< tries 3)))
+        (sleep-for 3))
+      (approve-scratch--check
+       (format "%s: no change on GitHub for change detection" what)
+       (null changes) (format "%S" changes)))))
 
 ;;; The checks
 

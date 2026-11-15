@@ -197,7 +197,7 @@ are dim."
 (defun approve-insert-header-section ()
   "Insert the header: the metadata rows.
 The number, title and state are in the header line, which stays in
-view (`approve-pr--update-header-line')."
+view (`approve-pr-update-header-line')."
   (magit-insert-section (approve-header-section)
     (cond
      ((approve-model-root-ref)

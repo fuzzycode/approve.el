@@ -381,12 +381,18 @@ subgraph cluster_g { label="g — refresh";
   g -> keep -> rerun; rerun -> repl [label=" ok"]; rerun -> failg [label=" error"];
 }
 subgraph cluster_d { label="change detection (D23)";
-  trig  [label="buffer gets focus (≤ once a minute)\nor approve-poll-interval timer"];
-  q     [label="pullRequest { updatedAt headRefOid }" @api];
-  diff  [label="different from\nthe store?" @dec];
-  same  [label="nothing" @note];
-  tell  [label="header: \"⟳ updated on GitHub — g to refresh\"\n(+ \"new commits\" if headRefOid moved)\nnever redraws by itself" @ok];
-  trig -> q -> diff; diff -> same [@no]; diff -> tell [@yes];
+  trig  [label="window selected or frame focused (≤ once a minute)\nor approve-poll-interval timer (5 min, shown buffers)"];
+  ready [label="loaded, nothing loading or failed,\nno write in flight?" @dec];
+  wait  [label="wait" @note];
+  q     [label="pullRequest { headRefOid commits title state\nisDraft lastEditedAt comments(last: 20)\nreviews(last: 20) }" @api];
+  moved [label="store changed while\nit was out?" @dec];
+  drop  [label="drop the answer" @note];
+  diff  [label="GitHub has what the store\nlacks or holds older?" @dec];
+  same  [label="nothing (Approve's own\nwrites are in the store)" @note];
+  tell  [label="header: \"⟳ updated on GitHub — g to refresh\n· 2 new commits · 1 new comment\"\nnever redraws by itself" @ok];
+  trig -> ready; ready -> wait [@no]; ready -> q [@yes];
+  q -> moved; moved -> drop [@yes]; moved -> diff [@no];
+  diff -> same [@no]; diff -> tell [@yes];
 }
 
 %% F18

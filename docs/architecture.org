@@ -18,7 +18,8 @@ callbacks it was given.
  ├───────────────────────────────┬──────────────────────────────────────────┤
  │ Buffers                       │ Input                                    │
  │  approve-pr.el (PR + diff)    │  approve-input.el (gfm input, completion,│
- │  approve-dashboard.el         │  preview, drafts)                        │
+ │  approve-changes.el           │  preview, drafts)                        │
+ │  approve-dashboard.el         │                                          │
  │  approve-search.el            │                                          │
  │  approve-file.el              │                                          │
  │  approve-notifications.el     │                                          │
@@ -82,6 +83,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-context.el=       | =approve-context-at-point=: what is under point or in the region                |     1 |
 | =approve-pr.el=            | =approve-pr-mode=, URL parsing, open/refresh, layouts, redraw, point restore,   |     1 |
 |                            | header line                                                                     |       |
+| =approve-changes.el=       | Change detection (D23): the check, comparing it with the store, the header      |     2 |
+|                            | line's notice, checks on selection and focus, polling                           |       |
 | =approve-nav.el=           | Read-only commands: visit (=RET=), browse (=o=), copy (=y=), jumps, next        |     1 |
 |                            | unviewed file and unresolved thread                                             |       |
 | =approve-eldoc.el=         | Eldoc: one-line =:echo= from the store, full details for the eldoc buffer,      |     1 |
@@ -131,6 +134,8 @@ The store from approve-v2 (D10), with a few additions.
  │   :drafts    target → unsent text (survives C-c C-k, lost on kill)    │
  │   :layout    single | split                                           │
  │   :threads   folded | shown, once T folded or unfolded every thread   │
+ │   :changes   what differs on GitHub, from the last check (D23)        │
+ │   :checking :checked   a check is out · when the last one was sent    │
  └───────────────────────────────────────────────────────────────────────┘
 #+end_example
 
@@ -189,7 +194,8 @@ schema on 2026-11-08.
 | Repo metadata (lazy)   | =repository.labels / assignableUsers / mentionableUsers / milestones=                                        |
 | Recent refs (lazy)     | =search(type: ISSUE, query: "repo:o/r sort:updated-desc", first: 100)=, for =#123= completion               |
 | Emoji (lazy)           | REST =GET /emojis= (name → image URL; the glyph is in a Unicode emoji's URL)                                 |
-| Change detection       | =pullRequest { updatedAt headRefOid }=                                                                       |
+| Change detection       | =pullRequest { headRefOid commitCount: commits { totalCount } title state isDraft lastEditedAt=              |
+|                        | =comments(last: 20) reviews(last: 20) { id lastEditedAt } }=, compared with the store (D23)                  |
 | User details (eldoc)   | =user(login) { pronouns email bio company location websiteUrl status { emoji message } }=                    |
 | Team details (eldoc)   | =organization(login).team(slug) { name description members { totalCount } }=                                 |
 | =#123= details (eldoc) | =repository.issueOrPullRequest(number) { title state author labels bodyText }=                               |

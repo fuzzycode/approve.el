@@ -611,17 +611,26 @@ Later idea: show a failing job's log in a buffer (REST Actions API).
  change detection (D23)
    │
    ▼
- buffer gets focus (at most once a minute) · or approve-poll-interval timer
+ buffer's window selected or frame focused (at most once a minute,
+ approve-focus-check-interval) · or approve-poll-interval timer (5 min,
+ buffers a window shows)
    │
    ▼
- query { pullRequest { updatedAt headRefOid } }
-   │
-   ▼
- ◇ different from the store? ◇──no──▶ nothing
+ ◇ loaded, nothing loading or failed, no write in flight? ◇──no──▶ wait
    │ yes
    ▼
- header line: "⟳ updated on GitHub — g to refresh"  (+ "new commits" when headRefOid moved)
- never redraw by itself
+ query { pullRequest { headRefOid commits title state isDraft lastEditedAt
+         comments(last: 20) reviews(last: 20) } }
+   │
+   ▼
+ ◇ store changed while it was out? ◇──yes──▶ drop the answer
+   │ no
+   ▼
+ ◇ GitHub has what the store lacks or holds older? ◇──no──▶ nothing
+   │ yes          (Approve's own writes are in the store: never a change)
+   ▼
+ header line: "⟳ updated on GitHub — g to refresh · 2 new commits · 1 new comment"
+ never redraw by itself; g drops the notice as the load starts
 #+end_example
 
 * F18 Switch layout

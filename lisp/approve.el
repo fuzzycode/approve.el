@@ -51,6 +51,7 @@
   :link '(url-link :tag "Homepage" "https://github.com/fuzzycode/approve.el"))
 
 (require 'approve-pr)
+(require 'approve-changes)
 (require 'approve-sections)
 (require 'approve-conversation)
 (require 'approve-diff)

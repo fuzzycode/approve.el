@@ -259,13 +259,19 @@ Checks).
 
 #+begin_example
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
- #1234 Add retry logic to the GraphQL client · ⟳ updated on GitHub — g to refresh  ● Open
+ #1234 Add retry logic … · ⟳ updated on GitHub — g to refresh · 2 new commits  ● Open
  #1234 · loading pull request, files, threads…
 #+end_example
 
-The second form appears when change detection ([[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]) finds new commits or
-comments (=approve-pr-header-line-functions=).  The third is the first moment,
-before the title has loaded.
+The second form appears when change detection ([[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]) finds that the PR
+changed on GitHub (=approve-pr-header-line-functions=).  After "to
+refresh" it says what is new, as far as the check tells: "2 new commits"
+("the branch changed" after a force push), "1 new comment", "3 new
+reviews"; an edit alone (the title, the description, a comment) adds
+nothing.  It is in =approve-updated=, the key in =approve-hint-key=, and it
+names the key bound to =approve-pr-refresh=.  It stays until =g=, which
+drops it as the load starts.  The third is the first moment, before the
+title has loaded.
 
 * Loading, empty and error states
 #+begin_example
@@ -727,6 +733,7 @@ inherit:
 | =approve-thread-border=                          | =shadow=                                     | Thread box lines          |
 | =approve-resolved= / =approve-outdated=          | =shadow= / =warning=                         | Thread states             |
 | =approve-new= / =approve-dismissed=              | =warning=                                    | New since your review     |
+| =approve-updated=                                | =approve-new=                                | Changed on GitHub (D23)   |
 | =approve-diff-added/removed/context=             | =magit-diff-added/removed/context=           | Diff lines                |
 | =approve-diff-hunk-heading=                      | =magit-diff-hunk-heading=                    | =@@= lines                |
 | =approve-diff-bubble=                            | =default=                                    | Thread bubbles on lines   |
