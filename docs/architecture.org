@@ -74,7 +74,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-api-url.el=       | Plain URL fetches (images in comments), async through =url-queue-retrieve=      |     1 |
 | =approve-model.el=         | Store, refs, connections, selectors, patch, list edits, shared store            |     0 |
 | =approve-session.el=       | Session state: loading, errors, in-flight, drafts, layout (never sent anywhere) |     0 |
-| =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, markdown preview     |   1–3 |
+| =approve-queries.el=       | PR core, files, threads, timeline, patches, blobs, search, a PR's row, the      |   1–3 |
+|                            | viewer, markdown preview                                                        |       |
 | =approve-metadata.el=      | Repository metadata fetched once per session (D24): mentionable users, recent   |     2 |
 |                            | issues and PRs, emoji; later labels, assignable users, milestones               |       |
 | =approve-mutations.el=     | All mutations ([[*API map][API map]]): patch the store, make the list edits (D35)             |   2–5 |
@@ -202,6 +203,8 @@ schema on 2026-11-08.
 | Commit range diff      | REST =GET /repos/{o}/{r}/compare/{base}...{head}=                                                            |
 | File contents          | =repository.object(expression: "OID:path") { ... on Blob { text isBinary byteSize } }=                       |
 | Search                 | =search(type: ISSUE, query: "is:pr …", first:, after:)= → rows (=PullRequestSummaryFields=)                  |
+| Recently opened        | =repository.pullRequest(number)= → a row (=PullRequestSummaryFields=), one query per PR (D39)                |
+| Viewer (dashboard)     | =viewer { login name }=, for the dashboard's title line                                                      |
 | Repo metadata (lazy)   | =repository.labels / assignableUsers / mentionableUsers / milestones=                                        |
 | Recent refs (lazy)     | =search(type: ISSUE, query: "repo:o/r sort:updated-desc", first: 100)=, for =#123= completion               |
 | Emoji (lazy)           | REST =GET /emojis= (name → image URL; the glyph is in a Unicode emoji's URL)                                 |

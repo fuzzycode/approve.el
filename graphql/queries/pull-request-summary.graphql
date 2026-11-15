@@ -1,0 +1,19 @@
+${include:fragments/pull-request-summary.graphql}
+
+# One pull request as a row of the lists, by its number: the dashboard's
+# "Recently opened" asks for each pull request opened in the session.
+# Like the search's rows, it never goes into a store.
+query PullRequestSummary($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    pullRequest(number: $number) {
+      ...PullRequestSummaryFields
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

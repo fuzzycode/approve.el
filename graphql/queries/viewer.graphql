@@ -1,0 +1,13 @@
+${include:fragments/user.graphql}
+
+# Who the token belongs to, for the dashboard's title line.
+query Viewer {
+  viewer {
+    ...UserFields
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

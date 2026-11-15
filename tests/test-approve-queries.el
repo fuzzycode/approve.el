@@ -110,4 +110,55 @@ The requests are pushed to `test-queries--requests'."
         (expect (mapcar (lambda (node) (alist-get 'number node)) .nodes)
                 :to-equal '(7))))))
 
+(describe "approve-query-summary"
+  :var (result failure)
+  (before-each
+    (setq test-queries--requests nil result nil failure nil))
+
+  (it "asks the PR's own GitHub for it by number, and gives it"
+    (let ((approve-api-transport
+           (test-queries--answering
+            '((data (repository (__typename . "Repository") (id . "R_1")
+                                (pullRequest (__typename . "PullRequest") (id . "PR_1")
+                                             (number . 5) (title . "Retry")))))))
+          (approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t))
+      (approve-query-summary '(:host "git.example.com" :owner "acme" :repo "rocket" :number 5)
+                             :callback (lambda (pr) (setq result pr)))
+      (approve-test-wait-for (lambda () result))
+      (expect (alist-get 'title result) :to-equal "Retry")
+      (let ((request (car test-queries--requests)))
+        (expect (plist-get request :name) :to-equal "queries/pull-request-summary.graphql")
+        (expect (plist-get request :variables)
+                :to-equal '((owner . "acme") (name . "rocket") (number . 5)))
+        (expect (plist-get request :host) :to-equal "git.example.com/api/v3"))))
+
+  (it "fails as not found when GitHub has no such pull request"
+    (let ((approve-api-transport
+           (test-queries--answering
+            '((data (repository (__typename . "Repository") (id . "R_1") (pullRequest))))))
+          (approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t))
+      (approve-query-summary '(:host "github.com" :owner "acme" :repo "rocket" :number 5)
+                             :callback (lambda (pr) (setq result pr))
+                             :errorback (lambda (err) (setq failure err)))
+      (approve-test-wait-for (lambda () failure))
+      (expect (car failure) :to-be 'approve-api-not-found)
+      (expect result :to-be nil))))
+
+(describe "approve-query-viewer"
+  (it "asks who the token belongs to, and gives the user"
+    (let ((approve-api-transport
+           (test-queries--answering
+            '((data (viewer (__typename . "User") (id . "U_1") (login . "me"))))))
+          (approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t)
+          (viewer nil))
+      (setq test-queries--requests nil)
+      (approve-query-viewer :callback (lambda (user) (setq viewer user)))
+      (approve-test-wait-for (lambda () viewer))
+      (expect (alist-get 'login viewer) :to-equal "me")
+      (expect (plist-get (car test-queries--requests) :name)
+              :to-equal "queries/viewer.graphql"))))
+
 ;;; test-approve-queries.el ends here

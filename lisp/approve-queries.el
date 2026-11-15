@@ -37,8 +37,9 @@
 ;;
 ;; Change detection (`approve-query-changes') asks GitHub without
 ;; loading the store: its caller compares the answer with the store.
-;; The lists of pull requests (`approve-query-search') keep what
-;; GitHub sends as it is, without a store.
+;; The lists of pull requests (`approve-query-search',
+;; `approve-query-summary') keep what GitHub sends as it is, without a
+;; store, as does `approve-query-viewer'.
 ;;
 ;; The PR is the one in the store's meta data (`approve-model-meta').
 ;; `approve-query-plan' lists the plan, so the buffer that loads can
@@ -327,9 +328,13 @@ changes nothing on GitHub (REST POST /markdown)."
 
 ;;; Lists
 
-(defun approve-query--pull-request-search (search)
+(defun approve-query-pull-request-search (search)
   "Return SEARCH, GitHub's search syntax, made to find pull requests only.
-\"is:pr\" goes in front unless SEARCH says is:pr or type:pr already."
+\"is:pr\" goes in front unless SEARCH says is:pr or type:pr already.
+
+Example:
+  (approve-query-pull-request-search \"is:open author:@me\")
+  => \"is:pr is:open author:@me\""
   (let ((search (string-trim (or search ""))))
     (if (string-match-p "\\(?:\\`\\|[[:space:]]\\)\\(?:is\\|type\\):pr\\(?:\\'\\|[[:space:]]\\)"
                         search)
@@ -356,7 +361,7 @@ Example:
                (message \"%d found\" (alist-get \='issueCount search))))"
   (approve-api-graphql
    "queries/search-pull-requests.graphql"
-   `((search . ,(approve-query--pull-request-search search))
+   `((search . ,(approve-query-pull-request-search search))
      (first . ,first)
      ,@(and after `((after . ,after))))
    :host host
@@ -370,6 +375,51 @@ Example:
                   (cons (cons 'nodes (seq-filter (lambda (node) (alist-get 'number node))
                                                  (alist-get 'nodes search)))
                         (assq-delete-all 'nodes (copy-alist search)))))))))
+
+(cl-defun approve-query-summary (pr &key callback errorback)
+  "Ask GitHub for PR as a row of the lists.
+PR is a plist from `approve-parse-url', (:host :owner :repo
+:number); its host says which GitHub to ask.  CALLBACK is called
+with the pull request, an alist in the shape of
+graphql/fragments/pull-request-summary.graphql, as GitHub sends it,
+which goes into no store.  ERRORBACK is called with the error, which
+is `approve-api-not-found' when GitHub has no such pull request or
+the token can't read it.
+
+Example:
+  (approve-query-summary
+   \='(:host \"github.com\" :owner \"magit\" :repo \"magit\" :number 5000)
+   :callback (lambda (pr) (message \"%s\" (alist-get \='title pr))))"
+  (approve-api-graphql
+   "queries/pull-request-summary.graphql"
+   `((owner . ,(plist-get pr :owner))
+     (name . ,(plist-get pr :repo))
+     (number . ,(plist-get pr :number)))
+   :host (approve-api-host-from-web-host (or (plist-get pr :host) "github.com"))
+   :progress nil
+   :errorback errorback
+   :callback
+   (lambda (data)
+     (if-let* ((pull-request (approve-query--pull-request data)))
+         (when callback
+           (funcall callback pull-request))
+       (funcall (or errorback #'approve-api-default-errorback)
+                (list 'approve-api-not-found "Pull request not found"))))))
+
+(cl-defun approve-query-viewer (&key host callback errorback)
+  "Ask GitHub who the token belongs to.
+HOST is the API host, `approve-api-host' by default.  CALLBACK is
+called with the viewer, an alist in the shape of
+graphql/fragments/user.graphql (login, name, url); ERRORBACK with
+the error."
+  (approve-api-graphql
+   "queries/viewer.graphql" nil
+   :host host
+   :progress nil
+   :errorback errorback
+   :callback (lambda (data)
+               (when callback
+                 (funcall callback (alist-get 'viewer data))))))
 
 ;;; Details (eldoc)
 
