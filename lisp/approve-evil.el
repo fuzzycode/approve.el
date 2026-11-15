@@ -32,10 +32,11 @@
 ;; selection or yank: Approve's single-letter keys move to g-, y- and
 ;; capital-letter keys instead.  The one exception is ?, evil's search
 ;; backward, which opens the dispatch menu as in evil-collection's
-;; Magit: / still searches.  Keys that would edit text in a file
+;; Magit, in visual state too, so its commands act on the selection:
+;; / still searches.  Keys that would edit text in a file
 ;; buffer (c s r R x D C S X i) are free in a read-only buffer, so the
 ;; commands that change the pull request take them; in visual state,
-;; c s r C act on the selection.
+;; c s r C act on the selection, and ? opens the dispatch menu on it.
 ;;
 ;; j, k and the arrow keys move by screen line, as magit's own motions do
 ;; (`line-move-visual'): moving by logical line from a collapsed
@@ -98,11 +99,13 @@
   '(("c" . approve-comment)
     ("s" . approve-suggest)
     ("r" . approve-reply)
-    ("C" . approve-comment-on-pr))
+    ("C" . approve-comment-on-pr)
+    ("?" . approve-dispatch))
   "Keys of `approve-pr-mode' in evil's visual state: (KEY . COMMAND).
 They act on the selection: a comment or suggestion on the selected
 lines of the diff (\\`V' picks them), or a reply or conversation
-comment quoting the selected text.")
+comment quoting the selected text.  The dispatch menu keeps the
+selection for the command picked in it.")
 
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.

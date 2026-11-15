@@ -718,7 +718,8 @@ preview, =C-c @= mention (same in every state).
 
 In evil's visual state, =c=, =s=, =r= and =C= act on the selection: =V= picks
 lines of the diff to comment on or suggest a change of, and selected text is
-quoted by a reply or a conversation comment.  A command that doesn't apply to
+quoted by a reply or a conversation comment.  =?= opens the dispatch there
+too, and the command picked in it acts on the selection.  A command that doesn't apply to
 the thing at point applies to the section around it: on a comment's =@author=,
 =r= replies to the comment and =e= edits it.  A range is named as GitHub does:
 =a.go:13–14=, or =a.go:-13–+14= from a removed line to an added one.

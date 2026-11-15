@@ -65,8 +65,21 @@ The diff of `test-menus--path' is expanded first, for its threads."
                        (error "No section %s %s" type value))
                    start)))
 
+(defun test-menus--goto-line (number)
+  "Move point to the added or context line NUMBER of `test-menus--path'."
+  (approve-nav-goto-file test-menus--path)
+  (goto-char (point-min))
+  (let ((found nil))
+    (while (and (not found) (not (eobp)))
+      (let ((line (get-text-property (point) 'approve-line)))
+        (if (and line (equal (plist-get line :path) test-menus--path)
+                 (equal (plist-get line :side) "RIGHT") (eql (plist-get line :new) number))
+            (setq found (point))
+          (forward-line 1))))
+    (or found (error "No line %s of %s" number test-menus--path))))
+
 (describe "The dispatch menu"
-  (it "opens on ?, in Emacs and in evil's normal state"
+  (it "opens on ?, in Emacs and in evil's normal and visual states"
     (expect (keymap-lookup approve-pr-mode-map "?") :to-be 'approve-dispatch)
     (expect (get 'approve-dispatch 'transient--prefix) :to-be-truthy)
     (let ((bound nil))
@@ -74,7 +87,8 @@ The diff of `test-menus--path' is expanded first, for its threads."
                  (lambda (state _map key def) (push (list state (key-description key) def) bound)))
                 ((symbol-function 'evil-set-initial-state) #'ignore))
         (load "approve-evil" nil t))
-      (expect (member '(normal "?" approve-dispatch) bound) :to-be-truthy)))
+      (expect (member '(normal "?" approve-dispatch) bound) :to-be-truthy)
+      (expect (member '(visual "?" approve-dispatch) bound) :to-be-truthy)))
 
   (it "lists only commands that exist, with the keys of the PR buffer"
     (dolist (suffix (test-menus--suffixes 'approve-dispatch))
@@ -113,6 +127,18 @@ The diff of `test-menus--path' is expanded first, for its threads."
       ;; On the description, which can't be edited yet.
       (goto-char (oref (approve-test-find-section 'approve-description-section) start))
       (expect (test-menus--dimmed) :to-equal '("s" "v" "r" "R" "e" "k"))))
+
+  (it "follows a selection of diff lines, for the command picked in it"
+    (test-menus--with-medium
+      (let ((transient-mark-mode t))
+        (test-menus--goto-line 13)
+        (push-mark (point) t t)
+        (test-menus--goto-line 14)
+        (end-of-line)
+        (expect (plist-get (approve-context-at-point) :kind) :to-be 'lines)
+        (expect (test-menus--dimmed) :to-equal '("r" "R" "e" "k"))
+        (expect (approve-commands--suggest-preflight)
+                :to-equal (approve-context-at-point)))))
 
   (it "dims what the viewer may not do, and what there is nothing for"
     (test-menus--with-medium
