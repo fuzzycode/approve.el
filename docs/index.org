@@ -69,10 +69,13 @@ task only needs the files it touches.
   done ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): comments, replies, submit and discard need only the PR's
   id, and GitHub's silent or misleading answers are checked by Approve.
   Writes are tried on the scratch repository ([[file:development.org::*Scratch repository][development.org]]).
-- Next step: [[file:roadmap.org::*Phase 3 — Find PRs][Phase 3]] (find PRs).  Its shared list of pull requests
+- Phase 3 was called done on 2026-11-15: the shared list of pull requests
   (=approve-list.el=, [[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]), their search (=approve-query-search=) and the
-  dashboard (=M-x approve-dashboard=, =approve-dashboard.el=, [[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]) are
-  done; the search buffer and its filter menu come next.
+  dashboard (=M-x approve-dashboard=, =approve-dashboard.el=, [[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]).  The
+  search buffer, =approve-at-point= and the =browse-url= handler moved to
+  a new last phase, [[file:roadmap.org::*Phase 9 — More ways to find a PR][Phase 9]]: nice to have, not essential.
+- Next step: [[file:roadmap.org::*Phase 4 — Manage the PR][Phase 4]] (manage the PR), starting with the repository's
+  metadata and its cache (D24).
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

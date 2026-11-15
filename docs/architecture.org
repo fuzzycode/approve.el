@@ -108,7 +108,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |
 | =approve-dashboard.el=     | Dashboard buffer from =approve-dashboard-sections= (D39): searches and the PRs  |     3 |
 |                            | opened in the session, a refresh of one list, its title line                    |       |
-| =approve-search.el=        | Search buffer and search-filter transient                                       |     3 |
+| =approve-search.el=        | Search buffer and search-filter transient                                       |     9 |
 | =approve-file.el=          | Full-file view: blob, major mode, fringe marks, inline threads                  |     6 |
 | =approve-notifications.el= | Notifications buffer                                                            |     7 |
 | =approve-clone.el=         | A local clone (D36, D37): the user's clones (=approve-clone-directories=), the  |  2, 8 |

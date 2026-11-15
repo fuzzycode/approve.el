@@ -380,7 +380,7 @@ them all, and =zp= folds the others.  =?= opens the dashboard's dispatch:
 #+end_example
 
 =s= will open search with the section's filter, once search exists
-(Phase 3).
+(Phase 9).
 
 * Search
 =M-x approve-search= prompts for a query (with history), or =s= in the

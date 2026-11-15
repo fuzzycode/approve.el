@@ -161,8 +161,8 @@ region to =c=.
   be an evil operator or motion.
 
 * Phase 3 — Find PRs
-Implements F01 in full.
-Mockups: dashboard, search, search filter transient.
+Implements F01 from the dashboard; its other ways in are Phase 9's.
+Mockups: dashboard.
 - [X] =approve-list.el=: shared list rendering (port approve-v2's dashboard
       formatting).  A row per pull request, a section whose context is the
       pull request; its columns from =approve-list-columns=, a state icon
@@ -173,12 +173,11 @@ Mockups: dashboard, search, search filter transient.
       ([[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]: the pull requests opened in the session, rows asked anew;
       every list loaded again each time the dashboard is asked for; =G=,
       =gR= in evil).  =s= waits for the search.
-- [ ] =approve-search.el= and its filter transient; "Load more".
-- [ ] =approve-at-point=: PR URLs in any buffer; Magit/Forge PR at point
-      (soft dependency, no =require=).
-- [ ] =approve-browse-url-handler= (opt-in) for =browse-url-handlers=.
 - Done when :: the author's daily lists (review requested, mine, involved) open
-  from one command, and any PR link in Emacs opens in Approve with one key.
+  from one command.
+- Done (2026-11-15) :: the search, =approve-at-point= and the
+  =browse-url= handler moved to Phase 9, at the author's request: they are
+  nice to have, and the dashboard and =M-x approve= cover what is needed.
 
 * Phase 4 — Manage the PR
 Implements F08 (title, description), F11, F12.
@@ -316,6 +315,19 @@ On a clone of the scratch repository, find out and note in
   =originalCommit=), or only listed.
 - Whether the mode turns itself on (a global mode, =find-file-hook=), and
   what that costs in a clone with no PR.
+
+* Phase 9 — More ways to find a PR
+The rest of F01: a search of any pull requests, and a PR opened from a link
+or from Magit/Forge.  Moved from Phase 3 (2026-11-15): nice to have, not
+essential; the dashboard and =M-x approve= open what the author needs.
+Mockups: search, search filter transient.
+- [ ] =approve-search.el= and its filter transient; "Load more".  =s= in
+      the dashboard opens it with the list's filter.
+- [ ] =approve-at-point=: PR URLs in any buffer; Magit/Forge PR at point
+      (soft dependency, no =require=).
+- [ ] =approve-browse-url-handler= (opt-in) for =browse-url-handlers=.
+- Done when :: any search of pull requests can be run and refined from
+  Emacs, and any PR link in Emacs opens in Approve with one key.
 
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.
