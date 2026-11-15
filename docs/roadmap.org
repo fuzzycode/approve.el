@@ -126,6 +126,8 @@ Mockups: input buffer, dispatch, submit review, pending review section, keys.
   edit, delete, and submit approve / request changes / comment.  The browser
   shows exactly the same state at each step, and a pending review started in
   the browser can be finished in Emacs.
+- Done (2026-11-15) :: called done by the author.  What is left is tuning
+  and fixing what using Approve brings up, as its use grows.
 
 ** SP1 Review API behaviour
 Before =approve-review.el=, on a scratch repository, find out and note in
