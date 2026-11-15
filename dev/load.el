@@ -20,8 +20,8 @@
 
 (defvar approve-dev-load-order
   '(approve-log approve-graphql approve-api approve-api-paging approve-api-queue
-    approve-api-url approve-model approve-session approve-queries approve-metadata approve-faces
-    approve-icons approve-html approve-render approve-pr approve-changes approve-thread
+    approve-api-url approve-model approve-session approve-queries approve-metadata approve-clone
+    approve-faces approve-icons approve-html approve-render approve-pr approve-changes approve-thread
     approve-sections approve-conversation approve-diff approve-context approve-nav
     approve-eldoc approve-input approve-mutations approve-actions approve-review approve-commands
     approve-menus approve approve-dev)
@@ -58,7 +58,8 @@
     ;; Lists the modules fill as they load start empty again, so what a
     ;; module no longer adds goes away.
     (dolist (registry '(approve-pr-header-line-functions approve-pr-lazy-loaders
-                        approve-pr-load-hook approve-pr-clear-cache-functions))
+                        approve-pr-load-hook approve-pr-clear-cache-functions
+                        approve-visit-commit-functions))
       (when (boundp registry)
         (set registry nil)))
     ;; `defface' leaves a face it has defined before as it was; without

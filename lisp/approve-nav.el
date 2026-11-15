@@ -41,6 +41,11 @@
 ;; approve-menus.el.  Moving into a file's diff or a thread expands
 ;; what hides it.  This file binds its keys in `approve-pr-mode-map'.
 ;;
+;; A commit is shown by the first of `approve-visit-commit-functions'
+;; that can, else on GitHub.  approve.el puts `approve-clone-show-commit'
+;; there, which shows it in Magit from a local clone (decision D37), so
+;; this file never needs a clone.
+;;
 ;; Layer rules: this is the buffers layer.  It reads the context, the
 ;; store and the sections and moves point; it never changes the store
 ;; or calls the network (opening a URL hands it to `browse-url').
@@ -292,6 +297,19 @@ is collapsed again."
       (approve-pr-open pr)
     (browse-url url)))
 
+(defvar approve-visit-commit-functions nil
+  "Functions that show a commit for `approve-visit', tried in order.
+Each is called with the commit's sha (perhaps abbreviated) and its
+URL on GitHub, and returns non-nil if it showed the commit.  When
+none does, the commit opens in the browser.  approve.el adds
+`approve-clone-show-commit', which shows it in Magit from a local
+clone that has it (decision D37).")
+
+(defun approve-nav--visit-commit (oid url)
+  "Show the commit OID: by `approve-visit-commit-functions', else at URL."
+  (unless (run-hook-with-args-until-success 'approve-visit-commit-functions oid url)
+    (browse-url url)))
+
 (defconst approve-nav--fold-through '(approve-thread-section approve-comment-section)
   "Sections that toggling passes to their parent.
 Threads do not fold by themselves: in a thread, toggling folds the
@@ -381,8 +399,10 @@ The section is the one `approve-section-toggle' folds."
   "Follow the thing at point (flow F03).
 A file goes to its diff, a pending comment or a review to its thread,
 a link to its target (a pull request in Approve, anything else in the
-browser), a check to its details, a diff GitHub did not send is
-computed from the file's versions.  Elsewhere, toggle the section."
+browser), a check to its details.  A commit shows in Magit from a
+local clone that has it (`approve-clone-directories'), else on
+GitHub.  A diff GitHub did not send is computed from the file's
+versions.  Elsewhere, toggle the section."
   (interactive)
   (let ((context (approve-context-at-point)))
     (pcase (plist-get context :kind)
@@ -405,7 +425,8 @@ computed from the file's versions.  Elsewhere, toggle the section."
        (if-let* ((url (plist-get context :url)))
            (approve-nav--open-url url)
          (user-error "Nothing to visit here")))
-      ('commit (browse-url (plist-get context :url)))
+      ('commit (approve-nav--visit-commit (plist-get context :value)
+                                          (plist-get context :url)))
       ('load-diff (approve-pr-load-local-patch (plist-get context :path)))
       (_ (approve-nav--toggle-or "Nothing to visit here")))))
 

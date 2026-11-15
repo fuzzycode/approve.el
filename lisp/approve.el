@@ -62,8 +62,15 @@
 (require 'approve-actions)
 (require 'approve-review)
 (require 'approve-commands)
+(require 'approve-clone)
 
 (declare-function magit-add-section-hook "magit-section")
+
+;;; Extras for a local clone
+
+;; The core never requires the clone modules (decision D36); they join
+;; it here, on the hooks it offers.
+(add-hook 'approve-visit-commit-functions #'approve-clone-show-commit)
 
 ;;;###autoload
 (defalias 'approve-add-section-hook #'magit-add-section-hook

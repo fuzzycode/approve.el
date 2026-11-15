@@ -95,7 +95,7 @@ mv     [label="n/p (gj/gk) · TAB · ^ parent · M-n/M-p sibling"];
 jump   [label="j … jump menu: description, conversation,\nchecks, commits, files, pending review, a file"];
 work   [label="]u next unviewed file · ]t next unresolved thread\nj n next comment new since my last review"];
 learn  [label="eldoc in the echo area\nuser · label · sha · check · date"];
-follow [label="RET: file → its diff · commit → commit diff\nPR link → open in Approve · check → details URL"];
+follow [label="RET: file → its diff · commit → Magit, from a clone\nthat has it (D37), else GitHub\nPR link → open in Approve · check → details URL"];
 web    [label="o: thing at point in the browser"];
 copy   [label="y: copy URL · sha · path:line"];
 u -> mv [label="move"]; u -> jump [label="go somewhere"]; u -> work [label="find the next work"];

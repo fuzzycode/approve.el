@@ -249,13 +249,18 @@ nothing else changes.  Moved from Ideas (2026-11-15).  Builds on the file
 view's overlays (Phase 6) and the store shared by a PR's buffers (Phase 7).
 Implements F21, F22 (written in this phase's first task).
 Mockups: a file's buffer with its threads (written with F21).
+- [X] Done early (2026-11-15), at the author's request: =RET= on a commit
+      shows it in Magit from a clone that has it, else on GitHub
+      ([[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]).  =approve-clone.el= begins with the clones
+      (=approve-clone-directories=, Magit's by default) and the one with
+      a commit; =approve.el= puts it on =approve-visit-commit-functions=.
 - [ ] SP8 first.  Then F21 (review feedback in a file you edit) and F22
       (find a buffer's PR, and a PR's clone) in [[file:flows.org][flows.org]], the mockup of a
       file's buffer with its threads in [[file:ui.org][ui.org]], and their HTML views.
-- [ ] =approve-clone.el=: a buffer's clone, repository and branch (git
+- [ ] =approve-clone.el=, grown: a buffer's clone, repository and branch (git
       through Magit), the PR of a branch (a query by =headRefName=), and a
-      PR's clone, as SP8 decides.  Tests without the network, on a
-      throwaway repository.
+      PR's clone among those of =approve-clone-directories=, as SP8
+      decides.  Tests without the network, on a throwaway repository.
 - [ ] Line mapping: GitHub's lines at the PR head to the buffer's and
       back, from a =diff= of the head blob and the buffer's text, redone
       when the buffer changes (on idle, coalesced).  It knows the lines
@@ -286,10 +291,10 @@ Mockups: a file's buffer with its threads (written with F21).
 ** SP8 The clone and its lines
 On a clone of the scratch repository, find out and note in
 [[file:decisions.org][decisions.org]] (the part D36 left open):
-- How a PR finds its clone: the current project (=project.el=), a clone
-  whose remote is the repository (ssh or https, Enterprise hosts), or an
-  option mapping repositories to directories; several clones or worktrees
-  of one repository.
+- How a PR finds its clone, starting from D37's list: the current project
+  (=project.el=), a clone whose remote is the repository (ssh or https,
+  Enterprise hosts), or an option mapping repositories to directories;
+  several clones or worktrees of one repository.
 - How a branch finds its PR: =headRefName= and the head repository
   (forks), the branch's upstream, several PRs from one branch, a closed or
   merged PR.

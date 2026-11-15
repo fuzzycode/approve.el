@@ -56,7 +56,8 @@ Rules:
 - Nothing outside =approve-api.el= calls ghub.
 - Only the modules for a local clone touch one (its files, branch, git), and
   the core never requires them: every other module works without a clone
-  (D36).
+  (D36).  =approve.el= requires them and puts their functions on the hooks
+  the core offers, such as =approve-visit-commit-functions= (D37).
 
 * Modules
 Planned files.  Split a file when it passes ~600 lines or holds two concerns.
@@ -107,8 +108,9 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-search.el=        | Search buffer and search-filter transient                                       |     3 |
 | =approve-file.el=          | Full-file view: blob, major mode, fringe marks, inline threads                  |     6 |
 | =approve-notifications.el= | Notifications buffer                                                            |     7 |
-| =approve-clone.el=         | A local clone (D36): a buffer's clone, repository, branch and PR; a PR's        |     8 |
-|                            | clone; GitHub's lines to the buffer's and back                                  |       |
+| =approve-clone.el=         | A local clone (D36, D37): the user's clones (=approve-clone-directories=), the  |  2, 8 |
+|                            | one with a commit, shown in Magit; later a buffer's clone, repository, branch   |       |
+|                            | and PR; a PR's clone; GitHub's lines to the buffer's and back                   |       |
 | =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads and actions in the buffers of its       |     8 |
 |                            | clone; ways to and from the PR buffer                                           |       |
 | =approve-dev.el=           | Development tools, fixture recording and replay (not packaged)                  |     0 |

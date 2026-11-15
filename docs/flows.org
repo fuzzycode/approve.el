@@ -173,7 +173,8 @@ No network.  This is mostly magit-section plus jumps.
    ├─ find the next work ────▶ ]u next unviewed file · ]t next unresolved thread
    │                            j n next comment new since my last review
    ├─ learn about a thing ───▶ eldoc in the echo area (user, label, sha, check)
-   ├─ follow a thing ────────▶ RET: file → its diff · commit → commit diff
+   ├─ follow a thing ────────▶ RET: file → its diff · commit → Magit, from a
+   │                            clone that has it (D37), else GitHub
    │                            issue/PR link → open (PR in Approve) · check → URL
    ├─ see it on GitHub ──────▶ o (thing at point, else the PR)
    └─ copy it ───────────────▶ y (URL, sha, path:line)

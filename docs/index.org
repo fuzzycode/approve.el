@@ -57,6 +57,12 @@ task only needs the files it touches.
   what is new on GitHub until =g=.  Last, the dispatch menu (=?=, D06
   amended): it lists the commands that exist, each dimmed where its
   preflight says it can't run, and new commands join it as they come.
+- The first extra for a local clone came early, at the author's request
+  ([[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]): =RET= on a commit shows it in Magit from the first clone
+  in =approve-clone-directories= (Magit's =magit-repository-directories=
+  by default) that has it, else on GitHub.  =approve-clone.el= holds it;
+  the core offers =approve-visit-commit-functions= and =approve.el= puts
+  it there (D36).
 - Next step: every task of [[file:roadmap.org::*Phase 2 — Review][Phase 2]] is done; its done-when is left: a
   whole review on a real PR from Emacs, the browser showing the same state
   at each step, and a pending review started in the browser finished in

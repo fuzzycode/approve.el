@@ -65,6 +65,39 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   edited, as CLion and VS Code show it.  Keeping the extras apart keeps
   the core testable without git, and every feature usable from anywhere.
 
+** D37 Clones are found where Magit lists them; a commit opens in Magit
+- Status :: accepted (2026-11-15, by the author; answers part of what
+  [[*D36 No clone needed; a local clone adds to it][D36]] left open, with its first extra)
+- Decision ::
+  - Approve finds the user's clones in =approve-clone-directories=, a
+    list of =(DIRECTORY . DEPTH)= in the format of
+    =magit-repository-directories=.  Its default, the symbol =magit=,
+    means Magit's list; nil means no clones.  They are listed again
+    each time they are needed, as Magit lists repositories.
+  - A commit is looked for in every listed clone, in order, and the
+    first that has it (=git cat-file -e SHA^{commit}=) is the one.  No
+    remote is matched: a sha names one commit anywhere, so this finds
+    the PR's commits, a fork's, and those that comments link to in
+    other repositories alike.
+  - =RET= on a commit (in the commits, the conversation's pushes, a
+    comment's commit link) shows it with =magit-show-commit= in that
+    clone: Magit's revision buffer, displayed and selected as
+    =magit-display-buffer-function= says, with Magit's keys (=q= goes
+    back).  When no clone has it, it opens on GitHub as before.
+  - The core offers the hook =approve-visit-commit-functions=
+    (=approve-nav.el=).  =approve-clone.el= has the function that shows
+    the commit, and =approve.el= puts it on the hook, so the core never
+    requires the clone module.
+  - How a PR, rather than a commit, finds its clone (Phase 8, SP8)
+    starts from this option.
+- Why :: Magit's revision buffer shows more than a browser (the diff,
+  the message, refs, blame from there) and is where later extras can
+  go.  Users of Magit set its option already, so they need no setup.
+  Asking every clone costs one git call each until one has the commit:
+  about 7 ms a clone on the author's machine, a quarter of a second
+  before the browser when none of 37 has it.  Matching remotes would ask
+  fewer clones but miss commits of other repositories.
+
 * UI
 ** D04 Buffers are magit-section trees built from section hooks
 - Status :: accepted (project.org)

@@ -118,6 +118,9 @@ Notes:
 - Events by bots, and runs of small events, can be folded into one line
   ("github-actions added 3 labels").
 - Minimized (hidden) comments show as one dim line with the reason.
+- =RET= on a commit, in the commits or a push, shows it in Magit's revision
+  buffer from a local clone that has it (=approve-clone-directories=,
+  [[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]), else on GitHub.
 
 ** Bottom: files and diff
 #+begin_example

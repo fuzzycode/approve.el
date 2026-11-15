@@ -141,7 +141,37 @@
     (test-nav--with-medium
       (approve-nav-goto-section 'approve-conversation-section)
       (approve-visit)
-      (expect (oref (magit-current-section) hidden) :to-be t))))
+      (expect (oref (magit-current-section) hidden) :to-be t)))
+
+  (it "shows a commit by the first of approve-visit-commit-functions that can"
+    (test-nav--with-medium
+      (spy-on 'browse-url)
+      (let* ((asked nil)
+             (approve-visit-commit-functions
+              (list (lambda (oid url) (push (list 'no oid url) asked) nil)
+                    (lambda (oid _url) (push (list 'yes oid) asked) t)))
+             (commit (car (oref (approve-nav-goto-section 'approve-commits-section t)
+                                children)))
+             (oid (oref commit value)))
+        (goto-char (oref commit start))
+        (approve-visit)
+        (expect (nreverse asked)
+                :to-equal `((no ,oid ,(format "https://github.com/acme-example/rocket/pull/202/commits/%s"
+                                             oid))
+                            (yes ,oid)))
+        (expect 'browse-url :not :to-have-been-called))))
+
+  (it "opens a commit on GitHub when no function shows it"
+    (test-nav--with-medium
+      (spy-on 'browse-url)
+      (let* ((approve-visit-commit-functions (list #'ignore))
+             (commit (car (oref (approve-nav-goto-section 'approve-commits-section t)
+                                children))))
+        (goto-char (oref commit start))
+        (approve-visit)
+        (expect 'browse-url :to-have-been-called-with
+                (format "https://github.com/acme-example/rocket/pull/202/commits/%s"
+                        (oref commit value)))))))
 
 (describe "approve-browse and approve-copy"
   (it "open the thing at point, else the pull request"
