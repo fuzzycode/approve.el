@@ -109,9 +109,11 @@ Mockups: input buffer, dispatch, submit review, pending review section, keys.
       F05, F09; tracking is the mutations', D35) and the submit transient.
       Moved ahead of the menus to try whole reviews by hand.  =e= on the title
       and description waits for Phase 4.
-- [ ] =approve-menus.el=: dispatch transient.
-- [ ] "Your pending review" section; header line counts.
+- [X] "Your pending review" section.  Drawn since Phase 1, with =RET=, =e=,
+      =k=, =S= and =X= on it from the commands; the counts it once put in
+      the header line live in the sections (the header line names the PR).
 - [ ] Change detection (D23).
+- [ ] =approve-menus.el=: dispatch transient.  Moved after change detection.
 - [ ] Split layout and =L= (F18).
 - Done when :: a whole review can be done on a real PR from Emacs: mark files
   viewed, comment on a line, a range and a file, suggest, reply, resolve,
