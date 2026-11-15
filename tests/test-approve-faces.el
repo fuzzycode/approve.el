@@ -77,6 +77,12 @@
                     (ensure-list (get-text-property 0 'face icon)))
               :not :to-be nil)))
 
+  (it "draws drafts with Codicons' pull request draft, as gh-dash does"
+    (setq approve-use-nerd-icons t)
+    (approve-icon-clear-cache)
+    (expect (approve-icon 'draft)
+            :to-equal (nerd-icons-codicon "nf-cod-git_pull_request_draft")))
+
   (it "has a glyph and a fallback for every icon"
     (dolist (entry approve-icons)
       (expect (assq (car entry) approve-icon-fallbacks) :not :to-be nil)

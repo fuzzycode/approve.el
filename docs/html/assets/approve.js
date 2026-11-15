@@ -7,7 +7,7 @@
   var SETS = {
     material: {
       "open": ["nf-md-source_pull", 0xf04c2],
-      "draft": ["nf-md-progress_pencil", 0xf1787],
+      "draft": ["nf-cod-git_pull_request_draft", 0xebdb],
       "merged": ["nf-md-source_merge", 0xf062d],
       "closed": ["nf-md-source_branch_remove", 0xf14cc],
       "approved": ["nf-md-check_decagram", 0xf0791],

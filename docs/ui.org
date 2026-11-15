@@ -817,7 +817,8 @@ inherit:
 
 * Icons
 =approve-icon= maps a semantic name to a nerd-icons glyph from the Material
-Design set (=nf-md-*=, [[file:decisions.org::*D31 Icons come from Material Design][D31]]), or to a Unicode fallback when
+Design set (=nf-md-*=, [[file:decisions.org::*D31 Icons come from Material Design][D31]]), but for drafts, which take gh-dash's
+Codicons glyph, or to a Unicode fallback when
 =approve-use-nerd-icons= is nil or the font is missing.  Both columns of the
 table are user options (=approve-icons=, =approve-icon-fallbacks=); a glyph
 from any other nerd-icons set can take a place, its prefix (=nf-cod-=,
@@ -828,7 +829,7 @@ rows align with =string-width=.  The other sets that were compared are on
 | Name                   | Material Design                      | Fallback |
 |------------------------+--------------------------------------+----------|
 | =open=                 | =nf-md-source_pull=                  | ●        |
-| =draft=                | =nf-md-progress_pencil=              | ◌        |
+| =draft=                | =nf-cod-git_pull_request_draft=      | ◌        |
 | =merged=               | =nf-md-source_merge=                 | ⮌        |
 | =closed=               | =nf-md-source_branch_remove=         | ⊘        |
 | =approved=             | =nf-md-check_decagram=               | ✓        |

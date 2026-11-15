@@ -32,8 +32,9 @@
 ;; D31; docs/ui.org, "Icons").  Every icon Approve shows goes through
 ;; it.
 ;;
-;; The glyphs are Material Design icons from nerd-icons
-;; (`approve-icons'); any other nerd-icons glyph can take a place.  When
+;; The glyphs are Material Design icons from nerd-icons, but for drafts,
+;; which are Codicons' as in gh-dash (`approve-icons'); any other
+;; nerd-icons glyph can take a place.  When
 ;; `approve-use-nerd-icons' is nil, or a graphical frame lacks the
 ;; nerd-icons font, each icon falls back to a Unicode character
 ;; (`approve-icon-fallbacks').  Both tables are user options, so any
@@ -79,7 +80,7 @@ characters in `approve-icon-fallbacks'.  Without a Nerd Font:
 
 (defcustom approve-icons
   '((open . "nf-md-source_pull")
-    (draft . "nf-md-progress_pencil")
+    (draft . "nf-cod-git_pull_request_draft")
     (merged . "nf-md-source_merge")
     (closed . "nf-md-source_branch_remove")
     (approved . "nf-md-check_decagram")
@@ -120,7 +121,8 @@ characters in `approve-icon-fallbacks'.  Without a Nerd Font:
     (reaction-rocket . "nf-md-rocket_launch_outline")
     (reaction-eyes . "nf-md-eye_outline"))
   "Glyph of each icon: semantic name → nerd-icons name.
-The defaults are Material Design icons (nf-md-…), but any glyph
+The defaults are Material Design icons (nf-md-…), but for drafts:
+Codicons' pull request draft, as gh-dash draws them.  Any glyph
 `nerd-icons-insert' lists will do, whatever its set: the prefix of
 the name picks it (nf-md-, nf-cod-, nf-oct-, nf-fa-, …).  To draw
 approvals with a thumbs-up:

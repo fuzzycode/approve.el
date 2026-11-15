@@ -202,7 +202,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   consistent outline style.  No extra dependency: nerd-icons ships them.
 
 ** D31 Icons come from Material Design
-- Status :: accepted (2026-11-09, replaces [[*D26 Icons come from Codicons][D26]])
+- Status :: accepted (2026-11-09, replaces [[*D26 Icons come from Codicons][D26]]); amended 2026-11-15
 - Decision :: =approve-icon= maps every semantic icon to the Material Design
   set in nerd-icons (names =nf-md-*=), as in the table in [[file:ui.org::*Icons][ui.org › Icons]].
   =approve-icons= stays a =defcustom=, and it takes a glyph from any
@@ -216,6 +216,10 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   rounded outline icons, which cover every state too (pull, merge, branch
   removed, a progress pencil for drafts, decagrams for verdicts).  Colour
   emoji for reactions looked out of place next to them.
+- Amended (2026-11-15) :: Drafts take Codicons' pull request draft
+  (=nf-cod-git_pull_request_draft=), the glyph gh-dash draws them with,
+  dim in =approve-state-draft=; the rest stays Material Design.  The
+  author found it says "draft" better than the progress pencil.
 
 ** D27 Extended information through eldoc: one line, then the eldoc buffer
 - Status :: accepted (2026-11-08)
