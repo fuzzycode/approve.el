@@ -23,6 +23,7 @@ callbacks it was given.
  │  approve-search.el            │                                          │
  │  approve-file.el              │                                          │
  │  approve-notifications.el     │                                          │
+ │  approve-feedback.el (clone)  │                                          │
  ├───────────────────────────────┴──────────────────────────────────────────┤
  │ Renderers (section inserters; pure: read the store, insert text)         │
  │  approve-sections.el · approve-diff.el · approve-thread.el               │
@@ -33,7 +34,7 @@ callbacks it was given.
  │   normalized store, selectors, list edits, session, context at point     │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Operations               approve-queries.el · approve-mutations.el ·     │
- │                          approve-metadata.el                             │
+ │                          approve-metadata.el · approve-clone.el          │
  │   one function per .graphql file / REST call; load/patch the store       │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Transport                approve-api.el · approve-api-paging.el ·        │
@@ -106,6 +107,10 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-search.el=        | Search buffer and search-filter transient                                       |     3 |
 | =approve-file.el=          | Full-file view: blob, major mode, fringe marks, inline threads                  |     6 |
 | =approve-notifications.el= | Notifications buffer                                                            |     7 |
+| =approve-clone.el=         | A local clone (D36): a buffer's clone, repository, branch and PR; a PR's        |     8 |
+|                            | clone; GitHub's lines to the buffer's and back                                  |       |
+| =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads and actions in the buffers of its       |     8 |
+|                            | clone; ways to and from the PR buffer                                           |       |
 | =approve-dev.el=           | Development tools, fixture recording and replay (not packaged)                  |     0 |
 
 * Data model

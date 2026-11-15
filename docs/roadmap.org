@@ -241,6 +241,69 @@ Implements F18, F19.
 - Done when :: a new user can install from MELPA, set a token, run
   =approve-dashboard= and review, following only the README.
 
+* Phase 8 — Review feedback in your clone
+Extras for a local clone ([[file:decisions.org::*D36 No clone needed; a local clone adds to it][D36]]): the PR's threads in the buffers of the
+files the user edits, as CLion and VS Code show them, and ways between
+those buffers and the PR buffer.  Without a clone none of it shows, and
+nothing else changes.  Moved from Ideas (2026-11-15).  Builds on the file
+view's overlays (Phase 6) and the store shared by a PR's buffers (Phase 7).
+Implements F21, F22 (written in this phase's first task).
+Mockups: a file's buffer with its threads (written with F21).
+- [ ] SP8 first.  Then F21 (review feedback in a file you edit) and F22
+      (find a buffer's PR, and a PR's clone) in [[file:flows.org][flows.org]], the mockup of a
+      file's buffer with its threads in [[file:ui.org][ui.org]], and their HTML views.
+- [ ] =approve-clone.el=: a buffer's clone, repository and branch (git
+      through Magit), the PR of a branch (a query by =headRefName=), and a
+      PR's clone, as SP8 decides.  Tests without the network, on a
+      throwaway repository.
+- [ ] Line mapping: GitHub's lines at the PR head to the buffer's and
+      back, from a =diff= of the head blob and the buffer's text, redone
+      when the buffer changes (on idle, coalesced).  It knows the lines
+      edited locally and the lines GitHub doesn't have.
+- [ ] =approve-feedback.el=, =approve-feedback-mode= (a minor mode):
+      threads under their lines as overlays, with the file view's bubbles
+      and folding, [[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]'s red, and an "edited locally" mark; the PR in
+      the mode line.  One store per PR, shared by its PR buffer and every
+      buffer of the clone, loaded once; [[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]'s notices there too.
+- [ ] Actions in a file's buffer: reply, resolve, edit, delete, and
+      comment and suggest on the lines GitHub has ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).  Context at
+      point and preflights from the overlays of a buffer that isn't
+      Approve's.  Keys under a prefix, never shadowing evil's motions
+      ([[file:decisions.org::*D17 Evil is supported, never required][D17]]), and a dispatch transient.
+- [ ] Between the buffers, added by the clone modules (the core never
+      requires them): from the PR buffer, a diff line or thread opens in
+      the local file; from a file's buffer, the PR buffer at that file;
+      next and previous unresolved thread across the PR's files, visiting
+      them in the clone.
+- [ ] Turning it on: a command, and the option SP8 decides on (the mode
+      on by itself in the buffers of a branch with a PR).
+- Done when :: on a branch with a PR, with commits not pushed and edits
+  not saved, the user reads the threads in the buffers they edit,
+  replies, resolves and comments from there, and the browser shows the
+  same.  Without a clone, Approve is unchanged and its tests run without
+  git.
+
+** SP8 The clone and its lines
+On a clone of the scratch repository, find out and note in
+[[file:decisions.org][decisions.org]] (the part D36 left open):
+- How a PR finds its clone: the current project (=project.el=), a clone
+  whose remote is the repository (ssh or https, Enterprise hosts), or an
+  option mapping repositories to directories; several clones or worktrees
+  of one repository.
+- How a branch finds its PR: =headRefName= and the head repository
+  (forks), the branch's upstream, several PRs from one branch, a closed or
+  merged PR.
+- Which blob to diff against the buffer when the local HEAD is the PR's
+  head, ahead of it (commits not pushed), behind it (pushed from
+  elsewhere) or on another history (rebased), and when to say the clone
+  and GitHub differ.
+- What a diff of the buffer costs on a large file, per edit, so the marks
+  keep up with typing (the budgets in [[file:architecture.org::*Speed][architecture.org]]).
+- Outdated threads: shown where they were (=originalLine= at
+  =originalCommit=), or only listed.
+- Whether the mode turns itself on (a global mode, =find-file-hook=), and
+  what that costs in a clone with no PR.
+
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.
 - AI-assisted review in the spirit of Hutch: a gptel-backed command that reads
@@ -262,13 +325,3 @@ Not planned yet.  Each needs a decision before it enters a phase.
   generated.  Navigation (=]u=, =]t=) and the counts follow the filter.
   Open questions: whether filters combine, and whether they are remembered
   per repository.
-- Review feedback in the buffers the user edits, as CLion and VS Code show
-  it (an extra for a local clone, [[file:decisions.org::*D36 No clone needed; a local clone adds to it][D36]]): a minor mode in the buffer of a
-  file whose branch has a PR shows the PR's threads under their lines
-  (overlays, as in the file view) and replies, resolves and comments from
-  there.  The PR is found from the branch (=headRefName=); GitHub's lines
-  are mapped to the buffer by a =diff= of the head blob and the buffer's
-  text, and threads on lines edited locally are marked so.  Builds on the
-  file view (Phase 6) and the shared store (Phase 7).  Open questions:
-  its keys (a prefix, never shadowing evil's motions), whether it turns
-  itself on, and how a PR finds its clone.
