@@ -87,8 +87,10 @@ task only needs the files it touches.
   (=approve-commands.el=).  The scratch script's =metadata= group checks
   them all live (=APPROVE_SCRATCH_ONLY=metadata=).  Not covered from
   GitHub's sidebar: projects and linked issues.
-- Next step: [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]] (merge and checks), starting with SP7
-  (applying suggestions).
+- Next step: [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]] (merge and checks), starting with applying
+  suggestions.  SP7 is done ([[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]], 2026-11-15): a suggestion is
+  committed as GitHub's button commits it, through =createCommitOnBranch=
+  on the files at the head, and its threads resolved after.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

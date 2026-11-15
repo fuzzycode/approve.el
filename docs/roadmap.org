@@ -200,12 +200,12 @@ Implements F08 (title, description), F11, F12.
 * Phase 5 — Merge and checks
 Implements F13, F16 in full, and applying suggestions (a flow written
 with SP7's answers).
-- [ ] Apply suggestions (SP7 first): a command on a suggestion, and a batch
+- [ ] Apply suggestions (SP7 done, [[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]): a command on a suggestion, and a batch
       of them in one commit, as GitHub's "Commit suggestion" and "Add
       suggestion to batch"; its key is chosen then.  With no clone (D36): the files at the head, the
       suggested lines spliced in, =createCommitOnBranch= with
       =expectedHeadOid=, the threads resolved, the PR loaded again.  Dimmed
-      without =viewerCanApplySuggestion=.  Moved here from Ideas
+      without =viewerCanApplySuggestion=, and where D41 refuses.  Moved here from Ideas
       (2026-11-15): it is the author's way to merge, like the rest of
       this phase.
 - [ ] Merge transient: methods allowed by the repository, commit title/body,
@@ -227,6 +227,21 @@ repository, find out and note in [[file:decisions.org][decisions.org]]:
 - Multi-line suggestions, an empty suggestion (deletes the lines),
   outdated threads, and a suggestion whose lines changed since.
 - Line endings and the file's last newline, kept as they were.
+- Found (2026-11-15) :: on fuzzycode/test-approve #10, written up as
+  [[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]].  GitHub's button and =createCommitOnBranch= make the same
+  commit (the viewer the author, GitHub the committer, signed by
+  web-flow); the message defaults to "Apply suggestion from @login" or
+  "Apply batched suggestions from code review", with a =Co-authored-by=
+  trailer per suggester, whose noreply address
+  (=DATABASEID+LOGIN@users.noreply.github.com=) GitHub attributes.  The
+  button resolves its threads; the API leaves them outdated, so Approve
+  resolves them.  Line endings and a missing final newline are kept, an
+  empty suggestion deletes its lines, threads below move without going
+  outdated.  Each suggestion block has its own button, also in replies;
+  none on pending comments, outdated or file-level threads, deleted
+  lines, or no change.  =viewerCanApplySuggestion= stays true on closed
+  and merged pull requests.  Forks with maintainer edits are not checked
+  (no second account).
 
 * Phase 6 — Iterative review and the file view
 Implements F14, F15.

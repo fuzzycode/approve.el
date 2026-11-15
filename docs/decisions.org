@@ -579,6 +579,87 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   costs one nested selection; deletions can't ask, because GitHub's answer
   may be stale then.
 
+** D41 Suggestions are committed the way GitHub's button does (SP7)
+- Status :: accepted (2026-11-15, by the author; answers [[file:roadmap.org::*SP7 Applying suggestions][SP7]], except forks)
+- Found :: On the scratch repository (fuzzycode/test-approve #10, "SP7:
+  applying suggestions"; github-actions[bot] suggests through the "Bot
+  review comment" workflow), committing in the browser and through
+  =createCommitOnBranch=:
+  - GitHub has a button for each suggestion block, not each comment: two
+    blocks in one comment, and a block in a reply, each have their own.  A
+    fence of four backticks, of tildes, or with words after =suggestion=
+    is a suggestion too.
+  - The browser asks for the commit message, with defaults that differ by
+    view: "Apply suggestion from @login" (the Files tab) or "Update PATH"
+    (the Conversation tab) for one, "Apply batched suggestions from code
+    review" for a batch.  The body is a =Co-authored-by: NAME <EMAIL>=
+    trailer for each suggester; for one suggestion it is left out when the
+    suggester is the viewer, in a batch it is not.  The email is the
+    account's commit email: the primary one, or
+    =ID+LOGIN@users.noreply.github.com= when it is kept private (a bot:
+    =41898282+github-actions[bot]@users.noreply.github.com=).
+  - The browser's commit and =createCommitOnBranch='s are alike: authored
+    by the viewer (their primary email), committed by GitHub and signed by
+    web-flow.  A noreply trailer is attributed (the commit's =authors=
+    lists the bot).
+  - The browser resolves the threads it commits (=resolvedBy= the viewer).
+    =createCommitOnBranch= doesn't: its threads only go outdated, and
+    =resolveReviewThread= then makes them resolved, as the browser's.
+  - The file keeps its line endings (CRLF) and its last line without a
+    newline.  An empty suggestion deletes its lines.  Blob =text= holds
+    the file's bytes exactly (CRLF, no final newline).
+  - A commit moves the threads below the changed lines (=line= follows,
+    =originalLine= stays) without making them outdated; a thread whose
+    lines changed goes outdated, with =line= null.
+  - GitHub refuses, in its words: "This suggestion is invalid because no
+    changes were made to the code." (the lines as they are), "Unable to
+    apply suggestions on deleted lines.", "This suggestion is part of a
+    pending comment and cannot be applied.", "Unable to commit due to
+    other pending changes affecting this line." (two in one batch).  It
+    offers no button on outdated threads, nor on a file-level comment, and
+    greys it out on a closed pull request.
+  - =viewerCanApplySuggestion= is on the pull request, not the thread.  It
+    is true on the viewer's closed and merged pull requests too, and false
+    on others' forks where the viewer is no maintainer.
+  - =createCommitOnBranch= with a stale =expectedHeadOid= fails with
+    =STALE_DATA=: "Expected branch to point to \"OID\" but it did not.
+    Pull and try again."
+  - Not found: whether =createCommitOnBranch= writes to a fork's branch
+    that allows edits from maintainers.  It needs a second account.
+- Decision ::
+  - A suggestion is a fenced block whose info string starts with
+    =suggestion=, in a comment that is not pending, of a thread on the new
+    side (=diffSide= RIGHT, and =startDiffSide= RIGHT or null) that is
+    not outdated and not file-level.  Each block is applied on its own.
+  - Applying one or a batch: the files at the store's =headRefOid=
+    (blobs), each suggestion's lines (=startLine= to =line=) replaced by
+    its block, from the bottom up; the file keeps its line endings and its
+    final newline or lack of one.  Then one =createCommitOnBranch= on the
+    head repository's branch with =expectedHeadOid= the store's head,
+    then =resolveReviewThread= for each thread, then the PR loaded again.
+    A stale head says so and asks for =g=; nothing is resolved then.
+  - The message is GitHub's default from the Files tab, and can be edited
+    before the commit, as GitHub's dialog allows; how is the flow's.  The
+    trailers name every suggester but the viewer, once each, as
+    =NAME <DATABASEID+LOGIN@users.noreply.github.com>= (=LOGIN[bot]= for a
+    bot; the login when there is no name).  The viewer is the commit's
+    author, so never a trailer, unlike GitHub's batch.  The noreply
+    address is the only one the API always gives, and GitHub attributes
+    it.  This needs =databaseId= on users and bots.
+  - Refused before anything is sent, with GitHub's words where it has
+    them: a pull request that isn't open, =viewerCanApplySuggestion=
+    false, a pending comment, an outdated or file-level thread, the old
+    side, no change, two suggestions on one line in a batch, and a file
+    that is binary, truncated or not UTF-8 (its =text= is not its bytes).
+  - A fork's branch is left to =viewerCanApplySuggestion= and GitHub's
+    message.
+- Why :: The commit should be the one the browser makes, so a reviewer
+  sees no difference in the history, and the thread ends resolved either
+  way.  The head the suggestions were read at is the one they are
+  written on: =expectedHeadOid= makes GitHub refuse rather than overwrite
+  a push made since.  Checking first gives GitHub's own messages, which
+  the API never sends since it knows nothing of suggestions.
+
 * Rendering
 ** D13 Full redraw, point restored by section ident
 - Status :: accepted (revisit if measurements say so)
