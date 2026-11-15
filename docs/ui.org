@@ -321,25 +321,29 @@ other failure of the core query (a timeout, a 502).
 (title, search filter or function, limit), as in approve-v2.
 
 #+begin_example
- Approve — pull requests                                  @bjornlarsson · 10:42 · g refresh
+ Approve — pull requests                                        @bjornlarsson · 10:42 · g refresh
 
  ▾ Needs my review (3)
-   ● #1234  Add retry logic to the GraphQL client      fuzzycode/approve  @alice  2h  ◐  ✗
-   ● #88    Fix crash when opening empty files          org/editor         @erin   1d  ✓  ·
-     #87    Draft: new theme                            org/editor         @frank  3d  ·  ◌
+   ● #1234   Add retry logic to the GraphQL client   fuzzycode/approve  @alice           2h  ◐  ✗
+   ● #88     Fix crash when opening empty files      org/editor         @erin            1d  ✓  ○
+   ◌ #87     New theme                               org/editor         @frank           3d  ·  ·
  ▾ My pull requests (2)
-     #1230  Normalize GraphQL connections              fuzzycode/approve  me     5h  ✓  ✓
-     #1229  Docs: architecture                          fuzzycode/approve  me     1d  ✗  💬
+   ● #1230   Normalize GraphQL connections           fuzzycode/approve  @bjornlarsson    5h  ✓  ✓
+   ● #1229   Docs: architecture                      fuzzycode/approve  @bjornlarsson    1d  ✗  ·
  ▸ Involved (5)
  ▸ Recently opened (10)
 #+end_example
 
-Columns: unread (●, when notifications are on), number, title (draft titles
-dim), repository, author, updated, checks (✓ ✗ ◐ ·), review decision (✓
-approved, ✗ changes requested, 💬 commented, · none, ◌ draft).  Widths are
-=defcustom=s; the title takes what's left.  =RET= opens the PR, =o= opens it
-in the browser, =G= refreshes only the section at point, =s= opens search
-with this section's filter.
+The rows are =approve-list.el='s, shared with the search ([[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]).
+Columns: state (● open, ◌ draft, ⮌ merged, ⊘ closed), number, title (a
+draft's dim), repository, author, updated (=5m 2h 3d 2w 4mo 1y=), checks of
+the last commit (✓ ✗ ◐ ·), GitHub's review decision (✓ approved, ✗
+changes requested, ○ review required, · none).  =approve-list-columns=
+says which columns, in what order and how wide; the title takes what's
+left up to =approve-page-width=.  Whether an unread mark joins them waits
+for notifications ([[file:decisions.org::*Open questions][Q6]]).  =RET= opens the PR, =o= opens it in the browser,
+=G= refreshes only the section at point, =s= opens search with this
+section's filter.
 
 * Search
 =M-x approve-search= prompts for a query (with history), or =s= in the
@@ -347,10 +351,11 @@ dashboard opens the filter transient.  Results use the dashboard's list
 renderer in one section.
 
 #+begin_example
- Search: is:pr is:open review-requested:@me repo:org/editor      12 results · s refine
+ Search: is:pr author:@erin repo:org/editor                                 12 results · s refine
 
-   ● #88    Fix crash when opening empty files          org/editor   @erin   1d  ✓  ·
-     #87    Draft: new theme                            org/editor   @frank  3d  ·  ◌
+   ● #88     Fix crash when opening empty files      org/editor         @erin            1d  ✓  ○
+   ⮌ #80     Remove legacy renderer                  org/editor         @erin            6d  ✓  ✓
+   ⊘ #79     Try a second renderer                   org/editor         @erin            2w  ✗  ✗
      …
    ▸ Load 20 more
 #+end_example
@@ -737,6 +742,8 @@ inherit:
 | =approve-heading=                                | =magit-section-heading=                      | Section headings          |
 | =approve-dim=                                    | =shadow=                                     | Hints, dates, done things |
 | =approve-user=                                   | =magit-log-author=                           | Logins                    |
+| =approve-number= / =approve-repository=          | =magit-dimmed= / =magit-branch-remote=       | Numbers, repos in lists   |
+| =approve-draft-title=                            | =approve-state-draft=                        | Draft titles in lists     |
 | =approve-label=                                  | (colour from GitHub, readable fg)            | Labels as boxes           |
 | =approve-state-open/closed/merged/draft=         | =success= / =error= / =magit-tag= / =shadow= | State badges              |
 | =approve-approved= / =approve-changes-requested= | =success= / =error=                          | Review marks              |

@@ -3,7 +3,8 @@
 ;;; Commentary:
 
 ;; Indentation drawn as text: `approve-render-prefix'.  Reactions,
-;; paths shortened to fit, and key hints that name the keys bound.
+;; paths shortened to fit, ages for lists, and key hints that name the
+;; keys bound.
 
 ;;; Code:
 
@@ -168,6 +169,20 @@
       (expect (string-width (approve-render-shorten-path
                              "internal/render/templates/{base.tmpl → page.tmpl}" width))
               :not :to-be-greater-than width))))
+
+(describe "approve-render-age"
+  (it "says how long ago in a few columns: minutes, hours, days, weeks, months, years"
+    (let ((approve-render-now (encode-time (list 0 0 12 4 10 2026 nil nil t))))
+      (expect (mapcar #'approve-render-age
+                      '("2026-10-04T11:59:30Z" "2026-10-04T11:55:00Z" "2026-10-04T10:00:00Z"
+                        "2026-10-01T12:00:00Z" "2026-09-20T12:00:00Z" "2025-10-20T12:00:00Z"
+                        "2024-10-01T12:00:00Z"))
+              :to-equal '("now" "5m" "2h" "3d" "2w" "11mo" "2y"))))
+
+  (it "says now for a time to come, and nothing without a time"
+    (let ((approve-render-now (encode-time (list 0 0 12 4 10 2026 nil nil t))))
+      (expect (approve-render-age "2026-10-04T12:05:00Z") :to-equal "now")
+      (expect (approve-render-age nil) :to-equal ""))))
 
 (describe "Key hints"
   (it "name the key that runs each command here, leaving out the unbound"

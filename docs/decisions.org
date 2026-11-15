@@ -280,6 +280,31 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   the reviewer has since withdrawn by approving blocks nothing, though
   GitHub keeps the old review's state.
 
+** D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision
+- Status :: accepted (2026-11-15, by the author)
+- Decision ::
+  - The dashboard and the search draw their pull requests with one
+    renderer, =approve-list.el=, a row per pull request, from GitHub's
+    search results as they come (=PullRequestSummaryFields=, no store).
+  - Each row starts with the pull request's state as an icon: open,
+    draft, merged or closed, in the state faces.  A draft's title is dim
+    too.
+  - =approve-list-columns= lists the columns, in order, each with its
+    width: state, number, title, repository, author, updated, checks,
+    review, or a function of the pull request.  A width of nil takes
+    what the others leave up to =approve-page-width= (the title's, by
+    default).
+  - The review column is GitHub's =reviewDecision= alone: ✓ approved,
+    ✗ changes requested, ○ review required, · none.  No "commented".
+- Why :: Search finds pull requests in every state, and GitHub's own
+  lists start each row with its state; the mockup's ◌ in the review
+  column marked drafts only.  A column list, like =approve-metadata-rows=
+  and =magit-repolist-columns=, lets a user drop the repository for lists
+  of one repository or add a column of their own, where width options
+  alone could not.  =reviewDecision= is what GitHub's list shows and is
+  set without branch protection too (checked on the scratch repository);
+  "commented" would need each reviewer's latest review in every row.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)

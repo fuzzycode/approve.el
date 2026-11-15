@@ -159,6 +159,16 @@ It follows the prompt in the header line."
   "Face of file paths in lists."
   :group 'approve-faces)
 
+(defface approve-number
+  '((t :inherit magit-dimmed))
+  "Face of the numbers of pull requests in lists, such as #123."
+  :group 'approve-faces)
+
+(defface approve-repository
+  '((t :inherit magit-branch-remote))
+  "Face of repositories in lists of pull requests, such as owner/name."
+  :group 'approve-faces)
+
 (defface approve-date
   '((t :inherit shadow))
   "Face of dates and relative times."
@@ -205,6 +215,11 @@ See `approve-label-face'."
 (defface approve-state-draft
   '((t :inherit shadow))
   "Face of the Draft state badge."
+  :group 'approve-faces)
+
+(defface approve-draft-title
+  '((t :inherit approve-state-draft))
+  "Face of the titles of draft pull requests in lists."
   :group 'approve-faces)
 
 (defface approve-approved

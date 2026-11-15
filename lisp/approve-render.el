@@ -149,6 +149,23 @@ FACE defaults to `approve-date'.  The text carries a thing of kind
                                (or face 'approve-date))
                  (list :kind 'date :value iso)))
 
+(defun approve-render-age (iso)
+  "Return how long ago ISO, an ISO 8601 time, was, in a few columns.
+That is \"now\" under a minute, then minutes, hours, days, weeks,
+months and years: \"5m\", \"2h\", \"3d\", \"2w\", \"11mo\", \"1y\", at most
+four columns, for lists.  A time to come is \"now\"; no time is \"\"."
+  (if-let* ((time (approve-render-parse-time iso)))
+      (let ((seconds (float-time (time-subtract (or approve-render-now (current-time))
+                                                time))))
+        (or (cl-loop for (unit . size) in '(("y" . 31536000) ("mo" . 2592000)
+                                            ("w" . 604800) ("d" . 86400)
+                                            ("h" . 3600) ("m" . 60))
+                     for n = (floor seconds size)
+                     when (>= n 1)
+                     return (format "%d%s" n unit))
+            "now"))
+    ""))
+
 ;;; Layout
 
 (defun approve-render-justify (left right &optional width)

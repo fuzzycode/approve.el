@@ -140,6 +140,9 @@ The region must start and end on diff lines of one file."
          ('date (list :value (plist-get thing :value)))
          ('load-diff (list :path (plist-get thing :path)
                            :url (approve-context-file-url (plist-get thing :path))))
+         ('pull-request (let-alist (plist-get thing :pr)
+                          (list :value (format "%s#%s" .repository.nameWithOwner .number)
+                                :url .url)))
          (_ (list :url (plist-get thing :url))))
        (list :thing thing)))))
 

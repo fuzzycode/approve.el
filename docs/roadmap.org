@@ -163,8 +163,11 @@ region to =c=.
 * Phase 3 — Find PRs
 Implements F01 in full.
 Mockups: dashboard, search, search filter transient.
-- [ ] =approve-list.el=: shared list rendering (port approve-v2's dashboard
-      formatting).
+- [X] =approve-list.el=: shared list rendering (port approve-v2's dashboard
+      formatting).  A row per pull request, a section whose context is the
+      pull request; its columns from =approve-list-columns=, a state icon
+      first, GitHub's review decision last ([[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]).  Rows come from
+      =approve-query-search= (=PullRequestSummaryFields=).
 - [ ] =approve-dashboard.el= with =approve-dashboard-sections= (filters as
       strings or functions), per-section refresh, "Recently opened".
 - [ ] =approve-search.el= and its filter transient; "Load more".

@@ -27,7 +27,8 @@ callbacks it was given.
  ├───────────────────────────────┴──────────────────────────────────────────┤
  │ Renderers (section inserters; pure: read the store, insert text)         │
  │  approve-sections.el · approve-diff.el · approve-thread.el               │
- │  approve-html.el · approve-faces.el · approve-icons.el · approve-eldoc.el│
+ │  approve-list.el · approve-html.el · approve-faces.el · approve-icons.el │
+ │  approve-eldoc.el                                                        │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Model                    approve-model.el · approve-session.el ·         │
  │                          approve-context.el                              │
@@ -396,6 +397,7 @@ then walks up the sections from point to the first one that means something.
 | branch, date, reactions    | =branch= =date= =reactions=     | eldoc)                                           |
 | Link in a comment          | =link=                          | =:value :url=                                    |
 | Commit author, no account  | =git-actor=                     | =:value= (=Name <email>=, D33)                   |
+| Row of a list of PRs       | =pull-request=                  | =:value= (=owner/repo#N=) =:url=                 |
 | Metadata row, pending      | =meta= =pending-review= =event= | =:row= / =:review-id= / =:id=                    |
 | review, timeline event     |                                 |                                                  |
 | Anything else              | =pr=                            |                                                  |

@@ -69,8 +69,9 @@ task only needs the files it touches.
   done ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): comments, replies, submit and discard need only the PR's
   id, and GitHub's silent or misleading answers are checked by Approve.
   Writes are tried on the scratch repository ([[file:development.org::*Scratch repository][development.org]]).
-- Next step: [[file:roadmap.org::*Phase 3 — Find PRs][Phase 3]] (find PRs), first the shared list of pull
-  requests (=approve-list.el=) that the dashboard and the search draw.
+- Next step: [[file:roadmap.org::*Phase 3 — Find PRs][Phase 3]] (find PRs).  Its shared list of pull requests
+  (=approve-list.el=, [[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]) and their search (=approve-query-search=) are
+  done; the dashboard that draws them comes next.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |
