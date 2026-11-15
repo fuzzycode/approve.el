@@ -1,0 +1,14 @@
+${include:fragments/pull-request-review-state.graphql}
+
+# F12: make the pull request a draft.  The answer is whether it is one, and
+# its review state, which the change may touch.
+mutation ConvertPullRequestToDraft($pullRequestId: ID!) {
+  convertPullRequestToDraft(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      __typename
+      id
+      isDraft
+      ...PullRequestReviewStateFields
+    }
+  }
+}

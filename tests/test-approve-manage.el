@@ -13,6 +13,7 @@
 (require 'buttercup)
 (require 'approve)
 (require 'approve-manage)
+(require 'approve-menus)
 (require 'approve-test-helpers "helpers")
 
 (defconst test-manage--pr "PR_kwDOPCDj7SnvM_RcFp"
@@ -129,9 +130,10 @@
                         (list :initial initial
                               :default (nth 1 more)
                               :candidates (all-completions "" table)
-                              :notes (let ((annotate (alist-get 'annotation-function
-                                                                (cdr (funcall table "" nil
-                                                                              'metadata)))))
+                              :notes (when-let* ((annotate
+                                                  (completion-metadata-get
+                                                   (completion-metadata "" table nil)
+                                                   'annotation-function)))
                                        (mapcar (lambda (candidate)
                                                  (cons candidate
                                                        (when-let* ((note (funcall annotate
@@ -367,14 +369,108 @@
       (test-manage--with-pr
         (test-manage--pick "v1.2")
         (call-interactively #'approve-set-milestone)
-        (expect test-manage--requests :to-be nil)))))
+        (expect test-manage--requests :to-be nil))))
+
+  (describe "D (approve-toggle-draft)"
+    (it "converts the pull request to a draft after asking, and back"
+      (test-manage--with-pr
+        (setq test-manage--answer
+              (lambda (request)
+                (let ((draft (string-match-p "convert" (plist-get request :name))))
+                  `((,(if draft 'convertPullRequestToDraft 'markPullRequestReadyForReview)
+                     (pullRequest (__typename . "PullRequest") (id . ,test-manage--pr)
+                                  (isDraft . ,(and draft t))))))))
+        (spy-on 'y-or-n-p :and-return-value nil)
+        (call-interactively #'approve-toggle-draft)
+        (expect 'y-or-n-p :to-have-been-called-with "Convert #202 to a draft? ")
+        (expect test-manage--requests :to-be nil)
+        (spy-on 'y-or-n-p :and-return-value t)
+        (call-interactively #'approve-toggle-draft)
+        (test-manage--wait)
+        (expect (test-manage--sent)
+                :to-equal `(("mutations/convert-pull-request-to-draft.graphql"
+                             ((pullRequestId . ,test-manage--pr)))))
+        (expect (substring-no-properties approve-pr--header-line) :to-match "Draft")
+        (call-interactively #'approve-toggle-draft)
+        (expect 'y-or-n-p :to-have-been-called-with "Mark #202 ready for review? ")
+        (test-manage--wait)
+        (expect (car (car (last (test-manage--sent))))
+                :to-equal "mutations/mark-pull-request-ready-for-review.graphql")
+        (expect (approve-pr-field 'isDraft) :to-be nil)))
+
+    (it "refuses a pull request that is not open"
+      (test-manage--with-pr
+        (approve-model-patch `((__typename . "PullRequest") (id . ,test-manage--pr)
+                               (state . "MERGED")))
+        (expect (call-interactively #'approve-toggle-draft)
+                :to-throw 'user-error '("Only an open pull request can be a draft")))))
+
+  (describe "w (approve-set-subscription)"
+    (it "offers the three ways to hear of it, the current one first chosen"
+      (test-manage--with-pr
+        (setq test-manage--answer
+              (lambda (_request)
+                `((updateSubscription
+                   (subscribable (__typename . "PullRequest") (id . ,test-manage--pr)
+                                 (viewerSubscription . "IGNORED"))))))
+        (test-manage--pick "Ignored")
+        (call-interactively #'approve-set-subscription)
+        (expect (plist-get test-manage--asked :default) :to-equal "Subscribed")
+        (expect (cdr (assoc "Subscribed" (plist-get test-manage--asked :notes)))
+                :to-equal "✓ all of its activity")
+        (test-manage--wait)
+        (expect (test-manage--sent)
+                :to-equal `(("mutations/update-subscription.graphql"
+                             ((state . "IGNORED") (subscribableId . ,test-manage--pr)))))
+        (expect (approve-pr-field 'viewerSubscription) :to-equal "IGNORED"))))
+
+  (describe "# (approve-toggle-lock)"
+    (it "locks the conversation with a reason, and unlocks it after asking"
+      (test-manage--with-pr
+        (setq test-manage--answer
+              (lambda (request)
+                (let ((lock (string-match-p "/lock" (plist-get request :name))))
+                  `((,(if lock 'lockLockable 'unlockLockable)
+                     (,(if lock 'lockedRecord 'unlockedRecord)
+                      (__typename . "PullRequest") (id . ,test-manage--pr)
+                      (locked . ,(and lock t))
+                      (activeLockReason . ,(and lock "TOO_HEATED"))))))))
+        (test-manage--pick "Too heated")
+        (call-interactively #'approve-toggle-lock)
+        (test-manage--wait)
+        (expect (test-manage--sent)
+                :to-equal `(("mutations/lock-lockable.graphql"
+                             ((lockReason . "TOO_HEATED") (lockableId . ,test-manage--pr)))))
+        (expect (approve-pr-field 'locked) :to-be t)
+        (expect (approve-menus--lock-description) :to-equal "Unlock conversation")
+        (spy-on 'y-or-n-p :and-return-value t)
+        (call-interactively #'approve-toggle-lock)
+        (test-manage--wait)
+        (expect (car (last (test-manage--sent)))
+                :to-equal `("mutations/unlock-lockable.graphql"
+                            ((lockableId . ,test-manage--pr))))
+        (expect (approve-pr-field 'locked) :to-be nil)))
+
+    (it "locks with no reason"
+      (test-manage--with-pr
+        (setq test-manage--answer
+              (lambda (_request)
+                `((lockLockable (lockedRecord (__typename . "PullRequest")
+                                              (id . ,test-manage--pr) (locked . t))))))
+        (test-manage--pick "No reason")
+        (call-interactively #'approve-toggle-lock)
+        (test-manage--wait)
+        (expect (cadr (car (test-manage--sent)))
+                :to-equal `((lockableId . ,test-manage--pr)))))))
 
 (describe "The metadata keys"
   (it "bind the commands in the PR buffer"
     (dolist (binding '(("t" . approve-edit-title) ("d" . approve-edit-description)
                        ("l" . approve-set-labels) ("a" . approve-set-assignees)
-                       ("A" . approve-request-reviewers) ("M" . approve-set-milestone)))
-      (expect (keymap-lookup approve-pr-mode-map (car binding)) :to-be (cdr binding)))))
+                       ("A" . approve-request-reviewers) ("M" . approve-set-milestone)
+                       ("D" . approve-toggle-draft) ("w" . approve-set-subscription)))
+      (expect (keymap-lookup approve-pr-mode-map (car binding)) :to-be (cdr binding)))
+    (expect (keymap-lookup approve-pr-mode-map "#") :to-be nil)))
 
 (provide 'test-approve-manage)
 

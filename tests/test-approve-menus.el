@@ -21,6 +21,9 @@
 (defconst test-menus--thread "PRRT_kwDO85-qIzFQYiTYBM"
   "A published, unresolved thread on line 15 of parser.go.")
 
+(defconst test-menus--dispatch-only '(approve-toggle-lock)
+  "The commands with a key in the dispatch menu alone, none in the buffer.")
+
 (defmacro test-menus--with-medium (&rest body)
   "Run BODY in a freshly loaded medium PR buffer."
   (declare (indent 0) (debug t))
@@ -94,7 +97,8 @@ The diff of `test-menus--path' is expanded first, for its threads."
     (dolist (suffix (test-menus--suffixes 'approve-dispatch))
       (let ((command (plist-get suffix :command)))
         (expect (commandp command) :to-be-truthy)
-        (expect (keymap-lookup approve-pr-mode-map (plist-get suffix :key)) :to-be command))))
+        (expect (keymap-lookup approve-pr-mode-map (plist-get suffix :key))
+                :to-be (unless (memq command test-menus--dispatch-only) command)))))
 
   (it "reaches every command a PR buffer binds, itself or through j and S"
     (let ((reachable (append '(approve-dispatch)
@@ -157,7 +161,7 @@ The diff of `test-menus--path' is expanded first, for its threads."
         (unwind-protect
             (with-current-buffer buffer
               (expect (test-menus--dimmed)
-                      :to-equal '("c" "s" "v" "S" "X" "r" "R" "e" "k" "C" "t" "d" "l" "a" "A" "M"))
+                      :to-equal '("c" "s" "v" "S" "X" "r" "R" "e" "k" "C" "t" "d" "l" "a" "A" "M" "D" "w" "#"))
               (expect (approve-action-why-not 'approve-comment)
                       :to-equal "Wait until the pull request has loaded"))
           (kill-buffer buffer)))))

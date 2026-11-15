@@ -51,6 +51,9 @@
 ;;   `approve-mutation-set-milestone'           F12  the milestone, or none
 ;;   `approve-mutation-set-title'               F08  the title
 ;;   `approve-mutation-set-description'         F08  the description
+;;   `approve-mutation-set-draft'               F12  a draft, or ready for review
+;;   `approve-mutation-set-subscription'        F12  how the viewer hears of it
+;;   `approve-mutation-set-locked'              lock or unlock the conversation
 ;;
 ;; Each one queues its mutation (`approve-api-mutate': one at a time,
 ;; decision D15) for the PR of the current buffer's store.  Once GitHub
@@ -721,6 +724,52 @@ ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
               (body . ,(or body "")))
             'updatePullRequest 'pullRequest "Saving the description")
            callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-draft (draft &key callback errorback)
+  "Make the PR a draft when DRAFT is non-nil, else ready for review.
+Once GitHub has, the store says whether it is a draft, its review
+state is GitHub's (marking it ready may ask code owners for
+reviews), and CALLBACK gets the PR's ref.  ERRORBACK gets the error
+otherwise.  (Flow F12.)"
+  (funcall (approve-mutation--pr-step
+            (if draft
+                "mutations/convert-pull-request-to-draft.graphql"
+              "mutations/mark-pull-request-ready-for-review.graphql")
+            `((pullRequestId . ,(approve-mutation--pull-request-id)))
+            (if draft 'convertPullRequestToDraft 'markPullRequestReadyForReview)
+            'pullRequest
+            (if draft "Converting to a draft" "Marking ready for review"))
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-subscription (state &key callback errorback)
+  "Make STATE how the viewer hears of the PR.
+STATE is \"SUBSCRIBED\" (all of it), \"UNSUBSCRIBED\" (when
+participating or mentioned) or \"IGNORED\" (never).  Once GitHub
+has it, the PR's `viewerSubscription' in the store is STATE and
+CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
+\(Flow F12.)"
+  (funcall (approve-mutation--pr-step
+            "mutations/update-subscription.graphql"
+            `((subscribableId . ,(approve-mutation--pull-request-id)) (state . ,state))
+            'updateSubscription 'subscribable "Changing the subscription")
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-locked (locked &key reason callback errorback)
+  "Lock the conversation of the PR when LOCKED is non-nil, else unlock it.
+REASON, when locking, is \"OFF_TOPIC\", \"TOO_HEATED\", \"RESOLVED\",
+\"SPAM\" or nil for none.  Once GitHub has, the store says whether
+it is locked and why, and CALLBACK gets the PR's ref.  ERRORBACK
+gets the error otherwise."
+  (let ((pr (approve-mutation--pull-request-id)))
+    (funcall (if locked
+                 (approve-mutation--pr-step
+                  "mutations/lock-lockable.graphql"
+                  `((lockableId . ,pr) (lockReason . ,reason))
+                  'lockLockable 'lockedRecord "Locking the conversation")
+               (approve-mutation--pr-step
+                "mutations/unlock-lockable.graphql" `((lockableId . ,pr))
+                'unlockLockable 'unlockedRecord "Unlocking the conversation"))
+             callback (or errorback #'approve-api-default-errorback))))
 
 (provide 'approve-mutations)
 

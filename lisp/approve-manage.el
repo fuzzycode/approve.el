@@ -38,6 +38,10 @@
 ;;   a   `approve-set-assignees'       who is assigned
 ;;   A   `approve-request-reviewers'   who is asked for a review
 ;;   M   `approve-set-milestone'       the milestone, or none
+;;   D   `approve-toggle-draft'        a draft, or ready for review
+;;   w   `approve-set-subscription'    how you hear of it
+;;   #   `approve-toggle-lock'         lock or unlock the conversation
+;;                                     (in the dispatch menu only)
 ;;
 ;; They work anywhere in the buffer.  The title and the description are
 ;; written in an input buffer (approve-input.el), starting from what
@@ -478,6 +482,134 @@ The repository's open milestones are offered, those due first first."
                (approve-mutation-set-milestone (alist-get 'id milestone)
                                                :callback callback :errorback errorback)))))))
 
+;;; Draft or ready (D)
+
+(defun approve-manage--draft-preflight ()
+  "Return the context where `approve-toggle-draft' runs.
+Signal a `user-error' when the pull request has not loaded, is not
+open, or the viewer may not change it."
+  (prog1 (approve-action-context)
+    (unless (equal (approve-pr-field 'state) "OPEN")
+      (user-error "%s" "Only an open pull request can be a draft"))
+    (unless (approve-pr-viewer-can 'update)
+      (user-error "%s" "You can't change this pull request"))))
+
+(put 'approve-toggle-draft 'approve-preflight #'approve-manage--draft-preflight)
+
+(defun approve-toggle-draft ()
+  "Mark the draft pull request ready for review, or make it a draft (flow F12).
+It asks first: marking it ready tells its reviewers."
+  (interactive)
+  (approve-manage--draft-preflight)
+  (let ((draft (approve-pr-field 'isDraft))
+        (number (approve-pr-field 'number)))
+    (when (y-or-n-p (if draft
+                        (format "Mark #%s ready for review? " number)
+                      (format "Convert #%s to a draft? " number)))
+      (approve-action-run
+       :what (if draft "mark it ready for review" "convert it to a draft")
+       :send (lambda (_text callback errorback)
+               (approve-mutation-set-draft (not draft)
+                                           :callback callback :errorback errorback))
+       :done (lambda (_pr)
+               (message "Approve: #%s is %s" number
+                        (if draft "ready for review" "a draft")))))))
+
+;;; Subscription (w)
+
+(defun approve-manage--subscription-preflight ()
+  "Return the context where `approve-set-subscription' runs.
+Signal a `user-error' when the pull request has not loaded, or the
+viewer may not subscribe to it."
+  (prog1 (approve-action-context)
+    (unless (approve-pr-viewer-can 'subscribe)
+      (user-error "%s" "You can't subscribe to this pull request"))))
+
+(put 'approve-set-subscription 'approve-preflight #'approve-manage--subscription-preflight)
+
+(defconst approve-manage--subscriptions
+  '(("SUBSCRIBED" "Subscribed" "all of its activity")
+    ("UNSUBSCRIBED" "Participating and @mentions" "when you take part or are mentioned")
+    ("IGNORED" "Ignored" "never"))
+  "How one can hear of a pull request: (STATE NAME WHEN).")
+
+(defun approve-set-subscription ()
+  "Choose how you hear of the pull request (flow F12).
+Subscribed: all of its activity; participating and @mentions: when
+you take part or are mentioned; ignored: never.  GitHub wants the
+token to have the notifications scope for it."
+  (interactive)
+  (approve-manage--subscription-preflight)
+  (let* ((current (approve-pr-field 'viewerSubscription))
+         (name (nth 1 (assoc current approve-manage--subscriptions)))
+         (choice (completing-read
+                  (format-prompt "Notifications" name)
+                  (approve-manage--table
+                   (mapcar #'cadr approve-manage--subscriptions)
+                   (mapcar (lambda (entry)
+                             (cons (nth 1 entry)
+                                   (concat (approve-manage--current-mark
+                                            (equal (car entry) current))
+                                           " " (approve-manage--note (nth 2 entry)))))
+                           approve-manage--subscriptions)
+                   'approve-subscription)
+                  nil t nil nil name))
+         (state (car (seq-find (lambda (entry) (equal (nth 1 entry) choice))
+                               approve-manage--subscriptions))))
+    (if (or (null state) (equal state current))
+        (approve-manage--unchanged "the subscription")
+      (approve-action-run
+       :what "change the subscription"
+       :send (lambda (_text callback errorback)
+               (approve-mutation-set-subscription state
+                                                  :callback callback :errorback errorback))
+       :done (lambda (_pr)
+               (message "Approve: notifications of #%s: %s" (approve-pr-field 'number)
+                        (downcase choice)))))))
+
+;;; Lock (#, in the dispatch menu)
+
+(defun approve-manage--lock-preflight ()
+  "Return the context where `approve-toggle-lock' runs.
+Signal a `user-error' when the pull request has not loaded, or the
+viewer may not change it.  GitHub says no more of who may lock it;
+it refuses those who may not."
+  (prog1 (approve-action-context)
+    (unless (approve-pr-viewer-can 'update)
+      (user-error "%s" "You can't lock this conversation"))))
+
+(put 'approve-toggle-lock 'approve-preflight #'approve-manage--lock-preflight)
+
+(defconst approve-manage--lock-reasons
+  '(("No reason") ("Off topic" . "OFF_TOPIC") ("Too heated" . "TOO_HEATED")
+    ("Resolved" . "RESOLVED") ("Spam" . "SPAM"))
+  "The reasons one can give for locking a conversation: (NAME . REASON).")
+
+(defun approve-toggle-lock ()
+  "Lock the conversation of the pull request, or unlock it.
+Locking asks for a reason, which may be none; once it is locked,
+only collaborators can comment.  Unlocking asks first."
+  (interactive)
+  (approve-manage--lock-preflight)
+  (let ((locked (approve-pr-field 'locked))
+        (number (approve-pr-field 'number)))
+    (when (or (not locked)
+              (y-or-n-p (format "Unlock the conversation of #%s? " number)))
+      (let ((reason (unless locked
+                      (cdr (assoc (completing-read "Lock the conversation, because: "
+                                                   (mapcar #'car approve-manage--lock-reasons)
+                                                   nil t nil nil "No reason")
+                                  approve-manage--lock-reasons)))))
+        (approve-action-run
+         :what (if locked "unlock the conversation" "lock the conversation")
+         :marks '((section approve-conversation-section nil))
+         :send (lambda (_text callback errorback)
+                 (approve-mutation-set-locked (not locked) :reason reason
+                                              :callback callback :errorback errorback))
+         :done (lambda (_pr)
+                 (message "Approve: the conversation of #%s is %s" number
+                          (if locked "unlocked" "locked"))))))))
+
 ;;; Keys
 
 (keymap-set approve-pr-mode-map "t" #'approve-edit-title)
@@ -486,6 +618,8 @@ The repository's open milestones are offered, those due first first."
 (keymap-set approve-pr-mode-map "a" #'approve-set-assignees)
 (keymap-set approve-pr-mode-map "A" #'approve-request-reviewers)
 (keymap-set approve-pr-mode-map "M" #'approve-set-milestone)
+(keymap-set approve-pr-mode-map "D" #'approve-toggle-draft)
+(keymap-set approve-pr-mode-map "w" #'approve-set-subscription)
 
 (provide 'approve-manage)
 

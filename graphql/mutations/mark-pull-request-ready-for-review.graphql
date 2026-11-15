@@ -1,0 +1,14 @@
+${include:fragments/pull-request-review-state.graphql}
+
+# F12: mark a draft ready for review.  The answer is whether it is a draft,
+# and its review state: GitHub may ask code owners for reviews now.
+mutation MarkPullRequestReadyForReview($pullRequestId: ID!) {
+  markPullRequestReadyForReview(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      __typename
+      id
+      isDraft
+      ...PullRequestReviewStateFields
+    }
+  }
+}

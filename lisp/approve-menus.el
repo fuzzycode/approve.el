@@ -42,7 +42,9 @@
 ;; The dispatch lists the commands that exist, no more: a new command
 ;; joins it, and any other menu it fits, in the change that adds it.
 ;; Every command bound in a PR buffer, or in the dashboard, is
-;; reachable from its dispatch.
+;; reachable from its dispatch, with the key it has there; a few that
+;; are seldom used have a key in the dispatch alone (# locks the
+;; conversation).
 ;;
 ;; Suffixes that do not apply are shown dimmed, so a menu never
 ;; changes shape.  A command that changes the PR says itself whether
@@ -157,6 +159,12 @@ review, a verdict adds a review and submits it at once."
       "Unfold all threads"
     "Fold all threads"))
 
+(defun approve-menus--lock-description ()
+  "Return the description of `approve-toggle-lock': what it will do."
+  (if (and (approve-model-root-ref) (approve-pr-field 'locked))
+      "Unlock conversation"
+    "Lock conversation"))
+
 ;;;###autoload (autoload 'approve-dispatch "approve-menus" nil t)
 (transient-define-prefix approve-dispatch ()
   "Show the commands of the pull request buffer (decision D06).
@@ -196,7 +204,13 @@ Those that can't run at point, or that you may not use, are dimmed."
     ("A" "Request reviewers" approve-request-reviewers
      :inapt-if (lambda () (approve-action-why-not 'approve-request-reviewers)))
     ("M" "Milestone" approve-set-milestone
-     :inapt-if (lambda () (approve-action-why-not 'approve-set-milestone)))]
+     :inapt-if (lambda () (approve-action-why-not 'approve-set-milestone)))
+    ("D" "Draft / ready" approve-toggle-draft
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-draft)))
+    ("w" "Subscription" approve-set-subscription
+     :inapt-if (lambda () (approve-action-why-not 'approve-set-subscription)))
+    ("#" approve-toggle-lock :description approve-menus--lock-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-lock)))]
    ["Buffer"
     ("g" "Refresh" approve-pr-refresh)
     ("RET" "Visit at point" approve-visit)

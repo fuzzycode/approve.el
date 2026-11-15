@@ -104,7 +104,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–5 |
 |                            | delete, conversation comment; later react, merge                                |       |
 | =approve-manage.el=        | Commands that manage the PR (F08, F12): title, description, labels, assignees,  |     4 |
-|                            | reviewers, milestone, and their pickers over the repository's metadata          |       |
+|                            | reviewers, milestone (pickers over the repository's metadata), draft or ready,  |       |
+|                            | subscription, lock                                                              |       |
 | =approve-menus.el=         | Transients: jump (1), submit and dispatch (2); merge, metadata, range           |   1–5 |
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
 |                            | loaded)                                                                         |       |
@@ -264,7 +265,7 @@ schema on 2026-11-08.
 | Update branch                   | =updatePullRequestBranch=                                                   |
 | Close / reopen                  | =closePullRequest= / =reopenPullRequest=                                    |
 | Lock / unlock                   | =lockLockable= / =unlockLockable=                                           |
-| Subscription                    | =updateSubscription=                                                        |
+| Subscription                    | =updateSubscription=: the token needs the =notifications= scope             |
 | Apply a suggestion (Phase 5)    | =createCommitOnBranch= (file additions with full contents; SP7)             |
 
 * Loading a PR

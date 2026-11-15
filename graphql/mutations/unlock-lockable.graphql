@@ -1,0 +1,13 @@
+# Unlock the conversation.
+mutation UnlockLockable($lockableId: ID!) {
+  unlockLockable(input: {lockableId: $lockableId}) {
+    unlockedRecord {
+      __typename
+      ... on Node {
+        id
+      }
+      locked
+      activeLockReason
+    }
+  }
+}

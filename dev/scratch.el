@@ -185,7 +185,8 @@ An alist of: the files' viewed states; the threads, each with whether
 it is resolved and its comments with their states; the pending review
 and its comments; the reviews and comments of the conversation, in
 order; the review decision; the labels, assignees, milestone, review
-requests, title and description."
+requests, title and description; whether it is a draft, how the viewer
+hears of it, and whether its conversation is locked."
   `((viewed . ,(mapcar (lambda (file)
                          (cons (alist-get 'path file) (alist-get 'viewerViewedState file)))
                        (approve-pr-files)))
@@ -214,6 +215,9 @@ requests, title and description."
     (milestone . ,(alist-get 'title (approve-pr-field 'milestone)))
     (title . ,(approve-pr-field 'title))
     (body . ,(approve-pr-field 'body))
+    (draft . ,(approve-pr-field 'isDraft))
+    (subscription . ,(approve-pr-field 'viewerSubscription))
+    (locked . ,(list (approve-pr-field 'locked) (approve-pr-field 'activeLockReason)))
     (requested . ,(mapcar (lambda (request)
                             (let-alist (alist-get 'requestedReviewer request)
                               (or .login .combinedSlug)))
@@ -477,8 +481,9 @@ looked at again twice, a few seconds apart, as for the store."
 
 (defun approve-scratch--metadata-steps (store)
   "Run the checks of the PR's metadata in STORE, a buffer holding the scratch PR.
-Each change is undone after it: #8 keeps its title and description,
-and no labels, assignees, milestone or review requests."
+Each change is undone after it: #8 keeps its title, description and
+subscription, stays ready for review and unlocked, and has no labels,
+assignees, milestone or review requests."
   (with-current-buffer store
     ;; F08: the title and the description, changed and put back.
     (let ((title (approve-pr-field 'title))
@@ -538,7 +543,35 @@ and no labels, assignees, milestone or review requests."
       (approve-scratch--compare "the author asked" store)
       (approve-scratch--ok "ask no one for a review"
                            (approve-scratch--run #'approve-mutation-request-reviews))
-      (approve-scratch--compare "no review request" store))))
+      (approve-scratch--compare "no review request" store))
+    ;; F12: a draft, and ready for review again.
+    (approve-scratch--ok "convert to a draft"
+                         (approve-scratch--run #'approve-mutation-set-draft t))
+    (approve-scratch--compare "a draft" store)
+    (approve-scratch--ok "mark ready for review"
+                         (approve-scratch--run #'approve-mutation-set-draft nil))
+    (approve-scratch--compare "ready for review" store)
+    ;; F12: the subscription, ignored and back.  It needs the token's
+    ;; notifications scope, which gh's token may lack: then it is skipped.
+    (let* ((subscription (approve-pr-field 'viewerSubscription))
+           (outcome (approve-scratch--run #'approve-mutation-set-subscription "IGNORED")))
+      (if (and (not (car outcome))
+               (string-match-p "notifications" (approve-api-error-message (cdr outcome))))
+          (princ "SKIP the subscription: the token lacks the notifications scope\n")
+        (approve-scratch--ok "ignore the pull request" outcome)
+        (approve-scratch--compare "ignored" store)
+        (approve-scratch--ok "subscribe again"
+                             (approve-scratch--run #'approve-mutation-set-subscription
+                                                   subscription))
+        (approve-scratch--compare "the subscription back" store)))
+    ;; Lock the conversation with a reason, then unlock it.
+    (approve-scratch--ok "lock the conversation"
+                         (approve-scratch--run #'approve-mutation-set-locked t
+                                               :reason "RESOLVED"))
+    (approve-scratch--compare "locked" store)
+    (approve-scratch--ok "unlock it"
+                         (approve-scratch--run #'approve-mutation-set-locked nil))
+    (approve-scratch--compare "unlocked" store)))
 
 (defconst approve-scratch-step-groups
   '((review . approve-scratch--review-steps)

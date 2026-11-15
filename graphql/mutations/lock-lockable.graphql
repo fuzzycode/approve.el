@@ -1,0 +1,14 @@
+# Lock the conversation, with a reason or none (OFF_TOPIC, TOO_HEATED,
+# RESOLVED, SPAM): only collaborators can comment then.
+mutation LockLockable($lockableId: ID!, $lockReason: LockReason) {
+  lockLockable(input: {lockableId: $lockableId, lockReason: $lockReason}) {
+    lockedRecord {
+      __typename
+      ... on Node {
+        id
+      }
+      locked
+      activeLockReason
+    }
+  }
+}

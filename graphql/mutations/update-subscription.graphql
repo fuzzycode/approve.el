@@ -1,0 +1,11 @@
+# F12: how the viewer hears of the pull request: SUBSCRIBED (all of it),
+# UNSUBSCRIBED (when participating or mentioned) or IGNORED (never).
+mutation UpdateSubscription($subscribableId: ID!, $state: SubscriptionState!) {
+  updateSubscription(input: {subscribableId: $subscribableId, state: $state}) {
+    subscribable {
+      __typename
+      id
+      viewerSubscription
+    }
+  }
+}
