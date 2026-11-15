@@ -238,7 +238,7 @@ error, also when the file is binary or too large for GitHub to send."
 (defun approve-query--unified-diff (old new)
   "Return the unified diff from text OLD to text NEW, from its first hunk.
 It is computed by the `diff' program on temporary files (decision
-D03 allows a local diff of fetched blobs)."
+D36 allows a local diff of fetched blobs)."
   (let ((old-file (make-temp-file "approve-old"))
         (new-file (make-temp-file "approve-new")))
     (unwind-protect

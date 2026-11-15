@@ -25,7 +25,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   killed.  code-review kept a local database that had to be synced.
 
 ** D03 API-only, never a local clone
-- Status :: accepted (2026-11-08)
+- Status :: superseded by [[*D36 No clone needed; a local clone adds to it][D36]] (2026-11-15)
 - Decision :: Approve never needs a local clone or worktree.  Diffs come from
   the REST API, and file contents come from GraphQL blobs (or REST contents).
   A local =diff= program may be used on fetched blobs, but never git on a
@@ -33,6 +33,37 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Why :: Works for any PR from anywhere, with no setup and no repo state to
   manage.  The cost is no LSP or xref in review buffers; the file view
   ([[file:flows.org::*F15 View the whole file][F15]]) gives syntax highlighting through the file's major mode.
+
+** D36 No clone needed; a local clone adds to it
+- Status :: accepted (2026-11-15, by the author; replaces [[*D03 API-only, never a local clone][D03]])
+- Decision ::
+  - Everything Approve does works through the API alone, from anywhere,
+    as in D03: diffs come from the REST API and file contents from GraphQL
+    blobs (or REST contents).  A local =diff= program may be used on
+    fetched blobs.  A feature that works without a clone never comes to
+    need one.
+  - When the user has the PR's repository checked out, Approve may use
+    the clone for more: what the API can't give, such as the PR's threads
+    in the buffers of the files the user edits, or a diff line opened in
+    the local file, with LSP and xref.  Without a clone these extras are
+    simply absent, never an error, and nothing else changes.
+  - The clone holds no review state ([[*D02 Durable state lives on GitHub][D02]]).  Approve reads it (files,
+    branch, remotes, git through Magit) and changes it only by a command
+    the user gives for that.
+  - GitHub's lines are those of the PR's commits; a clone may differ
+    (commits not pushed, edits not saved).  An extra that shows GitHub's
+    threads in local files maps their lines, and comments only go on
+    lines GitHub has ([[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).
+  - The code that touches a clone lives in its own modules, which the
+    core never requires.  How a PR finds its clone (the current project, a
+    remote that matches the repository, an option) is decided with the
+    first extra that needs it.
+- Why :: Reviewing a PR of a project that isn't on the machine must keep
+  working with no setup (D03's reason).  But the projects the user works
+  on are checked out anyway, and the clone gives what the API can't: the
+  user's own buffers, LSP and xref, and review feedback where the code is
+  edited, as CLion and VS Code show it.  Keeping the extras apart keeps
+  the core testable without git, and every feature usable from anywhere.
 
 * UI
 ** D04 Buffers are magit-section trees built from section hooks

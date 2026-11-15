@@ -21,8 +21,9 @@ for each kind of task.
   conversation. Ask when the docs don't answer a design question.
 - Layers only call downwards (docs/architecture.org, "Layers"). Renderers
   never call the network; nothing but `approve-api.el` calls ghub.
-- Durable state lives on GitHub, including pending reviews (D02). API-only:
-  never depend on a local clone (D03).
+- Durable state lives on GitHub, including pending reviews (D02). Never
+  require a local clone: everything works through the API, and a clone only
+  adds extras, in their own modules (D36).
 - Faces only in `approve-faces.el`, inheriting from magit or built-in faces;
   icons only through `approve-icon`.
 - Evil is optional: never `require` it; bindings go in `approve-evil.el`.

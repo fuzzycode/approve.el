@@ -186,7 +186,7 @@ Implements F13, F16 in full, and applying suggestions (a flow written
 with SP7's answers).
 - [ ] Apply suggestions (SP7 first): a command on a suggestion, and a batch
       of them in one commit, as GitHub's "Commit suggestion" and "Add
-      suggestion to batch"; its key is chosen then.  API-only (D03): the files at the head, the
+      suggestion to batch"; its key is chosen then.  With no clone (D36): the files at the head, the
       suggested lines spliced in, =createCommitOnBranch= with
       =expectedHeadOid=, the threads resolved, the PR loaded again.  Dimmed
       without =viewerCanApplySuggestion=.  Moved here from Ideas
@@ -257,8 +257,18 @@ Not planned yet.  Each needs a decision before it enters a phase.
   in the section headings ("12 of 30 files · filter: code owner"), so a big
   PR can be read a slice at a time.  Examples: files where I am a code owner
   (CODEOWNERS fetched through the API and matched against me and my teams,
-  D03), by extension or glob (=*.cpp=/=*.h=), files with threads (or
+  D36), by extension or glob (=*.cpp=/=*.h=), files with threads (or
   unresolved ones), unviewed or changed since viewed, added/deleted, large,
   generated.  Navigation (=]u=, =]t=) and the counts follow the filter.
   Open questions: whether filters combine, and whether they are remembered
   per repository.
+- Review feedback in the buffers the user edits, as CLion and VS Code show
+  it (an extra for a local clone, [[file:decisions.org::*D36 No clone needed; a local clone adds to it][D36]]): a minor mode in the buffer of a
+  file whose branch has a PR shows the PR's threads under their lines
+  (overlays, as in the file view) and replies, resolves and comments from
+  there.  The PR is found from the branch (=headRefName=); GitHub's lines
+  are mapped to the buffer by a =diff= of the head blob and the buffer's
+  text, and threads on lines edited locally are marked so.  Builds on the
+  file view (Phase 6) and the shared store (Phase 7).  Open questions:
+  its keys (a prefix, never shadowing evil's motions), whether it turns
+  itself on, and how a PR finds its clone.

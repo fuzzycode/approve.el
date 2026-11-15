@@ -53,6 +53,9 @@ Rules:
   (=approve-api=), so the store they patch is that buffer's.
 - Actions are the only place where context, input, network and redraw meet.
 - Nothing outside =approve-api.el= calls ghub.
+- Only the modules for a local clone touch one (its files, branch, git), and
+  the core never requires them: every other module works without a clone
+  (D36).
 
 * Modules
 Planned files.  Split a file when it passes ~600 lines or holds two concerns.

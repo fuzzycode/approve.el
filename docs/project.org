@@ -26,6 +26,8 @@ We are OK adding dependencies if they make the code easier to read or add new fu
 - AI will do most of the coding, we optimize for that but understand that humans will read and modify the code too.
 - Important state is on Github and not local. When adding comments etc. this is pushed to github so that switching between
   the two is as seamless as possible.
+- No local clone is needed: any PR can be reviewed from anywhere.  For the projects the user has checked out,
+  Approve can use the clone for a richer experience (D36).
 - We provide our own faces for all the things we use, but we try to derive them either from builtin or dependency faces
   so that any themes will have a good support out of the box.
 - evil support
