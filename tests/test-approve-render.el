@@ -211,6 +211,16 @@
                  (approve-render-key-hints '((approve-test-render--reply "reply"))))
                 :to-equal "r reply")
         (expect (substring-no-properties (approve-render-retry-hint))
-                :to-equal "g to retry")))))
+                :to-equal "g to retry"))))
+
+  (it "say how to retry with the command that loads again"
+    (with-temp-buffer
+      (use-local-map (define-keymap "G" #'approve-test-render--reply))
+      (expect (substring-no-properties (approve-render-retry-hint 'approve-test-render--reply))
+              :to-equal "G to retry")
+      (expect (substring-no-properties
+               (approve-render-failure "the list" '(approve-api-http-error "Bad Gateway")
+                                       'approve-test-render--reply))
+              :to-match "Could not load the list: Bad Gateway · G to retry"))))
 
 ;;; test-approve-render.el ends here

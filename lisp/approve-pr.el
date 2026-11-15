@@ -39,6 +39,8 @@
 ;; - `approve-pr-redraw' erases the buffer and runs
 ;;   `approve-pr-sections-hook' (decision D13).  Point stays on the
 ;;   same section, line and column; collapsed sections stay collapsed.
+;;   `approve-redraw-sections' does that part, for every Approve
+;;   buffer of sections (the dashboard too).
 ;; - The header line sums up the PR and what is still loading.
 ;; - `g' (`approve-pr-refresh') runs the plan again, keeping the text
 ;;   on screen until data arrives; each list is replaced whole.
@@ -444,12 +446,13 @@ the markers of earlier redraws."
            (set-marker marker nil))))
      magit-root-section)))
 
-(defun approve-pr-redraw ()
-  "Draw the current PR buffer again from its store.
-The buffer is erased and `approve-pr-sections-hook' is run.  Point
-stays on the same section, line and column, in each window showing
-the buffer, and collapsed sections stay collapsed (decision D13)."
-  (approve-pr--cancel-redraw)
+(defun approve-redraw-sections (insert)
+  "Erase the current buffer and draw its sections again with INSERT.
+INSERT is called with no arguments, at point, inside the root
+section (`approve-root-section').  Point stays on the same section,
+line and column, in each window showing the buffer, and collapsed
+sections stay collapsed (decision D13).  Every Approve buffer of
+sections redraws this way: the PR buffer and the dashboard."
   (let* ((windows (get-buffer-window-list (current-buffer) nil t))
          (positions (cons (approve-pr--position nil)
                           (mapcar #'approve-pr--position windows)))
@@ -458,9 +461,7 @@ the buffer, and collapsed sections stay collapsed (decision D13)."
     (erase-buffer)
     (save-excursion
       (magit-insert-section (approve-root-section)
-        (if-let* ((fatal (approve-session-get :fatal)))
-            (approve-pr--insert-fatal fatal)
-          (magit-run-section-hook 'approve-pr-sections-hook)))
+        (funcall insert))
       ;; Inserting only records which sections are collapsed; this hides
       ;; their bodies, as `magit-refresh-buffer' does.
       (magit-section-show magit-root-section))
@@ -475,36 +476,42 @@ the buffer, and collapsed sections stay collapsed (decision D13)."
                               (goto-char point)
                               (vertical-motion (- (max 0 (1- rows))) window)
                               (point))
-                            t)))))
+                            t))))))
+
+(defun approve-pr-redraw ()
+  "Draw the current PR buffer again from its store.
+The buffer is erased and `approve-pr-sections-hook' is run.  Point
+stays on the same section, line and column, in each window showing
+the buffer, and collapsed sections stay collapsed (decision D13)."
+  (approve-pr--cancel-redraw)
+  (approve-redraw-sections
+   (lambda ()
+     (if-let* ((fatal (approve-session-get :fatal)))
+         (approve-pr--insert-fatal fatal)
+       (magit-run-section-hook 'approve-pr-sections-hook))))
   (approve-pr-update-header-line)
   (approve-pr--fetch-images)
   (run-hooks 'approve-pr-redraw-hook))
+
+(defun approve-pr-token-hint ()
+  "Return what to check when GitHub gets no usable token."
+  (format "Approve asks ghub for the token of `%s' (`approve-api-auth')."
+          approve-api-auth))
 
 (defun approve-pr--insert-fatal (err)
   "Insert ERR as the error of the whole buffer: what failed, why, what to do.
 See `approve-pr--note-fatal'."
   (insert (approve-face (approve-pr--name) 'approve-title) "\n\n")
-  (insert (approve-icon 'error 'approve-error) " "
-          (approve-face (pcase (car-safe err)
-                          ('approve-api-not-found
-                           "Pull request not found, or the token has no access to it.")
-                          ('approve-api-unauthorized "Could not use the GitHub token.")
-                          (_ "Could not load the pull request."))
-                        'approve-error)
-          "\n")
-  (let ((start (point))
-        (hint (pcase (car-safe err)
-                ('approve-api-not-found
-                 (format "Check the URL, and the token ghub finds for `%s'."
-                         approve-api-auth))
-                ('approve-api-unauthorized
-                 (format "Approve asks ghub for the token of `%s' (`approve-api-auth')."
-                         approve-api-auth)))))
-    (insert (approve-face (approve-api-error-message err) 'approve-dim) "\n\n")
-    (when hint
-      (insert (approve-face hint 'approve-dim) "\n"))
-    (insert (approve-render-retry-hint) "\n")
-    (approve-render-prefix start (point) "  ")))
+  (approve-render-insert-fatal
+   (pcase (car-safe err)
+     ('approve-api-not-found "Pull request not found, or the token has no access to it.")
+     ('approve-api-unauthorized "Could not use the GitHub token.")
+     (_ "Could not load the pull request."))
+   (approve-api-error-message err)
+   (pcase (car-safe err)
+     ('approve-api-not-found
+      (format "Check the URL, and the token ghub finds for `%s'." approve-api-auth))
+     ('approve-api-unauthorized (approve-pr-token-hint)))))
 
 ;;; Header line
 

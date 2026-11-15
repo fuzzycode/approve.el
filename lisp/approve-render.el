@@ -316,12 +316,15 @@ Example:
   (when approve-show-hints
     (approve-render-key-hints hints)))
 
-(defun approve-render-retry-hint ()
+(defun approve-render-retry-hint (&optional command)
   "Return the hint that says how to retry what failed to load.
-It shows even when `approve-show-hints' is nil: it is the way out."
-  (or (approve-render-key-hints '((approve-pr-refresh "to retry")))
-      (approve-face (substitute-command-keys "\\[approve-pr-refresh] to retry")
-                    'approve-hint)))
+COMMAND is the command that loads it again, `approve-pr-refresh' by
+default.  The hint shows even when `approve-show-hints' is nil: it is
+the way out."
+  (let ((command (or command 'approve-pr-refresh)))
+    (or (approve-render-key-hints `((,command "to retry")))
+        (approve-face (substitute-command-keys (format "\\[%s] to retry" command))
+                      'approve-hint))))
 
 ;;; States
 
@@ -347,10 +350,10 @@ badges, as GitHub does."
                         'approve-loading)
           "\n"))
 
-(defun approve-render-failure (what err)
+(defun approve-render-failure (what err &optional command)
   "Return a line saying WHAT could not be loaded because of ERR.
 ERR is an error from approve-api; its message is shown, with how to
-retry."
+retry: COMMAND, `approve-pr-refresh' by default."
   (concat (approve-icon 'error 'approve-error) " "
           (approve-face (format "Could not load %s: %s" what
                                 (if (and (consp err) (stringp (cadr err)))
@@ -358,12 +361,27 @@ retry."
                                   (format "%s" err)))
                         'approve-error)
           (approve-face " · " 'approve-dim)
-          (approve-render-retry-hint)
+          (approve-render-retry-hint command)
           "\n"))
 
 (defun approve-render-empty (text)
   "Return TEXT as a placeholder line, such as \"No description provided.\"."
   (concat (approve-face text 'approve-empty) "\n"))
+
+(defun approve-render-insert-fatal (headline message &optional hint command)
+  "Insert the error of a whole buffer, which leaves nothing else to show.
+HEADLINE says what failed, MESSAGE is the error's text, and HINT, if
+non-nil, what to check; then how to retry with COMMAND,
+`approve-pr-refresh' by default.  The lines under HEADLINE are
+indented."
+  (insert (approve-icon 'error 'approve-error) " " (approve-face headline 'approve-error)
+          "\n")
+  (let ((start (point)))
+    (insert (approve-face message 'approve-dim) "\n\n")
+    (when hint
+      (insert (approve-face hint 'approve-dim) "\n"))
+    (insert (approve-render-retry-hint command) "\n")
+    (approve-render-prefix start (point) "  ")))
 
 ;;; Reactions
 
