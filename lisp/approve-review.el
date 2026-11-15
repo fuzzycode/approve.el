@@ -261,13 +261,20 @@ from it."
 
 ;;; Discarding
 
+(defun approve-review--discard-preflight ()
+  "Return the pending review `approve-discard-review' discards.
+Signal a `user-error' when there is none."
+  (approve-action-context)
+  (or (approve-pr-pending-review)
+      (user-error "You have no pending review")))
+
+(put 'approve-discard-review 'approve-preflight #'approve-review--discard-preflight)
+
 (defun approve-discard-review ()
   "Discard your pending review, with its comments (flow F09).
 GitHub deletes it; this asks first."
   (interactive)
-  (approve-action-context)
-  (let* ((review (or (approve-pr-pending-review)
-                     (user-error "You have no pending review")))
+  (let* ((review (approve-review--discard-preflight))
          (id (alist-get 'id review)))
     (when (yes-or-no-p (format "Discard your pending review (%s)? " (approve-review-summary)))
       (approve-action-run

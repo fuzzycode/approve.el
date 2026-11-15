@@ -36,14 +36,19 @@
 ;;
 ;; A command supplies only its own parts:
 ;;
-;;   (defun approve-resolve-thread ()
+;;   (defun approve-resolve-preflight ()
+;;     (let ((context (approve-action-context '(thread) "Put point on a thread")))
+;;       (unless (plist-get context :can-resolve)
+;;         (user-error "%s" "You can't resolve this thread"))
+;;       (plist-get context :thread-id)))
+;;
+;;   (put 'approve-resolve 'approve-preflight #'approve-resolve-preflight)
+;;
+;;   (defun approve-resolve ()
 ;;     (interactive)
-;;     (let* ((context (approve-action-context '(thread) "Put point on a thread"))
-;;            (id (plist-get context :thread-id)))
+;;     (let ((id (approve-resolve-preflight)))
 ;;       (approve-action-run
 ;;        :what "resolve the thread"
-;;        :why-not (unless (plist-get context :can-resolve)
-;;                   "You can't resolve this thread")
 ;;        :marks `((section approve-thread-section ,id))
 ;;        :send (lambda (_text callback errorback)
 ;;                (approve-mutation-resolve-thread
@@ -51,7 +56,13 @@
 ;;
 ;; - `approve-action-context' is the context at point when the command
 ;;   applies to it, else a `user-error' saying what it needs.
-;; - `approve-action-run' says why not when the viewer may not act,
+;; - A command's preflight finds what it would act on, or signals a
+;;   `user-error' saying why it can't (nothing it applies to at point,
+;;   no `viewerCan…'), and changes nothing.  The command calls it
+;;   first; its `approve-preflight' property names it, so the menus
+;;   dim what can't run here (`approve-action-why-not', decision D06).
+;; - `approve-action-run' says why not when :why-not says the viewer
+;;   may not act (a reason found only once the command has started),
 ;;   asks for the text when there is :input, then marks the target in
 ;;   flight and calls :send, which starts the mutations
 ;;   (approve-mutations.el: they patch the store with what GitHub
@@ -114,6 +125,25 @@ Example:
     (or (seq-find applies (delq nil (list (approve-context-at-point)
                                           (approve-context-of-sections))))
         (user-error "%s" (or needs "That command does not apply here")))))
+
+;;; Whether a command can run here
+
+(defun approve-action-why-not (command)
+  "Return why COMMAND can't run at point, or nil when it can.
+COMMAND's `approve-preflight' property is a function of no arguments
+that returns what the command would act on, or signals a
+`user-error' saying why it can't; it must change nothing.  The
+command calls it first, and menus call this to dim what can't run
+here (decision D06).  A command without one can run anywhere.
+
+Example:
+  (put \='approve-resolve \='approve-preflight
+       #\='approve-commands--resolve-preflight)
+  (approve-action-why-not \='approve-resolve) => \"Put point on a thread\""
+  (when-let* ((preflight (get command 'approve-preflight)))
+    (condition-case err
+        (progn (funcall preflight) nil)
+      (user-error (error-message-string err)))))
 
 ;;; Marks of the actions in flight
 

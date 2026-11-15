@@ -174,7 +174,8 @@ pending, the reply joins it.</p>
 <section class="shot" id="dispatch">
 <h2>Dispatch menu <span class="ref">? · D06</span></h2>
 <p>Every command, grouped. Point is on a file heading, so thread commands are dimmed (inapt) instead of hidden,
-and the menu never jumps around.</p>
+and the menu never jumps around. A command is dimmed exactly where it would refuse to run (D06). The menu lists only
+the commands that exist: the Pull request column, React, Review range, Layout and Doctor join it with their phases.</p>
 <div class="emacs">
 <div class="win stack">
 <div class="win">
@@ -189,14 +190,14 @@ and the menu never jumps around.</p>
 <p><span class="kh">Approve</span>  <span class="t">#1234 Add retry logic to the GraphQL client</span></p>
 <p><span class="kh">Review</span>                     <span class="kh">Comments</span>                 <span class="kh">Pull request</span>          <span class="kh">Buffer</span></p>
 <p> <span class="k">c</span> Comment at point         <span class="ina">r Reply</span>                  <span class="k">t</span> Title               <span class="k">g</span> Refresh</p>
-<p> <span class="ina">s Suggest change</span>           <span class="ina">R Resolve / unresolve</span>    <span class="k">d</span> Description         <span class="k">o</span> Open in browser</p>
-<p> <span class="k">v</span> Toggle viewed            <span class="ina">e Edit at point</span>           <span class="k">l</span> Labels              <span class="k">y</span> Copy URL / sha</p>
-<p> <span class="k">S</span> Submit review…           <span class="ina">k Delete at point</span>         <span class="k">a</span> Assignees           <span class="k">j</span> Jump…</p>
-<p> <span class="k">X</span> Discard pending review   <span class="ina">+ React</span>                  <span class="k">A</span> Request reviewers   <span class="k">L</span> Layout</p>
-<p> <span class="k">V</span> Review range…            <span class="k">C</span> Conversation comment   <span class="k">M</span> Milestone           <span class="k">!</span> Doctor</p>
-<p>                                                     <span class="k">D</span> Draft / ready       <span class="k">K</span> Details (eldoc)</p>
-<p>                                                     <span class="k">w</span> Subscription        <span class="k">T</span> Fold all threads</p>
-<p>                                                     <span class="k">m</span> Merge / close…</p>
+<p> <span class="ina">s Suggest change</span>           <span class="ina">R Resolve / unresolve</span>    <span class="k">d</span> Description         <span class="k">RET</span> Visit at point</p>
+<p> <span class="k">v</span> Toggle viewed            <span class="ina">e Edit at point</span>           <span class="k">l</span> Labels              <span class="k">o</span> Open in browser</p>
+<p> <span class="k">S</span> Submit review…           <span class="ina">k Delete at point</span>         <span class="k">a</span> Assignees           <span class="k">y</span> Copy URL / sha</p>
+<p> <span class="k">X</span> Discard pending review   <span class="ina">+ React</span>                  <span class="k">A</span> Request reviewers   <span class="k">j</span> Jump…</p>
+<p> <span class="k">V</span> Review range…            <span class="k">C</span> Conversation comment   <span class="k">M</span> Milestone           <span class="k">L</span> Layout</p>
+<p>                                                     <span class="k">D</span> Draft / ready       <span class="k">!</span> Doctor</p>
+<p>                                                     <span class="k">w</span> Subscription        <span class="k">K</span> Details (eldoc)</p>
+<p>                                                     <span class="k">m</span> Merge / close…      <span class="k">T</span> Fold all threads</p>
 </div>
 </div>
 <div class="echo"></div>

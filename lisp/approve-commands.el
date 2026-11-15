@@ -45,6 +45,11 @@
 ;; approve-review.el and approve-menus.el.  Evil's keys are in
 ;; approve-evil.el.
 ;;
+;; Each command starts with its preflight, `approve-commands--NAME-preflight':
+;; what it acts on, or a `user-error' saying why it can't run here.
+;; Its `approve-preflight' property names it, so the dispatch menu
+;; dims the command where it can't run (`approve-action-why-not').
+;;
 ;; Layer rules: this is the actions layer.  The commands read the
 ;; context at point and the store, and leave the rest to the pipeline
 ;; and the mutations, which keep the store true (decision D35).
@@ -197,17 +202,23 @@ Moving on goes to the next unviewed file when
           (approve-next-unviewed-file)
           (approve-commands--show-at (magit-current-section)))))))
 
+(defun approve-commands--viewed-preflight ()
+  "Return the context of the file `approve-toggle-viewed' acts on.
+Signal a `user-error' when point is on no file."
+  (approve-action-context (lambda (context)
+                            (and (plist-get context :path)
+                                 (memq (plist-get context :kind) '(file line lines thread))))
+                          "Put point on a file, in the file list or the diff"))
+
+(put 'approve-toggle-viewed 'approve-preflight #'approve-commands--viewed-preflight)
+
 (defun approve-toggle-viewed ()
   "Mark the file at point viewed, or not viewed when it is (flow F04).
 Point may be on the file in the file list, on its heading in the
 diff, or on any line of its diff.  Marking it viewed from the diff
 folds it; see `approve-viewed-advance'."
   (interactive)
-  (let* ((context (approve-action-context
-                   (lambda (context)
-                     (and (plist-get context :path)
-                          (memq (plist-get context :kind) '(file line lines thread))))
-                   "Put point on a file, in the file list or the diff"))
+  (let* ((context (approve-commands--viewed-preflight))
          (path (plist-get context :path))
          (viewed (equal (approve-commands--viewed-state path) "VIEWED"))
          (in-diff (and (approve-commands--file-section-at-point) t)))
@@ -273,6 +284,20 @@ suggested change of the lines."
              (approve-review-send-comment target text :single single
                                           :callback callback :errorback errorback)))))
 
+(defun approve-commands--comment-preflight ()
+  "Return the context `approve-comment' acts on.
+On code (lines, a region over them, a file) it is that; elsewhere
+the comment goes to the conversation.  Signal a `user-error' when
+the region is on lines a comment can't hold, or, off code, when the
+conversation is locked."
+  (let ((context (approve-action-context)))
+    (approve-commands--check-region context)
+    (unless (memq (plist-get context :kind) '(line lines file))
+      (approve-commands--conversation-preflight))
+    context))
+
+(put 'approve-comment 'approve-preflight #'approve-commands--comment-preflight)
+
 (defun approve-comment (&optional prefix)
   "Comment on what is at point (flow F05).
 On a line of the diff, or a region over lines of one hunk (evil's
@@ -283,11 +308,21 @@ PREFIX argument it is a single comment, published at once (see
 request (`approve-comment-on-pr'), where PREFIX quotes the comment
 at point."
   (interactive "P")
-  (let ((context (approve-action-context)))
-    (approve-commands--check-region context)
+  (let ((context (approve-commands--comment-preflight)))
     (if (memq (plist-get context :kind) '(line lines file))
         (approve-commands--comment-on-code context (approve-review-single-p prefix) nil)
       (approve-comment-on-pr prefix))))
+
+(defun approve-commands--suggest-preflight ()
+  "Return the context of the lines `approve-suggest' acts on.
+Signal a `user-error' when point is on no lines of the diff, or the
+region is on lines a comment can't hold."
+  (let ((context (approve-action-context
+                  '(line lines) "Put point on added or unchanged lines of the diff")))
+    (approve-commands--check-region context)
+    context))
+
+(put 'approve-suggest 'approve-preflight #'approve-commands--suggest-preflight)
 
 (defun approve-suggest (&optional prefix)
   "Suggest a change of the lines at point, or in the region (flow F06).
@@ -295,10 +330,8 @@ The comment starts with a suggestion block holding their new
 version, for you to edit into what it should be.  PREFIX is as for
 `approve-comment'."
   (interactive "P")
-  (let ((context (approve-action-context
-                  '(line lines) "Put point on added or unchanged lines of the diff")))
-    (approve-commands--check-region context)
-    (approve-commands--comment-on-code context (approve-review-single-p prefix) t)))
+  (approve-commands--comment-on-code (approve-commands--suggest-preflight)
+                                     (approve-review-single-p prefix) t))
 
 ;;; Threads (r, R)
 
@@ -311,6 +344,30 @@ version, for you to edit into what it should be.  PREFIX is as for
            :start-line .startLine :side .diffSide
            :start-side (or .startDiffSide .diffSide)))))
 
+(defun approve-commands--reply-preflight ()
+  "Return what `approve-reply' acts on, as a plist.
+:context is the context at point.  On a thread or a comment in one,
+:thread-id is the thread and :thread its fields; on a comment of the
+conversation there is no thread, and the reply is a conversation
+comment.  Signal a `user-error' when point is on neither, the
+viewer may not reply to the thread, or the conversation is locked."
+  (let ((context (approve-action-context '(thread review-comment issue-comment review)
+                                         "Put point on a thread or a comment")))
+    (if (memq (plist-get context :kind) '(issue-comment review))
+        (progn (approve-commands--conversation-preflight)
+               (list :context context))
+      (let* ((thread-id (or (plist-get context :thread-id)
+                            (approve-commands--thread-of (plist-get context :comment-id))
+                            (user-error "That comment is in no thread")))
+             (thread (approve-model-get "PullRequestReviewThread" thread-id
+                                        '(path line startLine diffSide startDiffSide
+                                               subjectType viewerCanReply comments))))
+        (unless (alist-get 'viewerCanReply thread)
+          (user-error "%s" "You can't reply to this thread"))
+        (list :context context :thread-id thread-id :thread thread)))))
+
+(put 'approve-reply 'approve-preflight #'approve-commands--reply-preflight)
+
 (defun approve-reply (&optional quote)
   "Reply to the thread at point (flow F07).
 With a QUOTE prefix argument, the reply starts by quoting the
@@ -318,18 +375,12 @@ comment at point; with an active region, by quoting the region.  On
 a comment of the conversation, comment on the pull request quoting
 it (`approve-comment-on-pr')."
   (interactive "P")
-  (let* ((context (approve-action-context '(thread review-comment issue-comment review)
-                                          "Put point on a thread or a comment"))
-         (kind (plist-get context :kind)))
-    (if (memq kind '(issue-comment review))
+  (let* ((target (approve-commands--reply-preflight))
+         (thread-id (plist-get target :thread-id)))
+    (if (null thread-id)
         (approve-comment-on-pr t)
-      (let* ((thread-id (or (plist-get context :thread-id)
-                            (approve-commands--thread-of (plist-get context :comment-id))
-                            (user-error "That comment is in no thread")))
-             (thread (approve-model-get "PullRequestReviewThread" thread-id
-                                        '(path line startLine diffSide startDiffSide
-                                               subjectType viewerCanReply comments)))
-             (comment-id (or (plist-get context :comment-id)
+      (let* ((thread (plist-get target :thread))
+             (comment-id (or (plist-get (plist-get target :context) :comment-id)
                              (alist-get 'id (car (approve-model-nodes
                                                   (alist-get 'comments thread))))))
              (location (approve-commands--thread-location thread))
@@ -338,7 +389,6 @@ it (`approve-comment-on-pr')."
                               (approve-commands--body "PullRequestReviewComment" comment-id)))))
         (approve-action-run
          :what "reply"
-         :why-not (unless (alist-get 'viewerCanReply thread) "You can't reply to this thread")
          :input (list :prompt (format "Reply to @%s on %s"
                                       (approve-commands--author "PullRequestReviewComment"
                                                                 comment-id)
@@ -352,9 +402,10 @@ it (`approve-comment-on-pr')."
                  (approve-mutation-add-reply thread-id text
                                              :callback callback :errorback errorback)))))))
 
-(defun approve-resolve ()
-  "Resolve the thread at point, or unresolve it when it is resolved (flow F07)."
-  (interactive)
+(defun approve-commands--resolve-preflight ()
+  "Return (THREAD-ID . RESOLVED) of the thread `approve-resolve' acts on.
+Signal a `user-error' when point is on no thread, or the viewer may
+not resolve it (or unresolve it, when it is resolved)."
   (let* ((context (approve-action-context
                    (lambda (context) (plist-get context :thread-id))
                    "Put point on a thread"))
@@ -362,10 +413,18 @@ it (`approve-comment-on-pr')."
          (thread (approve-model-get "PullRequestReviewThread" id
                                     '(isResolved viewerCanResolve viewerCanUnresolve)))
          (resolved (alist-get 'isResolved thread)))
+    (unless (alist-get (if resolved 'viewerCanUnresolve 'viewerCanResolve) thread)
+      (user-error "%s" (format "You can't %s this thread" (if resolved "unresolve" "resolve"))))
+    (cons id resolved)))
+
+(put 'approve-resolve 'approve-preflight #'approve-commands--resolve-preflight)
+
+(defun approve-resolve ()
+  "Resolve the thread at point, or unresolve it when it is resolved (flow F07)."
+  (interactive)
+  (pcase-let ((`(,id . ,resolved) (approve-commands--resolve-preflight)))
     (approve-action-run
      :what (if resolved "unresolve the thread" "resolve the thread")
-     :why-not (unless (alist-get (if resolved 'viewerCanUnresolve 'viewerCanResolve) thread)
-                (format "You can't %s this thread" (if resolved "unresolve" "resolve")))
      :marks `((section approve-thread-section ,id))
      :send (lambda (_text callback errorback)
              (funcall (if resolved
@@ -383,54 +442,75 @@ it (`approve-comment-on-pr')."
     (_ `((section approve-comment-section ,id)
          (section approve-pending-comment-section ,id)))))
 
+(defun approve-commands--edit-preflight ()
+  "Return the context `approve-edit' acts on.
+Signal a `user-error' when point is on no comment or review, on the
+description (not editable yet), or on text the viewer may not edit."
+  (let* ((context (approve-action-context
+                   '(issue-comment review-comment review pending-review description)
+                   "Put point on a comment or a review you wrote")))
+    (pcase (plist-get context :kind)
+      ('description (user-error "Approve can't edit the description yet; %s opens it on GitHub"
+                                (substitute-command-keys "\\[approve-browse]")))
+      ('pending-review nil)
+      (_ (pcase-let ((`(,typename . ,id) (approve-commands--comment-entity context)))
+           (unless (approve-model-get typename id 'viewerCanUpdate)
+             (user-error "%s" (format "You can't edit this %s"
+                                      (if (equal typename "PullRequestReview")
+                                          "review"
+                                        "comment")))))))
+    context))
+
+(put 'approve-edit 'approve-preflight #'approve-commands--edit-preflight)
+
 (defun approve-edit ()
   "Edit your comment or review body at point (flow F08).
 The text starts as you wrote it; sending it unchanged sends nothing.
 On the pending review, write the body you will submit it with
 \(`approve-edit-review-body')."
   (interactive)
-  (let* ((context (approve-action-context
-                   '(issue-comment review-comment review pending-review description)
-                   "Put point on a comment or a review you wrote"))
-         (kind (plist-get context :kind)))
-    (pcase kind
-      ('description (user-error "Approve can't edit the description yet; %s opens it on GitHub"
-                                (substitute-command-keys "\\[approve-browse]")))
-      ('pending-review (approve-edit-review-body))
-      (_
-       (pcase-let* ((`(,typename . ,id) (approve-commands--comment-entity context))
-                    (review (equal typename "PullRequestReview"))
-                    (body (approve-commands--body typename id)))
-         (approve-action-run
-          :what (if review "edit the review" "edit the comment")
-          :why-not (unless (approve-model-get typename id 'viewerCanUpdate)
-                     (format "You can't edit this %s" (if review "review" "comment")))
-          :input (list :prompt (if review "Edit the review" "Edit the comment")
-                       :target (list 'edit id) :name (format "edit %s" id)
-                       :initial body)
-          :marks (approve-commands--comment-marks typename id)
-          :send (lambda (text callback errorback)
-                  (if (equal text (string-trim-right body))
-                      (progn (message "Approve: the text is unchanged")
-                             (funcall callback nil))
-                    (funcall (pcase typename
-                               ("IssueComment" #'approve-mutation-update-issue-comment)
-                               ("PullRequestReview" #'approve-mutation-update-review)
-                               (_ #'approve-mutation-update-review-comment))
-                             id text :callback callback :errorback errorback)))))))))
+  (let ((context (approve-commands--edit-preflight)))
+    (if (eq (plist-get context :kind) 'pending-review)
+        (approve-edit-review-body)
+      (pcase-let* ((`(,typename . ,id) (approve-commands--comment-entity context))
+                   (review (equal typename "PullRequestReview"))
+                   (body (approve-commands--body typename id)))
+        (approve-action-run
+         :what (if review "edit the review" "edit the comment")
+         :input (list :prompt (if review "Edit the review" "Edit the comment")
+                      :target (list 'edit id) :name (format "edit %s" id)
+                      :initial body)
+         :marks (approve-commands--comment-marks typename id)
+         :send (lambda (text callback errorback)
+                 (if (equal text (string-trim-right body))
+                     (progn (message "Approve: the text is unchanged")
+                            (funcall callback nil))
+                   (funcall (pcase typename
+                              ("IssueComment" #'approve-mutation-update-issue-comment)
+                              ("PullRequestReview" #'approve-mutation-update-review)
+                              (_ #'approve-mutation-update-review-comment))
+                            id text :callback callback :errorback errorback))))))))
+
+(defun approve-commands--delete-preflight ()
+  "Return (TYPENAME . ID) of the comment `approve-delete' acts on.
+Signal a `user-error' when point is on no comment, or the viewer may
+not delete it."
+  (let ((entity (approve-commands--comment-entity
+                 (approve-action-context '(issue-comment review-comment)
+                                         "Put point on a comment"))))
+    (unless (approve-model-get (car entity) (cdr entity) 'viewerCanDelete)
+      (user-error "You can't delete this comment"))
+    entity))
+
+(put 'approve-delete 'approve-preflight #'approve-commands--delete-preflight)
 
 (defun approve-delete ()
   "Delete the comment at point, after asking (flow F08).
 Deleting the last comment of a review without a body deletes the
 review too, as GitHub does."
   (interactive)
-  (pcase-let* ((context (approve-action-context '(issue-comment review-comment)
-                                                "Put point on a comment"))
-               (`(,typename . ,id) (approve-commands--comment-entity context))
-               (comment (approve-model-get typename id
-                                           '(viewerCanDelete viewerDidAuthor author state))))
-    (unless (alist-get 'viewerCanDelete comment)
-      (user-error "You can't delete this comment"))
+  (pcase-let* ((`(,typename . ,id) (approve-commands--delete-preflight))
+               (comment (approve-model-get typename id '(viewerDidAuthor author state))))
     (when (y-or-n-p (format "Delete %s%s comment? "
                             (if (alist-get 'viewerDidAuthor comment)
                                 "your"
@@ -447,21 +527,28 @@ review too, as GitHub does."
 
 ;;; The conversation (C)
 
+(defun approve-commands--conversation-preflight ()
+  "Return the context at point, where `approve-comment-on-pr' may comment.
+Signal a `user-error' when the conversation is locked to the viewer."
+  (prog1 (approve-action-context)
+    (when (and (approve-pr-field 'locked) (not (approve-pr-viewer-can 'update)))
+      (user-error "The conversation is locked"))))
+
+(put 'approve-comment-on-pr 'approve-preflight #'approve-commands--conversation-preflight)
+
 (defun approve-comment-on-pr (&optional quote)
   "Comment on the pull request, in its conversation (flow F10).
 With an active region, the comment starts by quoting it; with a
 QUOTE prefix argument, by quoting the comment at point.  Point goes
 to the comment once GitHub has it."
   (interactive "P")
-  (let* ((context (approve-action-context))
+  (let* ((context (approve-commands--conversation-preflight))
          (entity (approve-commands--comment-entity context))
          (quoted (or (approve-commands--region-text)
                      (and quote entity (approve-commands--body (car entity) (cdr entity)))))
          (number (approve-pr-field 'number)))
     (approve-action-run
      :what "comment on the pull request"
-     :why-not (and (approve-pr-field 'locked) (not (approve-pr-viewer-can 'update))
-                   "The conversation is locked")
      :input (list :prompt (format "Comment on #%s" number) :context "conversation"
                   :target '(conversation) :name (format "comment #%s" number)
                   :initial (and quoted (not (string-blank-p quoted))

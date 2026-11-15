@@ -30,14 +30,21 @@
 ;; The transients of Approve (decision D06; docs/ui.org,
 ;; "Transients"):
 ;;
+;;   ?  `approve-dispatch'       every command of a PR buffer, by what
+;;                               it works on
 ;;   j  `approve-jump'           the sections of the PR, the next work
 ;;                               (unviewed files, unresolved threads)
 ;;                               and any changed file by name
 ;;   S  `approve-submit-review'  a verdict for the pending review, its
 ;;                               body, or discarding it (flow F09)
 ;;
+;; The dispatch lists the commands that exist, no more: a new command
+;; joins it, and any other menu it fits, in the change that adds it.
+;; Every command bound in a PR buffer is reachable from it.
+;;
 ;; Suffixes that do not apply are shown dimmed, so a menu never
-;; changes shape.
+;; changes shape.  A command that changes the PR says itself whether
+;; it can run here: its preflight (`approve-action-why-not').
 ;;
 ;; Layer rules: this is the entry points and menus layer.  It only
 ;; arranges commands defined below it.
@@ -49,7 +56,10 @@
 (require 'approve-model)
 (require 'approve-pr)
 (require 'approve-nav)
+(require 'approve-actions)
 (require 'approve-review)
+(require 'approve-commands)
+(require 'approve-eldoc)
 (require 'approve-faces)
 
 (defun approve-menus--no-pending-review-p ()
@@ -123,6 +133,63 @@ review, a verdict adds a review and submits it at once."
      :inapt-if approve-menus--no-pending-review-p)]])
 
 (keymap-set approve-pr-mode-map "S" #'approve-submit-review)
+(put 'approve-submit-review 'approve-preflight #'approve-action-context)
+
+;;; Dispatch (?)
+
+(defun approve-menus--dispatch-heading ()
+  "Return the heading of the dispatch menu: the number and title of the PR."
+  (concat (propertize "Approve" 'face 'transient-heading) "  "
+          (propertize (string-trim-right
+                       (format "#%s %s" (approve-model-meta :number)
+                               (truncate-string-to-width
+                                (or (and (approve-model-root-ref) (approve-pr-field 'title)) "")
+                                60 nil nil "…")))
+                      'face 'approve-title)))
+
+(defun approve-menus--threads-description ()
+  "Return the description of `approve-toggle-threads': what it will do."
+  (if (eq (approve-session-get :threads) 'folded)
+      "Unfold all threads"
+    "Fold all threads"))
+
+;;;###autoload (autoload 'approve-dispatch "approve-menus" nil t)
+(transient-define-prefix approve-dispatch ()
+  "Show the commands of the pull request buffer (decision D06).
+Those that can't run at point, or that you may not use, are dimmed."
+  [:description approve-menus--dispatch-heading
+   ["Review"
+    ("c" "Comment at point" approve-comment
+     :inapt-if (lambda () (approve-action-why-not 'approve-comment)))
+    ("s" "Suggest change" approve-suggest
+     :inapt-if (lambda () (approve-action-why-not 'approve-suggest)))
+    ("v" "Toggle viewed" approve-toggle-viewed
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-viewed)))
+    ("S" "Submit review…" approve-submit-review
+     :inapt-if (lambda () (approve-action-why-not 'approve-submit-review)))
+    ("X" "Discard pending review" approve-discard-review
+     :inapt-if (lambda () (approve-action-why-not 'approve-discard-review)))]
+   ["Comments"
+    ("r" "Reply" approve-reply
+     :inapt-if (lambda () (approve-action-why-not 'approve-reply)))
+    ("R" "Resolve / unresolve" approve-resolve
+     :inapt-if (lambda () (approve-action-why-not 'approve-resolve)))
+    ("e" "Edit at point" approve-edit
+     :inapt-if (lambda () (approve-action-why-not 'approve-edit)))
+    ("k" "Delete at point" approve-delete
+     :inapt-if (lambda () (approve-action-why-not 'approve-delete)))
+    ("C" "Conversation comment" approve-comment-on-pr
+     :inapt-if (lambda () (approve-action-why-not 'approve-comment-on-pr)))]
+   ["Buffer"
+    ("g" "Refresh" approve-pr-refresh)
+    ("RET" "Visit at point" approve-visit)
+    ("o" "Open in browser" approve-browse)
+    ("y" "Copy URL / sha" approve-copy)
+    ("j" "Jump…" approve-jump)
+    ("K" "Details (eldoc)" approve-show-details)
+    ("T" approve-toggle-threads :description approve-menus--threads-description)]])
+
+(keymap-set approve-pr-mode-map "?" #'approve-dispatch)
 
 (provide 'approve-menus)
 

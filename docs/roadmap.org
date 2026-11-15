@@ -16,6 +16,8 @@ links, do it in small commits ([[file:development.org][development.org]]), tick 
   through =approve-icon=; every user-visible string can be customized or
   comes from GitHub.
 - Works with and without evil loaded.
+- A new command is in the dispatch transient (=?=) and the Keys table of
+  [[file:ui.org::*Keys][ui.org]], with a preflight if it changes the PR ([[file:decisions.org::*D06 Menus are transients; everything is reachable from =?=][D06]]).
 - Docs updated: a changed decision, flow or mockup is changed in the same
   commit, in the org file and in its HTML view (=docs/html/=, =make docs=).
 
@@ -116,7 +118,9 @@ Mockups: input buffer, dispatch, submit review, pending review section, keys.
       amended: the check compares GitHub's newest comments, reviews, head
       and edits with the store, as =updatedAt= can't tell the viewer's own
       writes from others'.
-- [ ] =approve-menus.el=: dispatch transient.  Moved after change detection.
+- [X] =approve-menus.el=: dispatch transient.  It lists the commands that
+      exist and dims each where its preflight says it can't run (D06,
+      amended); later commands join it as they come.
 - Done when :: a whole review can be done on a real PR from Emacs: mark files
   viewed, comment on a line, a range and a file, suggest, reply, resolve,
   edit, delete, and submit approve / request changes / comment.  The browser

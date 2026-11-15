@@ -56,11 +56,20 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   Making it a hook choice costs almost nothing.
 
 ** D06 Menus are transients; everything is reachable from =?=
-- Status :: accepted (project.org)
+- Status :: accepted (project.org); amended 2026-11-15
 - Decision :: Every command is reachable from the dispatch transient (=?=).
   Bigger tasks have their own transients: submit review, merge, metadata,
   jump, review range, search filters.  Suffixes that don't apply are shown
   but inapt (=:inapt-if=), based on context and =viewerCan*= fields.
+- Amended (2026-11-15) :: The menus list only commands that exist.  A new
+  command joins the dispatch, and any other menu it fits, in the change
+  that adds it; a test checks that every command bound in a PR buffer is
+  reachable from =?=.  A command that changes the PR starts with its
+  /preflight/: what it would act on, or a =user-error= saying why it can't
+  (nothing it applies to at point, no =viewerCan*=), changing nothing.
+  Its =approve-preflight= property names it, and the menus dim the
+  command where it would refuse (=approve-action-why-not=), so the menu
+  and the command never disagree.
 - Why :: Discoverability, Magit consistency, and one place to learn the keys.
 
 ** D11 Show bodyHTML; edit markdown

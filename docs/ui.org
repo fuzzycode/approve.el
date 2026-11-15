@@ -409,19 +409,26 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
  Approve  #1234 Add retry logic to the GraphQL client
  Review                     Comments                 Pull request          Buffer
   c Comment at point         r Reply                  t Title               g Refresh
-  s Suggest change           R Resolve / unresolve    d Description         o Open in browser
-  v Toggle viewed            e Edit at point          l Labels              y Copy URL / sha
-  S Submit review…           k Delete at point        a Assignees           j Jump…
-  X Discard pending review   + React                  A Request reviewers   L Layout
-  V Review range…            C Conversation comment   M Milestone           ! Doctor
-                                                      D Draft / ready       K Details (eldoc)
-                                                      w Subscription        T Fold all threads
-                                                      m Merge / close…
+  s Suggest change           R Resolve / unresolve    d Description         RET Visit at point
+  v Toggle viewed            e Edit at point          l Labels              o Open in browser
+  S Submit review…           k Delete at point        a Assignees           y Copy URL / sha
+  X Discard pending review   + React                  A Request reviewers   j Jump…
+  V Review range…            C Conversation comment   M Milestone           L Layout
+                                                      D Draft / ready       ! Doctor
+                                                      w Subscription        K Details (eldoc)
+                                                      m Merge / close…      T Fold all threads
 #+end_example
 
 Suffixes that don't apply to the context, or that the viewer may not use
 (=viewerCan*=), are shown dimmed (=:inapt-if=) instead of hidden, so the menu
-doesn't jump around.
+doesn't jump around.  A command is dimmed exactly where it would refuse to
+run: the menu asks the command's preflight ([[file:decisions.org::*D06 Menus are transients; everything is reachable from =?=][D06]]).  =T= says what it will
+do: "Fold all threads", or "Unfold all threads" once they are folded.
+
+The mockup is the whole menu; the menu lists only the commands that exist.
+Today that is Review without =V=, Comments without =+=, and Buffer without
+=L= and =!=; the Pull request column and the rest join with the phases
+that add their commands ([[file:roadmap.org][roadmap]]).
 
 ** Submit review (=S=)
 #+begin_example

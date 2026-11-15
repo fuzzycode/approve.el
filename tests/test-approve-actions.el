@@ -320,6 +320,25 @@ ICON is non-nil when the loading icon follows the line."
         (expect 'approve-pr-redraw :to-have-been-called)
         (expect (test-actions--marked pr) :to-be nil)))))
 
+(describe "approve-action-why-not"
+  (after-each
+    (put 'test-actions--command 'approve-preflight nil))
+
+  (it "is nil for a command without a preflight, or whose preflight passes"
+    (expect (approve-action-why-not 'test-actions--command) :to-be nil)
+    (put 'test-actions--command 'approve-preflight (lambda () 'a-thread))
+    (expect (approve-action-why-not 'test-actions--command) :to-be nil))
+
+  (it "is the message of the user-error the preflight signals"
+    (put 'test-actions--command 'approve-preflight
+         (lambda () (user-error "%s" "You can't resolve this thread")))
+    (expect (approve-action-why-not 'test-actions--command)
+            :to-equal "You can't resolve this thread"))
+
+  (it "lets other errors through: they are bugs, not reasons"
+    (put 'test-actions--command 'approve-preflight (lambda () (error "Oops")))
+    (expect (approve-action-why-not 'test-actions--command) :to-throw 'error)))
+
 (provide 'test-approve-actions)
 
 ;;; test-approve-actions.el ends here

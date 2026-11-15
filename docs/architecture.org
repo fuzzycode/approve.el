@@ -95,7 +95,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-actions.el=       | The action pipeline (F00) and =approve-action-context=                          |     2 |
 | =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–5 |
 |                            | delete, conversation comment; later react, metadata, merge                      |       |
-| =approve-menus.el=         | Transients: jump (1), submit (2); dispatch, merge, metadata, range              |   1–5 |
+| =approve-menus.el=         | Transients: jump (1), submit and dispatch (2); merge, metadata, range           |   1–5 |
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
 |                            | loaded)                                                                         |       |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |
@@ -447,11 +447,18 @@ and, for the pending review as a whole, =approve-review.el=.  A command
 supplies its own parts (the ✱ of F00) and nothing else:
 
 #+begin_example
- (let* ((context (approve-action-context '(thread) "Put point on a thread"))
-        (id (plist-get context :thread-id)))
+ (defun approve-commands--resolve-preflight ()        what it acts on, or why not
+   (let* ((context (approve-action-context            (a user-error); changes nothing
+                    '(thread) "Put point on a thread"))
+          (id (plist-get context :thread-id)))
+     (unless (plist-get context :can-resolve)
+       (user-error "You can't resolve this thread"))
+     id))
+ (put 'approve-resolve 'approve-preflight #'approve-commands--resolve-preflight)
+
+ (let ((id (approve-commands--resolve-preflight)))
    (approve-action-run
     :what "resolve the thread"                       for "could not resolve the thread: …"
-    :why-not (unless (plist-get context :can-resolve) "You can't resolve this thread")
     :input nil                                       or approve-input-read's arguments
     :marks `((section approve-thread-section ,id))   what waits for GitHub
     :send (lambda (_text callback errorback)         queue the mutations
@@ -459,13 +466,20 @@ supplies its own parts (the ✱ of F00) and nothing else:
     :done (lambda (result) …)))                      anything else, before the redraw
 #+end_example
 
+- The /preflight/ comes first: what the command acts on, or a =user-error=
+  saying why it can't run here (nothing it applies to at point, no
+  =viewerCan*=).  It must change nothing, as the menus call it too: the
+  =approve-preflight= property names it, and =approve-action-why-not=
+  gives its reason, which dims the command in the dispatch ([[file:decisions.org::*D06 Menus are transients; everything is reachable from =?=][D06]]).
 - =approve-action-context= is the context at point when the command
   applies to its kind (a list of kinds, or a predicate), else the context
   of the section around point if the command applies to that (on a
   comment's =@author=, =r= replies to the comment), else a =user-error=
   with what the command needs.  It also refuses where no pull request has
   loaded.
-- =approve-action-run= signals =:why-not= as a =user-error=, then asks for
+- =approve-action-run= signals =:why-not= as a =user-error= (for a reason
+  only known once the command has started, such as a verdict GitHub
+  refuses), then asks for
   the text when there is =:input= (aborting stops there, keeping the
   draft).  It marks =:marks= in flight and calls =:send= in the PR buffer
   with the text (or nil), a callback and an errorback.  =:send= queues the

@@ -89,6 +89,12 @@ The shell is fish: wrap loops in =bash -c '…'=.  Fish has no heredocs
   Approve mode requires when =(featurep 'evil)= (D17; package-lint rejects
   =with-eval-after-load=).  Never shadow evil's motions there.
 - Faces only from =approve-faces.el=; icons only through =approve-icon=.
+- A new command joins the dispatch transient (=?=), and any other menu it
+  fits, in the commit that adds it; =tests/test-approve-menus.el= fails
+  while a bound command can't be reached from =?=.  A command that
+  changes the PR starts with its preflight, which changes nothing, and
+  names it in its =approve-preflight= property, so the menu dims it where
+  it would refuse ([[file:decisions.org::*D06 Menus are transients; everything is reachable from =?=][D06]]).
 - Every =defcustom= has =:type=, =:group= and a docstring with an example.
 - Async: callbacks never assume the buffer is alive or point unchanged.
   Capture what you need before the request.
