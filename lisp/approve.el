@@ -62,6 +62,7 @@
 (require 'approve-actions)
 (require 'approve-review)
 (require 'approve-commands)
+(require 'approve-manage)
 (require 'approve-dashboard)
 (require 'approve-clone)
 

@@ -172,6 +172,14 @@ repository: commands under development, spikes, recording fixtures.
     -f approve-scratch-run-batch > /tmp/scratch.log 2>&1
   grep -E '^(PASS|FAIL|ERROR)' /tmp/scratch.log
   #+end_src
+  The checks come in groups (=approve-scratch-step-groups=): =review=
+  (the review's writes, above) and =metadata= (labels, assignees,
+  milestone and review requests on #8, each undone after).
+  =APPROVE_SCRATCH_ONLY=metadata= runs one group alone:
+  #+begin_src sh
+  env APPROVE_SCRATCH_ONLY=metadata timeout 900 cask exec emacs -Q --batch \
+    -L lisp -l dev/scratch.el -f approve-scratch-run-batch > /tmp/scratch.log 2>&1
+  #+end_src
   It sends requests through the =gh= CLI (=approve-scratch-gh-transport=),
   so it needs =gh auth login= with write access, not ghub's token.  It
   refuses to start while the viewer has a pending review on #8, and

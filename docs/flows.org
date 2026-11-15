@@ -486,6 +486,7 @@ Labels shown; assignees, reviewers and milestone work the same way.
 | Labels             | =repository.labels=                                | =addLabelsToLabelable= / =removeLabelsFromLabelable=                        |
 | Assignees          | =repository.assignableUsers=                       | =addAssigneesToAssignable= / =removeAssigneesFromAssignable=                |
 | Reviewers          | assignable users + teams; suggestedReviewers first | =requestReviews= (=union: false= sends the whole set, so removal works too) |
+|                    | (never the author: GitHub drops them silently)     |                                                                             |
 | Milestone          | =repository.milestones(states: OPEN)=              | =updatePullRequest(milestoneId)=                                            |
 | Draft / ready      | —                                                  | =convertPullRequestToDraft= / =markPullRequestReadyForReview=               |
 | Subscription       | subscribed / ignored / unsubscribed                | =updateSubscription=                                                        |

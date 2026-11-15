@@ -61,6 +61,7 @@
 (require 'approve-actions)
 (require 'approve-review)
 (require 'approve-commands)
+(require 'approve-manage)
 (require 'approve-eldoc)
 (require 'approve-dashboard)
 (require 'approve-faces)
@@ -183,6 +184,15 @@ Those that can't run at point, or that you may not use, are dimmed."
      :inapt-if (lambda () (approve-action-why-not 'approve-delete)))
     ("C" "Conversation comment" approve-comment-on-pr
      :inapt-if (lambda () (approve-action-why-not 'approve-comment-on-pr)))]
+   ["Pull request"
+    ("l" "Labels" approve-set-labels
+     :inapt-if (lambda () (approve-action-why-not 'approve-set-labels)))
+    ("a" "Assignees" approve-set-assignees
+     :inapt-if (lambda () (approve-action-why-not 'approve-set-assignees)))
+    ("A" "Request reviewers" approve-request-reviewers
+     :inapt-if (lambda () (approve-action-why-not 'approve-request-reviewers)))
+    ("M" "Milestone" approve-set-milestone
+     :inapt-if (lambda () (approve-action-why-not 'approve-set-milestone)))]
    ["Buffer"
     ("g" "Refresh" approve-pr-refresh)
     ("RET" "Visit at point" approve-visit)

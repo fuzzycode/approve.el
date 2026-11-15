@@ -472,9 +472,9 @@ run: the menu asks the command's preflight ([[file:decisions.org::*D06 Menus are
 do: "Fold all threads", or "Unfold all threads" once they are folded.
 
 The mockup is the whole menu; the menu lists only the commands that exist.
-Today that is Review without =V=, Comments without =+=, and Buffer without
-=L= and =!=; the Pull request column and the rest join with the phases
-that add their commands ([[file:roadmap.org][roadmap]]).
+Today that is Review without =V=, Comments without =+=, the Pull request
+column's =l a A M=, and Buffer without =L= and =!=; the rest join with the
+phases that add their commands ([[file:roadmap.org][roadmap]]).
 
 ** Submit review (=S=)
 #+begin_example
@@ -528,16 +528,35 @@ requested · ◐ 2 checks running").  Only methods the repository allows are apt
 #+end_example
 
 ** Metadata pickers
-Labels, assignees, reviewers and milestone use =completing-read-multiple= (or
-=completing-read= for one value).  Current values are preselected, and
-candidates are annotated:
+Labels, assignees and reviewers use =completing-read-multiple=, the milestone
+=completing-read=.  The current values are in the input already, separated by
+commas: removing one takes it away.  Candidates are annotated, ✓ on the ones
+the pull request has:
 
 #+begin_example
  Labels: enhancement,api,█
-   bug            Something isn't working                       ■ red
-   documentation  Improvements or additions to documentation    ■ blue
-   enhancement ✓  New feature or request                        ■ teal
+   api              ✓ ▇▇▇▇ Talking to GitHub
+   bug                ▇▇▇▇ Something isn't working
+   documentation      ▇▇▇▇ Improvements or additions to documentation
+   enhancement      ✓ ▇▇▇▇ New feature or request
 #+end_example
+
+- Labels (=l=): the repository's, by name, with their colour and
+  description.
+- Assignees (=a=): the people who can be assigned, with their names.
+- Reviewers (=A=): GitHub's suggestions first (and why: "suggested,
+  commented"), then who is asked now, then the people who can be assigned
+  and the teams of the organization that owns the repository, each with
+  their latest verdict.  The pull request's author is never offered: GitHub
+  drops them from the requests without a word.
+- Milestone (=M=): "No milestone" when there is one, then the open
+  milestones, those due first first and those with no due date last, with
+  their due date and progress.  =RET= alone keeps the current one.
+
+The lists come from the repository's metadata (D24), fetched the first time
+and waited for, the echo area saying so.  Choosing what the pull request has
+sends nothing ("no change to the labels"); else only the difference goes:
+the labels added, then those removed.
 
 * Commits section with a range
 #+begin_example

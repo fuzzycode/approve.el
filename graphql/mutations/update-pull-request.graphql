@@ -1,0 +1,28 @@
+${include:fragments/milestone.graphql}
+
+# F08, F12: change the title, the description or the milestone.  A variable
+# left out leaves its field as it is; a milestoneId of null takes the
+# milestone away.  The answer is what these change.
+mutation UpdatePullRequest(
+  $pullRequestId: ID!
+  $title: String
+  $body: String
+  $milestoneId: ID
+) {
+  updatePullRequest(
+    input: {pullRequestId: $pullRequestId, title: $title, body: $body, milestoneId: $milestoneId}
+  ) {
+    pullRequest {
+      __typename
+      id
+      title
+      body
+      bodyHTML
+      lastEditedAt
+      includesCreatedEdit
+      milestone {
+        ...MilestoneFields
+      }
+    }
+  }
+}

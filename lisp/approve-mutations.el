@@ -45,6 +45,10 @@
 ;;   `approve-mutation-add-comment'             F10  comment in the conversation
 ;;   `approve-mutation-update-issue-comment'    F08  edit such a comment
 ;;   `approve-mutation-delete-issue-comment'    F08  delete it
+;;   `approve-mutation-set-labels'              F12  add and remove labels
+;;   `approve-mutation-set-assignees'           F12  assign and unassign people
+;;   `approve-mutation-request-reviews'         F12  who is asked for a review
+;;   `approve-mutation-set-milestone'           F12  the milestone, or none
 ;;
 ;; Each one queues its mutation (`approve-api-mutate': one at a time,
 ;; decision D15) for the PR of the current buffer's store.  Once GitHub
@@ -63,7 +67,9 @@
 ;;   still list what was deleted right after (D32): a deleted comment
 ;;   leaves its thread and its review's count, a thread left empty
 ;;   leaves the PR, and a review left with neither comments nor a body
-;;   goes too, as GitHub deletes it.
+;;   goes too, as GitHub deletes it.  The events GitHub adds to the
+;;   conversation for a change of the PR's metadata ("added the bug
+;;   label") come with the next load: no answer holds them.
 ;;
 ;; Then it calls CALLBACK with the ref of the entity it changed.
 ;; ERRORBACK gets an approve-api error: GitHub's, or
@@ -568,6 +574,128 @@ gets its ref.  ERRORBACK gets the error otherwise.  (Flow F08.)"
               (approve-mutation--remove (approve-model-root-ref) 'timelineItems comment)
               comment))
    :callback callback :errorback errorback))
+
+;;; The pull request's metadata
+
+(cl-defun approve-mutation--in-turn (steps &key callback errorback)
+  "Run STEPS one after the other, each once GitHub confirmed the one before.
+Each step is a function of (CALLBACK ERRORBACK) that sends one
+mutation.  CALLBACK gets the result of the last step, or the PR's
+ref when there are no STEPS.  ERRORBACK gets the error of the first
+step that fails, and the steps after it are not sent; the ones
+before stay done."
+  (let ((errorback (or errorback #'approve-api-default-errorback)))
+    (if (null steps)
+        (when callback
+          (funcall callback (approve-model-root-ref)))
+      (funcall (car steps)
+               (lambda (result)
+                 (if (cdr steps)
+                     (approve-mutation--in-turn (cdr steps)
+                                                :callback callback :errorback errorback)
+                   (when callback
+                     (funcall callback result))))
+               errorback))))
+
+(defun approve-mutation--pr-step (query variables mutation payload progress)
+  "Return a step of `approve-mutation--in-turn' that sends QUERY with VARIABLES.
+GitHub's answer to MUTATION holds the PR in its field PAYLOAD; the
+step patches the store with it and gives the PR's ref.  PROGRESS is
+the echo-area text while it runs."
+  (lambda (callback errorback)
+    (approve-mutation--send
+     query variables
+     :progress progress
+     :apply (lambda (data)
+              (approve-mutation--patch (approve-mutation--answer data mutation payload)))
+     :callback callback :errorback errorback)))
+
+(cl-defun approve-mutation--add-and-remove (add remove &key add-query remove-query
+                                                variables mutations payload what
+                                                callback errorback)
+  "Add the ids ADD to a list of the PR, then remove the ids REMOVE.
+ADD-QUERY and REMOVE-QUERY are the mutations, MUTATIONS their names
+in GitHub's answer, (ADDING . REMOVING), and PAYLOAD the field there
+that holds the PR.  VARIABLES is a function of the PR's id and a
+vector of ids that returns the variables.  WHAT names the list for
+the echo area, such as \"labels\".  An empty ADD or REMOVE sends
+nothing.  CALLBACK gets the PR's ref once GitHub confirmed both."
+  (let ((pr (approve-mutation--pull-request-id)))
+    (approve-mutation--in-turn
+     (delq nil
+           (list (and add (approve-mutation--pr-step
+                           add-query (funcall variables pr (vconcat add))
+                           (car mutations) payload (format "Adding %s" what)))
+                 (and remove (approve-mutation--pr-step
+                              remove-query (funcall variables pr (vconcat remove))
+                              (cdr mutations) payload (format "Removing %s" what)))))
+     :callback callback :errorback errorback)))
+
+(cl-defun approve-mutation-set-labels (add remove &key callback errorback)
+  "Add the labels ADD to the PR and remove the labels REMOVE, lists of ids.
+Adding comes first, then removing, each once the one before is
+done.  Once GitHub has made both, the PR's labels in the store are
+GitHub's and CALLBACK gets the PR's ref.  ERRORBACK gets the error
+of the first that fails.  (Flow F12.)
+
+Example:
+  (approve-mutation-set-labels \\='(\"LA_bug\") nil :callback #\\='ignore)"
+  (approve-mutation--add-and-remove
+   add remove
+   :add-query "mutations/add-labels-to-labelable.graphql"
+   :remove-query "mutations/remove-labels-from-labelable.graphql"
+   :mutations '(addLabelsToLabelable . removeLabelsFromLabelable)
+   :payload 'labelable
+   :variables (lambda (pr ids) `((labelableId . ,pr) (labelIds . ,ids)))
+   :what "labels" :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-set-assignees (add remove &key callback errorback)
+  "Assign the users ADD to the PR and unassign the users REMOVE, lists of ids.
+Assigning comes first, then unassigning, each once the one before is
+done.  Once GitHub has made both, the PR's assignees in the store
+are GitHub's and CALLBACK gets the PR's ref.  ERRORBACK gets the
+error of the first that fails.  (Flow F12.)"
+  (approve-mutation--add-and-remove
+   add remove
+   :add-query "mutations/add-assignees-to-assignable.graphql"
+   :remove-query "mutations/remove-assignees-from-assignable.graphql"
+   :mutations '(addAssigneesToAssignable . removeAssigneesFromAssignable)
+   :payload 'assignable
+   :variables (lambda (pr ids) `((assignableId . ,pr) (assigneeIds . ,ids)))
+   :what "assignees" :callback callback :errorback errorback))
+
+(cl-defun approve-mutation-request-reviews (&key users teams bots callback errorback)
+  "Ask USERS, TEAMS and BOTS, lists of ids, for a review, and no one else.
+The ids are the whole set of review requests: one asked before and
+left out is asked no more, and no ids ask no one.  Asking someone
+who has reviewed asks them again.  Once GitHub has it, the PR's
+review state in the store is GitHub's, its review requests with it,
+and CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
+\(Flow F12.)
+
+Example:
+  (approve-mutation-request-reviews :users \\='(\"U_1\") :teams \\='(\"T_1\"))"
+  (funcall (approve-mutation--pr-step
+            "mutations/request-reviews.graphql"
+            `((pullRequestId . ,(approve-mutation--pull-request-id))
+              (userIds . ,(vconcat users))
+              (teamIds . ,(vconcat teams))
+              (botIds . ,(vconcat bots)))
+            'requestReviews 'pullRequest "Asking for reviews")
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-milestone (milestone-id &key callback errorback)
+  "Put the PR in the milestone MILESTONE-ID, or in none when it is nil.
+Once GitHub has, the PR's milestone in the store is GitHub's and
+CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
+\(Flow F12.)"
+  (funcall (approve-mutation--pr-step
+            "mutations/update-pull-request.graphql"
+            `((pullRequestId . ,(approve-mutation--pull-request-id))
+              (milestoneId . ,(or milestone-id :null)))
+            'updatePullRequest 'pullRequest
+            (if milestone-id "Setting the milestone" "Taking the milestone away"))
+           callback (or errorback #'approve-api-default-errorback)))
 
 (provide 'approve-mutations)
 

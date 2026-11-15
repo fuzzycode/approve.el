@@ -157,7 +157,7 @@ The diff of `test-menus--path' is expanded first, for its threads."
         (unwind-protect
             (with-current-buffer buffer
               (expect (test-menus--dimmed)
-                      :to-equal '("c" "s" "v" "S" "X" "r" "R" "e" "k" "C"))
+                      :to-equal '("c" "s" "v" "S" "X" "r" "R" "e" "k" "C" "l" "a" "A" "M"))
               (expect (approve-action-why-not 'approve-comment)
                       :to-equal "Wait until the pull request has loaded"))
           (kill-buffer buffer)))))

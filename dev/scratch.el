@@ -37,6 +37,7 @@
 (require 'approve-queries)
 (require 'approve-mutations)
 (require 'approve-changes)
+(require 'approve-metadata)
 
 (defconst approve-scratch-repository '("fuzzycode" . "test-approve")
   "The only repository this script writes to.")
@@ -183,7 +184,8 @@ That is (t . RESULT) or (nil . ERROR)."
 An alist of: the files' viewed states; the threads, each with whether
 it is resolved and its comments with their states; the pending review
 and its comments; the reviews and comments of the conversation, in
-order; the review decision."
+order; the review decision; the labels, assignees, milestone and
+review requests."
   `((viewed . ,(mapcar (lambda (file)
                          (cons (alist-get 'path file) (alist-get 'viewerViewedState file)))
                        (approve-pr-files)))
@@ -205,7 +207,15 @@ order; the review decision."
                                               (alist-get 'id item)))
                                        (approve-pr-list-fields
                                         'timelineItems '(__typename id state)))))
-    (decision . ,(approve-pr-field 'reviewDecision))))
+    (decision . ,(approve-pr-field 'reviewDecision))
+    (labels . ,(mapcar (lambda (label) (alist-get 'name label)) (approve-pr-field 'labels)))
+    (assignees . ,(mapcar (lambda (user) (alist-get 'login user))
+                          (approve-pr-field 'assignees)))
+    (milestone . ,(alist-get 'title (approve-pr-field 'milestone)))
+    (requested . ,(mapcar (lambda (request)
+                            (let-alist (alist-get 'requestedReviewer request)
+                              (or .login .combinedSlug)))
+                          (approve-pr-field 'reviewRequests)))))
 
 (defun approve-scratch--compare (what store)
   "Check that STORE's facts are GitHub's, after WHAT.
@@ -285,8 +295,8 @@ looked at again twice, a few seconds apart, as for the store."
   "Return the id of the pending review in the store, or nil."
   (alist-get 'id (approve-pr-pending-review)))
 
-(defun approve-scratch--steps (store)
-  "Run the checks in STORE, a buffer holding the scratch PR."
+(defun approve-scratch--review-steps (store)
+  "Run the checks of the review in STORE, a buffer holding the scratch PR."
   (with-current-buffer store
     (when (approve-scratch--pending-review)
       (error "The viewer has a pending review on #%d; submit or discard it first"
@@ -450,8 +460,76 @@ looked at again twice, a few seconds apart, as for the store."
                                                    comment)))
       (approve-scratch--compare "the clean-up" store))))
 
-(defun approve-scratch-run ()
-  "Run the checks on the scratch pull request; return the failures."
+(defun approve-scratch--named (kind name)
+  "Return the id of the metadata KIND whose name, title or login is NAME."
+  (alist-get 'id (seq-find (lambda (entry)
+                             (equal (or (alist-get 'name entry) (alist-get 'title entry))
+                                    name))
+                           (approve-metadata-wait kind))))
+
+(defun approve-scratch--viewer-id ()
+  "Return the id of the viewer, who can be assigned in the repository."
+  (alist-get 'id (seq-find (lambda (user)
+                             (equal (alist-get 'login user) (car approve-scratch-repository)))
+                           (approve-metadata-wait 'assignable-users))))
+
+(defun approve-scratch--metadata-steps (store)
+  "Run the checks of the PR's metadata in STORE, a buffer holding the scratch PR.
+Each change is undone after it: #8 keeps no labels, assignees,
+milestone or review requests."
+  (with-current-buffer store
+    (let ((bug (approve-scratch--named 'labels "bug"))
+          (docs (approve-scratch--named 'labels "documentation"))
+          (viewer (approve-scratch--viewer-id))
+          (milestone (approve-scratch--named 'milestones "0.2.0")))
+      ;; F12: labels, added then removed.
+      (approve-scratch--ok "add two labels"
+                           (approve-scratch--run #'approve-mutation-set-labels
+                                                 (list bug docs) nil))
+      (approve-scratch--compare "two labels" store)
+      (approve-scratch--ok "remove one"
+                           (approve-scratch--run #'approve-mutation-set-labels nil (list docs)))
+      (approve-scratch--compare "one label" store)
+      (approve-scratch--ok "remove the other"
+                           (approve-scratch--run #'approve-mutation-set-labels nil (list bug)))
+      (approve-scratch--compare "no label" store)
+      ;; F12: assignees.
+      (approve-scratch--ok "assign the viewer"
+                           (approve-scratch--run #'approve-mutation-set-assignees
+                                                 (list viewer) nil))
+      (approve-scratch--compare "an assignee" store)
+      (approve-scratch--ok "unassign the viewer"
+                           (approve-scratch--run #'approve-mutation-set-assignees
+                                                 nil (list viewer)))
+      (approve-scratch--compare "no assignee" store)
+      ;; F12: the milestone, set and taken away.
+      (approve-scratch--ok "set the milestone"
+                           (approve-scratch--run #'approve-mutation-set-milestone milestone))
+      (approve-scratch--compare "a milestone" store)
+      (approve-scratch--ok "take the milestone away"
+                           (approve-scratch--run #'approve-mutation-set-milestone nil))
+      (approve-scratch--compare "no milestone" store)
+      ;; F12: review requests.  GitHub drops the author from them without
+      ;; a word; asking no one is a whole set too.
+      (approve-scratch--ok "ask the author for a review"
+                           (approve-scratch--run #'approve-mutation-request-reviews
+                                                 :users (list viewer)))
+      (approve-scratch--check "the author is not asked: GitHub drops them"
+                              (null (approve-pr-field 'reviewRequests)))
+      (approve-scratch--compare "the author asked" store)
+      (approve-scratch--ok "ask no one for a review"
+                           (approve-scratch--run #'approve-mutation-request-reviews))
+      (approve-scratch--compare "no review request" store))))
+
+(defconst approve-scratch-step-groups
+  '((review . approve-scratch--review-steps)
+    (metadata . approve-scratch--metadata-steps))
+  "The groups of checks, in the order they run: (NAME . FUNCTION).")
+
+(defun approve-scratch-run (&optional only)
+  "Run the checks on the scratch pull request; return the failures.
+ONLY, a list of names of `approve-scratch-step-groups', runs those
+groups alone."
   (interactive)
   (let ((approve-api-transport #'approve-scratch-gh-transport)
         (approve-api-timeout 60)
@@ -460,19 +538,26 @@ looked at again twice, a few seconds apart, as for the store."
     (unwind-protect
         (progn
           (approve-scratch--load store)
-          (approve-scratch--steps store))
+          (pcase-dolist (`(,name . ,function) approve-scratch-step-groups)
+            (when (or (null only) (memq name only))
+              (funcall function store))))
       (kill-buffer store))
     (princ (format "%d checks failed\n" approve-scratch--failures))
     approve-scratch--failures))
 
 (defun approve-scratch-run-batch ()
-  "Run `approve-scratch-run' in batch mode; exit 1 when a check failed."
+  "Run `approve-scratch-run' in batch mode; exit 1 when a check failed.
+The environment variable APPROVE_SCRATCH_ONLY names the groups of
+`approve-scratch-step-groups' to run, such as \"metadata\"; without
+it, all run."
   (setq approve-graphql-directory
         (expand-file-name "../graphql" (file-name-directory
                                         (or load-file-name
                                             (locate-library "approve-mutations")))))
   (kill-emacs (if (zerop (condition-case err
-                             (approve-scratch-run)
+                             (approve-scratch-run
+                              (mapcar #'intern
+                                      (split-string (or (getenv "APPROVE_SCRATCH_ONLY") ""))))
                            (error (princ (format "ERROR %s\n" (error-message-string err)))
                                   1)))
                   0 1)))

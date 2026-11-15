@@ -7,11 +7,12 @@ ${include:fragments/reaction-group.graphql}
 ${include:fragments/pull-request-review-state.graphql}
 
 # The PR core: what the header, metadata rows, status line, description,
-# header line and "Your pending review" show.  The review state has a
-# fragment of its own, which the review mutations select too.  The long lists
-# (files, threads, timeline, commits, check contexts) come from their own
-# queries; here they are only counted, under aliases, so loading this never
-# replaces a list another query loaded (store contract point 3).
+# header line and "Your pending review" show, and the reviewers GitHub
+# suggests, whom the reviewers picker offers first (F12).  The review state
+# has a fragment of its own, which the review mutations select too.  The long
+# lists (files, threads, timeline, commits, check contexts) come from their
+# own queries; here they are only counted, under aliases, so loading this
+# never replaces a list another query loaded (store contract point 3).
 fragment PullRequestFields on PullRequest {
   __typename
   id
@@ -82,6 +83,13 @@ fragment PullRequestFields on PullRequest {
     ...MilestoneFields
   }
   ...PullRequestReviewStateFields
+  suggestedReviewers {
+    isAuthor
+    isCommenter
+    reviewer {
+      ...UserFields
+    }
+  }
   mergeable
   mergeStateStatus
   statusCheckRollup {

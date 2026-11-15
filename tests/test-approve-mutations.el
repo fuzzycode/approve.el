@@ -506,6 +506,112 @@ without, there is none."
         (expect (approve-api-error-message (cdr outcome)) :to-match "see \\*approve-log\\*"))
       (expect 'approve-log-condition :to-have-been-called))))
 
+(defun test-mutations--answer-by-name (answers)
+  "Make GitHub answer each mutation with its data in ANSWERS.
+ANSWERS is an alist (QUERY-FILE . DATA)."
+  (setq test-mutations--answer
+        (lambda (request)
+          `((data . ,(copy-tree (cdr (assoc (plist-get request :name) answers))))))))
+
+(defun test-mutations--names ()
+  "Return the query files of the requests sent, the first first."
+  (reverse (mapcar (lambda (request) (plist-get request :name)) test-mutations--requests)))
+
+(defun test-mutations--pr-labels (&rest names)
+  "Return the PR with labels NAMES, as GitHub answers a label mutation."
+  `((__typename . "PullRequest") (id . ,test-mutations--pr)
+    (labels (nodes ,@(mapcar (lambda (name)
+                               `((__typename . "Label") (id . ,(concat "LA_" name))
+                                 (name . ,name) (color . "ededed")))
+                             names)))))
+
+(describe "The metadata mutations"
+  (it "add labels, then remove labels; the PR's labels are GitHub's"
+    (test-mutations--with-pr
+      (test-mutations--answer-by-name
+       `(("mutations/add-labels-to-labelable.graphql"
+          (addLabelsToLabelable
+           (labelable ,@(test-mutations--pr-labels "enhancement" "area: parser" "bug"))))
+         ("mutations/remove-labels-from-labelable.graphql"
+          (removeLabelsFromLabelable
+           (labelable ,@(test-mutations--pr-labels "enhancement" "bug"))))))
+      (expect (test-mutations--run #'approve-mutation-set-labels
+                                   '("LA_bug") '("LA_kwDObXGcJQS9m86GUU"))
+              :to-equal `(t . ,(test-mutations--ref "PullRequest" test-mutations--pr)))
+      (expect (test-mutations--names)
+              :to-equal '("mutations/add-labels-to-labelable.graphql"
+                          "mutations/remove-labels-from-labelable.graphql"))
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/remove-labels-from-labelable.graphql"
+                          ((labelIds . ["LA_kwDObXGcJQS9m86GUU"])
+                           (labelableId . ,test-mutations--pr))))
+      (expect (mapcar (lambda (label) (alist-get 'name label)) (approve-pr-field 'labels))
+              :to-equal '("enhancement" "bug"))))
+
+  (it "send only what changes, and stop at the first GitHub refuses"
+    (test-mutations--with-pr
+      (test-mutations--answer-by-name
+       `(("mutations/remove-assignees-from-assignable.graphql"
+          (removeAssigneesFromAssignable
+           (assignable (__typename . "PullRequest") (id . ,test-mutations--pr)
+                       (assignees (nodes)))))))
+      (test-mutations--run #'approve-mutation-set-assignees nil '("U_kgDOUisnajVr3zkBPf"))
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/remove-assignees-from-assignable.graphql"
+                          ((assignableId . ,test-mutations--pr)
+                           (assigneeIds . ["U_kgDOUisnajVr3zkBPf"]))))
+      (expect (approve-pr-field 'assignees) :to-be nil)
+      (setq test-mutations--requests nil
+            test-mutations--answer
+            (lambda (_request)
+              '((data (addLabelsToLabelable))
+                (errors ((type . "FORBIDDEN") (message . "Not allowed"))))))
+      (expect (car (test-mutations--run #'approve-mutation-set-labels '("LA_bug") '("LA_x")))
+              :to-be nil)
+      (expect (test-mutations--names) :to-equal '("mutations/add-labels-to-labelable.graphql"))
+      (expect (length (approve-pr-field 'labels)) :to-equal 2)))
+
+  (it "ask users, teams and bots for a review, and no one else"
+    (test-mutations--with-pr
+      (test-mutations--answer-with
+       `((requestReviews
+          (pullRequest
+           (__typename . "PullRequest") (id . ,test-mutations--pr)
+           (reviewRequests
+            (nodes ((__typename . "ReviewRequest") (id . "RR_new") (asCodeOwner)
+                    (requestedReviewer (__typename . "User") (id . "U_erin")
+                                       (login . "erin-example")))))))))
+      (test-mutations--run #'approve-mutation-request-reviews
+                           :users '("U_erin") :teams nil :bots nil)
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/request-reviews.graphql"
+                          ((botIds . []) (pullRequestId . ,test-mutations--pr)
+                           (teamIds . []) (userIds . ["U_erin"]))))
+      (expect (mapcar (lambda (request) (let-alist request .requestedReviewer.login))
+                      (approve-pr-field 'reviewRequests))
+              :to-equal '("erin-example"))))
+
+  (it "set the milestone, and take it away with null"
+    (test-mutations--with-pr
+      (test-mutations--answer-with
+       `((updatePullRequest
+          (pullRequest (__typename . "PullRequest") (id . ,test-mutations--pr)
+                       (milestone (__typename . "Milestone") (id . "MI_2")
+                                  (title . "v2.0"))))))
+      (test-mutations--run #'approve-mutation-set-milestone "MI_2")
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/update-pull-request.graphql"
+                          ((milestoneId . "MI_2") (pullRequestId . ,test-mutations--pr))))
+      (expect (alist-get 'title (approve-pr-field 'milestone)) :to-equal "v2.0")
+      (test-mutations--answer-with
+       `((updatePullRequest
+          (pullRequest (__typename . "PullRequest") (id . ,test-mutations--pr)
+                       (milestone)))))
+      (test-mutations--run #'approve-mutation-set-milestone nil)
+      (expect (cadr (test-mutations--sent))
+              :to-equal `((milestoneId . :null) (pullRequestId . ,test-mutations--pr)))
+      (expect (approve-pr-field 'milestone) :to-be nil))))
+
 (provide 'test-approve-mutations)
 
 ;;; test-approve-mutations.el ends here

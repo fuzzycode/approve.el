@@ -1,0 +1,19 @@
+${include:fragments/label.graphql}
+
+# F12: remove labels from the pull request.  The answer is its labels,
+# all of them.
+mutation RemoveLabelsFromLabelable($labelableId: ID!, $labelIds: [ID!]!) {
+  removeLabelsFromLabelable(input: {labelableId: $labelableId, labelIds: $labelIds}) {
+    labelable {
+      __typename
+      ... on PullRequest {
+        id
+        labels(first: 100) {
+          nodes {
+            ...LabelFields
+          }
+        }
+      }
+    }
+  }
+}

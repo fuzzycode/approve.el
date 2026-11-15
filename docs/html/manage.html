@@ -44,8 +44,9 @@ eldoc.</p>
 <!-- ================================================================== -->
 <section class="shot" id="labels">
 <h2>Labels picker <span class="ref">l · F12 · completing-read-multiple</span></h2>
-<p>Current labels are preselected; marginalia-style annotations show description and colour. On commit, Approve sends
-only the difference (add these, remove those).</p>
+<p>The current labels are in the input already; removing one takes it away. Each candidate shows its colour and
+description, ✓ on the pull request's. On commit, Approve sends only the difference: the labels added, then those
+removed. Assignees, reviewers (GitHub's suggestions first) and the milestone work the same way.</p>
 <div class="emacs">
 <div class="win">
 <div class="buf short">
@@ -56,10 +57,10 @@ only the difference (add these, remove those).</p>
 </div>
 <div class="mini">
 <p><span class="m">4/9</span>  <span class="pi">Labels:</span> enhancement,api,<span class="cursor"> </span></p>
-<p class="sel">  <span class="b">api</span> <span class="ok">✓</span>             <span class="m">Talking to GitHub                              </span> <span style="color:#5319e7">■</span></p>
-<p>  bug               <span class="m">Something isn't working                        </span> <span style="color:#d73a4a">■</span></p>
-<p>  documentation     <span class="m">Improvements or additions to documentation     </span> <span style="color:#0075ca">■</span></p>
-<p>  <span class="b">enhancement</span> <span class="ok">✓</span>     <span class="m">New feature or request                         </span> <span style="color:#a2eeef">■</span></p>
+<p class="sel">  <span class="b">api</span>              <span class="ok">✓</span> <span style="background:#5319e7">    </span> <span class="m">Talking to GitHub</span></p>
+<p>  bug                <span style="background:#d73a4a">    </span> <span class="m">Something isn't working</span></p>
+<p>  documentation      <span style="background:#0075ca">    </span> <span class="m">Improvements or additions to documentation</span></p>
+<p>  <span class="b">enhancement</span>      <span class="ok">✓</span> <span style="background:#a2eeef">    </span> <span class="m">New feature or request</span></p>
 </div>
 </div>
 </section>

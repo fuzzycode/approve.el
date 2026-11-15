@@ -1,0 +1,28 @@
+${include:fragments/pull-request-review-state.graphql}
+
+# F12: ask people, teams and bots (Copilot) for a review.  With union false
+# the lists are the whole set: whoever is asked now and left out is asked no
+# more, and empty lists ask no one.  The answer is the PR's review state, the
+# review requests with it.
+mutation RequestReviews(
+  $pullRequestId: ID!
+  $userIds: [ID!]
+  $teamIds: [ID!]
+  $botIds: [ID!]
+) {
+  requestReviews(
+    input: {
+      pullRequestId: $pullRequestId
+      userIds: $userIds
+      teamIds: $teamIds
+      botIds: $botIds
+      union: false
+    }
+  ) {
+    pullRequest {
+      __typename
+      id
+      ...PullRequestReviewStateFields
+    }
+  }
+}

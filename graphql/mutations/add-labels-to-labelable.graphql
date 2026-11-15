@@ -1,0 +1,19 @@
+${include:fragments/label.graphql}
+
+# F12: add labels to the pull request.  The answer is its labels,
+# all of them.
+mutation AddLabelsToLabelable($labelableId: ID!, $labelIds: [ID!]!) {
+  addLabelsToLabelable(input: {labelableId: $labelableId, labelIds: $labelIds}) {
+    labelable {
+      __typename
+      ... on PullRequest {
+        id
+        labels(first: 100) {
+          nodes {
+            ...LabelFields
+          }
+        }
+      }
+    }
+  }
+}

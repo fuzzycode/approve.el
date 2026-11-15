@@ -1,0 +1,19 @@
+${include:fragments/user.graphql}
+
+# F12: unassign people from the pull request.  The answer is its assignees, all
+# of them.
+mutation RemoveAssigneesFromAssignable($assignableId: ID!, $assigneeIds: [ID!]!) {
+  removeAssigneesFromAssignable(input: {assignableId: $assignableId, assigneeIds: $assigneeIds}) {
+    assignable {
+      __typename
+      ... on PullRequest {
+        id
+        assignees(first: 100) {
+          nodes {
+            ...UserFields
+          }
+        }
+      }
+    }
+  }
+}
