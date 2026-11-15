@@ -14,7 +14,11 @@ predictable.
    change.
 5. Tick the task in [[file:roadmap.org][roadmap.org]], and update any doc the change affects, in
    the same commit.
-6. Never let a command wait without a limit: an agent can't press =C-g=.
+6. Reload Approve in the author's running Emacs after each unit of work, so
+   it can be tried at once: =make build=, then load =dev/load.el= there
+   (=(load-file "~/workspace/approve/dev/load.el")= through the Emacs
+   tools) and check =*Messages*=.  Nothing important is lost by a reload.
+7. Never let a command wait without a limit: an agent can't press =C-g=.
    Run every build, test, lint, Emacs and network command under
    =timeout= (=timeout 600 make test=, =timeout 60 emacs --batch …=,
    =timeout 60 gh api …=), give the tool its own timeout too, and send

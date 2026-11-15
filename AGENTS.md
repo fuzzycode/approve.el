@@ -33,6 +33,10 @@ for each kind of task.
   repository, `dev/scratch.el` (docs/development.org, "Scratch repository").
 - Conventional commits, one logical change each, with its tests and doc
   updates. Tick the roadmap task in the same commit.
+- After each unit of work, reload Approve in the author's running Emacs so
+  it can be tried at once: `make build`, then `(load-file
+  "~/workspace/approve/dev/load.el")` through the Emacs tools, and check
+  `*Messages*`. Reloading loses nothing important; don't ask first.
 - A changed mockup or flow is changed in its org file and in its HTML view
   (`docs/html/`); `make docs` rebuilds the flow diagrams (graphviz).
 - The shell is fish: wrap loops in `bash -c '…'`. Fish has no heredocs:
