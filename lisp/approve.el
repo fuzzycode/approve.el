@@ -51,6 +51,7 @@
   :link '(url-link :tag "Homepage" "https://github.com/fuzzycode/approve.el"))
 
 (require 'approve-pr)
+(require 'approve-input)
 (require 'approve-changes)
 (require 'approve-sections)
 (require 'approve-conversation)
@@ -98,8 +99,9 @@ is; \\[approve-pr-refresh] there loads it again.
 Example: (approve \"https://github.com/magit/magit/pull/5000\")"
   (interactive
    (let ((default (approve--default-url)))
-     (list (read-string (format-prompt "Pull request URL" default)
-                        nil nil default))))
+     (list (approve-input-with-submit-key
+             (read-string (format-prompt "Pull request URL" default)
+                          nil nil default)))))
   (approve-pr-open (or (approve-parse-url url)
                        (user-error "Not a pull request URL: %s" url))))
 

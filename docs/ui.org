@@ -804,7 +804,10 @@ conversation, files, diff), and in the diff every file but the one at
 point.  In the dashboard it folds every list but the one at point.
 
 Input buffers: =C-c C-c= send, =C-c C-k= abort, =C-c C-s= suggestion, =C-c C-p=
-preview, =C-c @= mention (same in every state).
+preview, =C-c @= mention (same in every state).  A one-line input (a title)
+sends with =RET= too.  In Approve's minibuffer prompts (the pickers, reasons,
+reactions, a file, a URL), =C-c C-c= does what =RET= does: it is the key that
+applies and sends everywhere ([[file:decisions.org::*D40 C-c C-c applies and sends, everywhere][D40]]).
 
 In evil's visual state, =c=, =s=, =r= and =C= act on the selection: =V= picks
 lines of the diff to comment on or suggest a change of, and selected text is

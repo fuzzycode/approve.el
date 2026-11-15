@@ -63,6 +63,10 @@
 ;;   first.  The rest is repository metadata (approve-metadata.el,
 ;;   decision D24), fetched in the background when an input opens.
 ;; - Opening the same target twice shows the buffer already open.
+;; - C-c C-c sends in every input, a line or more; a title's one line
+;;   is sent by RET too.  `approve-input-with-submit-key' gives the
+;;   minibuffer prompts of Approve the same key: C-c C-c does there what
+;;   RET does (decision D40).
 ;;
 ;; Layer rules: this is the input layer, beside the buffers.  It keeps
 ;; drafts in the session of the buffer it was opened from and never
@@ -189,13 +193,50 @@ screen (`visual-line-mode').
 
 (defvar-keymap approve-input-single-line-mode-map
   :doc "Keymap of `approve-input-single-line-mode'."
-  "RET" #'approve-input-commit)
+  "RET" #'approve-input-commit-line)
 
 (define-minor-mode approve-input-single-line-mode
   "Minor mode of an input buffer for one line, such as a title.
-\\<approve-input-single-line-mode-map>\\[approve-input-commit] sends the first line, trimmed."
+\\<approve-input-single-line-mode-map>\\[approve-input-commit-line] sends the first line, trimmed, as \\<approve-input-mode-map>\\[approve-input-commit] does."
   :keymap approve-input-single-line-mode-map
   :group 'approve)
+
+;;; Minibuffer prompts
+
+(defun approve-input-minibuffer-submit ()
+  "Submit the minibuffer as \\`RET' does there.
+\\<approve-input-minibuffer-map>Approve's prompts bind it to \\[approve-input-minibuffer-submit], the key that sends
+every text Approve asks for, so the same key applies a choice too
+\(`approve-input-with-submit-key').  It runs what \\`RET' runs, so a
+completion UI such as Vertico submits its way."
+  (interactive)
+  (let ((command (key-binding (kbd "RET"))))
+    (unless (commandp command)
+      (user-error "RET submits nothing here"))
+    (setq this-command command)
+    (call-interactively command)))
+
+(defvar-keymap approve-input-minibuffer-map
+  :doc "Keys Approve adds to its minibuffer prompts."
+  "C-c C-c" #'approve-input-minibuffer-submit)
+
+(defmacro approve-input-with-submit-key (&rest body)
+  "Run BODY, whose minibuffer prompt `approve-input-minibuffer-map' joins.
+\\<approve-input-minibuffer-map>There \\[approve-input-minibuffer-submit] submits as \\`RET' does.  Wrap every
+prompt of Approve where \\`RET' submits, so that key applies or sends
+everywhere: in input buffers, one line or more, and in the
+minibuffer (decision D40).  Only the first minibuffer BODY opens
+gets the key.
+
+Example:
+  (approve-input-with-submit-key
+    (completing-read \"Label: \" \\='(\"bug\" \"docs\") nil t))"
+  (declare (indent 0) (debug t))
+  `(minibuffer-with-setup-hook
+       (lambda ()
+         (use-local-map (make-composed-keymap approve-input-minibuffer-map
+                                              (current-local-map))))
+     ,@body))
 
 ;;; Drafts
 
@@ -575,8 +616,9 @@ those who can be mentioned in its repository."
                  (lambda (login)
                    (let ((note (cdr (assoc login people))))
                      (and note (not (string-empty-p note)) (concat "  " note)))))))
-     (list (completing-read "Mention: " (approve-input--table (mapcar #'car people)
-                                                               'approve-person)))))
+     (list (approve-input-with-submit-key
+             (completing-read "Mention: " (approve-input--table (mapcar #'car people)
+                                                                 'approve-person))))))
   (unless (eq (char-before) ?@)
     (insert "@"))
   (insert login " "))
@@ -672,6 +714,14 @@ The text stays the draft of its target until GitHub has it."
     (when on-commit
       (with-current-buffer source
         (funcall on-commit text)))))
+
+(defun approve-input-commit-line ()
+  "Send the one line of a single-line input, as \\<approve-input-mode-map>\\[approve-input-commit] does.
+It is \\`RET' there, which ends a line; \\[approve-input-commit] sends
+every text Approve asks for, a line or more, so the header line
+names that one."
+  (interactive)
+  (approve-input-commit))
 
 (defun approve-input-abort ()
   "Abort: close this buffer, keeping its text as a draft of its target.

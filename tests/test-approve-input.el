@@ -71,7 +71,7 @@ header line's form."
                                                   :commit-label "submit"))
             :to-match "C-c C-c submit")
     (expect (test-input--header (test-input--open :prompt "New title" :single-line t))
-            :to-match "C-c C-k abort\\'"))
+            :to-match "C-c C-c send · C-c C-k abort\\'"))
 
   (it "name their keys even when hints are turned off, as they are bound"
     (let ((approve-show-hints nil)
@@ -166,16 +166,40 @@ header line's form."
       (with-current-buffer first
         (expect (buffer-string) :to-equal "Typing"))))
 
-  (it "send the first line of a single-line input with RET, trimmed"
+  (it "send the first line of a single-line input with RET or C-c C-c, trimmed"
     (let* ((sent nil)
            (buffer (test-input--open :single-line t :initial "  New title  "
                                      :on-commit (lambda (text) (setq sent text)))))
       (with-current-buffer buffer
         (goto-char (point-max))
         (insert "\nignored")
-        (expect (key-binding (kbd "RET")) :to-be #'approve-input-commit)
-        (approve-input-commit))
+        (expect (key-binding (kbd "RET")) :to-be #'approve-input-commit-line)
+        (expect (key-binding (kbd "C-c C-c")) :to-be #'approve-input-commit)
+        (approve-input-commit-line))
       (expect sent :to-equal "New title")))
+
+  ;; Batch Emacs reads prompts from stdin, without a minibuffer, so
+  ;; these run the minibuffer's setup in a buffer of their own.
+  (it "give a minibuffer prompt of Approve C-c C-c, over the prompt's own keys"
+    (let ((own (define-keymap "RET" #'exit-minibuffer "C-g" #'abort-minibuffers)))
+      (with-temp-buffer
+        (use-local-map own)
+        (approve-input-with-submit-key
+          (run-hooks 'minibuffer-setup-hook))
+        (expect (key-binding (kbd "C-c C-c")) :to-be #'approve-input-minibuffer-submit)
+        (expect (key-binding (kbd "RET")) :to-be #'exit-minibuffer))
+      ;; Only the prompt it wraps: the setup is gone after it.
+      (with-temp-buffer
+        (use-local-map own)
+        (run-hooks 'minibuffer-setup-hook)
+        (expect (key-binding (kbd "C-c C-c")) :to-be nil))))
+
+  (it "submit the minibuffer with C-c C-c by running what RET runs there"
+    (let ((ran nil))
+      (with-temp-buffer
+        (use-local-map (define-keymap "RET" (lambda () (interactive) (setq ran this-command))))
+        (approve-input-minibuffer-submit)
+        (expect ran :to-be (key-binding (kbd "RET"))))))
 
   (it "stay open when the buffer the text was for is gone"
     (let ((buffer (test-input--open :on-commit #'ignore)))

@@ -68,6 +68,7 @@
 (require 'approve-pr)
 (require 'approve-sections)
 (require 'approve-diff)
+(require 'approve-input)
 
 ;;; Moving to sections
 
@@ -272,9 +273,10 @@ is collapsed again."
 (defun approve-jump-file (path)
   "Move to the diff of the changed file PATH, read with completion."
   (interactive
-   (list (completing-read "File: " (mapcar (lambda (file) (alist-get 'path file))
-                                           (approve-pr-files))
-                          nil t)))
+   (list (approve-input-with-submit-key
+           (completing-read "File: " (mapcar (lambda (file) (alist-get 'path file))
+                                             (approve-pr-files))
+                            nil t))))
   (approve-nav-goto-file path))
 
 ;;; Visiting, opening, copying

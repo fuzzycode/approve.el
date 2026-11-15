@@ -426,11 +426,16 @@ Every context also carries =:url= when one exists (for =o= and copying).
   (=approve-input-display-action=) and returns it.  =:prompt= says what the
   text is for and =:context= where it goes; both start the header line, with
   the keys at its right edge.  =:name= names the buffer, =:initial= fills
-  it, =:single-line= makes RET send one line (a title), =:allow-empty= lets
+  it, =:single-line= makes RET send one line (a title), as =C-c C-c= does
+  and the header line says, =:allow-empty= lets
   an empty text be sent (a review body), =:commit-label= says what =C-c C-c=
   does ("send", "submit").  =:on-commit= gets the text and =:on-abort=
   nothing, both in the buffer the input was opened from, after the input's
   window is gone.
+- =approve-input-with-submit-key= wraps every minibuffer prompt of Approve
+  where =RET= submits (pickers, reasons, reactions, a file, the URL of
+  =M-x approve=): =C-c C-c= runs there what =RET= runs, so it applies and
+  sends everywhere (D40), whatever the completion UI.
 - =:target= is a stable key for drafts, such as =(reply "PRRT_1")=.  Abort
   keeps the text in the session's =:drafts= under the target, and so does
   killing the input buffer; reopening the same target fills the buffer from

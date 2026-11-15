@@ -343,6 +343,19 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   text must not move under the reader ([[*D23 Remote changes are announced, never auto-applied][D23]]).  =gR= follows approve-v2's
   dashboard and sits next to =gr=, which refreshes everything.
 
+** D40 C-c C-c applies and sends, everywhere
+- Status :: accepted (2026-11-15, by the author)
+- Decision :: =C-c C-c= sends or applies wherever Approve asks for text or a
+  choice: in every input buffer, a comment as well as a one-line title
+  (where =RET= sends too), and in Approve's minibuffer prompts (the
+  metadata pickers, reasons, reactions, a file to jump to, a URL), where it
+  does what =RET= does there, whatever the completion UI
+  (=approve-input-with-submit-key=).  A one-line input's header line names
+  =C-c C-c=.  Prompts that ask y or n keep their keys.
+- Why :: Muscle memory: one key to apply or save, as in Magit's commit
+  buffer, Org's capture and message-mode, without thinking whether the text
+  is one line or many, in a buffer or the minibuffer.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)

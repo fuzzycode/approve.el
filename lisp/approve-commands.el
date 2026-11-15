@@ -597,17 +597,15 @@ is taken back."
                                   (alist-get 'viewerHasReacted group)
                                   (or (let-alist group .reactors.totalCount) 0))))
                         approve-commands--reactions))
-               (choice (completing-read
+               (choice (approve-manage-read-one
                         (approve-commands--react-prompt typename id)
-                        (approve-manage-table
-                         (mapcar #'car candidates)
-                         (mapcar (lambda (candidate)
-                                   (cons (car candidate)
-                                         (approve-commands--reaction-note (nth 2 candidate)
-                                                                          (nth 3 candidate))))
-                                 candidates)
-                         'approve-reaction)
-                        nil t))
+                        (mapcar #'car candidates)
+                        :notes (mapcar (lambda (candidate)
+                                         (cons (car candidate)
+                                               (approve-commands--reaction-note
+                                                (nth 2 candidate) (nth 3 candidate))))
+                                       candidates)
+                        :category 'approve-reaction))
                (`(,_ ,content ,given ,_) (assoc choice candidates)))
     (approve-action-run
      :what (if given "take the reaction back" "react")
@@ -652,14 +650,13 @@ hide what others wrote."
   (interactive)
   (pcase-let* ((`(,typename ,id ,hidden) (approve-commands--hide-preflight))
                (reason (unless hidden
-                         (cdr (assoc (completing-read
+                         (cdr (assoc (approve-manage-read-one
                                       (format "Hide @%s's %s, because: "
                                               (approve-commands--author typename id)
                                               (if (equal typename "PullRequestReview")
                                                   "review"
                                                 "comment"))
-                                      (mapcar #'car approve-commands--hide-reasons)
-                                      nil t)
+                                      (mapcar #'car approve-commands--hide-reasons))
                                      approve-commands--hide-reasons)))))
     (approve-action-run
      :what (if hidden "show the comment" "hide the comment")

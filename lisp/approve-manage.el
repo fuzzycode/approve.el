@@ -67,6 +67,7 @@
 (require 'subr-x)
 (require 'approve-model)
 (require 'approve-faces)
+(require 'approve-input)
 (require 'approve-metadata)
 (require 'approve-mutations)
 (require 'approve-actions)
@@ -114,10 +115,23 @@ chosen.
 Example:
   (approve-manage--read-many \"Labels\" \\='(\"bug\" \"docs\") \\='(\"bug\"))"
   (delete-dups
-   (completing-read-multiple
-    (format "%s: " prompt)
-    (approve-manage-table candidates notes category)
-    nil t (and current (concat (string-join current ",") ",")))))
+   (approve-input-with-submit-key
+     (completing-read-multiple
+      (format "%s: " prompt)
+      (approve-manage-table candidates notes category)
+      nil t (and current (concat (string-join current ",") ","))))))
+
+(cl-defun approve-manage-read-one (prompt candidates &key notes category default)
+  "Read one of CANDIDATES, strings, with PROMPT, the whole prompt.
+NOTES and CATEGORY are as for `approve-manage-table'; DEFAULT is what
+\\`RET' alone chooses.  \\<approve-input-minibuffer-map>As in every prompt of Approve,
+\\[approve-input-minibuffer-submit] chooses too (`approve-input-with-submit-key').
+
+Example:
+  (approve-manage-read-one \"Notifications: \" \\='(\"Subscribed\" \"Ignored\"))"
+  (approve-input-with-submit-key
+    (completing-read prompt (approve-manage-table candidates notes category)
+                     nil t nil nil default)))
 
 (defun approve-manage-note (&rest parts)
   "Return PARTS, strings or nil, joined by two spaces, as a dim note."
@@ -466,17 +480,15 @@ The repository's open milestones are offered, those due first first."
          (titles (append (and current (list approve-manage--no-milestone))
                          (mapcar (lambda (milestone) (alist-get 'title milestone))
                                  milestones)))
-         (choice (completing-read
-                  (format-prompt "Milestone" title)
-                  (approve-manage-table
-                   titles
-                   (mapcar (lambda (milestone)
-                             (cons (alist-get 'title milestone)
-                                   (approve-manage--milestone-note
-                                    milestone (equal (alist-get 'title milestone) title))))
-                           milestones)
-                   'approve-milestone)
-                  nil t nil nil title))
+         (choice (approve-manage-read-one
+                  (format-prompt "Milestone" title) titles
+                  :notes (mapcar (lambda (milestone)
+                                   (cons (alist-get 'title milestone)
+                                         (approve-manage--milestone-note
+                                          milestone
+                                          (equal (alist-get 'title milestone) title))))
+                                 milestones)
+                  :category 'approve-milestone :default title))
          (milestone (seq-find (lambda (milestone) (equal (alist-get 'title milestone) choice))
                               milestones)))
     (cond
@@ -550,18 +562,16 @@ token to have the notifications scope for it."
   (approve-manage--subscription-preflight)
   (let* ((current (approve-pr-field 'viewerSubscription))
          (name (nth 1 (assoc current approve-manage--subscriptions)))
-         (choice (completing-read
+         (choice (approve-manage-read-one
                   (format-prompt "Notifications" name)
-                  (approve-manage-table
-                   (mapcar #'cadr approve-manage--subscriptions)
-                   (mapcar (lambda (entry)
-                             (cons (nth 1 entry)
-                                   (concat (approve-manage-mark
-                                            (equal (car entry) current))
-                                           " " (approve-manage-note (nth 2 entry)))))
-                           approve-manage--subscriptions)
-                   'approve-subscription)
-                  nil t nil nil name))
+                  (mapcar #'cadr approve-manage--subscriptions)
+                  :notes (mapcar (lambda (entry)
+                                   (cons (nth 1 entry)
+                                         (concat (approve-manage-mark
+                                                  (equal (car entry) current))
+                                                 " " (approve-manage-note (nth 2 entry)))))
+                                 approve-manage--subscriptions)
+                  :category 'approve-subscription :default name))
          (state (car (seq-find (lambda (entry) (equal (nth 1 entry) choice))
                                approve-manage--subscriptions))))
     (if (or (null state) (equal state current))
@@ -604,9 +614,10 @@ only collaborators can comment.  Unlocking asks first."
     (when (or (not locked)
               (y-or-n-p (format "Unlock the conversation of #%s? " number)))
       (let ((reason (unless locked
-                      (cdr (assoc (completing-read "Lock the conversation, because: "
-                                                   (mapcar #'car approve-manage--lock-reasons)
-                                                   nil t nil nil "No reason")
+                      (cdr (assoc (approve-manage-read-one
+                                   "Lock the conversation, because: "
+                                   (mapcar #'car approve-manage--lock-reasons)
+                                   :default "No reason")
                                   approve-manage--lock-reasons)))))
         (approve-action-run
          :what (if locked "unlock the conversation" "lock the conversation")
