@@ -36,12 +36,13 @@
 ;;   knowing, with details the store lacks fetched on demand.
 ;;
 ;; `approve-eldoc-function' is on `eldoc-documentation-functions' in
-;; every PR buffer.  It finds the context at point and its describer in
-;; `approve-eldoc-describers'; a describer returns the echo line, the
-;; full text, and which details it would like.  Details are fetched
-;; only when K asked for this thing or the eldoc buffer is showing, are
-;; cached for the session (an error for a minute), and eldoc runs again
-;; once they arrive.  Moving point around never touches the network.
+;; every PR buffer and in the dashboard.  It finds the context at point
+;; and its describer in `approve-eldoc-describers'; a describer returns
+;; the echo line, the full text, and which details it would like.
+;; Details are fetched only when K asked for this thing or the eldoc
+;; buffer is showing, are cached for the session (an error for a
+;; minute), and eldoc runs again once they arrive.  Moving point around
+;; never touches the network.
 ;;
 ;; Layer rules: this sits with the renderers (it draws text from the
 ;; store) but, as the architecture's eldoc flow says, it also starts
@@ -97,7 +98,7 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
 (defun approve-eldoc--row (name value)
   "Return a row of the eldoc buffer: NAME, then VALUE, or nil without VALUE."
   (when (and value (not (and (stringp value) (string-empty-p value))))
-    (concat (approve-face (approve-render-pad name 10) 'approve-secondary-heading)
+    (concat (approve-face (approve-render-pad name 11) 'approve-secondary-heading)
             (format "%s" value) "\n")))
 
 (defun approve-eldoc--link (url)
@@ -317,6 +318,19 @@ wrote, and so does Approve."
   "Return the STATE of an issue or pull request of TYPE in words."
   (format "%s %s" (downcase (or state "")) (if (equal type "PullRequest") "pull request" "issue")))
 
+(defun approve-eldoc--labels (details)
+  "Return the labels of DETAILS, a #123 reference's, as boxes."
+  (mapconcat (lambda (label)
+               (let-alist label
+                 (approve-face (format " %s " .name) (approve-label-face .color))))
+             (let-alist details .labels.nodes) " "))
+
+(defun approve-eldoc--body (details)
+  "Return the start of the text of DETAILS, a #123 reference's, or nil."
+  (when-let* ((body (alist-get 'bodyText details)))
+    (unless (string-empty-p body)
+      (concat "\n" (approve-render-truncate (string-trim body) 400) "\n"))))
+
 (defun approve-eldoc-describe-ref (context details)
   "Describe the issue or pull request of CONTEXT, with DETAILS if fetched."
   (let* ((thing (plist-get context :thing))
@@ -334,15 +348,86 @@ wrote, and so does Approve."
       (approve-eldoc--row "State" (and state (approve-eldoc--state state type)))
       (approve-eldoc--row "Author" (let-alist details
                                      (and .author.login (concat "@" .author.login))))
-      (approve-eldoc--row "Labels" (mapconcat (lambda (label)
-                                                (let-alist label
-                                                  (approve-face (format " %s " .name)
-                                                                (approve-label-face .color))))
-                                              (let-alist details .labels.nodes) " "))
-      (when-let* ((body (alist-get 'bodyText details)))
-        (unless (string-empty-p body)
-          (concat "\n" (approve-render-truncate (string-trim body) 400) "\n")))
+      (approve-eldoc--row "Labels" (approve-eldoc--labels details))
+      (approve-eldoc--body details)
       "\n" (approve-eldoc--link (plist-get context :url)) "\n"))))
+
+(defun approve-eldoc--pr-state (pr)
+  "Return the state of PR, a row of a list, in words."
+  (let-alist pr
+    (pcase .state
+      ("MERGED" "merged")
+      ("CLOSED" "closed")
+      (_ (if .isDraft "open, draft" "open")))))
+
+(defun approve-eldoc--pr-checks (pr)
+  "Return the checks of PR's last commit in words, or nil without checks."
+  (pcase (let-alist pr .statusCheckRollup.state)
+    ("SUCCESS" (concat (approve-icon 'check-success 'approve-check-success) " passed"))
+    ((or "FAILURE" "ERROR")
+     (concat (approve-icon 'check-failure 'approve-check-failure) " failed"))
+    ((or "PENDING" "EXPECTED")
+     (concat (approve-icon 'check-pending 'approve-check-pending) " running"))))
+
+(defun approve-eldoc--pr-review (pr)
+  "Return GitHub's review decision on PR in words, or nil without one."
+  (pcase (alist-get 'reviewDecision pr)
+    ("APPROVED" "approved")
+    ("CHANGES_REQUESTED" "changes requested")
+    ("REVIEW_REQUIRED" "review required")))
+
+(defun approve-eldoc-describe-pull-request (context details)
+  "Describe the pull request of CONTEXT, a row of a list.
+DETAILS are its #123 details (labels, text) if fetched."
+  (let ((pr (plist-get (plist-get context :thing) :pr)))
+    (let-alist pr
+      (let* ((number (approve-face (format "#%s" .number) 'approve-number))
+             (branch (and .headRefName
+                          (concat (approve-face .headRefName 'approve-branch) " → "
+                                  (approve-face .baseRefName 'approve-branch))))
+             (size (and .additions
+                        (concat (approve-face (format "+%d" .additions) 'approve-diffstat-added)
+                                " " (approve-face (format "−%d" .deletions)
+                                                  'approve-diffstat-removed))))
+             (files (and .changedFiles
+                         (format "%d file%s" .changedFiles (if (= .changedFiles 1) "" "s")))))
+        (list
+         :echo (string-trim-right
+                (approve-eldoc--title
+                 number
+                 (approve-render-join
+                  (list (approve-face (or .repository.nameWithOwner "") 'approve-repository)
+                        branch size files))))
+         :details (and .repository.nameWithOwner
+                       (let ((parts (split-string .repository.nameWithOwner "/")))
+                         (cons 'ref (list (car parts) (cadr parts) .number))))
+         :doc
+         (concat
+          (approve-eldoc--title number (approve-face (or .title "") 'bold))
+          "\n"
+          (approve-eldoc--row "State" (approve-eldoc--pr-state pr))
+          (approve-eldoc--row "Author" (approve-render-user .author))
+          (approve-eldoc--row "Repository" .repository.nameWithOwner)
+          (approve-eldoc--row "Branch" branch)
+          (approve-eldoc--row "Changes" (approve-render-join (list files size)))
+          (approve-eldoc--row "Checks" (approve-eldoc--pr-checks pr))
+          (approve-eldoc--row "Review" (approve-eldoc--pr-review pr))
+          (approve-eldoc--row "Opened" (and .createdAt (approve-eldoc--when .createdAt)))
+          (approve-eldoc--row "Updated" (and .updatedAt (approve-eldoc--when .updatedAt)))
+          (approve-eldoc--row "Labels" (approve-eldoc--labels details))
+          (approve-eldoc--body details)
+          "\n" (approve-eldoc--link .url) "\n"))))))
+
+(defun approve-eldoc-describe-search (context _details)
+  "Describe the search of CONTEXT, a list of the dashboard."
+  (let* ((thing (plist-get context :thing))
+         (search (or (plist-get context :value) ""))
+         (total (plist-get thing :total))
+         (found (and total (format "%d found" total))))
+    (list :echo (string-trim-right (approve-eldoc--title (plist-get thing :title) search found))
+          :doc (concat (approve-eldoc--title (plist-get thing :title) found)
+                       "\n" (approve-eldoc--row "Search" search)
+                       "\n" (approve-eldoc--link (plist-get context :url)) "\n"))))
 
 (defun approve-eldoc-describe-check (context _details)
   "Describe the check of CONTEXT."
@@ -555,7 +640,9 @@ wrote, and so does Approve."
     (reactions . approve-eldoc-describe-reactions)
     (date . approve-eldoc-describe-date)
     (milestone . approve-eldoc-describe-milestone)
-    (branch . approve-eldoc-describe-branch))
+    (branch . approve-eldoc-describe-branch)
+    (pull-request . approve-eldoc-describe-pull-request)
+    (search . approve-eldoc-describe-search))
   "Describers of things at point, by context kind.
 Each is called with the context and the details fetched for it (or
 nil) and returns a plist: :echo, the line for the echo area; :doc,
@@ -630,18 +717,20 @@ they are loading.  Return nil when nothing describes CONTEXT."
 
 (defun approve-eldoc-function (callback &rest _)
   "Document the thing at point for eldoc, calling CALLBACK.
-The echo line comes from the store; details are fetched only when
-\\[approve-show-details] asked for this thing or the eldoc buffer
-is showing.  Return nil when there is nothing to say."
-  (when (approve-model-root-ref)
-    (let* ((context (approve-context-at-point))
-           (fetch (or (approve-eldoc--buffer-visible-p)
-                      (equal approve-eldoc--wanted (approve-eldoc--identity context))))
-           (description (approve-eldoc-describe context fetch)))
-      (when description
-        (funcall callback (plist-get description :doc)
-                 :echo (plist-get description :echo))
-        t))))
+The echo line comes from the store, or in a buffer of lists from the
+rows; details are fetched only when \\[approve-show-details] asked
+for this thing or the eldoc buffer is showing.  Return nil when
+there is nothing to say, as in a PR buffer before its PR loaded."
+  (when (or (approve-model-root-ref) (not (approve-model-meta :number)))
+    (when-let* ((context (approve-context-at-point))
+                (description
+                 (approve-eldoc-describe
+                  context
+                  (or (approve-eldoc--buffer-visible-p)
+                      (equal approve-eldoc--wanted (approve-eldoc--identity context))))))
+      (funcall callback (plist-get description :doc)
+               :echo (plist-get description :echo))
+      t)))
 
 (defun approve-show-details ()
   "Show everything about the thing at point in the eldoc buffer (K).

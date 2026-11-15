@@ -52,6 +52,7 @@
 
 (require 'magit-section)
 (require 'approve-pr)
+(require 'approve-dashboard)
 
 (declare-function evil-define-key* "evil-core" (state keymap key def &rest bindings))
 (declare-function evil-set-initial-state "evil-core" (mode state))
@@ -107,14 +108,40 @@ lines of the diff (\\`V' picks them), or a reply or conversation
 comment quoting the selected text.  The dispatch menu keeps the
 selection for the command picked in it.")
 
+(defconst approve-evil-dashboard-bindings
+  '(("j" . evil-next-visual-line)
+    ("k" . evil-previous-visual-line)
+    ("<down>" . evil-next-visual-line)
+    ("<up>" . evil-previous-visual-line)
+    ("RET" . approve-visit)
+    ("TAB" . approve-section-toggle)
+    ("za" . approve-section-toggle)
+    ("gr" . approve-dashboard-refresh)
+    ("gR" . approve-dashboard-refresh-section)
+    ("go" . approve-browse)
+    ("gy" . approve-copy)
+    ("K" . approve-show-details)
+    ("gj" . magit-section-forward)
+    ("gk" . magit-section-backward)
+    ("C-j" . magit-section-forward)
+    ("C-k" . magit-section-backward)
+    ("?" . approve-dashboard-dispatch)
+    ("q" . quit-window))
+  "Keys of `approve-dashboard-mode' in evil's normal state: (KEY . COMMAND).
+The PR buffer's keys for the same commands; G, which refreshes the
+list at point in Emacs, is evil's motion, so gR does it.")
+
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.
-Also `approve-evil-visual-bindings' in its visual state.  Input
-buffers start in insert state."
+Also `approve-evil-visual-bindings' in its visual state, and
+`approve-evil-dashboard-bindings' in the dashboard's normal state.
+Input buffers start in insert state."
   (dolist (binding approve-evil-pr-bindings)
     (evil-define-key* 'normal approve-pr-mode-map (kbd (car binding)) (cdr binding)))
   (dolist (binding approve-evil-visual-bindings)
     (evil-define-key* 'visual approve-pr-mode-map (kbd (car binding)) (cdr binding)))
+  (dolist (binding approve-evil-dashboard-bindings)
+    (evil-define-key* 'normal approve-dashboard-mode-map (kbd (car binding)) (cdr binding)))
   (evil-set-initial-state 'approve-input-mode 'insert))
 
 (approve-evil-setup)

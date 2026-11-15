@@ -64,10 +64,11 @@ valid  [label="a pull request\nURL?" @dec];
 err    [label="user-error\n\"Not a pull request URL: …\"" @err];
 exists [label="buffer for it\nexists?" @dec];
 switch [label="switch to it — no reload\n(header line says if stale)" @ok];
-create [label="create buffer · approve-pr-mode\nremember in \"Recently opened\""];
+remem  [label="remember in \"Recently opened\"\n(first; this Emacs session)"];
+create [label="create buffer · approve-pr-mode"];
 load   [label="F02  Load a PR" @goto, href="#F02"];
 dash -> parse; search -> parse; url -> parse; atpt -> parse; burl -> parse; notif -> parse;
-parse -> valid; valid -> err [@no]; valid -> exists [@yes];
+parse -> valid; valid -> err [@no]; valid -> remem [@yes]; remem -> exists;
 exists -> switch [@yes]; exists -> create [@no]; create -> load;
 
 %% F02

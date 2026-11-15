@@ -305,6 +305,40 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   set without branch protection too (checked on the scratch repository);
   "commented" would need each reviewer's latest review in every row.
 
+** D39 The dashboard: lists loaded anew each time, "Recently opened" for the session
+- Status :: accepted (2026-11-15, by the author)
+- Decision ::
+  - =approve-dashboard-sections= lists the dashboard's lists, each a plist:
+    =:title=, =:filter= (a GitHub search, or a function that returns one
+    when the list loads), =:limit= (=approve-dashboard-limit=, 20, by
+    default; at most 100), =:hidden= (collapsed at first), or =:recent=
+    instead of a filter.
+  - "Recently opened" (=:recent=) lists the pull requests opened in this
+    Emacs session, newest first.  The list is kept in memory only
+    (=approve-pr-recent=, the last 50), not in a file.  Each time a pull
+    request is opened, a buffer that was open already included, it goes
+    first.  Its rows are asked anew from GitHub each time the list
+    loads, one query per pull request by owner, name and number
+    (=queries/pull-request-summary.graphql=), all at once.  A pull
+    request GitHub no longer has, or the token can't read, is left out.
+  - =M-x approve-dashboard= loads every list again each time, as
+    =magit-status= refreshes, and so does =g=.  =G= loads the list at
+    point alone; evil's =G= is a motion, so there it is =gR=.  A list
+    keeps its rows while it loads again, and an answer to a request made
+    before the list's last one is dropped.
+  - A heading counts what GitHub finds (=issueCount=); when that is more
+    than the list shows, a last line says how many more, and =o= opens the
+    search on GitHub.  A token error is shown once, for the whole
+    dashboard, as in a PR buffer.
+- Why :: The author chose a list for the session over a file: nothing to
+  keep on disk, and the rows are fresh anyway.  =nodes(ids:)= would ask
+  for every row at once, but it needs the node ids, known only once a pull
+  request has loaded, and one missing pull request fails the whole answer
+  (=NOT_FOUND=); a query per pull request fails alone.  A dashboard is
+  asked for to see the lists as they are now, unlike a PR buffer, whose
+  text must not move under the reader ([[*D23 Remote changes are announced, never auto-applied][D23]]).  =gR= follows approve-v2's
+  dashboard and sits next to =gr=, which refreshes everything.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)

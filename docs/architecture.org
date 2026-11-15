@@ -89,7 +89,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-thread.el=        | Thread and comment sections (also used in the conversation)                     |     1 |
 | =approve-context.el=       | =approve-context-at-point=: what is under point or in the region                |     1 |
 | =approve-pr.el=            | =approve-pr-mode=, URL parsing, open/refresh, layouts, redraw, point restore,   |     1 |
-|                            | header line                                                                     |       |
+|                            | header line, the PRs opened in the session                                      |       |
 | =approve-changes.el=       | Change detection (D23): the check, comparing it with the store, the header      |     2 |
 |                            | line's notice, checks on selection and focus, polling                           |       |
 | =approve-nav.el=           | Read-only commands: visit (=RET=), browse (=o=), copy (=y=), jumps, next        |     1 |
@@ -106,7 +106,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
 |                            | loaded)                                                                         |       |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |
-| =approve-dashboard.el=     | Dashboard buffer from =approve-dashboard-sections=                              |     3 |
+| =approve-dashboard.el=     | Dashboard buffer from =approve-dashboard-sections= (D39): searches and the PRs  |     3 |
+|                            | opened in the session, a refresh of one list, its title line                    |       |
 | =approve-search.el=        | Search buffer and search-filter transient                                       |     3 |
 | =approve-file.el=          | Full-file view: blob, major mode, fringe marks, inline threads                  |     6 |
 | =approve-notifications.el= | Notifications buffer                                                            |     7 |
@@ -170,7 +171,9 @@ The store from approve-v2 (D10), with a few additions.
   points to its PR buffer (=approve-model-store-buffer=), and every model
   function reads and writes the store and session there.
 - The dashboard and search lists do not normalize; they keep the raw search
-  result (it is shown once and thrown away).
+  result (it is shown once and thrown away).  The pull requests opened in
+  the session, newest first, are a global list in =approve-pr.el=
+  (=approve-pr-recent=, D39); the dashboard asks GitHub for their rows.
 - Extended details for eldoc (a user's bio, an issue's title, a commit's full
   message) live in one global cache, =approve-eldoc--details=, keyed by host,
   type and id, for the Emacs session.  They are shared by every Approve
@@ -401,9 +404,11 @@ then walks up the sections from point to the first one that means something.
 | Link in a comment          | =link=                          | =:value :url=                                    |
 | Commit author, no account  | =git-actor=                     | =:value= (=Name <email>=, D33)                   |
 | Row of a list of PRs       | =pull-request=                  | =:value= (=owner/repo#N=) =:url=                 |
+| Heading of a dashboard's   | =search=                        | =:value= (the search) =:url= (GitHub's search)   |
+| list, its "… N more"       |                                 |                                                  |
 | Metadata row, pending      | =meta= =pending-review= =event= | =:row= / =:review-id= / =:id=                    |
 | review, timeline event     |                                 |                                                  |
-| Anything else              | =pr=                            |                                                  |
+| Anything else              | =pr= (nil in the dashboard)     |                                                  |
 
 Every context also carries =:url= when one exists (for =o= and copying).
 

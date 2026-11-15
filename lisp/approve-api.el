@@ -61,6 +61,7 @@
 (require 'cl-lib)
 (require 'seq)
 (require 'parse-time)
+(require 'subr-x)
 (require 'ghub)
 (require 'approve-log)
 (require 'approve-graphql)
@@ -787,6 +788,18 @@ Example:
     (if (member host '("github.com" "www.github.com"))
         "api.github.com"
       (concat host "/api/v3"))))
+
+(defun approve-api-web-host (&optional host)
+  "Return the web host of the API HOST, `approve-api-host' by default.
+It is where GitHub's pages are, such as a search's.
+
+Example:
+  (approve-api-web-host \"api.github.com\") => \"github.com\"
+  (approve-api-web-host \"git.example.com/api/v3\") => \"git.example.com\""
+  (let ((host (downcase (or host approve-api-host "api.github.com"))))
+    (if (equal host "api.github.com")
+        "github.com"
+      (string-remove-suffix "/api/v3" host))))
 
 (provide 'approve-api)
 

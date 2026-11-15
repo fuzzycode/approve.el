@@ -318,7 +318,9 @@ other failure of the core query (a timeout, a 502).
 
 * Dashboard
 =M-x approve-dashboard=.  Sections come from =approve-dashboard-sections=
-(title, search filter or function, limit), as in approve-v2.
+(title, search filter or function, limit, collapsed at first), as in
+approve-v2, and "Recently opened" lists the pull requests opened in this
+Emacs session ([[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]).
 
 #+begin_example
  Approve — pull requests                                        @bjornlarsson · 10:42 · g refresh
@@ -341,9 +343,40 @@ the last commit (✓ ✗ ◐ ·), GitHub's review decision (✓ approved, ✗
 changes requested, ○ review required, · none).  =approve-list-columns=
 says which columns, in what order and how wide; the title takes what's
 left up to =approve-page-width=.  Whether an unread mark joins them waits
-for notifications ([[file:decisions.org::*Open questions][Q6]]).  =RET= opens the PR, =o= opens it in the browser,
-=G= refreshes only the section at point, =s= opens search with this
-section's filter.
+for notifications ([[file:decisions.org::*Open questions][Q6]]).
+
+The title line names the viewer and when the lists were loaded.
+=M-x approve-dashboard= loads every list again each time it shows the
+buffer, as =g= does; =G= (=gR= in evil, as =G= is a motion there) loads
+the list at point alone.  A list keeps its rows while it loads again, with
+"⟳ loading…" on its heading; before its first answer it says "⟳
+Loading…", and a failed one says why, with how to retry.  A token error
+is shown once, for the whole dashboard.  A heading counts what GitHub
+finds; when a list shows fewer, its last line says how many more:
+
+#+begin_example
+ ▾ Needs my review (23)
+   ● #1234   Add retry logic to the GraphQL client   fuzzycode/approve  @alice           2h  ◐  ✗
+   …
+   … 3 more · o show them on GitHub
+#+end_example
+
+On a row, =RET= opens the PR, =o= opens it in the browser, =y= copies its
+URL, =K= shows its details (eldoc), and =TAB= folds its list.  On a list's
+heading, =o= opens its search on GitHub and =y= copies the search.  =?=
+opens the dashboard's dispatch:
+
+#+begin_example
+ Approve  Dashboard
+ Pull request              Lists
+  RET Open                  g Refresh all
+  o   Open in browser       G Refresh list at point
+  y   Copy URL / search
+  K   Details (eldoc)
+#+end_example
+
+=s= will open search with the section's filter, once search exists
+(Phase 3).
 
 * Search
 =M-x approve-search= prompts for a query (with history), or =s= in the
@@ -598,6 +631,7 @@ eldoc function ([[file:decisions.org::*D27 Extended information through eldoc: o
  👍 3 — you and 2 others · 🎉 1
  2 days ago — 2026-11-06 09:12
  Björn Larsson — <develop@example.com> — no GitHub account
+ #1234 — fuzzycode/approve · feature/retry → main · +340 −56 · 12 files
 #+end_example
 
 The echo line shows only what is already loaded ([[file:decisions.org::*D29 Echo lines show what the store holds; names and emails wait for K][D29]]): a person's public
@@ -661,6 +695,9 @@ written on (GitHub keeps it as the comment's =diffHunk=):
 | Milestone                 | title — due date — progress              | description                                                            |
 | Branch ref                | owner:branch — fork or not               | ahead/behind the base                                                  |
 | Git author, no account    | name — <email> — no GitHub account       | why there is no =@login=                                               |
+| Row of a list of PRs      | #123 — repository · head → base · +a −d  | title, state, author, checks, review decision, dates, labels, start    |
+|                           | · files                                  | of the body                                                            |
+| Heading of a search       | title — search — N found                 | the search's link on GitHub                                            |
 
 * Keys
 Keys are a draft to check in Phases 1–2.  Principles:
@@ -681,6 +718,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 |-------------------------------+---------------+-----------------------+---------------------------|
 | Dispatch                      | =?=           | =?=                   | any                       |
 | Refresh (=C-u=: clear caches) | =g=           | =gr=                  | any                       |
+| Refresh list at point         | =G=           | =gR=                  | dashboard list            |
 | Bury / back                   | =q=           | =q=                   | any                       |
 | Toggle section                | =TAB=         | =TAB= =za=            | section                   |
 | Fold / unfold every thread    | =T=           | =zM= =zm= / =zR= =zr= | any                       |

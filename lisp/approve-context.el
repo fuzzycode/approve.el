@@ -39,8 +39,8 @@
 ;; under point (`approve-thing': a user, label, commit, issue link…),
 ;; the diff line (`approve-line'), and the section point is in, walking
 ;; up to the first section that means something.  Anything else is the
-;; pull request itself (`pr').  Every context carries :url when there
-;; is one, for opening and copying.
+;; pull request itself (`pr'), in a PR's buffer.  Every context carries
+;; :url when there is one, for opening and copying.
 ;;
 ;; Layer rules: this is the model layer.  It reads the text properties
 ;; and sections of the current buffer and the store; it never changes
@@ -143,6 +143,7 @@ The region must start and end on diff lines of one file."
          ('pull-request (let-alist (plist-get thing :pr)
                           (list :value (format "%s#%s" .repository.nameWithOwner .number)
                                 :url .url)))
+         ('search (list :value (plist-get thing :search) :url (plist-get thing :url)))
          (_ (list :url (plist-get thing :url))))
        (list :thing thing)))))
 
@@ -238,7 +239,8 @@ author of a comment, applies to the section around it, the comment."
 :kind says what it is; the table in docs/architecture.org (\"Context
 at point\") lists the kinds and their keys.  An active region over
 diff lines gives `lines'.  When nothing more specific is at POS, the
-context is the pull request, kind `pr'.
+context is the pull request, kind `pr', in a buffer of one; in a
+buffer of lists, such as the dashboard, it is nil.
 
 Example, on an added line:
   (:kind line :path \"a.el\" :side \"RIGHT\" :line 42 :old nil :new 42
@@ -250,7 +252,8 @@ Example, on an added line:
           (approve-context--line-plist line))
         (approve-context--link pos)
         (approve-context--from-sections pos)
-        (list :kind 'pr :url (approve-context--pr-url)))))
+        (and (approve-model-meta :number)
+             (list :kind 'pr :url (approve-context--pr-url))))))
 
 (provide 'approve-context)
 

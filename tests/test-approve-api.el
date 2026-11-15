@@ -662,4 +662,15 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
     (expect (approve-api-host-from-web-host "git.example.com")
             :to-equal "git.example.com/api/v3")))
 
+(describe "approve-api-web-host"
+  (it "maps api.github.com to github.com and HOST/api/v3 to HOST"
+    (expect (approve-api-web-host "api.github.com") :to-equal "github.com")
+    (expect (approve-api-web-host "git.example.com/api/v3") :to-equal "git.example.com"))
+
+  (it "is github.com by default, else approve-api-host's"
+    (let ((approve-api-host nil))
+      (expect (approve-api-web-host) :to-equal "github.com"))
+    (let ((approve-api-host "git.example.com/api/v3"))
+      (expect (approve-api-web-host) :to-equal "git.example.com"))))
+
 ;;; test-approve-api.el ends here

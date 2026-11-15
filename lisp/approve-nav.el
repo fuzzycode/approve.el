@@ -40,6 +40,8 @@
 ;; and the jumps the `approve-jump' transient (j) offers, defined in
 ;; approve-menus.el.  Moving into a file's diff or a thread expands
 ;; what hides it.  This file binds its keys in `approve-pr-mode-map'.
+;; The dashboard binds RET, o, y and TAB to the same commands: on a row
+;; of a list, RET opens its pull request and TAB folds the list.
 ;;
 ;; A commit is shown by the first of `approve-visit-commit-functions'
 ;; that can, else on GitHub.  approve.el puts `approve-clone-show-commit'
@@ -310,10 +312,12 @@ clone that has it (decision D37).")
   (unless (run-hook-with-args-until-success 'approve-visit-commit-functions oid url)
     (browse-url url)))
 
-(defconst approve-nav--fold-through '(approve-thread-section approve-comment-section)
+(defconst approve-nav--fold-through
+  '(approve-thread-section approve-comment-section approve-list-pr-section)
   "Sections that toggling passes to their parent.
 Threads do not fold by themselves: in a thread, toggling folds the
-diff line it is on, or its group (\"On this file\", \"Outdated\").")
+diff line it is on, or its group (\"On this file\", \"Outdated\").  A
+row of a list of pull requests folds its list.")
 
 (defun approve-nav--foldable-section ()
   "Return the section at point that toggling folds, or nil.
@@ -402,7 +406,8 @@ a link to its target (a pull request in Approve, anything else in the
 browser), a check to its details.  A commit shows in Magit from a
 local clone that has it (`approve-clone-directories'), else on
 GitHub.  A diff GitHub did not send is computed from the file's
-versions.  Elsewhere, toggle the section."
+versions.  A row of a list of pull requests opens its pull request.
+Elsewhere, toggle the section."
   (interactive)
   (let ((context (approve-context-at-point)))
     (pcase (plist-get context :kind)
@@ -421,7 +426,7 @@ versions.  Elsewhere, toggle the section."
        (approve-nav-goto-thread (or (approve-nav--thread-of-review
                                      (plist-get context :review-id))
                                     (user-error "This review has no comments on code"))))
-      ((or 'link 'ref 'check 'user 'team 'label 'milestone)
+      ((or 'link 'ref 'check 'user 'team 'label 'milestone 'pull-request)
        (if-let* ((url (plist-get context :url)))
            (approve-nav--open-url url)
          (user-error "Nothing to visit here")))
@@ -434,7 +439,8 @@ versions.  Elsewhere, toggle the section."
   "Open the thing at point on GitHub, or the pull request."
   (interactive)
   (let ((url (or (plist-get (approve-context-at-point) :url)
-                 (approve-pr-field 'url))))
+                 (approve-pr-field 'url)
+                 (user-error "Nothing to open here"))))
     (browse-url url)
     (message "Opened %s" url)))
 
@@ -448,13 +454,13 @@ versions.  Elsewhere, toggle the section."
                   (format "%s:%s" (plist-get context :path) end)
                 (format "%s:%s-%s" (plist-get context :path) start end))))
     ('file (plist-get context :path))
-    ((or 'commit 'user 'team 'label 'branch 'milestone 'git-actor)
+    ((or 'commit 'user 'team 'label 'branch 'milestone 'git-actor 'search)
      (format "%s" (plist-get context :value)))
     ('ref (format "#%s" (plist-get context :value)))
     (_ (plist-get context :url))))
 
 (defun approve-copy (&optional url)
-  "Copy the thing at point: a path:line, sha, login, name, or URL.
+  "Copy the thing at point: a path:line, sha, login, name, search or URL.
 With a prefix argument URL, copy its URL instead."
   (interactive "P")
   (let* ((context (approve-context-at-point))

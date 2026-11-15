@@ -31,7 +31,9 @@
 ;; (docs/ui.org, "PR buffer"; docs/flows.org, F01, F02 and F17).
 ;;
 ;; - `approve-pr-open' finds or makes the buffer of a PR, draws its
-;;   skeleton and runs the loading plan (`approve-pr-load').
+;;   skeleton and runs the loading plan (`approve-pr-load').  It
+;;   remembers the PRs opened in the session, newest first
+;;   (`approve-pr-recent'), for the dashboard's "Recently opened".
 ;; - Each query of the plan is tracked in the session under its key:
 ;;   :loading while it runs, :errors when it failed.  Every page that
 ;;   arrives schedules a redraw; redraws coalesce
@@ -213,10 +215,47 @@ loaded yet; see `approve-pr-load'."
       (approve-pr-redraw))
     buffer))
 
+(defconst approve-pr--recent-kept 50
+  "How many pull requests `approve-pr-recent' remembers.")
+
+(defvar approve-pr--recent nil
+  "The pull requests opened in this session, newest first.
+Each is a plist from `approve-parse-url'.")
+
+(defun approve-pr-recent ()
+  "Return the pull requests opened in this Emacs session, newest first.
+Each is a plist from `approve-parse-url', (:host :owner :repo
+:number); a pull request is listed once, where it was last opened.
+The list is kept in memory only, for the session (decision D39)."
+  approve-pr--recent)
+
+(defun approve-pr--same-p (a b)
+  "Return non-nil if A and B, plists from `approve-parse-url', are one PR.
+Host, owner and repository are compared ignoring case, as GitHub does."
+  (and (equal (plist-get a :number) (plist-get b :number))
+       (cl-every (lambda (key)
+                   (string-equal-ignore-case (or (plist-get a key) "")
+                                             (or (plist-get b key) "")))
+                 '(:host :owner :repo))))
+
+(defun approve-pr-remember (pr)
+  "Put PR first in the pull requests opened in the session.
+PR is a plist from `approve-parse-url'.  See `approve-pr-recent'."
+  (let ((pr (list :host (or (plist-get pr :host) "github.com")
+                  :owner (plist-get pr :owner) :repo (plist-get pr :repo)
+                  :number (plist-get pr :number))))
+    (setq approve-pr--recent
+          (seq-take (cons pr (seq-remove (lambda (old) (approve-pr--same-p old pr))
+                                         approve-pr--recent))
+                    approve-pr--recent-kept))))
+
 (defun approve-pr-open (pr)
   "Show the buffer of PR, loading it first if there is none (flow F01).
 PR is a plist from `approve-parse-url'.  An existing buffer is shown
-as it is; \\<approve-pr-mode-map>\\[approve-pr-refresh] loads it again.  Return the buffer."
+as it is; \\<approve-pr-mode-map>\\[approve-pr-refresh] loads it again.  Either way the PR goes first
+in the ones opened in the session (`approve-pr-recent').  Return
+the buffer."
+  (approve-pr-remember pr)
   (let ((buffer (or (approve-pr-buffer pr)
                     (with-current-buffer (approve-pr-setup-buffer pr)
                       (approve-pr-load)

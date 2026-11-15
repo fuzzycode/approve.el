@@ -37,8 +37,10 @@ and notifications (F01, F19).</p>
 <!-- ================================================================== -->
 <section class="shot" id="dashboard">
 <h2>Dashboard <span class="ref">M-x approve-dashboard · ui.org › Dashboard</span></h2>
-<p>Sections come from <code>approve-dashboard-sections</code>: a title, a GitHub search filter (or a function) and a limit.
-<code>RET</code> opens a PR, <code>o</code> opens it in the browser, <code>G</code> refreshes one section.</p>
+<p>Sections come from <code>approve-dashboard-sections</code>: a title, a GitHub search filter (or a function) and a limit;
+"Recently opened" lists the pull requests opened in this Emacs session (D39).
+<code>RET</code> opens a PR, <code>o</code> opens it in the browser, <code>G</code> (<code>gR</code> in evil) refreshes one section,
+<code>?</code> lists the dashboard's commands.</p>
 <div class="emacs">
 <div class="tb">*approve-dashboard*</div>
 <div class="win">
@@ -89,6 +91,11 @@ and notifications (F01, F19).</p>
       <i data-i="requested">○</i> review required, · none).</li>
   <li><code>approve-list-columns</code> says which columns, in what order and how wide; the title takes what is left.
       Whether an unread mark joins them waits for notifications (Q6).</li>
+  <li><code>M-x approve-dashboard</code> and <code>g</code> load every list again; a list keeps its rows meanwhile, with
+      <span class="wa"><i data-i="loading">⟳</i> loading…</span> on its heading. A heading counts what GitHub finds; when a list
+      shows fewer, its last line says <span class="d">… 3 more ·</span> <span class="k">o</span> <span class="d">show them on GitHub</span>.</li>
+  <li>On a list's heading, <code>o</code> opens its search on GitHub and <code>y</code> copies it. A token error is shown once,
+      for the whole dashboard.</li>
 </ul>
 </section>
 

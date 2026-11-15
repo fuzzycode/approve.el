@@ -32,6 +32,7 @@
 ;;
 ;;   ?  `approve-dispatch'       every command of a PR buffer, by what
 ;;                               it works on
+;;   ?  `approve-dashboard-dispatch'  every command of the dashboard
 ;;   j  `approve-jump'           the sections of the PR, the next work
 ;;                               (unviewed files, unresolved threads)
 ;;                               and any changed file by name
@@ -40,7 +41,8 @@
 ;;
 ;; The dispatch lists the commands that exist, no more: a new command
 ;; joins it, and any other menu it fits, in the change that adds it.
-;; Every command bound in a PR buffer is reachable from it.
+;; Every command bound in a PR buffer, or in the dashboard, is
+;; reachable from its dispatch.
 ;;
 ;; Suffixes that do not apply are shown dimmed, so a menu never
 ;; changes shape.  A command that changes the PR says itself whether
@@ -60,6 +62,7 @@
 (require 'approve-review)
 (require 'approve-commands)
 (require 'approve-eldoc)
+(require 'approve-dashboard)
 (require 'approve-faces)
 
 (defun approve-menus--no-pending-review-p ()
@@ -190,6 +193,26 @@ Those that can't run at point, or that you may not use, are dimmed."
     ("T" approve-toggle-threads :description approve-menus--threads-description)]])
 
 (keymap-set approve-pr-mode-map "?" #'approve-dispatch)
+
+;;; Dashboard dispatch (?)
+
+;;;###autoload (autoload 'approve-dashboard-dispatch "approve-menus" nil t)
+(transient-define-prefix approve-dashboard-dispatch ()
+  "Show the commands of the dashboard (decision D06).
+Those that can't run at point are dimmed."
+  [:description (lambda () (concat (propertize "Approve" 'face 'transient-heading) "  "
+                                   (propertize "Dashboard" 'face 'approve-title)))
+   ["Pull request"
+    ("RET" "Open" approve-visit)
+    ("o" "Open in browser" approve-browse)
+    ("y" "Copy URL / search" approve-copy)
+    ("K" "Details (eldoc)" approve-show-details)]
+   ["Lists"
+    ("g" "Refresh all" approve-dashboard-refresh)
+    ("G" "Refresh list at point" approve-dashboard-refresh-section
+     :inapt-if (lambda () (approve-action-why-not 'approve-dashboard-refresh-section)))]])
+
+(keymap-set approve-dashboard-mode-map "?" #'approve-dashboard-dispatch)
 
 (provide 'approve-menus)
 

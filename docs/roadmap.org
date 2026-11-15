@@ -168,8 +168,11 @@ Mockups: dashboard, search, search filter transient.
       pull request; its columns from =approve-list-columns=, a state icon
       first, GitHub's review decision last ([[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]).  Rows come from
       =approve-query-search= (=PullRequestSummaryFields=).
-- [ ] =approve-dashboard.el= with =approve-dashboard-sections= (filters as
-      strings or functions), per-section refresh, "Recently opened".
+- [X] =approve-dashboard.el= with =approve-dashboard-sections= (filters as
+      strings or functions), per-section refresh, "Recently opened"
+      ([[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]: the pull requests opened in the session, rows asked anew;
+      every list loaded again each time the dashboard is asked for; =G=,
+      =gR= in evil).  =s= waits for the search.
 - [ ] =approve-search.el= and its filter transient; "Load more".
 - [ ] =approve-at-point=: PR URLs in any buffer; Magit/Forge PR at point
       (soft dependency, no =require=).

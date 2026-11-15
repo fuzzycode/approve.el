@@ -108,12 +108,15 @@ GitHub URL opened through =browse-url=, a notification.
      ◇ valid PR? ◇──no──▶ user-error "Not a pull request URL: …"
                 │ yes
                 ▼
+ ┌───────────────────────────────┐
+ │ remember in "recently opened" │  (first; this Emacs session, D39)
+ └──────────────┬────────────────┘
+                ▼
      ◇ buffer for it exists? ◇──yes──▶ switch to it (no reload; header says if stale)
                 │ no
                 ▼
  ┌───────────────────────────────┐
  │ create buffer, approve-pr-mode│
- │ remember in "recently opened" │
  └──────────────┬────────────────┘
                 ▼
                 ⇢ F02

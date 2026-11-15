@@ -70,8 +70,9 @@ task only needs the files it touches.
   id, and GitHub's silent or misleading answers are checked by Approve.
   Writes are tried on the scratch repository ([[file:development.org::*Scratch repository][development.org]]).
 - Next step: [[file:roadmap.org::*Phase 3 — Find PRs][Phase 3]] (find PRs).  Its shared list of pull requests
-  (=approve-list.el=, [[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]) and their search (=approve-query-search=) are
-  done; the dashboard that draws them comes next.
+  (=approve-list.el=, [[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]), their search (=approve-query-search=) and the
+  dashboard (=M-x approve-dashboard=, =approve-dashboard.el=, [[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]) are
+  done; the search buffer and its filter menu come next.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

@@ -67,7 +67,32 @@
     (expect 'approve-pr-open :to-have-been-called-with
             '(:host "github.com" :owner "acme-example" :repo "greeter" :number 7))
     (expect (approve "https://github.com/acme-example/greeter/issues/7")
-            :to-throw 'user-error)))
+            :to-throw 'user-error))
+
+  (it "remembers the PRs opened in the session, newest first, each once"
+    (let ((approve-pr--recent nil)
+          (magit '(:host "github.com" :owner "magit" :repo "magit" :number 5000)))
+      (approve-test-with-fixture "small"
+        (let ((buffer (approve-test-open-pr "small")))
+          (unwind-protect
+              (progn
+                (approve-pr-remember magit)
+                ;; Showing an open buffer counts as opening it.
+                (approve-pr-open (approve-test-pr-plist "small"))
+                (expect (approve-pr-recent)
+                        :to-equal (list (approve-test-pr-plist "small") magit))
+                (approve-pr-remember '(:host "github.com" :owner "Magit" :repo "MAGIT"
+                                       :number 5000))
+                (expect (length (approve-pr-recent)) :to-be 2)
+                (expect (plist-get (car (approve-pr-recent)) :owner) :to-equal "Magit"))
+            (kill-buffer buffer))))))
+
+  (it "remembers the last 50 PRs"
+    (let ((approve-pr--recent nil))
+      (dotimes (number 60)
+        (approve-pr-remember (list :host "github.com" :owner "o" :repo "r" :number number)))
+      (expect (length (approve-pr-recent)) :to-be 50)
+      (expect (plist-get (car (approve-pr-recent)) :number) :to-be 59))))
 
 (describe "Loading a PR"
   (it "draws a skeleton that says what is loading"

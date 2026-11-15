@@ -148,7 +148,7 @@ FETCH as for `approve-eldoc-describe'."
           (expect doc :to-match "Bob Example (he/him)")
           (expect doc :to-match "bob@example.com")
           (expect doc :to-match "Tools and coffee.")
-          (expect doc :to-match "Location  Gothenburg")
+          (expect doc :to-match "Location   Gothenburg")
           (expect doc :to-match "In this pull request\n  approved")
           (expect doc :not :to-match "loading details"))))
 

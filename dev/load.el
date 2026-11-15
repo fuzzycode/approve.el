@@ -7,8 +7,8 @@
 ;;   M-x load-file RET ~/workspace/approve/dev/load.el RET
 ;;
 ;; Loading it again reloads every module (compiled ones when `make
-;; build' ran) and redraws the open PR buffers, so a fix shows at once;
-;; options left at their default take a changed default.
+;; build' ran) and redraws the open PR buffers and the dashboard, so a
+;; fix shows at once; options left at their default take a changed default.
 ;; Dependencies the Emacs lacks (often ghub and treepy) come from the
 ;; project's Cask (`make install').  It turns on `approve-dev-offline-mode' with
 ;; `approve-dev-offline-fallback': the fixture PRs open without a token,
@@ -24,7 +24,7 @@
     approve-faces approve-icons approve-html approve-render approve-pr approve-changes approve-thread
     approve-sections approve-conversation approve-diff approve-context approve-nav
     approve-eldoc approve-input approve-mutations approve-actions approve-review approve-commands
-    approve-menus approve approve-dev)
+    approve-list approve-dashboard approve-menus approve approve-dev)
   "Modules in the order they are reloaded; others follow, by name.")
 
 (let* ((root (file-name-directory
@@ -87,8 +87,8 @@
   (approve-dev-offline-mode 1)
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
-      (when (derived-mode-p 'approve-pr-mode)
-        (approve-pr-redraw))))
+      (cond ((derived-mode-p 'approve-pr-mode) (approve-pr-redraw))
+            ((derived-mode-p 'approve-dashboard-mode) (approve-dashboard-redraw)))))
   (message "Approve loaded from %s; fixture PRs replay, other URLs go to GitHub" root))
 
 ;;; load.el ends here

@@ -62,6 +62,7 @@
 (require 'approve-actions)
 (require 'approve-review)
 (require 'approve-commands)
+(require 'approve-dashboard)
 (require 'approve-clone)
 
 (declare-function magit-add-section-hook "magit-section")

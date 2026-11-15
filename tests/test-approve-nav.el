@@ -218,10 +218,22 @@
                    (push (list state map (key-description key) def) bound)))
                 ((symbol-function 'evil-set-initial-state) #'ignore))
         (load "approve-evil" nil t))
-      (expect (seq-find (lambda (b) (equal (nth 2 b) "g r")) bound)
+      (expect (seq-find (lambda (b) (and (eq (nth 1 b) approve-pr-mode-map)
+                                         (equal (nth 2 b) "g r")))
+                        bound)
               :to-equal (list 'normal approve-pr-mode-map "g r" 'approve-pr-refresh))
-      (expect (seq-find (lambda (b) (equal (nth 2 b) "g y")) bound)
+      (expect (seq-find (lambda (b) (and (eq (nth 1 b) approve-pr-mode-map)
+                                         (equal (nth 2 b) "g y")))
+                        bound)
               :to-equal (list 'normal approve-pr-mode-map "g y" 'approve-copy))
+      ;; The dashboard's G, refreshing the list at point, is gR: G is
+      ;; evil's motion to the end.
+      (expect (seq-find (lambda (b) (and (eq (nth 1 b) approve-dashboard-mode-map)
+                                         (equal (nth 2 b) "g R")))
+                        bound)
+              :to-equal (list 'normal approve-dashboard-mode-map "g R"
+                              'approve-dashboard-refresh-section))
+      (expect (seq-find (lambda (b) (equal (nth 2 b) "G")) bound) :to-be nil)
       ;; No key may be an evil motion, search, visual selection or yank,
       ;; nor start with one.  An operator (c d) may be a key of its own,
       ;; as change and delete have nothing to do in a read-only buffer
