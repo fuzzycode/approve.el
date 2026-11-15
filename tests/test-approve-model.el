@@ -527,7 +527,24 @@ The check list carries HAS-NEXT and CURSOR."
       (expect (approve-model-delete '(:approve-ref "Label" "LA_1"))
               :to-be-truthy)
       (expect (approve-model-has-entity-p "Label" "LA_1") :to-be nil)
-      (expect (approve-model-delete '(:approve-ref "Label" "LA_1")) :to-be nil)))
+      (expect (approve-model-delete '(:approve-ref "Label" "LA_1")) :to-be nil))
+
+    (it "grow the store's version, as loads do; reading doesn't"
+      (let* ((pr (approve-model-root-ref))
+             (start (approve-model-version))
+             (grown (lambda () (- (approve-model-version) start))))
+        (approve-model-get-ref pr 'title)
+        (approve-pr-threads)
+        (expect (funcall grown) :to-equal 0)
+        (approve-model-patch '((__typename . "Label") (id . "LA_9") (name . "new")))
+        (expect (funcall grown) :to-equal 1)
+        (approve-model-remove-ref
+         pr 'reviewThreads '(:approve-ref "PullRequestReviewThread" "PRRT_2"))
+        (expect (funcall grown) :to-equal 2)
+        (approve-model-delete '(:approve-ref "Label" "LA_9"))
+        (expect (funcall grown) :to-equal 3)
+        (approve-model-delete '(:approve-ref "Label" "LA_9"))
+        (expect (funcall grown) :to-equal 3))))
 
   (describe "selectors"
     (it "return nil before the PR is loaded"

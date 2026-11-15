@@ -55,6 +55,10 @@
 ;; its PR buffer; every function here then reads and writes the state
 ;; of that buffer.
 ;;
+;; `approve-model-version' grows with every change of the entities, so
+;; code that compares an answer from GitHub with the store can tell
+;; whether the store changed while the answer was on its way.
+;;
 ;; Layer rules: this is the model layer.  It never calls the network
 ;; and never touches the text of a buffer; it only holds buffer-local
 ;; data.  It requires nothing from Approve but `approve-log'.
@@ -95,6 +99,9 @@ commit range under review (nil means all changes).")
 The diff buffer of the split layout sets it to its PR buffer, so
 both buffers read and write one store and one session.")
 
+(defvar-local approve-model--version 0
+  "How many times the entities changed; see `approve-model-version'.")
+
 (defvar approve-model--append-pages nil
   "Non-nil while `approve-model-load-page' normalizes the outer level.")
 
@@ -129,7 +136,17 @@ Example:
           approve-model--root nil
           approve-model--meta meta
           approve-model--extra nil)
+    (setq approve-model--version (1+ approve-model--version))
     (kill-local-variable 'approve-session)))
+
+(defun approve-model-version ()
+  "Return a number that grows each time the entities of the store change.
+Loading, patching, list edits and deletions change it.  Code that
+asks GitHub something to compare with the store keeps the version
+from before the request, and drops an answer that arrives after a
+change: the answer may predate what the store holds now."
+  (approve-model--with-store
+    approve-model--version))
 
 (defun approve-model-meta (&optional key)
   "Return the value of KEY in the meta plist, or the whole plist.
@@ -364,6 +381,7 @@ Example:
   (approve-model--with-store
     (unless approve-model--store
       (setq approve-model--store (make-hash-table :test #'equal)))
+    (setq approve-model--version (1+ approve-model--version))
     (let ((result (approve-model--normalize data)))
       (when set-root
         (unless (approve-model-ref-p result)
@@ -525,6 +543,7 @@ Signal `approve-model-not-found' if the entity is not stored."
          (entity (approve-model--entity typename id)))
     (unless entity
       (signal 'approve-model-not-found (list typename id)))
+    (setq approve-model--version (1+ approve-model--version))
     (puthash id
              (if (assq field entity)
                  (mapcar (lambda (pair)
@@ -609,6 +628,7 @@ Refs to it elsewhere stay; remove them from their lists with
                             (gethash (approve-model-ref-type ref)
                                      approve-model--store)))
                 ((gethash (approve-model-ref-id ref) table)))
+      (setq approve-model--version (1+ approve-model--version))
       (remhash (approve-model-ref-id ref) table)
       t)))
 
