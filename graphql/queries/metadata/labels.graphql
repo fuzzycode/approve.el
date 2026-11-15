@@ -1,0 +1,25 @@
+${include:fragments/label.graphql}
+
+# Repository metadata (D24): the repository's labels, by name, for the
+# labels picker (F12).  Fetched once per session, 100 per page.
+query Labels($owner: String!, $name: String!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    labels(first: 100, after: $after, orderBy: {field: NAME, direction: ASC}) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ...LabelFields
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

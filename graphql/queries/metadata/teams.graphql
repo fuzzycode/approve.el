@@ -1,0 +1,27 @@
+${include:fragments/team.graphql}
+
+# Repository metadata (D24): the teams of the organization that owns the
+# repository, by name, for the reviewers picker (F12).  GitHub doesn't say
+# which of them can see the repository; asking one that can't for a review
+# fails with GitHub's message.  Fetched once per session, 100 per page.
+query Teams($owner: String!, $after: String) {
+  organization(login: $owner) {
+    __typename
+    id
+    teams(first: 100, after: $after, orderBy: {field: NAME, direction: ASC}) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ...TeamFields
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

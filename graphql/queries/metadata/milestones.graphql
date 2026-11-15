@@ -1,0 +1,27 @@
+${include:fragments/milestone.graphql}
+
+# Repository metadata (D24): the open milestones by due date, as GitHub
+# orders them (those without one first), for the milestone picker (F12).
+# Fetched once per session, 100 per page.
+query Milestones($owner: String!, $name: String!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    milestones(first: 100, after: $after, states: [OPEN],
+               orderBy: {field: DUE_DATE, direction: ASC}) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ...MilestoneFields
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

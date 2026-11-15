@@ -30,10 +30,16 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
 - =queries/details/= :: eldoc's lazy details ([[file:../docs/decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]); they don't go into the
   store.
 - =queries/metadata/= :: repository metadata, fetched once per session and
-  cached ([[file:../docs/decisions.org::*D24 Repository metadata is fetched lazily and cached per session][D24]]); it doesn't go into the store either.
+  cached ([[file:../docs/decisions.org::*D24 Repository metadata is fetched lazily and cached per session][D24]]); it doesn't go into the store either.  The paged
+  ones take =$after= too.
   | File                        | Loads                                                     |
   |-----------------------------+-----------------------------------------------------------|
   | =mentionable-users.graphql= | who can be =@mentioned=, pages of 100 (=$owner=, =$name=) |
+  | =assignable-users.graphql=  | who can be assigned or asked for a review, pages of 100   |
+  | =labels.graphql=            | the labels by name, pages of 100                          |
+  | =milestones.graphql=        | the open milestones by due date, pages of 100             |
+  | =owner.graphql=             | whether an Organization or a User owns it (=$owner=)      |
+  | =teams.graphql=             | an organization's teams by name, pages of 100 (=$owner=)  |
   | =recent-refs.graphql=       | the 100 issues and PRs updated last (=$search=)           |
 - =mutations/= :: one mutation per file, named after GitHub's mutation in
   kebab case (=resolve-review-thread.graphql=); =approve-mutations.el= has

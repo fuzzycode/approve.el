@@ -1,0 +1,15 @@
+# Repository metadata (D24): who owns the repository, an Organization or a
+# User.  Only an organization has teams, so teams.graphql is sent only
+# when this says Organization.
+query Owner($owner: String!) {
+  repositoryOwner(login: $owner) {
+    __typename
+    id
+    login
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

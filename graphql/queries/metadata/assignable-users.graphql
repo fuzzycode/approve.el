@@ -1,0 +1,25 @@
+${include:fragments/user.graphql}
+
+# Repository metadata (D24): who can be assigned, for the assignees and
+# reviewers pickers (F12).  Fetched once per session, 100 per page.
+query AssignableUsers($owner: String!, $name: String!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    assignableUsers(first: 100, after: $after) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ...UserFields
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

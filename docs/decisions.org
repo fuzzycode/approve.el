@@ -441,6 +441,17 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   network.  Opening an input buffer fetches the three in the background
   when they aren't cached; until they arrive, =@= completes the people
   the store holds.  =approve-metadata.el= holds the cache.
+- Amended (2026-11-15) :: The lists the metadata edits choose from (F12):
+  the labels by name, who can be assigned (the people one can ask for a
+  review, too), the open milestones, and the teams of the organization
+  that owns the repository; a user who owns one has none, which a small
+  query asks first.  GraphQL can't say which teams can see a repository,
+  so every team the viewer can see is offered, and asking one that can't
+  fails with GitHub's message.  Each list takes at most
+  =approve-metadata-max-pages= pages of 100.  A command that needs a list
+  before it can ask anything waits for it (=approve-metadata-wait=),
+  saying so in the echo area; =C-g= stops the waiting, and the fetch goes
+  on and is kept.
 - Why :: approve-v2 fetched them with every PR load, which made the main query
   slow and big.
 

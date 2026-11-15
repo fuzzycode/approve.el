@@ -1,0 +1,11 @@
+# A team of an organization: a reviewer one can ask for (F12), with what
+# the reviewers picker shows of it.
+fragment TeamFields on Team {
+  __typename
+  id
+  name
+  slug
+  combinedSlug
+  description
+  url
+}

@@ -181,7 +181,11 @@ Mockups: dashboard.
 
 * Phase 4 — Manage the PR
 Implements F08 (title, description), F11, F12.
-- [ ] Repository metadata fetch and cache (D24).
+- [X] Repository metadata fetch and cache (D24).  =approve-metadata.el=
+      had completion's lists since Phase 2; it fetches the pickers' too
+      (labels, assignable users, open milestones, the owner's teams), and
+      =approve-metadata-wait= gives a command a list, waiting for it the
+      first time.
 - [ ] Title, description, labels, assignees, reviewers (users and teams),
       milestone, draft/ready, subscription, lock, reactions, minimize
       comments.

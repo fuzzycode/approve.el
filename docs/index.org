@@ -74,8 +74,13 @@ task only needs the files it touches.
   dashboard (=M-x approve-dashboard=, =approve-dashboard.el=, [[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]).  The
   search buffer, =approve-at-point= and the =browse-url= handler moved to
   a new last phase, [[file:roadmap.org::*Phase 9 — More ways to find a PR][Phase 9]]: nice to have, not essential.
-- Next step: [[file:roadmap.org::*Phase 4 — Manage the PR][Phase 4]] (manage the PR), starting with the repository's
-  metadata and its cache (D24).
+- Phase 4 (Manage the PR) started on 2026-11-15 with the repository
+  metadata the pickers choose from (D24, amended): labels, assignable
+  users, open milestones and the owner's teams, cached for the session
+  like completion's lists, and =approve-metadata-wait= for the commands
+  that need one before they can ask.
+- Next step: [[file:roadmap.org::*Phase 4 — Manage the PR][Phase 4]]'s title, description, labels, assignees,
+  reviewers, milestone and the rest of GitHub's sidebar (F08, F12).
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |
