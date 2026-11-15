@@ -55,7 +55,10 @@ The store depends on these (store contract):
    and unions write =__typename= and =... on Node { id }= (=Actor= has no
    =id=).
 2. Connections use =nodes { … }=, never =edges=.  A paged connection also
-   selects =totalCount= and =pageInfo { hasNextPage endCursor }=.
+   selects =totalCount= and =pageInfo { hasNextPage endCursor }=.  The
+   exception is =timelineItems=: its =totalCount= counts every item type,
+   whatever =itemTypes= asks for, so it would make a complete list look
+   truncated.  It selects =pageInfo= alone.
 3. The store keys fields by response name.  A field selected with
    different arguments or shapes in different places gets an alias:
    - =pendingReviews: reviews(states: PENDING, first: 1)= on PullRequest.

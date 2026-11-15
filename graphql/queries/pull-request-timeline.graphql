@@ -11,6 +11,10 @@ ${include:fragments/pull-request-review.graphql}
 # MergedEvent's commit is aliased (mergeCommit): PullRequestCommit.commit is
 # non-null and MergedEvent.commit is nullable, and GraphQL rejects one
 # response name with two shapes.
+# No totalCount: GitHub counts every item type in it, itemTypes or not, so
+# a complete list would look truncated.  filteredCount honours itemTypes
+# but counts only the items after the cursor.  hasNextPage alone says
+# whether more items come.
 query PullRequestTimeline($owner: String!, $name: String!, $number: Int!, $after: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -46,7 +50,6 @@ query PullRequestTimeline($owner: String!, $name: String!, $number: Int!, $after
           CROSS_REFERENCED_EVENT
         ]
       ) {
-        totalCount
         pageInfo {
           hasNextPage
           endCursor

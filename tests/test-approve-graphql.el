@@ -225,6 +225,14 @@
           (expect (cons file (test-approve-graphql--names
                               "\\$\\([A-Za-z]+\\)[^:A-Za-z0-9_]" text))
                   :to-equal (cons file (test-approve-graphql--names
-                                        "\\$\\([A-Za-z]+\\) *:" text))))))))
+                                        "\\$\\([A-Za-z]+\\) *:" text)))))))
+
+  (it "leave totalCount out of the timeline, where GitHub counts every item type"
+    ;; With itemTypes, timelineItems.totalCount still counts the items it
+    ;; filters out, so a complete conversation would say more is loading.
+    (let ((text (replace-regexp-in-string
+                 "#.*" "" (approve-graphql-load "queries/pull-request-timeline.graphql"))))
+      (expect (string-match-p "timelineItems([^)]*) *{[ \t\n]*pageInfo" text)
+              :to-be-truthy))))
 
 ;;; test-approve-graphql.el ends here

@@ -208,6 +208,10 @@
         (expect (nth 1 lines) :to-equal "  @alice-example opened this 3 days ago")
         (expect (car (last lines)) :to-equal "  ╰ C comment on this pull request")))
 
+    (it "says no more is loading once the last page is in"
+      (expect (test-sections--text 'approve-conversation-section)
+              :not :to-match "more is loading"))
+
     (it "folds runs of commits and of labels"
       (let ((text (test-sections--text 'approve-conversation-section)))
         (expect text :to-match "  ├ ↑ @alice-example pushed 2 commits · 3 days ago\n  │     dd4ac8a  Add the new parser\n  │     6fa7df8  Rename")

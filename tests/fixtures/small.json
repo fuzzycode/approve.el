@@ -836,7 +836,6 @@
                 "__typename": "PullRequest",
                 "id": "PR_kwDO8Dd5Ob7Ei0qgq0",
                 "timelineItems": {
-                  "totalCount": 5,
                   "pageInfo": {
                     "hasNextPage": false,
                     "endCursor": "Y3Vyc29yOnYyOjU="

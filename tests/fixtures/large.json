@@ -3486,7 +3486,6 @@
                 "__typename": "PullRequest",
                 "id": "PR_kwDOI2Z39ZRDOnZQBK",
                 "timelineItems": {
-                  "totalCount": 8,
                   "pageInfo": {
                     "hasNextPage": false,
                     "endCursor": "Y3Vyc29yOnYyOjg="

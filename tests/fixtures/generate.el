@@ -807,7 +807,8 @@ of a later page."
 (defun approve-fixtures--paged (query field nodes &optional files-cursor)
   "Return the exchanges of QUERY paging the list FIELD of NODES by 100.
 With FILES-CURSOR, cursors are the item count in base 64, as the files
-list has them; otherwise opaque."
+list has them; otherwise opaque.  The timeline has no totalCount, as
+its query selects none."
   (let* ((pages (or (seq-partition nodes 100) (list nil)))
          (total (length nodes))
          (seen 0) (after nil))
@@ -825,7 +826,8 @@ list has them; otherwise opaque."
               `((repository
                  (pullRequest (__typename . "PullRequest")
                               (id . ,(approve-fixtures--pr-id))
-                              (,field (totalCount . ,total)
+                              (,field ,@(unless (eq field 'timelineItems)
+                                          `((totalCount . ,total)))
                                       (pageInfo (hasNextPage . ,(approve-fixtures--bool (not last)))
                                                 (endCursor . ,cursor))
                                       (nodes . ,(approve-fixtures--array page))))))

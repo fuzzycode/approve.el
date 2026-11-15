@@ -241,7 +241,7 @@ without, there is none."
           (expect (test-mutations--total 'comments thread) :to-equal 4)
           ;; GitHub's timeline never lists a review that holds a reply alone.
           (expect (test-mutations--ids 'timelineItems) :not :to-contain "PRR_reply")
-          (expect (test-mutations--total 'timelineItems) :to-equal 40)
+          (expect (length (test-mutations--ids 'timelineItems)) :to-equal 40)
           (expect (approve-pr-pending-review) :to-be nil))))
 
     (it "keeps a pending reply out of the conversation; it joins the pending review"
@@ -261,7 +261,7 @@ without, there is none."
                                                            "PullRequestReviewThread"
                                                            test-mutations--thread))))
                 :to-equal "PRRC_reply")
-        (expect (test-mutations--total 'timelineItems) :to-equal 40)
+        (expect (length (test-mutations--ids 'timelineItems)) :to-equal 40)
         (expect (length (approve-model-nodes (alist-get 'comments (approve-pr-pending-review))))
                 :to-equal 4))))
 
@@ -420,7 +420,7 @@ without, there is none."
                 :to-equal '("PRRC_kwDOk4pUe_h6k_jiHs" "PRRC_kwDOW1CBXUSEPg3qZA"))
         (expect (test-mutations--ids 'reviewThreads) :to-contain test-mutations--thread)
         (expect (test-mutations--ids 'timelineItems) :not :to-contain "PRR_kwDOHuf84-IhbwNOnj")
-        (expect (test-mutations--total 'timelineItems) :to-equal 39))
+        (expect (length (test-mutations--ids 'timelineItems)) :to-equal 39))
       ;; A comment of a review with a body: the review stays, counting one less.
       (let ((review (test-mutations--ref "PullRequestReview" "PRR_kwDOLL0E04LyFJdf5U")))
         (test-mutations--run #'approve-mutation-delete-review-comment "PRRC_kwDOvNUASM_gTiHG6o")
@@ -468,14 +468,14 @@ without, there is none."
               :to-equal `("mutations/add-comment.graphql"
                           ((body . "Hi") (subjectId . ,test-mutations--pr))))
       (expect (car (last (test-mutations--ids 'timelineItems))) :to-equal "IC_new")
-      (expect (test-mutations--total 'timelineItems) :to-equal 41)
+      (expect (length (test-mutations--ids 'timelineItems)) :to-equal 41)
       (test-mutations--answer-with '((deleteIssueComment (clientMutationId))))
       (test-mutations--run #'approve-mutation-delete-issue-comment "IC_kwDOVM-W6WgSu2tHHg")
       (expect (test-mutations--sent)
               :to-equal '("mutations/delete-issue-comment.graphql"
                           ((commentId . "IC_kwDOVM-W6WgSu2tHHg"))))
       (expect (test-mutations--ids 'timelineItems) :not :to-contain "IC_kwDOVM-W6WgSu2tHHg")
-      (expect (test-mutations--total 'timelineItems) :to-equal 40)))
+      (expect (length (test-mutations--ids 'timelineItems)) :to-equal 40)))
 
   (it "give GitHub's error to the errorback, changing nothing"
     (test-mutations--with-pr
