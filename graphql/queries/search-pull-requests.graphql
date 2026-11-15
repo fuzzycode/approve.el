@@ -1,0 +1,25 @@
+${include:fragments/pull-request-summary.graphql}
+
+# The pull requests a GitHub search finds, a page at a time: the
+# dashboard's sections and the search buffer.  $search is GitHub's search
+# syntax and holds is:pr (approve-query-search adds it); $after is the
+# endCursor of the page before, for "Load more".
+query SearchPullRequests($search: String!, $first: Int!, $after: String) {
+  search(type: ISSUE, query: $search, first: $first, after: $after) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      ... on PullRequest {
+        ...PullRequestSummaryFields
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

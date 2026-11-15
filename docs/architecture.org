@@ -200,7 +200,7 @@ schema on 2026-11-08.
 | Patch text             | REST =GET /repos/{o}/{r}/pulls/{n}/files?per_page=100&page=…= (≤ 3000 files)                                 |
 | Commit range diff      | REST =GET /repos/{o}/{r}/compare/{base}...{head}=                                                            |
 | File contents          | =repository.object(expression: "OID:path") { ... on Blob { text isBinary byteSize } }=                       |
-| Search                 | =search(type: ISSUE, query: "is:pr …", first:)=                                                              |
+| Search                 | =search(type: ISSUE, query: "is:pr …", first:, after:)= → rows (=PullRequestSummaryFields=)                  |
 | Repo metadata (lazy)   | =repository.labels / assignableUsers / mentionableUsers / milestones=                                        |
 | Recent refs (lazy)     | =search(type: ISSUE, query: "repo:o/r sort:updated-desc", first: 100)=, for =#123= completion               |
 | Emoji (lazy)           | REST =GET /emojis= (name → image URL; the glyph is in a Unicode emoji's URL)                                 |

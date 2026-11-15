@@ -37,6 +37,8 @@
 ;;
 ;; Change detection (`approve-query-changes') asks GitHub without
 ;; loading the store: its caller compares the answer with the store.
+;; The lists of pull requests (`approve-query-search') keep what
+;; GitHub sends as it is, without a store.
 ;;
 ;; The PR is the one in the store's meta data (`approve-model-meta').
 ;; `approve-query-plan' lists the plan, so the buffer that loads can
@@ -59,6 +61,8 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'seq)
+(require 'subr-x)
 (require 'diff)
 (require 'approve-api)
 (require 'approve-api-paging)
@@ -320,6 +324,52 @@ changes nothing on GitHub (REST POST /markdown)."
                     :progress "Rendering the preview"
                     :callback callback
                     :errorback errorback))
+
+;;; Lists
+
+(defun approve-query--pull-request-search (search)
+  "Return SEARCH, GitHub's search syntax, made to find pull requests only.
+\"is:pr\" goes in front unless SEARCH says is:pr or type:pr already."
+  (let ((search (string-trim (or search ""))))
+    (if (string-match-p "\\(?:\\`\\|[[:space:]]\\)\\(?:is\\|type\\):pr\\(?:\\'\\|[[:space:]]\\)"
+                        search)
+        search
+      (string-trim (concat "is:pr " search)))))
+
+(cl-defun approve-query-search (search &key (first 20) after host callback errorback)
+  "Ask GitHub for the pull requests SEARCH finds, the first FIRST of them.
+SEARCH is GitHub's search syntax, such as \"is:open
+review-requested:@me\"; \"is:pr\" is added when it says nothing of
+the type.  AFTER is the endCursor of the page before, for the next
+page.  HOST is the API host, `approve-api-host' by default.
+
+CALLBACK is called with GitHub's search: an alist of issueCount (how
+many it finds in all), pageInfo and nodes, the pull requests in the
+shape of graphql/fragments/pull-request-summary.graphql, as GitHub
+sends them (they go into no store).  ERRORBACK is called with the
+error.
+
+Example:
+  (approve-query-search
+   \"is:open author:@me\" :first 10
+   :callback (lambda (search)
+               (message \"%d found\" (alist-get \='issueCount search))))"
+  (approve-api-graphql
+   "queries/search-pull-requests.graphql"
+   `((search . ,(approve-query--pull-request-search search))
+     (first . ,first)
+     ,@(and after `((after . ,after))))
+   :host host
+   :progress nil
+   :errorback errorback
+   :callback
+   (lambda (data)
+     (let ((search (alist-get 'search data)))
+       (when callback
+         (funcall callback
+                  (cons (cons 'nodes (seq-filter (lambda (node) (alist-get 'number node))
+                                                 (alist-get 'nodes search)))
+                        (assq-delete-all 'nodes (copy-alist search)))))))))
 
 ;;; Details (eldoc)
 

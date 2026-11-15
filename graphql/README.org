@@ -20,6 +20,10 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   All take =$owner=, =$name=, =$number=; the paged ones also =$after=.
   =pull-request-changes.graphql= is change detection ([[file:../docs/decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]): it
   never goes into the store, Approve compares it with the store.
+  =search-pull-requests.graphql= is the lists' (dashboard, search): the
+  pull requests a search finds (=$search=, =$first=, =$after=), each
+  through =PullRequestSummaryFields=, the row a list draws.  The lists
+  keep the answer as it is; it never goes into a store.
 - =queries/details/= :: eldoc's lazy details ([[file:../docs/decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]); they don't go into the
   store.
 - =queries/metadata/= :: repository metadata, fetched once per session and

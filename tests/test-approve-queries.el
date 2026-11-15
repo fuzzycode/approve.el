@@ -3,8 +3,9 @@
 ;;; Commentary:
 
 ;; The detail queries: which query and variables each kind sends, and
-;; how the answer is picked out of the response.  The loading plan
-;; itself is tested through the PR buffer (test-approve-pr.el).
+;; how the answer is picked out of the response.  The search of the
+;; lists of pull requests.  The loading plan itself is tested through
+;; the PR buffer (test-approve-pr.el).
 
 ;;; Code:
 
@@ -66,5 +67,47 @@ The requests are pushed to `test-queries--requests'."
       (approve-test-wait-for (lambda () failure))
       (expect (car failure) :to-be 'approve-api-not-found)
       (expect result :to-be nil))))
+
+(describe "approve-query-search"
+  :var (result)
+  (before-each
+    (setq test-queries--requests nil result nil))
+
+  (it "asks for pull requests only, a page at a time"
+    (let ((approve-api-transport (test-queries--answering
+                                  '((data (search (issueCount . 0) (nodes))))))
+          (approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t))
+      (approve-query-search "is:open review-requested:@me" :errorback #'ignore)
+      (approve-query-search "is:pr author:@me" :first 5 :after "Y3Vy" :errorback #'ignore)
+      (approve-query-search "type:pr  label:bug" :errorback #'ignore)
+      (approve-query-search "is:private" :errorback #'ignore)
+      (approve-test-wait-for (lambda () (= (length test-queries--requests) 4)))
+      (let ((requests (reverse test-queries--requests)))
+        (expect (plist-get (car requests) :name)
+                :to-equal "queries/search-pull-requests.graphql")
+        (expect (mapcar (lambda (request) (plist-get request :variables)) requests)
+                :to-equal '(((search . "is:pr is:open review-requested:@me") (first . 20))
+                            ((search . "is:pr author:@me") (first . 5) (after . "Y3Vy"))
+                            ((search . "type:pr  label:bug") (first . 20))
+                            ((search . "is:pr is:private") (first . 20)))))))
+
+  (it "gives GitHub's search, with the pull requests among its nodes"
+    (let ((approve-api-transport
+           (test-queries--answering
+            '((data (search (issueCount . 2)
+                            (pageInfo (hasNextPage . t) (endCursor . "Y3Vy"))
+                            (nodes ((__typename . "PullRequest") (number . 7)
+                                    (title . "Retry"))
+                                   nil))))))
+          (approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t))
+      (approve-query-search "author:@me" :callback (lambda (search) (setq result search)))
+      (approve-test-wait-for (lambda () result))
+      (let-alist result
+        (expect .issueCount :to-be 2)
+        (expect .pageInfo.endCursor :to-equal "Y3Vy")
+        (expect (mapcar (lambda (node) (alist-get 'number node)) .nodes)
+                :to-equal '(7))))))
 
 ;;; test-approve-queries.el ends here

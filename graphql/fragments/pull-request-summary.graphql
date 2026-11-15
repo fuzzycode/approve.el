@@ -1,0 +1,38 @@
+${include:fragments/actor.graphql}
+
+# A pull request as a row of the lists, the dashboard's and the search's:
+# what approve-list.el draws (state, number, title, repository, author,
+# last update, checks, review decision) and what a row tells about itself
+# (its branches and size).  The lists keep search results as GitHub sends
+# them; they never go into a store.
+fragment PullRequestSummaryFields on PullRequest {
+  __typename
+  id
+  number
+  url
+  title
+  state
+  isDraft
+  createdAt
+  updatedAt
+  author {
+    ...ActorFields
+  }
+  repository {
+    __typename
+    id
+    nameWithOwner
+    url
+  }
+  baseRefName
+  headRefName
+  additions
+  deletions
+  changedFiles
+  reviewDecision
+  statusCheckRollup {
+    __typename
+    id
+    state
+  }
+}
