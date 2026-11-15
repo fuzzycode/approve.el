@@ -2,14 +2,23 @@
 
 ;;; Commentary:
 
-;; Indentation drawn as text: `approve-render-prefix'.  Reactions, and
-;; paths shortened to fit.
+;; Indentation drawn as text: `approve-render-prefix'.  Reactions,
+;; paths shortened to fit, and key hints that name the keys bound.
 
 ;;; Code:
 
 (require 'buttercup)
 (require 'approve-render)
+(require 'approve-pr)
 (require 'magit-section)
+
+(defun approve-test-render--reply ()
+  "A command for the key hint tests."
+  (interactive))
+
+(defun approve-test-render--resolve ()
+  "A command for the key hint tests."
+  (interactive))
 
 (defclass test-render--section (magit-section) ()
   "A section for the tests.")
@@ -159,5 +168,34 @@
       (expect (string-width (approve-render-shorten-path
                              "internal/render/templates/{base.tmpl → page.tmpl}" width))
               :not :to-be-greater-than width))))
+
+(describe "Key hints"
+  (it "name the key that runs each command here, leaving out the unbound"
+    (with-temp-buffer
+      (use-local-map (define-keymap "r" #'approve-test-render--reply))
+      (expect (substring-no-properties
+               (approve-render-hints '(approve-test-render--reply "reply")
+                                     nil
+                                     '(approve-test-render--resolve "resolve")))
+              :to-equal "r reply")
+      (local-set-key (kbd "R") #'approve-test-render--resolve)
+      (local-set-key (kbd "r") nil)
+      (local-set-key (kbd "C-c r") #'approve-test-render--reply)
+      (expect (substring-no-properties
+               (approve-render-hints '(approve-test-render--reply "reply")
+                                     '(approve-test-render--resolve "resolve")))
+              :to-equal "C-c r reply · R resolve")))
+
+  (it "are hidden with approve-show-hints, but for the input keys and retry"
+    (with-temp-buffer
+      (use-local-map (define-keymap "r" #'approve-test-render--reply
+                                    "g" #'approve-pr-refresh))
+      (let ((approve-show-hints nil))
+        (expect (approve-render-hints '(approve-test-render--reply "reply")) :to-be nil)
+        (expect (substring-no-properties
+                 (approve-render-key-hints '((approve-test-render--reply "reply"))))
+                :to-equal "r reply")
+        (expect (substring-no-properties (approve-render-retry-hint))
+                :to-equal "g to retry")))))
 
 ;;; test-approve-render.el ends here

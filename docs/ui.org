@@ -12,8 +12,12 @@ Design rules for every buffer:
 - Dim what is done (viewed files, resolved threads, outdated comments); keep
   what needs attention at normal weight.
 - Every actionable thing shows its key the first time it appears, as a dim
-  hint (=r reply · R resolve=).  =approve-show-hints= turns hints off.  A hint
-  shows only once its command exists, so the read-only Phase 1 shows few.
+  hint (=r reply · R resolve=).  A hint names the key that runs its command
+  in that buffer, looked up when it is drawn, so it follows the user's own
+  bindings and evil's (=i edit=, =D delete=); a command no key runs has no
+  hint, and the read-only Phase 1 shows few.  =approve-show-hints= turns
+  hints off, except the keys of an input buffer's header line and how to
+  retry a failed load.
 - No line exceeds =fill-column= + the indent; long text is wrapped (=shr=
   fills to =approve-fill-column=, default 80).
 - People are written =@login=, as GitHub writes mentions ([[file:decisions.org::*D33 People are written as @login][D33]]); their names
@@ -385,7 +389,8 @@ The header-line text names the action: "Comment on…", "Reply to @bob on…",
 "Edit comment", "Edit description", "Review body — Approve", "New title"
 (single line).  Its right end names the keys: send and abort, then suggest
 while the text is on code and has no suggestion yet, else preview (not for
-a single line).  Evil users start in insert state.
+a single line).  They are the keys bound in the input buffer, shown even
+when =approve-show-hints= is nil.  Evil users start in insert state.
 
 * Transients
 ** Dispatch (=?=)

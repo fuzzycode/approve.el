@@ -285,7 +285,7 @@ which only the viewer sees, are left out."
                     (if (alist-get 'lastEditedAt item)
                         (concat (approve-face " · " 'approve-dim) (approve-render-edited item))
                       "")))
-           (approve-render-hints '("r" approve-reply "quote") '("+" approve-react "react"))))
+           (approve-render-hints '(approve-reply "quote") '(approve-react "react"))))
         (let ((start (point)))
           (approve-thread-insert-comment-body item)
           (approve-conversation--gutter-body start))))
@@ -363,7 +363,7 @@ which only the viewer sees, are left out."
           (insert bar "\n"
                   (approve-face "╰" 'approve-thread-border)
                   (if-let* ((hints (approve-render-hints
-                                    '("C" approve-comment-on-pr "comment on this pull request"))))
+                                    '(approve-comment-on-pr "comment on this pull request"))))
                       (concat " " hints)
                     "")
                   "\n"))

@@ -225,25 +225,22 @@ instead.  Return non-nil if a draft was kept."
 
 (defun approve-input--key (command)
   "Return the key of COMMAND in an input buffer, as text, or nil."
-  (when-let* ((keys (where-is-internal command (current-local-map) t)))
-    (key-description keys)))
+  (approve-render-key command))
 
 (defun approve-input--hints ()
   "Return the key hints of the header line, or nil.
 After sending and aborting comes the suggestion, while the text is
-on code and has none yet; else the preview, unless it is one line."
-  (let ((hint (lambda (command label)
-                (when-let* ((key (approve-input--key command)))
-                  (list key command label)))))
-    (apply #'approve-render-hints
-           (delq nil
-                 (list (funcall hint #'approve-input-commit approve-input--commit-label)
-                       (funcall hint #'approve-input-abort "abort")
-                       (cond
-                        ((and approve-input--code (not (approve-input--suggestion-p)))
-                         (funcall hint #'approve-input-insert-suggestion "suggest"))
-                        ((not approve-input-single-line-mode)
-                         (funcall hint #'approve-input-preview "preview"))))))))
+on code and has none yet; else the preview, unless it is one line.
+They name the keys that run the commands here, and show even when
+`approve-show-hints' is nil: an input buffer must say how to leave."
+  (approve-render-key-hints
+   (list (list #'approve-input-commit approve-input--commit-label)
+         (list #'approve-input-abort "abort")
+         (cond
+          ((and approve-input--code (not (approve-input--suggestion-p)))
+           (list #'approve-input-insert-suggestion "suggest"))
+          ((not approve-input-single-line-mode)
+           (list #'approve-input-preview "preview"))))))
 
 (defun approve-input--header-line ()
   "Return the header line of an input buffer.

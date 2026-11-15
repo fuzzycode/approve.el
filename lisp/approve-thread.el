@@ -144,10 +144,10 @@ A hidden (minimized) comment is one dim line saying why."
     (approve-thread--rule
      "╰─"
      (if-let* ((hints (approve-render-hints
-                       (and .viewerCanReply '("r" approve-reply "reply"))
+                       (and .viewerCanReply '(approve-reply "reply"))
                        (cond (.isResolved
-                              (and .viewerCanUnresolve '("R" approve-resolve "unresolve")))
-                             (.viewerCanResolve '("R" approve-resolve "resolve"))))))
+                              (and .viewerCanUnresolve '(approve-resolve "unresolve")))
+                             (.viewerCanResolve '(approve-resolve "resolve"))))))
          (concat " " hints)
        ""))))
 

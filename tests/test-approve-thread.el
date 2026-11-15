@@ -64,7 +64,9 @@
         (expect (nth 1 lines) :to-equal "│ This allocates on every call; hoist the buffer out of the loop.")
         (expect (nth 2 lines) :to-equal "│")
         (expect (nth 3 lines) :to-match "\\`│ @alice-example · 2 days ago")
-        (expect (car (last lines)) :to-match "\\`╰─ r reply · R resolve ─+\\'"))))
+        ;; A plain section buffer binds no key to reply or resolve, so
+        ;; the rule names none (approve-render-key-hints).
+        (expect (car (last lines)) :to-match "\\`╰─+\\'"))))
 
   (it "makes a section for the thread and one for each comment"
     (let ((thread (car test-thread--threads)))

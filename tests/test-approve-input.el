@@ -73,6 +73,16 @@ header line's form."
     (expect (test-input--header (test-input--open :prompt "New title" :single-line t))
             :to-match "C-c C-k abort\\'"))
 
+  (it "name their keys even when hints are turned off, as they are bound"
+    (let ((approve-show-hints nil)
+          (buffer (test-input--open :prompt "Comment on a.el:42")))
+      (expect (test-input--header buffer) :to-match "C-c C-c send · C-c C-k abort")
+      (with-current-buffer buffer
+        (use-local-map (define-keymap "C-c s" #'approve-input-commit
+                                      "C-c C-k" #'approve-input-abort))
+        ;; Rebound, it says the new key; unbound, the preview is left out.
+        (expect (test-input--header buffer) :to-match "C-c s send · C-c C-k abort\\'"))))
+
   (it "hand the text to ON-COMMIT in the source buffer, and close"
     (let* ((sent nil)
            (buffer (test-input--open

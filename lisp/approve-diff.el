@@ -632,8 +632,8 @@ HIDE collapses it at first; NOTE is dim text on the right."
       (insert (approve-thing
                (concat (approve-face "Diff not shown by GitHub (too large)" 'approve-empty)
                        (if-let* ((hints (approve-render-hints
-                                         '("RET" approve-visit "load it anyway")
-                                         '("o" approve-browse "open it on GitHub"))))
+                                         '(approve-visit "load it anyway")
+                                         '(approve-browse "open it on GitHub"))))
                            (concat (approve-face " · " 'approve-dim) hints)
                          ""))
                (list :kind 'load-diff :path path))

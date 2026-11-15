@@ -390,8 +390,8 @@ Its heading counts its comments, replies included."
         (magit-insert-heading
           (approve-sections-heading
            "Your pending review" (length comments)
-           (approve-render-hints '("S" approve-submit-review "submit")
-                                 '("X" approve-discard-review "discard"))))
+           (approve-render-hints '(approve-submit-review "submit")
+                                 '(approve-discard-review "discard"))))
         (let ((body (point))
               (width (min 40 (apply #'max 10 (mapcar (lambda (comment)
                                                        (string-width
@@ -427,7 +427,7 @@ An edited description says so right after its heading."
                 (and .lastEditedAt (approve-render-edited
                                     `((lastEditedAt . ,.lastEditedAt))))))
          ;; Shown once Phase 4 defines the command that edits it.
-         (approve-render-hints '("e" approve-edit-description "edit"))))
+         (approve-render-hints '(approve-edit-description "edit"))))
       (let ((start (point)))
         (cond
          ((not (approve-model-root-ref))

@@ -497,9 +497,7 @@ See `approve-pr--note-fatal'."
     (insert (approve-face (approve-api-error-message err) 'approve-dim) "\n\n")
     (when hint
       (insert (approve-face hint 'approve-dim) "\n"))
-    (insert (or (approve-render-hints '("g" approve-pr-refresh "to retry"))
-                (approve-face "g to retry" 'approve-hint))
-            "\n")
+    (insert (approve-render-retry-hint) "\n")
     (approve-render-prefix start (point) "  ")))
 
 ;;; Header line

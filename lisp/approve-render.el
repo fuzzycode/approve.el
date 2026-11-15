@@ -64,7 +64,11 @@ fills text.  For a wide frame:
 
 (defcustom approve-show-hints t
   "Whether key hints such as \"r reply · R resolve\" are shown.
-Hints only name commands that exist.  To hide them all:
+They are in the PR buffer: under headings, after threads, at the end
+of the conversation.  Each names the key that runs its command there,
+so it follows your bindings and evil's.  Input buffers always name
+their keys in the header line, and a failed load always says how to
+retry.  To hide the others:
 
   (setq approve-show-hints nil)"
   :type 'boolean
@@ -256,18 +260,49 @@ Approve buffers filter copied text through it."
 
 ;;; Hints
 
+(defun approve-render-key (command)
+  "Return the key that runs COMMAND in the current buffer, as text, or nil.
+The binding is looked up in the keymaps active here, so it is the
+key the user would press: one they bound themselves, or evil's (\"i\"
+for `approve-edit' in normal state).  Nil when no key runs COMMAND."
+  (when-let* ((keys (and (fboundp command) (where-is-internal command nil t))))
+    (key-description keys)))
+
+(defun approve-render-key-hints (hints)
+  "Return key hints for HINTS, such as \"r reply · R resolve\", or nil.
+Each of HINTS is (COMMAND LABEL), or nil to skip.  The key of each is
+the one that runs COMMAND in the current buffer (`approve-render-key');
+a COMMAND no key runs is left out, so a hint appears with its command
+and follows the user's bindings.  Unlike `approve-render-hints', this
+ignores `approve-show-hints': input buffers always name their keys."
+  (let ((shown (delq nil (mapcar (lambda (hint)
+                                   (when-let* ((key (and hint (approve-render-key (car hint)))))
+                                     (cons key (cadr hint))))
+                                 hints))))
+    (when shown
+      (mapconcat (lambda (hint)
+                   (concat (approve-face (car hint) 'approve-hint-key) " "
+                           (approve-face (cdr hint) 'approve-hint)))
+                 shown (approve-face " · " 'approve-hint)))))
+
 (defun approve-render-hints (&rest hints)
   "Return key hints, such as \"r reply · R resolve\", or nil.
-Each of HINTS is (KEY COMMAND LABEL).  Only hints whose COMMAND is
-defined are shown, so a hint appears with its command; none are
-shown when `approve-show-hints' is nil."
+Each of HINTS is (COMMAND LABEL), or nil to skip; see
+`approve-render-key-hints'.  None are shown when `approve-show-hints'
+is nil.
+
+Example:
+  (approve-render-hints \='(approve-reply \"reply\") \='(approve-resolve \"resolve\"))
+  => \"r reply · R resolve\" in a PR buffer, without evil"
   (when approve-show-hints
-    (let ((shown (seq-filter (lambda (hint) (fboundp (nth 1 hint))) hints)))
-      (when shown
-        (mapconcat (lambda (hint)
-                     (concat (approve-face (nth 0 hint) 'approve-hint-key) " "
-                             (approve-face (nth 2 hint) 'approve-hint)))
-                   shown (approve-face " · " 'approve-hint))))))
+    (approve-render-key-hints hints)))
+
+(defun approve-render-retry-hint ()
+  "Return the hint that says how to retry what failed to load.
+It shows even when `approve-show-hints' is nil: it is the way out."
+  (or (approve-render-key-hints '((approve-pr-refresh "to retry")))
+      (approve-face (substitute-command-keys "\\[approve-pr-refresh] to retry")
+                    'approve-hint)))
 
 ;;; States
 
@@ -304,8 +339,7 @@ retry."
                                   (format "%s" err)))
                         'approve-error)
           (approve-face " · " 'approve-dim)
-          (or (approve-render-hints '("g" approve-pr-refresh "to retry"))
-              (approve-face "g to retry" 'approve-hint))
+          (approve-render-retry-hint)
           "\n"))
 
 (defun approve-render-empty (text)
