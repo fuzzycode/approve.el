@@ -1,0 +1,15 @@
+# Show a hidden comment or review again.
+mutation UnminimizeComment($subjectId: ID!) {
+  unminimizeComment(input: {subjectId: $subjectId}) {
+    unminimizedComment {
+      __typename
+      ... on Node {
+        id
+      }
+      isMinimized
+      minimizedReason
+      viewerCanMinimize
+      viewerCanUnminimize
+    }
+  }
+}

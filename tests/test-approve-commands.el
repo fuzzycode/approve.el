@@ -504,6 +504,52 @@ The threads of parser.go are drawn once its diff is expanded."
                 :to-throw 'user-error
                 '("Put point on a comment, a review or the description")))))
 
+  (describe "H (approve-hide)"
+    (it "hides a comment with a reason, and shows it again"
+      (test-commands--with-pr
+        (spy-on 'completing-read :and-return-value "Outdated")
+        (setq test-commands--answer
+              (lambda (request)
+                (let ((hide (string-match-p "/minimize" (plist-get request :name))))
+                  `((,(if hide 'minimizeComment 'unminimizeComment)
+                     (,(if hide 'minimizedComment 'unminimizedComment)
+                      (__typename . "IssueComment") (id . "IC_kwDOVM-W6WgSu2tHHg")
+                      (isMinimized . ,(and hide t))
+                      (minimizedReason . ,(and hide "outdated"))
+                      (viewerCanMinimize . ,(not hide)) (viewerCanUnminimize . ,(and hide t))))))))
+        (test-commands--goto-section 'approve-issue-comment-section "IC_kwDOVM-W6WgSu2tHHg")
+        (call-interactively #'approve-hide)
+        (expect 'completing-read :to-have-been-called)
+        (expect (car (spy-calls-args-for 'completing-read 0))
+                :to-equal "Hide @bob-example's comment, because: ")
+        (test-commands--wait)
+        (expect (test-commands--sent)
+                :to-equal '("mutations/minimize-comment.graphql"
+                            ((classifier . "OUTDATED") (subjectId . "IC_kwDOVM-W6WgSu2tHHg"))))
+        (let ((text (approve-test-section-text
+                     (approve-test-find-section 'approve-issue-comment-section
+                                                "IC_kwDOVM-W6WgSu2tHHg"))))
+          (expect text :to-match "This comment was hidden (outdated)\\.")
+          (expect text :not :to-match "take a look today"))
+        (test-commands--goto-section 'approve-issue-comment-section "IC_kwDOVM-W6WgSu2tHHg")
+        (call-interactively #'approve-hide)
+        (test-commands--wait)
+        (expect (test-commands--sent)
+                :to-equal '("mutations/unminimize-comment.graphql"
+                            ((subjectId . "IC_kwDOVM-W6WgSu2tHHg"))))
+        (expect (approve-test-section-text
+                 (approve-test-find-section 'approve-issue-comment-section
+                                            "IC_kwDOVM-W6WgSu2tHHg"))
+                :to-match "take a look today")))
+
+    (it "refuses what the viewer may not hide"
+      (test-commands--with-pr
+        (approve-model-patch '((__typename . "IssueComment") (id . "IC_kwDOVM-W6WgSu2tHHg")
+                               (viewerCanMinimize)))
+        (test-commands--goto-section 'approve-issue-comment-section "IC_kwDOVM-W6WgSu2tHHg")
+        (expect (call-interactively #'approve-hide)
+                :to-throw 'user-error '("You can't hide this")))))
+
   (describe "C (approve-comment-on-pr)"
     (it "comments in the conversation, quoting the region, and goes to the comment"
       (test-commands--with-pr
@@ -617,7 +663,8 @@ The threads of parser.go are drawn once its diff is expanded."
                        ("s" . approve-suggest) ("r" . approve-reply) ("R" . approve-resolve)
                        ("e" . approve-edit) ("k" . approve-delete)
                        ("C" . approve-comment-on-pr) ("S" . approve-submit-review)
-                       ("X" . approve-discard-review) ("+" . approve-react)))
+                       ("X" . approve-discard-review) ("+" . approve-react)
+                       ("H" . approve-hide)))
       (expect (keymap-lookup approve-pr-mode-map (car binding)) :to-be (cdr binding))))
 
   (it "bind evil's keys for them, in normal and visual state"

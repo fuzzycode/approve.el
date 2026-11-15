@@ -117,7 +117,8 @@ Notes:
   =approve-timeline-event-types= picks which.
 - Events by bots, and runs of small events, can be folded into one line
   ("github-actions added 3 labels").
-- Minimized (hidden) comments show as one dim line with the reason.
+- Minimized (hidden) comments show as one dim line with the reason.  =H=
+  hides a comment or a review, asking for the reason, or shows it again.
 - =RET= on a commit, in the commits or a push, shows it in Magit's revision
   buffer from a local clone that has it (=approve-clone-directories=,
   [[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]), else on GitHub.
@@ -458,8 +459,8 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
   v Toggle viewed            e Edit at point          l Labels              o Open in browser
   S Submit review…           k Delete at point        a Assignees           y Copy URL / sha
   X Discard pending review   + React                  A Request reviewers   j Jump…
-  V Review range…            C Conversation comment   M Milestone           L Layout
-                                                      D Draft / ready       ! Doctor
+  V Review range…            H Hide / unhide          M Milestone           L Layout
+                             C Conversation comment   D Draft / ready       ! Doctor
                                                       w Subscription        K Details (eldoc)
                                                       # Lock conversation   T Fold all threads
                                                       m Merge / close…      O Fold all but this
@@ -763,6 +764,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Edit at point                 | =e=           | =i=                   | own comment, description  |
 | Delete at point               | =k=           | =D=                   | own comment               |
 | React                         | =+=           | =+=                   | comment, description      |
+| Hide / unhide a comment       | =H=           | via =?=               | comment, review           |
 | Toggle viewed                 | =v=           | =x=                   | file                      |
 | Submit review…                | =S=           | =S=                   | any                       |
 | Discard pending review        | =X=           | =X=                   | any                       |

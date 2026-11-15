@@ -42,6 +42,8 @@
 ;;   C   `approve-comment-on-pr'       F10  in the conversation, quoting
 ;;   +   `approve-react'               F11  to the comment, review or
 ;;                                          description at point
+;;   H   `approve-hide'                hide the comment or review at
+;;                                          point, or show it again
 ;;
 ;; S (submit) and X (discard) act on the pending review as a whole:
 ;; approve-review.el and approve-menus.el.  Evil's keys are in
@@ -616,6 +618,56 @@ is taken back."
              (approve-mutation-react id content :remove given
                                      :callback callback :errorback errorback)))))
 
+;;; Hidden comments (H)
+
+(defconst approve-commands--hide-reasons
+  '(("Spam" . "SPAM") ("Abuse" . "ABUSE") ("Off topic" . "OFF_TOPIC")
+    ("Outdated" . "OUTDATED") ("Duplicate" . "DUPLICATE") ("Resolved" . "RESOLVED")
+    ("Low quality" . "LOW_QUALITY"))
+  "The reasons GitHub shows for a hidden comment: (NAME . CLASSIFIER).")
+
+(defun approve-commands--hide-preflight ()
+  "Return (TYPENAME ID HIDDEN) of the comment `approve-hide' acts on.
+HIDDEN is non-nil when it is hidden, to be shown again.  Signal a
+`user-error' when point is on no comment or review, or the viewer
+may not hide it (or show it, when it is hidden)."
+  (pcase-let* ((`(,typename . ,id)
+                (approve-commands--comment-entity
+                 (approve-action-context '(issue-comment review-comment review)
+                                         "Put point on a comment or a review")))
+               (comment (approve-model-get typename id
+                                           '(isMinimized viewerCanMinimize viewerCanUnminimize)))
+               (hidden (alist-get 'isMinimized comment)))
+    (unless (alist-get (if hidden 'viewerCanUnminimize 'viewerCanMinimize) comment)
+      (user-error "%s" (if hidden "You can't show this again" "You can't hide this")))
+    (list typename id hidden)))
+
+(put 'approve-hide 'approve-preflight #'approve-commands--hide-preflight)
+
+(defun approve-hide ()
+  "Hide the comment or review at point, or show it again when it is hidden.
+Hiding asks for the reason GitHub shows instead of the text, such as
+off topic or outdated.  Those who may moderate the repository can
+hide what others wrote."
+  (interactive)
+  (pcase-let* ((`(,typename ,id ,hidden) (approve-commands--hide-preflight))
+               (reason (unless hidden
+                         (cdr (assoc (completing-read
+                                      (format "Hide @%s's %s, because: "
+                                              (approve-commands--author typename id)
+                                              (if (equal typename "PullRequestReview")
+                                                  "review"
+                                                "comment"))
+                                      (mapcar #'car approve-commands--hide-reasons)
+                                      nil t)
+                                     approve-commands--hide-reasons)))))
+    (approve-action-run
+     :what (if hidden "show the comment" "hide the comment")
+     :marks (approve-commands--comment-marks typename id)
+     :send (lambda (_text callback errorback)
+             (approve-mutation-set-hidden id (not hidden) :reason reason
+                                          :callback callback :errorback errorback)))))
+
 ;;; The conversation (C)
 
 (defun approve-commands--conversation-preflight ()
@@ -662,6 +714,7 @@ to the comment once GitHub has it."
 (keymap-set approve-pr-mode-map "k" #'approve-delete)
 (keymap-set approve-pr-mode-map "C" #'approve-comment-on-pr)
 (keymap-set approve-pr-mode-map "+" #'approve-react)
+(keymap-set approve-pr-mode-map "H" #'approve-hide)
 
 (provide 'approve-commands)
 

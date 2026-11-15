@@ -123,14 +123,14 @@ The diff of `test-menus--path' is expanded first, for its threads."
       ;; On a file heading, as in the mockup: the file's commands and
       ;; the PR's apply, those of threads and comments don't.
       (test-menus--goto-section 'approve-file-section test-menus--path)
-      (expect (test-menus--dimmed) :to-equal '("s" "r" "R" "e" "k" "+"))
+      (expect (test-menus--dimmed) :to-equal '("s" "r" "R" "e" "k" "+" "H"))
       (expect (approve-action-why-not 'approve-resolve) :to-equal "Put point on a thread")
       ;; On a thread: replying and resolving apply.
       (test-menus--goto-section 'approve-thread-section test-menus--thread)
-      (expect (test-menus--dimmed) :to-equal '("s" "e" "k" "+"))
+      (expect (test-menus--dimmed) :to-equal '("s" "e" "k" "+" "H"))
       ;; On the description, which can be edited.
       (goto-char (oref (approve-test-find-section 'approve-description-section) start))
-      (expect (test-menus--dimmed) :to-equal '("s" "v" "r" "R" "k"))))
+      (expect (test-menus--dimmed) :to-equal '("s" "v" "r" "R" "k" "H"))))
 
   (it "follows a selection of diff lines, for the command picked in it"
     (test-menus--with-medium
@@ -140,7 +140,7 @@ The diff of `test-menus--path' is expanded first, for its threads."
         (test-menus--goto-line 14)
         (end-of-line)
         (expect (plist-get (approve-context-at-point) :kind) :to-be 'lines)
-        (expect (test-menus--dimmed) :to-equal '("r" "R" "e" "k" "+"))
+        (expect (test-menus--dimmed) :to-equal '("r" "R" "e" "k" "+" "H"))
         (expect (approve-commands--suggest-preflight)
                 :to-equal (approve-context-at-point)))))
 
@@ -150,7 +150,7 @@ The diff of `test-menus--path' is expanded first, for its threads."
       (approve-model-patch `((__typename . "PullRequestReviewThread") (id . ,test-menus--thread)
                              (viewerCanResolve) (viewerCanReply)))
       (approve-model-edit-list (approve-model-root-ref) 'pendingReviews #'ignore)
-      (expect (test-menus--dimmed) :to-equal '("s" "X" "r" "R" "e" "k" "+"))
+      (expect (test-menus--dimmed) :to-equal '("s" "X" "r" "R" "e" "k" "+" "H"))
       (expect (approve-action-why-not 'approve-resolve) :to-equal "You can't resolve this thread")
       (expect (approve-action-why-not 'approve-discard-review)
               :to-equal "You have no pending review")))
@@ -161,7 +161,7 @@ The diff of `test-menus--path' is expanded first, for its threads."
         (unwind-protect
             (with-current-buffer buffer
               (expect (test-menus--dimmed)
-                      :to-equal '("c" "s" "v" "S" "X" "r" "R" "e" "k" "+" "C" "t" "d" "l" "a" "A" "M" "D" "w" "#"))
+                      :to-equal '("c" "s" "v" "S" "X" "r" "R" "e" "k" "+" "H" "C" "t" "d" "l" "a" "A" "M" "D" "w" "#"))
               (expect (approve-action-why-not 'approve-comment)
                       :to-equal "Wait until the pull request has loaded"))
           (kill-buffer buffer)))))

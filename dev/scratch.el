@@ -186,8 +186,8 @@ it is resolved and its comments with their states; the pending review
 and its comments; the reviews and comments of the conversation, in
 order; the review decision; the labels, assignees, milestone, review
 requests, title and description; whether it is a draft, how the viewer
-hears of it, whether its conversation is locked, and the reactions to
-its description."
+hears of it, whether its conversation is locked, the reactions to its
+description, and which comments of the conversation are hidden and why."
   `((viewed . ,(mapcar (lambda (file)
                          (cons (alist-get 'path file) (alist-get 'viewerViewedState file)))
                        (approve-pr-files)))
@@ -219,6 +219,12 @@ its description."
     (draft . ,(approve-pr-field 'isDraft))
     (subscription . ,(approve-pr-field 'viewerSubscription))
     (locked . ,(list (approve-pr-field 'locked) (approve-pr-field 'activeLockReason)))
+    (hidden . ,(delq nil (mapcar (lambda (item)
+                                   (and (alist-get 'isMinimized item)
+                                        (list (alist-get 'id item)
+                                              (alist-get 'minimizedReason item))))
+                                 (approve-pr-list-fields
+                                  'timelineItems '(id isMinimized minimizedReason)))))
     (reactions . ,(mapcar (lambda (group)
                             (let-alist group
                               (list .content .viewerHasReacted .reactors.totalCount)))
@@ -577,6 +583,21 @@ assignees, milestone or review requests."
       (approve-scratch--ok "take the reaction back"
                            (approve-scratch--run #'approve-mutation-react pr "EYES" :remove t))
       (approve-scratch--compare "no reaction" store))
+    ;; Hide a conversation comment, show it, then delete it.
+    (when-let* ((comment (approve-scratch--ok
+                          "a conversation comment to hide"
+                          (approve-scratch--run #'approve-mutation-add-comment
+                                                (approve-scratch--text "to hide")))))
+      (let ((id (approve-model-ref-id comment)))
+        (approve-scratch--ok "hide it as outdated"
+                             (approve-scratch--run #'approve-mutation-set-hidden id t
+                                                   :reason "OUTDATED"))
+        (approve-scratch--compare "a hidden comment" store)
+        (approve-scratch--ok "show it again"
+                             (approve-scratch--run #'approve-mutation-set-hidden id nil))
+        (approve-scratch--compare "the comment shown" store)
+        (approve-scratch--ok "delete it"
+                             (approve-scratch--run #'approve-mutation-delete-issue-comment id))))
     ;; Lock the conversation with a reason, then unlock it.
     (approve-scratch--ok "lock the conversation"
                          (approve-scratch--run #'approve-mutation-set-locked t

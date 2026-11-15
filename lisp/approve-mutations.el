@@ -55,6 +55,7 @@
 ;;   `approve-mutation-set-subscription'        F12  how the viewer hears of it
 ;;   `approve-mutation-set-locked'              lock or unlock the conversation
 ;;   `approve-mutation-react'                   F11  give or take back a reaction
+;;   `approve-mutation-set-hidden'              hide (minimize) a comment, or show it
 ;;
 ;; Each one queues its mutation (`approve-api-mutate': one at a time,
 ;; decision D15) for the PR of the current buffer's store.  Once GitHub
@@ -789,6 +790,25 @@ Example:
             `((subjectId . ,subject-id) (content . ,content))
             (if remove 'removeReaction 'addReaction) 'subject
             (if remove "Taking the reaction back" "Reacting"))
+           callback (or errorback #'approve-api-default-errorback)))
+
+;;; Hidden comments
+
+(cl-defun approve-mutation-set-hidden (subject-id hidden &key reason callback errorback)
+  "Hide the comment or review SUBJECT-ID when HIDDEN is non-nil, else show it.
+REASON, when hiding, is what GitHub shows for it: \"SPAM\",
+\"ABUSE\", \"OFF_TOPIC\", \"OUTDATED\", \"DUPLICATE\", \"RESOLVED\"
+or \"LOW_QUALITY\".  Once GitHub has, the store says whether it is
+hidden and why, and CALLBACK gets its ref.  ERRORBACK gets the error
+otherwise."
+  (funcall (if hidden
+               (approve-mutation--step
+                "mutations/minimize-comment.graphql"
+                `((subjectId . ,subject-id) (classifier . ,reason))
+                'minimizeComment 'minimizedComment "Hiding the comment")
+             (approve-mutation--step
+              "mutations/unminimize-comment.graphql" `((subjectId . ,subject-id))
+              'unminimizeComment 'unminimizedComment "Showing the comment"))
            callback (or errorback #'approve-api-default-errorback)))
 
 (provide 'approve-mutations)

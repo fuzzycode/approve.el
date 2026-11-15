@@ -1,0 +1,17 @@
+# Hide a comment or a review, with the reason GitHub shows for it: SPAM,
+# ABUSE, OFF_TOPIC, OUTDATED, DUPLICATE, RESOLVED or LOW_QUALITY.  The answer
+# is whether it is hidden, why, and what the viewer may do now.
+mutation MinimizeComment($subjectId: ID!, $classifier: ReportedContentClassifiers!) {
+  minimizeComment(input: {subjectId: $subjectId, classifier: $classifier}) {
+    minimizedComment {
+      __typename
+      ... on Node {
+        id
+      }
+      isMinimized
+      minimizedReason
+      viewerCanMinimize
+      viewerCanUnminimize
+    }
+  }
+}

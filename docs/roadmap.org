@@ -186,9 +186,11 @@ Implements F08 (title, description), F11, F12.
       (labels, assignable users, open milestones, the owner's teams), and
       =approve-metadata-wait= gives a command a list, waiting for it the
       first time.
-- [ ] Title, description, labels, assignees, reviewers (users and teams),
+- [X] Title, description, labels, assignees, reviewers (users and teams),
       milestone, draft/ready, subscription, lock, reactions, minimize
-      comments.
+      comments.  =approve-manage.el= (=t d l a A M D w=, and =#= in the
+      dispatch alone), =+= and =H= in =approve-commands.el=; each checked
+      live by the scratch script's =metadata= group.
 - [ ] Metadata keys on the metadata rows (=RET= on Labels edits labels).
 - Done when :: everything in GitHub's PR sidebar can be changed from Emacs.
 
