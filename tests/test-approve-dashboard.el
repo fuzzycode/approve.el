@@ -36,6 +36,37 @@ SEARCH is the search as sent, is:pr included.")
     (url . "https://github.com/me-example"))
   "The viewer the fake GitHub knows.")
 
+(defconst test-dashboard--details
+  '((__typename . "PullRequest") (id . "PR_1234")
+    (bodyText . "Retries failed requests with exponential back-off.")
+    (mergeable . "CONFLICTING")
+    (commitCount (totalCount . 3))
+    (reviewRequests
+     (nodes ((__typename . "ReviewRequest") (id . "RR_1")
+             (requestedReviewer (__typename . "User") (login . "dave")))
+            ((__typename . "ReviewRequest") (id . "RR_2")
+             (requestedReviewer (__typename . "Team") (combinedSlug . "fuzzycode/core")))))
+    (latestOpinionatedReviews
+     (nodes ((__typename . "PullRequestReview") (id . "PRR_1") (state . "APPROVED")
+             (author (login . "bob")))
+            ((__typename . "PullRequestReview") (id . "PRR_2") (state . "CHANGES_REQUESTED")
+             (author (login . "carol")))))
+    (assignees (nodes ((__typename . "User") (id . "U_2") (login . "alice"))))
+    (labels (nodes ((__typename . "Label") (id . "LA_1") (name . "enhancement")
+                    (color . "a2eeef"))))
+    (milestone (__typename . "Milestone") (id . "MI_1") (title . "0.2.0")
+               (dueOn . "2026-12-30T00:00:00Z"))
+    (closingIssuesReferences
+     (nodes ((__typename . "Issue") (id . "I_1") (number . 12) (title . "Retries")
+             (state . "OPEN")
+             (repository (__typename . "Repository") (id . "R_1")
+                         (nameWithOwner . "fuzzycode/approve")))
+            ((__typename . "Issue") (id . "I_2") (number . 3) (title . "Flaky CI")
+             (state . "CLOSED")
+             (repository (__typename . "Repository") (id . "R_9")
+                         (nameWithOwner . "acme/ci"))))))
+  "The details the fake GitHub has of every pull request (eldoc's K).")
+
 (defun test-dashboard--pr (number &rest fields)
   "Return pull request NUMBER of fuzzycode/approve as a search finds it.
 FIELDS is a plist of field names and values that replace the
@@ -51,6 +82,7 @@ defaults: by @alice, open, updated two hours before `approve-test-now'."
                          (updatedAt . "2026-10-04T10:00:00Z")
                          (author (__typename . "User") (id . "U_1") (login . "alice")
                                  (url . "https://github.com/alice"))
+                         (authorAssociation . "MEMBER")
                          (repository (__typename . "Repository") (id . "R_1")
                                      (nameWithOwner . "fuzzycode/approve")
                                      (url . "https://github.com/fuzzycode/approve"))
@@ -59,6 +91,8 @@ defaults: by @alice, open, updated two hours before `approve-test-now'."
                          (additions . 340)
                          (deletions . 56)
                          (changedFiles . 12)
+                         (commentCount (totalCount . 5))
+                         (threadCount (totalCount . 15))
                          (reviewDecision . "CHANGES_REQUESTED")
                          (statusCheckRollup (__typename . "StatusCheckRollup")
                                             (id . ,(format "SCR_%s" number))
@@ -88,6 +122,9 @@ defaults: by @alice, open, updated two hours before `approve-test-now'."
                                           (pullRequest)))))
              `(:body ((data (repository (__typename . "Repository") (id . "R_1")
                                         (pullRequest ,@(test-dashboard--pr number)))))))))
+        ("queries/details/pull-request.graphql"
+         `(:body ((data (repository (__typename . "Repository") (id . "R_1")
+                                    (pullRequest ,@test-dashboard--details))))))
         (_ (list :status 404))))))
 
 (defun test-dashboard--transport (request)
@@ -430,17 +467,66 @@ No pull request was opened before; the dashboard is killed after."
       (test-dashboard--goto "#1234")
       (expect (substring-no-properties
                (plist-get (approve-eldoc-describe (approve-context-at-point)) :echo))
-              :to-equal "#1234 — fuzzycode/approve · feature/retry → main · +340 −56 · 12 files")
+              :to-equal (concat "#1234 Add retry logic to the GraphQL client — @alice (member)"
+                                " · changes requested · checks running · 5 comments, 15 threads"
+                                " · +340 −56 in 12 files · feature/retry → main"))
       (let ((doc (plist-get (approve-eldoc-describe (approve-context-at-point)) :doc)))
         (expect doc :to-match "Add retry logic to the GraphQL client")
+        (expect doc :to-match "^Author +@alice (member)")
         (expect doc :to-match "^Review +changes requested")
-        (expect doc :to-match "^Checks +◐ running"))
+        (expect doc :to-match "^Checks +◐ running")
+        (expect doc :to-match "^Discussion +5 comments, 15 threads"))
       (test-dashboard--goto "Needs my review")
       (expect (substring-no-properties
                (plist-get (approve-eldoc-describe (approve-context-at-point)) :echo))
               :to-equal "Needs my review — is:pr is:open review-requested:@me — 2 found")
       (goto-char (point-max))
-      (expect (approve-context-at-point) :to-be nil))))
+      (expect (approve-context-at-point) :to-be nil)))
+
+  (it "names a draft, and leaves out what a pull request lacks, in the echo area"
+    (setcdr (assoc "is:pr is:open author:@me" test-dashboard--searches)
+            (list 1 (test-dashboard--pr 6 'title "WIP: move the settings to TOML"
+                                        'isDraft t 'authorAssociation "NONE"
+                                        'reviewDecision nil 'statusCheckRollup nil
+                                        'commentCount '((totalCount . 0))
+                                        'threadCount '((totalCount . 0))
+                                        'additions 11 'deletions 10 'changedFiles 1)))
+    (test-dashboard--with test-dashboard--two
+      (test-dashboard--open)
+      (test-dashboard--goto "#6 ")
+      (expect (substring-no-properties
+               (plist-get (approve-eldoc-describe (approve-context-at-point)) :echo))
+              :to-equal (concat "#6 WIP: move the settings to TOML — draft · @alice"
+                                " · +11 −10 in 1 file · feature/retry → main"))))
+
+  (it "fetches who reviews it, its labels and the rest for the eldoc buffer"
+    (test-dashboard--with test-dashboard--two
+      (approve-eldoc-clear-cache)
+      ;; Eldoc would show its buffer when the details arrive.
+      (spy-on 'eldoc-print-current-symbol-info)
+      (test-dashboard--open)
+      (test-dashboard--goto "#1234")
+      (let ((context (approve-context-at-point)))
+        (expect (plist-get (approve-eldoc-describe-pull-request context nil) :details)
+                :to-equal '(pull-request "fuzzycode" "approve" 1234 "github.com"))
+        (expect (plist-get (approve-eldoc-describe context t) :doc)
+                :to-match "loading details…")
+        (test-dashboard--settle)
+        (let ((request (car test-dashboard--requests)))
+          (expect (plist-get request :name) :to-equal "queries/details/pull-request.graphql")
+          (expect (plist-get request :variables)
+                  :to-equal '((owner . "fuzzycode") (name . "approve") (number . 1234))))
+        (let ((doc (substring-no-properties (plist-get (approve-eldoc-describe context) :doc))))
+          (expect doc :to-match "^Changes +12 files · \\+340 −56 · 3 commits")
+          (expect doc :to-match "^Reviewers +✓ @bob  ✗ @carol  ○ @dave  ○ @fuzzycode/core")
+          (expect doc :to-match "^Assignees +@alice")
+          (expect doc :to-match "^Labels +enhancement")
+          (expect doc :to-match "^Milestone +0.2.0 (due 2026-12-30)")
+          (expect doc :to-match "^Closes +#12 Retries, acme/ci#3 Flaky CI (closed)")
+          (expect doc :to-match "^Mergeable +no, it has conflicts")
+          (expect doc :to-match "^Retries failed requests with exponential back-off\\.")
+          (expect doc :not :to-match "loading details"))
+        (approve-eldoc-clear-cache)))))
 
 (describe "The dashboard's menu"
   (it "opens on ?, with the dashboard's keys, and reaches every command it binds"

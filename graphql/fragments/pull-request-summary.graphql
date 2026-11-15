@@ -3,8 +3,10 @@ ${include:fragments/actor.graphql}
 # A pull request as a row of the lists, the dashboard's and the search's:
 # what approve-list.el draws (state, number, title, repository, author,
 # last update, checks, review decision) and what a row tells about itself
-# (its branches and size).  The lists keep search results as GitHub sends
-# them; they never go into a store.
+# in eldoc's echo line (the author's role, its branches, size and
+# discussion).  The lists keep search results as GitHub sends them; they
+# never go into a store.  The counts are aliased, as the PR's own lists
+# keep their plain names for their pages (graphql/README.org).
 fragment PullRequestSummaryFields on PullRequest {
   __typename
   id
@@ -18,6 +20,7 @@ fragment PullRequestSummaryFields on PullRequest {
   author {
     ...ActorFields
   }
+  authorAssociation
   repository {
     __typename
     id
@@ -29,6 +32,12 @@ fragment PullRequestSummaryFields on PullRequest {
   additions
   deletions
   changedFiles
+  commentCount: comments {
+    totalCount
+  }
+  threadCount: reviewThreads {
+    totalCount
+  }
   reviewDecision
   statusCheckRollup {
     __typename

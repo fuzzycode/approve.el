@@ -636,7 +636,7 @@ eldoc function ([[file:decisions.org::*D27 Extended information through eldoc: o
  👍 3 — you and 2 others · 🎉 1
  2 days ago — 2026-11-06 09:12
  Björn Larsson — <develop@example.com> — no GitHub account
- #1234 — fuzzycode/approve · feature/retry → main · +340 −56 · 12 files
+ #1234 Add retry logic to the GraphQL client — @alice (member) · changes requested · checks running · 5 comments, 15 threads · +340 −56 in 12 files · feature/retry → main
 #+end_example
 
 The echo line shows only what is already loaded ([[file:decisions.org::*D29 Echo lines show what the store holds; names and emails wait for K][D29]]): a person's public
@@ -700,8 +700,10 @@ written on (GitHub keeps it as the comment's =diffHunk=):
 | Milestone                 | title — due date — progress              | description                                                            |
 | Branch ref                | owner:branch — fork or not               | ahead/behind the base                                                  |
 | Git author, no account    | name — <email> — no GitHub account       | why there is no =@login=                                               |
-| Row of a list of PRs      | #123 — repository · head → base · +a −d  | title, state, author, checks, review decision, dates, labels, start    |
-|                           | · files                                  | of the body                                                            |
+| Row of a list of PRs      | #123 title — state unless open ·         | state, repository, checks, dates; reviewers and their verdicts,        |
+|                           | @author (role) · review · checks ·       | assignees, labels, milestone, issues it closes, commits, whether it    |
+|                           | comments, threads · +a −d in N files ·   | merges, the start of its text                                          |
+|                           | head → base                              |                                                                        |
 | Heading of a search       | title — search — N found                 | the search's link on GitHub                                            |
 
 * Keys

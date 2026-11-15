@@ -43,6 +43,19 @@ The requests are pushed to `test-queries--requests'."
         (expect (plist-get request :variables) :to-equal '((login . "bob")))
         (expect (plist-get request :host) :to-equal "api.github.com"))))
 
+  (it "asks a pull request's own GitHub for its details"
+    (let ((approve-api-transport (test-queries--answering '((data (x . 1)))))
+          (approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t))
+      (approve-query-details 'pull-request '("acme" "other" 12 "git.example.com")
+                             :errorback #'ignore)
+      (approve-test-wait-for (lambda () test-queries--requests))
+      (let ((request (car test-queries--requests)))
+        (expect (plist-get request :name) :to-equal "queries/details/pull-request.graphql")
+        (expect (plist-get request :variables)
+                :to-equal '((owner . "acme") (name . "other") (number . 12)))
+        (expect (plist-get request :host) :to-equal "git.example.com/api/v3"))))
+
   (it "sends the parts of a team, a reference and a commit"
     (let ((approve-api-transport (test-queries--answering '((data (x . 1)))))
           (approve-graphql-directory approve-test-graphql-directory)

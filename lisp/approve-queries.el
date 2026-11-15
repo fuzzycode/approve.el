@@ -424,8 +424,9 @@ the error."
 ;;; Details (eldoc)
 
 (defun approve-query--details-request (kind key)
-  "Return (QUERY VARIABLES PATH) of the details query of KIND for KEY.
-PATH leads from the response's data to the details."
+  "Return (QUERY VARIABLES PATH HOST) of the details query of KIND for KEY.
+PATH leads from the response's data to the details.  HOST is the API
+host to ask, or nil for the store's."
   (pcase kind
     ('user (list "queries/details/user.graphql" `((login . ,key)) '(user)))
     ('team (let ((parts (split-string key "/")))
@@ -435,6 +436,11 @@ PATH leads from the response's data to the details."
     ('ref (list "queries/details/ref.graphql"
                 `((owner . ,(nth 0 key)) (name . ,(nth 1 key)) (number . ,(nth 2 key)))
                 '(repository issueOrPullRequest)))
+    ('pull-request (list "queries/details/pull-request.graphql"
+                         `((owner . ,(nth 0 key)) (name . ,(nth 1 key))
+                           (number . ,(nth 2 key)))
+                         '(repository pullRequest)
+                         (approve-api-host-from-web-host (or (nth 3 key) "github.com"))))
     ('commit (list "queries/details/commit.graphql"
                    `((owner . ,(approve-model-meta :owner))
                      (name . ,(approve-model-meta :repo)) (oid . ,key))
@@ -447,14 +453,17 @@ PATH leads from the response's data to the details."
   "Fetch the extended details of the thing of KIND identified by KEY.
 They are for eldoc (decision D27) and do not go into the store.
 KIND and KEY are: `user' and a login, `team' and \"org/slug\", `ref'
-and (OWNER REPO NUMBER), `commit' and an oid of the PR's repository,
-`comment-code' and a review comment id, `reactors' and the id of
-what was reacted to.  CALLBACK is called with the details, an alist;
-ERRORBACK with the error, also when GitHub has no such thing."
-  (pcase-let ((`(,query ,variables ,path) (approve-query--details-request kind key)))
+and (OWNER REPO NUMBER), `pull-request' and (OWNER REPO NUMBER
+WEB-HOST) for a row of a list, which asks the row's own GitHub,
+`commit' and an oid of the PR's repository, `comment-code' and a
+review comment id, `reactors' and the id of what was reacted to.
+CALLBACK is called with the details, an alist; ERRORBACK with the
+error, also when GitHub has no such thing."
+  (pcase-let ((`(,query ,variables ,path ,host)
+               (approve-query--details-request kind key)))
     (approve-api-graphql
      query variables
-     :host (approve-query-host)
+     :host (or host (approve-query-host))
      :progress nil
      :errorback errorback
      :callback

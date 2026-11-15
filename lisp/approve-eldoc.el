@@ -353,21 +353,25 @@ wrote, and so does Approve."
       "\n" (approve-eldoc--link (plist-get context :url)) "\n"))))
 
 (defun approve-eldoc--pr-state (pr)
-  "Return the state of PR, a row of a list, in words."
+  "Return the state of PR, a row of a list, in words: open, draft, merged, closed."
   (let-alist pr
     (pcase .state
       ("MERGED" "merged")
       ("CLOSED" "closed")
-      (_ (if .isDraft "open, draft" "open")))))
+      (_ (if .isDraft "draft" "open")))))
 
-(defun approve-eldoc--pr-checks (pr)
-  "Return the checks of PR's last commit in words, or nil without checks."
-  (pcase (let-alist pr .statusCheckRollup.state)
-    ("SUCCESS" (concat (approve-icon 'check-success 'approve-check-success) " passed"))
-    ((or "FAILURE" "ERROR")
-     (concat (approve-icon 'check-failure 'approve-check-failure) " failed"))
-    ((or "PENDING" "EXPECTED")
-     (concat (approve-icon 'check-pending 'approve-check-pending) " running"))))
+(defun approve-eldoc--pr-checks (pr &optional icon)
+  "Return the checks of PR's last commit in words, or nil without checks.
+With ICON, the words follow the checks' mark."
+  (pcase-let ((`(,name ,face ,words)
+               (pcase (let-alist pr .statusCheckRollup.state)
+                 ("SUCCESS" '(check-success approve-check-success "passed"))
+                 ((or "FAILURE" "ERROR") '(check-failure approve-check-failure "failing"))
+                 ((or "PENDING" "EXPECTED") '(check-pending approve-check-pending "running")))))
+    (when words
+      (if icon
+          (concat (approve-icon name face) " " words)
+        (concat "checks " words)))))
 
 (defun approve-eldoc--pr-review (pr)
   "Return GitHub's review decision on PR in words, or nil without one."
@@ -376,45 +380,166 @@ wrote, and so does Approve."
     ("CHANGES_REQUESTED" "changes requested")
     ("REVIEW_REQUIRED" "review required")))
 
+(defconst approve-eldoc--roles
+  '(("OWNER" . "owner") ("MEMBER" . "member") ("COLLABORATOR" . "collaborator")
+    ("CONTRIBUTOR" . "contributor") ("FIRST_TIME_CONTRIBUTOR" . "first-time contributor")
+    ("FIRST_TIMER" . "new to GitHub") ("MANNEQUIN" . "mannequin"))
+  "GitHub's author associations in words; NONE has none.")
+
+(defun approve-eldoc--pr-author (pr)
+  "Return PR's author as @login, with their role in the repository."
+  (let-alist pr
+    (concat (approve-render-user .author)
+            (when-let* ((role (cdr (assoc .authorAssociation approve-eldoc--roles))))
+              (approve-face (format " (%s)" role) 'approve-dim)))))
+
+(defun approve-eldoc--count (count noun)
+  "Return COUNT and NOUN, plural unless COUNT is 1: \"3 files\"."
+  (format "%d %s%s" count noun (if (= count 1) "" "s")))
+
+(defun approve-eldoc--pr-discussion (pr)
+  "Return PR's discussion, such as \"5 comments, 15 threads\", or nil.
+Comments are in the conversation, threads on the code; GitHub's lists
+and gh-dash count the two together."
+  (let-alist pr
+    (let ((parts (delq nil (list (and .commentCount.totalCount (> .commentCount.totalCount 0)
+                                      (approve-eldoc--count .commentCount.totalCount "comment"))
+                                 (and .threadCount.totalCount (> .threadCount.totalCount 0)
+                                      (approve-eldoc--count .threadCount.totalCount "thread"))))))
+      (and parts (string-join parts ", ")))))
+
+(defun approve-eldoc--pr-size (pr)
+  "Return PR's additions and deletions, \"+7 −2\", or nil."
+  (let-alist pr
+    (and .additions
+         (concat (approve-face (format "+%d" .additions) 'approve-diffstat-added)
+                 " " (approve-face (format "−%d" .deletions) 'approve-diffstat-removed)))))
+
+(defun approve-eldoc--pr-branch (pr)
+  "Return PR's head and base branches, \"feature → main\", or nil."
+  (let-alist pr
+    (and .headRefName
+         (concat (approve-face .headRefName 'approve-branch) " → "
+                 (approve-face .baseRefName 'approve-branch)))))
+
+(defun approve-eldoc--login (login)
+  "Return LOGIN, a user's or a team's, as @login."
+  (approve-face (concat "@" (or login "ghost")) 'approve-user))
+
+(defun approve-eldoc--pr-reviewers (details)
+  "Return who reviews the pull request of DETAILS, or nil.
+Each reviewer's latest verdict comes first, then who is asked."
+  (let-alist details
+    (let ((verdicts
+           (mapcar (lambda (review)
+                     (let-alist review
+                       (concat (pcase .state
+                                 ("APPROVED" (approve-icon 'approved 'approve-approved))
+                                 ("CHANGES_REQUESTED"
+                                  (approve-icon 'changes-requested 'approve-changes-requested))
+                                 ("DISMISSED" (approve-icon 'dismissed 'approve-dismissed))
+                                 (_ (approve-icon 'commented 'approve-commented)))
+                               " " (approve-eldoc--login .author.login))))
+                   .latestOpinionatedReviews.nodes))
+          (asked
+           (mapcar (lambda (request)
+                     (let-alist request
+                       (concat (approve-icon 'requested 'approve-requested) " "
+                               (approve-eldoc--login (or .requestedReviewer.login
+                                                         .requestedReviewer.combinedSlug)))))
+                   .reviewRequests.nodes)))
+      (and (or verdicts asked) (string-join (append verdicts asked) "  ")))))
+
+(defun approve-eldoc--pr-closes (pr details)
+  "Return the issues the pull request PR closes, from its DETAILS, or nil.
+An issue of another repository is named with it."
+  (when-let* ((issues (let-alist details .closingIssuesReferences.nodes)))
+    (mapconcat (lambda (issue)
+                 (let-alist issue
+                   (concat (approve-face (if (equal .repository.nameWithOwner
+                                                    (let-alist pr .repository.nameWithOwner))
+                                             (format "#%s" .number)
+                                           (format "%s#%s" .repository.nameWithOwner .number))
+                                         'approve-number)
+                           " " (or .title "")
+                           (if (equal .state "CLOSED") (approve-face " (closed)" 'approve-dim) ""))))
+               issues ", ")))
+
+(defun approve-eldoc--pr-mergeable (pr details)
+  "Return whether the open pull request PR merges, from DETAILS, or nil."
+  (when (equal (alist-get 'state pr) "OPEN")
+    (pcase (alist-get 'mergeable details)
+      ("MERGEABLE" "yes")
+      ("CONFLICTING" (approve-face "no, it has conflicts" 'approve-error))
+      ("UNKNOWN" "not known yet"))))
+
+(defun approve-eldoc--pr-details-key (pr)
+  "Return the key of PR's details: (OWNER REPO NUMBER WEB-HOST), or nil."
+  (when-let* ((parsed (approve-parse-url (alist-get 'url pr))))
+    (list (plist-get parsed :owner) (plist-get parsed :repo) (plist-get parsed :number)
+          (plist-get parsed :host))))
+
 (defun approve-eldoc-describe-pull-request (context details)
   "Describe the pull request of CONTEXT, a row of a list.
-DETAILS are its #123 details (labels, text) if fetched."
+The echo line adds to the row what it lacks or cuts: the whole title,
+the author's role, the state in words, the discussion, the size and
+the branches.  DETAILS, once \\[approve-show-details] fetched them, add
+who reviews it, assignees, labels, milestone, the issues it closes,
+its commits, whether it merges, and the start of its text."
   (let ((pr (plist-get (plist-get context :thing) :pr)))
     (let-alist pr
       (let* ((number (approve-face (format "#%s" .number) 'approve-number))
-             (branch (and .headRefName
-                          (concat (approve-face .headRefName 'approve-branch) " → "
-                                  (approve-face .baseRefName 'approve-branch))))
-             (size (and .additions
-                        (concat (approve-face (format "+%d" .additions) 'approve-diffstat-added)
-                                " " (approve-face (format "−%d" .deletions)
-                                                  'approve-diffstat-removed))))
-             (files (and .changedFiles
-                         (format "%d file%s" .changedFiles (if (= .changedFiles 1) "" "s")))))
+             (state (approve-eldoc--pr-state pr))
+             (files (and .changedFiles (approve-eldoc--count .changedFiles "file")))
+             (size (approve-eldoc--pr-size pr))
+             (commits (let-alist details .commitCount.totalCount)))
         (list
          :echo (string-trim-right
                 (approve-eldoc--title
-                 number
+                 (concat number " " (approve-render-truncate (or .title "") 60))
                  (approve-render-join
-                  (list (approve-face (or .repository.nameWithOwner "") 'approve-repository)
-                        branch size files))))
-         :details (and .repository.nameWithOwner
-                       (let ((parts (split-string .repository.nameWithOwner "/")))
-                         (cons 'ref (list (car parts) (cadr parts) .number))))
+                  (list (unless (equal state "open") state)
+                        (approve-eldoc--pr-author pr)
+                        (approve-eldoc--pr-review pr)
+                        (approve-eldoc--pr-checks pr)
+                        (approve-eldoc--pr-discussion pr)
+                        (and size (concat size (and files (concat " in " files))))
+                        (approve-eldoc--pr-branch pr)))))
+         :details (when-let* ((key (approve-eldoc--pr-details-key pr)))
+                    (cons 'pull-request key))
          :doc
          (concat
           (approve-eldoc--title number (approve-face (or .title "") 'bold))
           "\n"
-          (approve-eldoc--row "State" (approve-eldoc--pr-state pr))
-          (approve-eldoc--row "Author" (approve-render-user .author))
+          (approve-eldoc--row "State" state)
+          (approve-eldoc--row "Author" (approve-eldoc--pr-author pr))
           (approve-eldoc--row "Repository" .repository.nameWithOwner)
-          (approve-eldoc--row "Branch" branch)
-          (approve-eldoc--row "Changes" (approve-render-join (list files size)))
-          (approve-eldoc--row "Checks" (approve-eldoc--pr-checks pr))
+          (approve-eldoc--row "Branch" (approve-eldoc--pr-branch pr))
+          (approve-eldoc--row "Changes" (approve-render-join
+                                         (list files size
+                                               (and commits (approve-eldoc--count commits "commit")))))
+          (approve-eldoc--row "Checks" (approve-eldoc--pr-checks pr t))
           (approve-eldoc--row "Review" (approve-eldoc--pr-review pr))
+          (approve-eldoc--row "Reviewers" (approve-eldoc--pr-reviewers details))
+          (approve-eldoc--row "Assignees" (mapconcat (lambda (user)
+                                                       (approve-eldoc--login (alist-get 'login user)))
+                                                     (let-alist details .assignees.nodes) " "))
+          (approve-eldoc--row "Labels" (approve-eldoc--labels details))
+          (approve-eldoc--row "Milestone"
+                              (let-alist details
+                                (and .milestone.title
+                                     (concat .milestone.title
+                                             (and .milestone.dueOn
+                                                  (approve-face
+                                                   (format-time-string
+                                                    " (due %Y-%m-%d)"
+                                                    (approve-render-parse-time .milestone.dueOn))
+                                                   'approve-dim))))))
+          (approve-eldoc--row "Closes" (approve-eldoc--pr-closes pr details))
+          (approve-eldoc--row "Discussion" (approve-eldoc--pr-discussion pr))
+          (approve-eldoc--row "Mergeable" (approve-eldoc--pr-mergeable pr details))
           (approve-eldoc--row "Opened" (and .createdAt (approve-eldoc--when .createdAt)))
           (approve-eldoc--row "Updated" (and .updatedAt (approve-eldoc--when .updatedAt)))
-          (approve-eldoc--row "Labels" (approve-eldoc--labels details))
           (approve-eldoc--body details)
           "\n" (approve-eldoc--link .url) "\n"))))))
 

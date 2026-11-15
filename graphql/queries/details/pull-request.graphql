@@ -1,0 +1,84 @@
+# Eldoc details of a pull request in a list (F20): what its row lacks, for
+# the eldoc buffer (K).  Who reviews it and how, assignees, labels,
+# milestone, the issues it closes, its commits, whether it merges, and its
+# text.  It never goes into a store.
+query PullRequestDetails($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    pullRequest(number: $number) {
+      __typename
+      id
+      bodyText
+      mergeable
+      commitCount: commits {
+        totalCount
+      }
+      reviewRequests(first: 20) {
+        nodes {
+          __typename
+          id
+          requestedReviewer {
+            __typename
+            ... on Actor {
+              login
+            }
+            ... on Team {
+              combinedSlug
+            }
+          }
+        }
+      }
+      latestOpinionatedReviews(first: 20) {
+        nodes {
+          __typename
+          id
+          state
+          author {
+            login
+          }
+        }
+      }
+      assignees(first: 20) {
+        nodes {
+          __typename
+          id
+          login
+        }
+      }
+      labels(first: 20) {
+        nodes {
+          __typename
+          id
+          name
+          color
+        }
+      }
+      milestone {
+        __typename
+        id
+        title
+        dueOn
+      }
+      closingIssuesReferences(first: 10) {
+        nodes {
+          __typename
+          id
+          number
+          title
+          state
+          repository {
+            __typename
+            id
+            nameWithOwner
+          }
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

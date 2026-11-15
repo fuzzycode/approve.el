@@ -216,6 +216,8 @@ schema on 2026-11-08.
 | User details (eldoc)   | =user(login) { pronouns email bio company location websiteUrl status { emoji message } }=                    |
 | Team details (eldoc)   | =organization(login).team(slug) { name description members { totalCount } }=                                 |
 | =#123= details (eldoc) | =repository.issueOrPullRequest(number) { title state author labels bodyText }=                               |
+| PR details (eldoc)     | =repository.pullRequest(number)=: review requests, latest verdicts, assignees, labels, milestone, closing    |
+|                        | issues, commit count, =mergeable=, =bodyText=, for a row of a list, from the row's own host                  |
 | Commit details (eldoc) | =repository.object(oid) { ... on Commit { message author committer signature statusCheckRollup } }=          |
 | Outdated thread code   | =node(id) { ... on PullRequestReviewComment { diffHunk originalLine originalCommit } }= (first comment)      |
 | Reactors (eldoc)       | =node(id) { ... on Reactable { reactionGroups { content reactors(first: 20) { login } } } }=                 |
