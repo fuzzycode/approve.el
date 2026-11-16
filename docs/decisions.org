@@ -584,10 +584,10 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   commits already had it) makes it one thing to learn.
 
 ** D46 The feedback mode: no keys of its own, threads folded, the mode line speaks
-- Status :: proposed (2026-11-16).  The author chose: no default prefix,
-  every thread folded, the mode line only, and the threads' marks in the
-  right margin.  The rest is in the mockups (ui.org, html/clone.html) and
-  waits for their review.
+- Status :: accepted (2026-11-16, by the author, after reviewing the
+  mockups in ui.org and html/clone.html; to adjust as the work finds
+  the need).  The author chose no default prefix, every thread folded,
+  the mode line only, and the threads' marks in the right margin.
 - Decision ::
   - The feedback mode ([[file:flows.org::*F21 Review feedback in a file you edit][F21]]) binds no key in the user's buffers, except
     evil's =]t= and =[t= (next and previous thread, as in Approve's
