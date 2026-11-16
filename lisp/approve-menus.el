@@ -33,6 +33,7 @@
 ;;   ?  `approve-dispatch'       every command of a PR buffer, by what
 ;;                               it works on
 ;;   ?  `approve-dashboard-dispatch'  every command of the dashboard
+;;   ?  `approve-file-dispatch'  every command of a file view
 ;;   j  `approve-jump'           the sections of the PR, the next work
 ;;                               (unviewed files, unresolved threads)
 ;;                               and any changed file by name
@@ -70,6 +71,7 @@
 (require 'approve-suggestions)
 (require 'approve-eldoc)
 (require 'approve-dashboard)
+(require 'approve-file)
 (require 'approve-faces)
 
 (defun approve-menus--no-pending-review-p ()
@@ -319,6 +321,8 @@ Those that can't run at point, or that you may not use, are dimmed."
    ["Buffer"
     ("g" "Refresh" approve-pr-refresh)
     ("RET" "Visit at point" approve-visit)
+    ("F" "Whole file" approve-visit-file
+     :inapt-if (lambda () (approve-action-why-not 'approve-visit-file)))
     ("o" "Open in browser" approve-browse)
     ("y" "Copy URL / sha" approve-copy)
     ("j" "Jump…" approve-jump)
@@ -327,6 +331,50 @@ Those that can't run at point, or that you may not use, are dimmed."
     ("O" "Fold all but this" approve-fold-others)]])
 
 (keymap-set approve-pr-mode-map "?" #'approve-dispatch)
+
+;;; File view dispatch (?)
+
+(defun approve-menus--file-heading ()
+  "Return the heading of the file view's dispatch: the file and its version."
+  (concat (propertize "Approve" 'face 'transient-heading) "  "
+          (propertize (or (plist-get approve-context-file :name) "") 'face 'approve-title)
+          "  " (propertize (approve-file-version-label) 'face 'approve-dim)))
+
+(defun approve-menus--version-description ()
+  "Return the description of `approve-file-toggle-version': what it will do."
+  (if (equal (plist-get approve-context-file :side) "LEFT")
+      "Show the head"
+    "Show the base"))
+
+;;;###autoload (autoload 'approve-file-dispatch "approve-menus" nil t)
+(transient-define-prefix approve-file-dispatch ()
+  "Show the commands of the file view (decision D06).
+Those that can't run at point are dimmed.  The threads are acted on
+in the diff, which RET goes to (decision D43)."
+  [:description approve-menus--file-heading
+   ["Move"
+    ("n" "Next change" approve-file-next-change)
+    ("p" "Previous change" approve-file-previous-change)
+    ("]t" "Next unresolved thread" approve-file-next-thread)
+    ("[t" "Previous unresolved thread" approve-file-previous-thread)
+    ("RET" "Go to the diff" approve-visit)]
+   ["Review"
+    ("c" "Comment at point" approve-comment
+     :inapt-if (lambda () (approve-action-why-not 'approve-comment)))
+    ("s" "Suggest change" approve-suggest
+     :inapt-if (lambda () (approve-action-why-not 'approve-suggest)))
+    ("v" "Toggle viewed" approve-toggle-viewed
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-viewed)))]
+   ["Buffer"
+    ("TAB" "Fold the line's threads" approve-file-toggle-threads)
+    ("b" approve-file-toggle-version :description approve-menus--version-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-file-toggle-version)))
+    ("g" "Refresh" approve-file-refresh)
+    ("o" "Open in browser" approve-browse)
+    ("y" "Copy path:line / URL" approve-copy)
+    ("q" "Back" quit-window)]])
+
+(keymap-set approve-file-mode-map "?" #'approve-file-dispatch)
 
 ;;; Dashboard dispatch (?)
 

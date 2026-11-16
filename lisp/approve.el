@@ -56,6 +56,7 @@
 (require 'approve-sections)
 (require 'approve-conversation)
 (require 'approve-diff)
+(require 'approve-file)
 (require 'approve-context)
 (require 'approve-nav)
 (require 'approve-menus)

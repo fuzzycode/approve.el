@@ -112,8 +112,16 @@ task only needs the files it touches.
 - The review range (since my last review, one commit, a range) and what
   can be commented in it moved from Phase 6 to a new last phase,
   [[file:roadmap.org::*Phase 10 — Review ranges][Phase 10]] (2026-11-16): nice to have, not essential.
-- Next step: [[file:roadmap.org::*Phase 6 — The file view and what's new][Phase 6]], the whole-file view (=approve-file.el=, [[file:flows.org::*F15 View the whole file][F15]]),
-  then the marks of what is new since your last review.
+- Phase 6 started on 2026-11-16 with the whole-file view (=approve-file.el=,
+  [[file:flows.org::*F15 View the whole file][F15]], [[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]):
+  =RET= on a diff line, or =F= on a file, shows the file at the head (the
+  base for a removed line) in its own major mode, its hooks never run,
+  with fringe marks, the threads under their lines, =b= for the other
+  version and =c= on the lines of the diff.  It shares the PR buffer's
+  store and follows it.  Threads are read there and acted on in the
+  diff, one =RET= away.
+- Next step: the marks of what is new since your last review, the last
+  task of [[file:roadmap.org::*Phase 6 — The file view and what's new][Phase 6]].
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

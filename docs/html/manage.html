@@ -227,14 +227,16 @@ Lines that can't take comments in a range view are dimmed.</p>
 
 <!-- ================================================================== -->
 <section class="shot" id="file">
-<h2>Whole-file view <span class="ref">RET on a diff line · F15</span></h2>
-<p>The file at the PR head, fetched through the API (D36), in its own major mode. Fringe marks show changes; threads sit
-under their lines as in the diff: the line's speech bubble counts them, and the line folds them (<code>TAB</code>);
-lines whose threads are all resolved start folded. <code>b</code> toggles the base version.</p>
+<h2>Whole-file view <span class="ref">RET on a diff line · F (evil: gf) · F15 · D43</span></h2>
+<p>The file at the PR head (the base for a removed line), fetched through the API (D36), in its own major mode, whose
+hooks never run (D43). Fringe marks show changes; threads sit under their lines as in the diff: the line's speech
+bubble counts them, and the line folds them (<code>TAB</code>); lines whose threads are all resolved start folded.
+They are read here and acted on in the diff, where <code>RET</code> goes. <code>b</code> (evil: <code>gb</code>)
+shows the other version.</p>
 <div class="emacs">
 <div class="tb">*approve-file: fuzzycode/approve lisp/approve-api.el @ e5f6a7b*</div>
 <div class="win">
-<div class="hl"><span class="b">head e5f6a7b</span> <span class="d">· 3 changes · 2 threads ·</span> <span class="ok"><i data-i="viewed">✓</i> viewed</span>          <span class="k">n/p</span> <span class="d">change ·</span> <span class="k">]t</span> <span class="d">thread ·</span> <span class="k">c</span> <span class="d">comment ·</span> <span class="k">q</span> <span class="d">back</span></div>
+<div class="hl"><span class="b">head e5f6a7b</span> <span class="d">· 3 changes · 2 threads · 1 more in the diff ·</span> <span class="ok"><i data-i="viewed">✓</i> viewed</span>    <span class="k">n/p</span> <span class="d">change ·</span> <span class="k">] t</span> <span class="d">thread ·</span> <span class="k">b</span> <span class="d">base ·</span> <span class="k">c</span> <span class="d">comment ·</span> <span class="k">q</span> <span class="d">back</span></div>
 <div class="buf">
 <p>  <span class="ln"> 38</span> (<span class="kw">cl-defun</span> <span class="fn">approve-api-graphql</span> (query variables</p>
 <p>  <span class="ln"> 39</span>                                 <span class="vr">&amp;key</span> callback error-callback</p>
@@ -245,10 +247,10 @@ lines whose threads are all resolved start folded. <code>b</code> toggles the ba
 <div class="sb">
 <p>        <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────────</span></p>
 <p>        <span class="d">│</span> Should this be configurable per call?</p>
-<p>        <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ───────────────────────────────────────────</span></p>
-<p>        <span class="d">╭─</span> <span class="wa"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ───────────────────────────────────────────────</span></p>
+<p>        <span class="d">╰───────────────────────────────────────────────────────────────</span></p>
+<p>        <span class="d">╭─</span> <span class="wa"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">·</span> <span class="u">@fuzzycode</span> <span class="d">──────────────────────────────────────────</span></p>
 <p>        <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup?</p>
-<p>        <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ─────────────────────────────────────────────</span></p>
+<p>        <span class="d">╰───────────────────────────────────────────────────────────────</span></p>
 </div>
 </div>
 <p>  <span class="ln"> 43</span>     (<span class="kw">when</span> progress-message</p>
@@ -258,13 +260,20 @@ lines whose threads are all resolved start folded. <code>b</code> toggles the ba
 <p>  <span class="ln"> 47</span>              approve-api--pending-requests)</p>
 <p>  <span class="ln"> 48</span>     (<span class="fn">apply</span> #'ghub-graphql query variables <span class="st">"…"</span>)))</p>
 </div>
-<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve-file: … approve-api.el @ e5f6a7b*</span>  9%  L41  <span class="pi">ELisp/l Approve-File</span></div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve-file: … approve-api.el @ e5f6a7b*</span>  9%  L41  <span class="pi">ELisp/l Approve</span></div>
 </div>
 <div class="echo"><span class="fn">approve-api-graphql</span> <span class="m">(which-function)</span></div>
 </div>
 <ul>
-  <li><span class="ok">▌</span> added or changed lines, <span class="er">▸</span> where lines were removed.</li>
-  <li><code>c</code> only works on lines that are part of the diff, as GitHub requires; elsewhere it says why.</li>
+  <li><span class="ok">▌</span> lines this version has and the other hasn't (in the base, removed lines, in red), <span class="er">▸</span> where the
+  other version has lines this one hasn't. In a terminal they are in the margin.</li>
+  <li><code>n</code>/<code>p</code> (evil: <code>]c</code>/<code>[c</code>) move between changes, <code>]t</code>/<code>[t</code>
+  between unresolved threads; <code>v</code> (evil: <code>x</code>) marks the file viewed; <code>?</code> opens the
+  file view's dispatch.</li>
+  <li><code>c</code> and <code>s</code> only work on lines that are part of the diff, as GitHub requires; elsewhere
+  <code>c</code> says why.</li>
+  <li>The view follows its PR buffer: a new commit on its side (after <code>g</code>) brings that version, on the same
+  line.</li>
 </ul>
 </section>
 

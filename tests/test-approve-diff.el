@@ -284,8 +284,8 @@
       ;; An overlay string takes the colour of the text under it, so the
       ;; bubble's own face gives it one.
       (let* ((threads (list '((isResolved))))
-             (bubble (approve-diff--bubble threads 'test-diff--red-line))
-             (resolved (approve-diff--bubble (list '((isResolved . t)))
+             (bubble (approve-diff-thread-bubble threads 'test-diff--red-line))
+             (resolved (approve-diff-thread-bubble (list '((isResolved . t)))
                                              'test-diff--red-line)))
         (expect (get-text-property 0 'face bubble)
                 :to-equal '((:background "#ffeeee") approve-diff-bubble))
@@ -293,18 +293,18 @@
                 :to-equal '((:background "#ffeeee") approve-diff-bubble))
         (expect (get-text-property (1- (length resolved)) 'face resolved)
                 :to-equal '(approve-dim (:background "#ffeeee") approve-diff-bubble))
-        (expect (get-text-property 0 'face (approve-diff--bubble threads 'approve-dim))
+        (expect (get-text-property 0 'face (approve-diff-thread-bubble threads 'approve-dim))
                 :to-be 'approve-diff-bubble)))
 
     (it "makes a bubble red when one of its threads asks for changes (D34)"
       (let* ((threads (list '((id . "a") (isResolved)) '((id . "b") (isResolved))))
-             (bubble (approve-diff--bubble threads 'test-diff--red-line '("b"))))
+             (bubble (approve-diff-thread-bubble threads 'test-diff--red-line '("b"))))
         (expect (get-text-property (1- (length bubble)) 'face bubble)
                 :to-equal '(approve-thread-mark-changes-requested (:background "#ffeeee")
                                                                   approve-diff-bubble))
         (expect (get-text-property 0 'face bubble)
                 :to-equal '((:background "#ffeeee") approve-diff-bubble))
-        (setq bubble (approve-diff--bubble threads 'test-diff--red-line '("c")))
+        (setq bubble (approve-diff-thread-bubble threads 'test-diff--red-line '("c")))
         (expect (get-text-property (1- (length bubble)) 'face bubble)
                 :to-equal '((:background "#ffeeee") approve-diff-bubble))))
 

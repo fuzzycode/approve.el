@@ -405,6 +405,20 @@ file headings and of the file list."
   "Face of added counts and bars in the file list."
   :group 'approve-faces)
 
+(defface approve-file-change-added
+  '((t :inherit magit-diffstat-added))
+  "Face of the fringe marks of the file view on the head's side.
+They mark the lines the pull request added or changed, and where it
+added lines when the view shows the base."
+  :group 'approve-faces)
+
+(defface approve-file-change-removed
+  '((t :inherit magit-diffstat-removed))
+  "Face of the fringe marks of the file view on the base's side.
+They mark the lines the pull request removed or changed, when the
+view shows the base, and where it removed lines in the head."
+  :group 'approve-faces)
+
 (defface approve-diffstat-removed
   '((t :inherit magit-diffstat-removed))
   "Face of removed counts and bars in the file list."

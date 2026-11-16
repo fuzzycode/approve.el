@@ -347,20 +347,25 @@ okl -> err [@no]; okl -> f05 [@yes];
 cmp -> force [style=dotted, arrowhead=none];
 
 %% F15
-u      [label="[user] RET on a diff line\n(or F on a file)" @user];
+u      [label="[user] RET on a diff line\n(or F on a file, a thread)" @user];
 side   [label="line on the\nLEFT side?" @dec];
 base   [label="base: baseRefOid + old path"];
-head   [label="head: headRefOid + path"];
+head   [label="head: headRefOid + path\n(a file: its base when deleted)"];
+none   [label="no such version?\n(an added file's base,\na deleted one's head)" @dec];
+uerr   [label="user-error" @err];
 cached [label="blob cached?\n(oid:path)" @dec];
 fetch  [label="repository.object(expression: \"OID:path\")\n{ ... on Blob { text isBinary byteSize } }" @api];
 big    [label="binary or\ntoo big?" @dec];
-err    [label="user-error · offer to open on GitHub" @err];
-buf    [label="*approve-file: …* read-only, file's major mode\nfringe marks from the patch\nthreads folded under their line's bubble, as in the diff\npoint on the same line as in the diff" @ok];
-keys   [label="n/p change · ]t thread · b base/head · v viewed\nc comment (diff lines only) · q back" @note];
+err    [label="the echo area says so" @err];
+buf    [label="*approve-file: …* read-only, file's major mode (hooks never run, D43)\nshares the PR's store · fringe marks from the patch\nthreads folded under their line's bubble, as in the diff\npoint on the same line as in the diff" @ok];
+keys   [label="n/p change · ]t thread · TAB fold · b base/head · v viewed\nc s comment (diff lines only) · RET the line in the diff\n(r R e k there) · q back" @note];
+redraw [label="each redraw of the PR buffer\nredraws its file views"];
+moved  [label="the PR's commit on\nthe view's side moved?" @dec];
 u -> side; side -> base [@yes]; side -> head [@no];
-base -> cached; head -> cached;
+base -> none; head -> none; none -> uerr [@yes]; none -> cached [@no];
 cached -> buf [@yes]; cached -> fetch [@no]; fetch -> big;
 big -> err [@yes]; big -> buf [@no]; buf -> keys [style=dotted, arrowhead=none];
+buf -> redraw [style=dashed]; redraw -> moved; moved -> cached [@yes];
 
 %% F16
 roll   [label="Checks heading shows the rollup\n(statusCheckRollup.state from Q core)"];

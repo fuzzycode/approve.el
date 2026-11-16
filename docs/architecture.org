@@ -119,7 +119,9 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-dashboard.el=     | Dashboard buffer from =approve-dashboard-sections= (D39): searches and the PRs  |     3 |
 |                            | opened in the session, a refresh of one list, its title line                    |       |
 | =approve-search.el=        | Search buffer and search-filter transient                                       |     9 |
-| =approve-file.el=          | Full-file view: blob, major mode, fringe marks, inline threads                  |     6 |
+| =approve-file.el=          | The file view (F15, D43): a changed file at the head or base, its text cached   |     6 |
+|                            | for the session; the file's major mode without its hooks; fringe marks, the     |       |
+|                            | diff's lines (=approve-line=), the threads as overlays; follows its PR buffer   |       |
 | =approve-notifications.el= | Notifications buffer                                                            |     7 |
 | =approve-clone.el=         | A local clone (D36, D37): the user's clones (=approve-clone-directories=), the  |  2, 8 |
 |                            | one with a commit, shown in Magit; later a buffer's clone, repository, branch   |       |
@@ -180,7 +182,8 @@ The store from approve-v2 (D10), with a few additions.
   the store as it is stored, refs unresolved, for walking it cheaply.
 - The PR buffer and the split diff buffer share one store: the diff buffer
   points to its PR buffer (=approve-model-store-buffer=), and every model
-  function reads and writes the store and session there.
+  function reads and writes the store and session there.  A file view
+  (=approve-file.el=) points to its PR buffer the same way.
 - The dashboard and search lists do not normalize; they keep the raw search
   result (it is shown once and thrown away).  The pull requests opened in
   the session, newest first, are a global list in =approve-pr.el=
@@ -194,6 +197,9 @@ The store from approve-v2 (D10), with a few additions.
   lives in =approve-metadata.el='s global cache, keyed by API
   host, repository and kind (emoji by host only), for the Emacs session.
   It never enters the store; =C-u g= clears it.
+- The texts of files the file view fetched live in =approve-file.el='s
+  global cache, keyed by host, repository, commit and path, for the Emacs
+  session (a commit's file never changes); =C-u g= clears them.
 
 * API map
 What each feature uses.  GraphQL unless marked REST.  Check names against the
@@ -418,6 +424,8 @@ then walks up the sections from point to the first one that means something.
 |----------------------------+---------------------------------+--------------------------------------------------|
 | Diff line(s), region       | =lines=                         | =:path :side :line :start-line :start-side=      |
 | Diff line                  | =line=                          | =:path :side :line :old :new :line-kind=         |
+| Line of a file view not in | =code=                          | =:path :name :side :line= (=:name=: the path in  |
+| the diff                   |                                 | that version; =:url=: the file on GitHub)        |
 | File heading / file entry  | =file=                          | =:path :viewed=                                  |
 | Thread heading             | =thread=                        | =:thread-id :resolved :can-reply :can-resolve=   |
 | Comment in a thread        | =review-comment=                | =:comment-id :thread-id :can-update :can-delete= |

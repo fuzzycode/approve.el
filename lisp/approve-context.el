@@ -37,10 +37,12 @@
 ;;
 ;; It looks, in order, at the region (diff lines → `lines'), the thing
 ;; under point (`approve-thing': a user, label, commit, issue link…),
-;; the diff line (`approve-line'), and the section point is in, walking
-;; up to the first section that means something.  Anything else is the
-;; pull request itself (`pr'), in a PR's buffer.  Every context carries
-;; :url when there is one, for opening and copying.
+;; the diff line (`approve-line'), the line of a file's text
+;; (`code', in a buffer that holds one, `approve-context-file'), and
+;; the section point is in, walking up to the first section that
+;; means something.  Anything else is the pull request itself
+;; (`pr'), in a PR's buffer.  Every context carries :url when there is
+;; one, for opening and copying.
 ;;
 ;; Layer rules: this is the model layer.  It reads the text properties
 ;; and sections of the current buffer and the store; it never changes
@@ -51,9 +53,21 @@
 (require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
+(require 'url-util)
 (require 'magit-section)
 (require 'approve-model)
 
+(defvar-local approve-context-file nil
+  "The version of a changed file the current buffer holds, or nil.
+A buffer that holds the text of one file of the pull request, such
+as the file view (approve-file.el), sets it to a plist:
+  :path  the file's path in the pull request (its new path)
+  :name  its path in that version, the old one for the base of a
+         renamed file
+  :side  \"RIGHT\" for the head's version, \"LEFT\" for the base's
+  :oid   the commit of that version
+Its lines that are in the diff carry `approve-line', as in the diff;
+the others are the context `code'.")
 (defun approve-context--entity (typename id fields)
   "Return FIELDS of the entity TYPENAME ID as an alist, or nil if absent."
   (when (and id (approve-model-has-entity-p typename id))
@@ -169,6 +183,26 @@ suggestion anywhere else is no suggestion GitHub can apply."
   (when-let* ((url (get-text-property pos 'approve-url)))
     (list :kind 'link :value url :url url)))
 
+(defun approve-context-blob-url (oid name &optional line)
+  "Return the URL of the file NAME at commit OID on GitHub, at LINE if given."
+  (format "https://%s/%s/%s/blob/%s/%s%s" (or (approve-model-meta :host) "github.com")
+          (approve-model-meta :owner) (approve-model-meta :repo) oid
+          (mapconcat #'url-hexify-string (split-string name "/") "/")
+          (if line (format "#L%d" line) "")))
+
+(defun approve-context--code (pos)
+  "Return the `code' context of the line at POS of a file's text, or nil.
+That is in a buffer that holds one (`approve-context-file'), on a
+line that is not in the diff."
+  (when approve-context-file
+    (let ((line (line-number-at-pos pos)))
+      (list :kind 'code :path (plist-get approve-context-file :path)
+            :name (plist-get approve-context-file :name)
+            :side (plist-get approve-context-file :side) :line line
+            :url (approve-context-blob-url (plist-get approve-context-file :oid)
+                                           (plist-get approve-context-file :name)
+                                           line)))))
+
 (defun approve-context--thread (id)
   "Return the context of the thread ID."
   (let ((thread (approve-context--entity
@@ -267,6 +301,7 @@ Example, on an added line:
         (approve-context--thing pos)
         (when-let* ((line (get-text-property pos 'approve-line)))
           (approve-context--line-plist line))
+        (approve-context--code pos)
         (approve-context--link pos)
         (approve-context--from-sections pos)
         (and (approve-model-meta :number)

@@ -47,7 +47,8 @@
 ;;
 ;; S (submit) and X (discard) act on the pending review as a whole:
 ;; approve-review.el and approve-menus.el.  Evil's keys are in
-;; approve-evil.el.
+;; approve-evil.el.  In a file view (approve-file.el), c, s and v
+;; work on its lines that are in the diff, as in the diff.
 ;;
 ;; Each command starts with its preflight, `approve-commands--NAME-preflight':
 ;; what it acts on, or a `user-error' saying why it can't run here.
@@ -73,6 +74,7 @@
 (require 'approve-review)
 (require 'approve-pr)
 (require 'approve-nav)
+(require 'approve-file)
 (require 'approve-render)
 (require 'approve-manage)
 
@@ -213,7 +215,8 @@ Moving on goes to the next unviewed file when
 Signal a `user-error' when point is on no file."
   (approve-action-context (lambda (context)
                             (and (plist-get context :path)
-                                 (memq (plist-get context :kind) '(file line lines thread))))
+                                 (memq (plist-get context :kind)
+                                       '(file line lines thread code))))
                           "Put point on a file, in the file list or the diff"))
 
 (put 'approve-toggle-viewed 'approve-preflight #'approve-commands--viewed-preflight)
@@ -294,10 +297,14 @@ suggested change of the lines."
   "Return the context `approve-comment' acts on.
 On code (lines, a region over them, a file) it is that; elsewhere
 the comment goes to the conversation.  Signal a `user-error' when
-the region is on lines a comment can't hold, or, off code, when the
-conversation is locked."
+the region is on lines a comment can't hold, on a line of a file
+view that is not in the diff (GitHub takes comments only there), or,
+off code, when the conversation is locked."
   (let ((context (approve-action-context)))
     (approve-commands--check-region context)
+    (when (eq (plist-get context :kind) 'code)
+      (user-error "Line %s is not in the diff: GitHub takes comments only on lines of the diff"
+                  (plist-get context :line)))
     (unless (memq (plist-get context :kind) '(line lines file))
       (approve-commands--conversation-preflight))
     context))
@@ -712,6 +719,10 @@ to the comment once GitHub has it."
 (keymap-set approve-pr-mode-map "C" #'approve-comment-on-pr)
 (keymap-set approve-pr-mode-map "+" #'approve-react)
 (keymap-set approve-pr-mode-map "H" #'approve-hide)
+
+(keymap-set approve-file-mode-map "v" #'approve-toggle-viewed)
+(keymap-set approve-file-mode-map "c" #'approve-comment)
+(keymap-set approve-file-mode-map "s" #'approve-suggest)
 
 (provide 'approve-commands)
 

@@ -473,14 +473,15 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
  Review                     Comments                 Pull request          Buffer
   c Comment at point         r Reply                  t Title               g Refresh
   s Suggest change           R Resolve / unresolve    d Description         RET Visit at point
-  x Commit suggestion        e Edit at point          l Labels              o Open in browser
-  b Add to batch             k Delete at point        a Assignees           y Copy URL / sha
-  v Toggle viewed            + React                  A Request reviewers   j Jump…
-  S Submit review…           H Hide / unhide          M Milestone           L Layout
-  X Discard pending review   C Conversation comment   D Draft / ready       ! Doctor
-  V Review range…                                     w Subscription        K Details (eldoc)
-                                                      # Lock conversation   T Fold all threads
-                                                      m Merge / close…      O Fold all but this
+  x Commit suggestion        e Edit at point          l Labels              F Whole file
+  b Add to batch             k Delete at point        a Assignees           o Open in browser
+  v Toggle viewed            + React                  A Request reviewers   y Copy URL / sha
+  S Submit review…           H Hide / unhide          M Milestone           j Jump…
+  X Discard pending review   C Conversation comment   D Draft / ready       L Layout
+  V Review range…                                     w Subscription        ! Doctor
+                                                      # Lock conversation   K Details (eldoc)
+                                                      m Merge / close…      T Fold all threads
+                                                                            O Fold all but this
 #+end_example
 
 Suffixes that don't apply to the context, or that the viewer may not use
@@ -496,6 +497,20 @@ no key in the buffer: it is seldom used.
 The mockup is the whole menu; the menu lists only the commands that exist.
 Today that is Review without =V=, and Buffer without =L= and =!=; the
 rest join with the phases that add their commands ([[file:roadmap.org][roadmap]]).
+
+In a file view, =?= opens its own dispatch (=approve-file-dispatch=), with
+the file and its version in the heading:
+
+#+begin_example
+ Approve  lisp/approve-api.el  head e5f6a7b
+ Move                            Review                Buffer
+  n Next change                   c Comment at point    TAB Fold the line's threads
+  p Previous change               s Suggest change      b Show the base
+  ]t Next unresolved thread       v Toggle viewed       g Refresh
+  [t Previous unresolved thread                         o Open in browser
+  RET Go to the diff                                    y Copy path:line / URL
+                                                        q Back
+#+end_example
 
 ** Submit review (=S=)
 #+begin_example
@@ -641,12 +656,15 @@ base branch's rules require it, and its title or description, up to
 status's =targetUrl=); =K= adds its app, times and duration.
 
 * File view
-=RET= on a diff line (or =F= on a file) opens the whole file at the PR head
-(=b= toggles the base version), fetched through the API ([[file:flows.org::*F15 View the whole file][F15]]).
+=RET= on a diff line opens the whole file at that line: at the PR head, or
+at its base for a removed line.  =F= (evil =gf=) on a file opens its head
+(its base when it was deleted) at the first change, and on a thread its
+line.  =b= (evil =gb=) shows the other version, at the same place.  The
+file is fetched through the API and kept for the session ([[file:flows.org::*F15 View the whole file][F15]]).
 
 #+begin_example
  *approve-file: fuzzycode/approve lisp/approve-api.el @ e5f6a7b*
- head e5f6a7b · 3 changes · 2 threads              n/p change · ]t thread · c comment · q back
+ head e5f6a7b · 3 changes · 2 threads · 1 more in the diff   n/p change · ] t thread · b base · c comment · q back
    38   (cl-defun approve-api-graphql (query variables
    39                                    &key callback
  ▌ 40     (let* ((request-id (approve-api--generate-request-id))
@@ -654,23 +672,42 @@ status's =targetUrl=); =K= adds its app, times and duration.
  ▌ 42            (retries approve-api-retries))                                     💬 2
           ╭─ @bob · 2 days ago ─────────────────────────────────────────────
           │ Should this be configurable per call?
-          ╰─ r reply · R resolve ───────────────────────────────────────────
-          ╭─ ✎ Pending · you ───────────────────────────────────────────────
+          ╰───────────────────────────────────────────────────────────────
+          ╭─ ✎ Pending · @fuzzycode ───────────────────────────────────────────
           │ Should `retries` be part of the defgroup?
-          ╰─ e edit · k delete ─────────────────────────────────────────────
+          ╰───────────────────────────────────────────────────────────────
    43       (when progress-message
  ▸ 44         (make-progress-reporter progress-message))
 #+end_example
 
-- The buffer uses the file's major mode (font-lock, imenu, which-function).
-- Fringe: =▌= added or changed lines, =▸= where lines were removed.
+- The buffer uses the file's major mode (font-lock, imenu, which-function),
+  whose hooks never run there: no checker or language server starts for a
+  file that isn't on disk ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]).  =approve-file-mode-hook= is the place
+  for more.  Line numbers are =display-line-numbers-mode='s
+  (=approve-file-line-numbers=); the file takes the PR buffer's window
+  (=approve-file-display-action=), and =q= goes back.
+- Fringe (the margin in a terminal): =▌= lines this version has and the
+  other hasn't (added or changed in the head, removed or changed in the
+  base), =▸= where the other version has lines this one hasn't.
+- The header line says which version it is, how many changes and threads
+  it shows, how many threads only the diff shows (on the whole file,
+  outdated, or on lines of the other version), whether the file is viewed,
+  and its keys.
 - Threads sit under their lines as in the diff: a line with threads has the
-  speech bubble and their count at the right edge, and folds them (=TAB= on
-  the line or in them); lines whose threads are all resolved start folded,
-  so only the bubble shows.  They are overlays (=after-string=), as the
-  buffer holds the file's own text.
-- =c= works only on lines that are in the diff, as GitHub requires; on other
-  lines it says why.
+  speech bubble and their count at the right edge, and folds them (=TAB=
+  on the line); lines whose threads are all resolved start folded, so only
+  the bubble shows.  They are overlays, as the buffer holds the file's own
+  text, so point never enters them: they are read here and acted on in the
+  diff, where =RET= goes (the line, its threads unfolded), and their boxes
+  name no keys.
+- =n= / =p= (evil =]c= / =[c=) move between changes, =]t= / =[t= between
+  lines with unresolved threads.  =v= (evil =x=) marks the file viewed.
+- =c= and =s= work only on lines that are in the diff, as GitHub requires,
+  and the comment is the same as one written in the diff; on other lines
+  =c= says why.  =?= opens the file view's dispatch.
+- The view follows its PR buffer: each redraw there redraws it, and a new
+  commit on its side (after =g=, which works here too) brings that
+  version, on the same line.
 
 * Notifications (later)
 #+begin_example
@@ -809,6 +846,9 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k= | any                       |
 | Visit thing at point          | =RET=         | =RET=                 | file, line, link, commit… |
 |                               |               |                       | (a metadata row: edit it) |
+| Whole file at point           | =F=           | =gf=                  | file, line, thread        |
+| Next / previous change        | =n= =p=       | =]c= =[c=             | file view                 |
+| Other version (base / head)   | =b=           | =gb=                  | file view                 |
 | Open in browser               | =o=           | =go=                  | any (thing or PR)         |
 | Copy URL / sha / value        | =y=           | =gy=                  | any                       |
 | Comment at point (DWIM)       | =c=           | =c=                   | line, region, file, PR    |
@@ -841,7 +881,9 @@ Toggling a section (=approve-section-toggle=, also what =RET= does where there
 is nothing to visit) folds the section at point, except inside the diff: on a
 diff line with threads it folds the threads, and in a thread it folds the
 threads of its line (or its group, "On this file" or "Outdated"); on a
-line without threads it folds the hunk.
+line without threads it folds the hunk.  =RET= on a diff line opens the
+whole file there ([[*File view][File view]]), where =TAB= folds a line's threads and
+=RET= comes back to the line in the diff.
 
 =T= (=approve-toggle-threads=) folds every thread in the diff down to its
 line's bubble, "On this file" and "Outdated" included, or unfolds them all
@@ -899,6 +941,7 @@ inherit:
 | =approve-diff-file-heading=                      | =magit-diff-file-heading=                    | File headings             |
 | =approve-line-number=                            | =line-number=                                | Diff line numbers         |
 | =approve-target=                                 | =region=                                     | Lines being commented on  |
+| =approve-file-change-added= / =-removed=         | =magit-diffstat-added= / =-removed=          | File view's fringe marks  |
 | =approve-input-prompt= / =approve-input-context= | =bold= / =font-lock-keyword-face=            | Input header line         |
 | =approve-inflight=                               | =shadow=, italic                             | Things waiting for GitHub |
 | =approve-check-success/failure/pending/skipped=  | =success= / =error= / =warning= / =shadow=   | Checks                    |

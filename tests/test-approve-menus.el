@@ -130,7 +130,7 @@ The diff of `test-menus--path' is expanded first, for its threads."
       (expect (test-menus--dimmed) :to-equal '("s" "x" "b" "e" "k" "+" "H"))
       ;; On the description, which can be edited.
       (goto-char (oref (approve-test-find-section 'approve-description-section) start))
-      (expect (test-menus--dimmed) :to-equal '("s" "x" "b" "v" "r" "R" "k" "H"))))
+      (expect (test-menus--dimmed) :to-equal '("s" "x" "b" "v" "r" "R" "k" "H" "F"))))
 
   (it "follows a selection of diff lines, for the command picked in it"
     (test-menus--with-medium
@@ -161,7 +161,7 @@ The diff of `test-menus--path' is expanded first, for its threads."
         (unwind-protect
             (with-current-buffer buffer
               (expect (test-menus--dimmed)
-                      :to-equal '("c" "s" "x" "b" "v" "S" "X" "r" "R" "e" "k" "+" "H" "C" "t" "d" "l" "a" "A" "M" "D" "w" "#" "m"))
+                      :to-equal '("c" "s" "x" "b" "v" "S" "X" "r" "R" "e" "k" "+" "H" "C" "t" "d" "l" "a" "A" "M" "D" "w" "#" "m" "F"))
               (expect (approve-action-why-not 'approve-comment)
                       :to-equal "Wait until the pull request has loaded"))
           (kill-buffer buffer)))))

@@ -270,9 +270,14 @@ repository, find out and note in [[file:decisions.org][decisions.org]]:
 Implements F15, and F14's marks of what is new since your review; F14's
 review range is Phase 10's.
 Mockups: file view.
-- [ ] =approve-file.el=: blob fetch and cache, major mode, fringe, threads
+- [X] =approve-file.el=: blob fetch and cache, major mode, fringe, threads
       folded under their line's bubble as in the diff (overlays),
-      base/head toggle, comment on diff lines.
+      base/head toggle, comment on diff lines.  Done (2026-11-16,
+      [[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]): =RET= on a diff line or =F= (evil =gf=) opens it; the
+      mode's hooks never run; =n p= (evil =]c [c=), =]t [t=, =TAB=, =b=
+      (evil =gb=), =c s v=, =RET= back to the line in the diff, =?=.
+      Threads are read there and acted on in the diff, until Phase 8's
+      actions from overlays reach it.
 - [ ] "New since your last review" marks on comments and commits; =j n=.
 - Done when :: any changed file can be read whole with syntax
   highlighting, and what came after your last review is marked and one
@@ -330,7 +335,8 @@ Mockups: a file's buffer with its threads (written with F21).
 - [ ] Actions in a file's buffer: reply, resolve, edit, delete, and
       comment and suggest on the lines GitHub has ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).  Context at
       point and preflights from the overlays of a buffer that isn't
-      Approve's.  Keys under a prefix, never shadowing evil's motions
+      Approve's; the file view takes them too, its threads being read
+      only until then ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]).  Keys under a prefix, never shadowing evil's motions
       ([[file:decisions.org::*D17 Evil is supported, never required][D17]]), and a dispatch transient.
 - [ ] Between the buffers, added by the clone modules (the core never
       requires them): from the PR buffer, a diff line or thread opens in

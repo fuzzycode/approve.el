@@ -589,25 +589,39 @@ The marks of what is new since your review are Phase 6's; the review range
 
 * F15 View the whole file
 #+begin_example
- [user] RET on a diff line (or F on a file)
+ [user] RET on a diff line (or F on a file, a thread)
    │
    ▼
  side = LEFT? → base oid (baseRefOid) and old path : head oid (headRefOid) and path
-   │
+   │            (a file: its head, its base when it was deleted, at the first change)
+   ▼
+ ◇ no such version? (an added file's base, a deleted one's head) ◇──yes──▶ user-error
+   │ no
    ▼
  ◇ blob cached (by oid:path)? ◇──no──▶ repository.object(expression: "OID:path") { text }
-   │ yes                                     │ binary or too big ──▶ user-error / open on GitHub
+   │ yes                                     │ binary or too big ──▶ the echo area says so
    ◀─────────────────────────────────────────┘
    ▼
  ┌────────────────────────────────────────────────────────┐
  │ buffer *approve-file: …*, read-only, file's major mode │
+ │ (its hooks never run, D43); shares the PR's store      │
  │ fringe marks from the parsed patch                     │
  │ threads under their lines; their line folds them       │
  │ point on the same line as in the diff                  │
  └───────────────────────────┬────────────────────────────┘
                              ▼
- n/p next change · ]t thread · b base/head · v viewed · c comment (diff lines only) · q back
+ n/p change · ]t thread · TAB fold · b base/head · v viewed · c s comment (diff lines only)
+ RET the line in the diff, its threads unfolded (r R e k there) · q back
+
+ each redraw of the PR buffer redraws its file views
+   │
+   ▼
+ ◇ the PR's commit on the view's side moved? ◇──yes──▶ fetch that version, show it on the same line
 #+end_example
+
+The threads are read in the file view and acted on in the diff, one =RET=
+away ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]); Phase 8 brings actions from the overlays, for a
+clone's buffers, and the file view can take them then.
 
 * F16 Inspect checks
 #+begin_example

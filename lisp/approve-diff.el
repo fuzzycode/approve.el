@@ -505,8 +505,9 @@ Such threads start folded away."
                              (approve-thread-pending-p first)))))
                threads))
 
-(defun approve-diff--folded-p (threads)
+(defun approve-diff-threads-folded-p (threads)
   "Return non-nil if a line's (or a file's) THREADS start folded.
+The diff and the file view (approve-file.el) ask it.
 \\<approve-pr-mode-map>That is when \\[approve-toggle-threads] folded every thread (the
 session's :threads is `folded'), not when it unfolded them (`shown'),
 and otherwise when they are settled (`approve-diff--settled-p')."
@@ -515,8 +516,10 @@ and otherwise when they are settled (`approve-diff--settled-p')."
     ('shown nil)
     (_ (approve-diff--settled-p threads))))
 
-(defun approve-diff--bubble (threads face &optional asking)
-  "Return the speech bubble for THREADS, on a diff line whose face is FACE.
+(defun approve-diff-thread-bubble (threads face &optional asking)
+  "Return the speech bubble for THREADS, on a line whose face is FACE.
+The diff and the file view (approve-file.el) show it on a line with
+threads.
 The bubble and the number of unresolved threads (or of all, dim,
 when all are resolved) end at the page's right edge, as the counts
 of the file headings do.  It takes the line's background, not its
@@ -544,7 +547,7 @@ starts."
 
 (defun approve-diff--insert-bubble (threads &optional asking)
   "Show the bubble of THREADS on the line just inserted, before its newline.
-ASKING is as for `approve-diff--bubble'.  The bubble is an overlay's
+ASKING is as for `approve-diff-thread-bubble'.  The bubble is an overlay's
 before-string, not text: moving up and down never puts point in it,
 copying leaves it out, and it goes with the line when the buffer is
 redrawn (the overlay evaporates)."
@@ -553,7 +556,7 @@ redrawn (the overlay evaporates)."
     (overlay-put overlay 'evaporate t)
     (overlay-put overlay 'approve-bubble t)
     (overlay-put overlay 'before-string
-                 (approve-diff--bubble threads (get-text-property newline 'face) asking))))
+                 (approve-diff-thread-bubble threads (get-text-property newline 'face) asking))))
 
 (defun approve-diff--insert-hunk (path hunk width index &optional fontified)
   "Insert HUNK of PATH: its header, lines, and the threads under lines.
@@ -581,7 +584,7 @@ their code with syntax faces, or is nil."
             ;; The line is the heading of its threads: it folds them,
             ;; and its bubble says they are there.
             (magit-insert-section (approve-line-section (list path side number)
-                                                        (approve-diff--folded-p threads))
+                                                        (approve-diff-threads-folded-p threads))
               (magit-insert-heading text)
               (approve-diff--insert-bubble threads (plist-get index :asking))
               (approve-diff--insert-threads threads gutter))))))))
@@ -607,7 +610,7 @@ HIDE collapses it at first; NOTE is dim text on the right."
                                            (approve-diff--line-keys hunks))))
     (let ((on-file (plist-get index :file)))
       (approve-diff--insert-thread-group 'file "On this file" on-file
-                                         (approve-diff--folded-p on-file)))
+                                         (approve-diff-threads-folded-p on-file)))
     (cond
      (hunks
       (let ((width (approve-diff--number-width hunks))
@@ -749,13 +752,20 @@ Example:
   "Return where each line of RANGE starts in the current buffer, in order.
 Only diff lines count, not the threads under them.  Nil when the
 range is not drawn: its file's body was never expanded, or the
-buffer has no such lines."
-  (when-let* ((file (approve-diff--file-section (plist-get range :path))))
+buffer has no such lines.  A buffer without sections, such as the
+file view (approve-file.el), holds the lines of one file: all of it
+is looked at."
+  (when-let* ((path (plist-get range :path))
+              (bounds (if magit-root-section
+                          (when-let* ((file (approve-diff--file-section path)))
+                            (cons (or (oref file content) (oref file end))
+                                  (oref file end)))
+                        (cons (point-min) (point-max)))))
     (let ((starts nil))
       (save-excursion
-        (goto-char (or (oref file content) (oref file end)))
-        (while (< (point) (oref file end))
-          (when (get-text-property (point) 'approve-line)
+        (goto-char (car bounds))
+        (while (< (point) (cdr bounds))
+          (when (equal (plist-get (get-text-property (point) 'approve-line) :path) path)
             (push (point) starts))
           (forward-line 1)))
       (approve-diff--take-range

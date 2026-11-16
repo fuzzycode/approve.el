@@ -29,7 +29,9 @@
 
 ;; The read-only commands of a PR buffer (docs/flows.org, F03):
 ;;
-;;   RET   `approve-visit'      follow the thing at point
+;;   RET   `approve-visit'      follow the thing at point: a diff line
+;;                              opens the whole file (approve-file.el),
+;;                              a line of a file view goes to the diff
 ;;   o     `approve-browse'     open it (or the PR) on GitHub
 ;;   y     `approve-copy'       copy its URL, sha, path:line or name
 ;;   ] u   `approve-next-unviewed-file'      [ u  previous
@@ -42,7 +44,8 @@
 ;;
 ;; and the jumps the `approve-jump' transient (j) offers, defined in
 ;; approve-menus.el.  Moving into a file's diff or a thread expands
-;; what hides it.  This file binds its keys in `approve-pr-mode-map'.
+;; what hides it.  This file binds its keys in `approve-pr-mode-map',
+;; and RET, o and y in `approve-file-mode-map' too.
 ;; The dashboard binds RET, o, y, TAB and O to the same commands: on a
 ;; row of a list, RET opens its pull request and TAB folds the list.
 ;;
@@ -69,6 +72,7 @@
 (require 'approve-sections)
 (require 'approve-diff)
 (require 'approve-input)
+(require 'approve-file)
 
 ;;; Moving to sections
 
@@ -467,14 +471,36 @@ counts, not the thing."
     (and (eq (plist-get context :kind) 'meta)
          (alist-get (plist-get context :row) approve-visit-row-commands))))
 
+(defun approve-nav-goto-diff-line (context)
+  "Show the PR buffer at the line of CONTEXT in the diff, its threads unfolded.
+CONTEXT is a `line' or `lines' in a file view, the line's place in
+the diff, or `code', a line not in it: that goes to the file's diff.
+The PR buffer is shown where it is already, else in this window."
+  (let ((path (plist-get context :path))
+        (range (and (memq (plist-get context :kind) '(line lines))
+                    (list :path (plist-get context :path) :side (plist-get context :side)
+                          :line (plist-get context :line)))))
+    (pop-to-buffer (approve-model-owner-buffer)
+                   '(display-buffer-reuse-window display-buffer-same-window))
+    (approve-nav-goto-file path)
+    (when-let* ((start (car (and range (approve-diff-range-positions range)))))
+      (goto-char start)
+      (let ((section (magit-section-at)))
+        (when (and section (eq (oref section type) 'approve-line-section)
+                   (oref section hidden))
+          (magit-section-show section))))))
+
 (defun approve-visit ()
   "Follow the thing at point (flow F03).
-A file goes to its diff, a pending comment or a review to its thread,
+A file goes to its diff, a line of the diff to the whole file
+\(`approve-visit-file'), a pending comment or a review to its thread,
 a link to its target (a pull request in Approve, anything else in the
 browser), a check to its details.  A commit shows in Magit from a
 local clone that has it (`approve-clone-directories'), else on
 GitHub.  A diff GitHub did not send is computed from the file's
 versions.  A row of a list of pull requests opens its pull request.
+In a file view, a line goes to the diff: to its own place when it is
+in the diff, its threads unfolded, else to the file.
 On a metadata row that can be changed, such as Labels, change it
 \(`approve-visit-row-commands'); \\[approve-browse] opens the label
 or person at point.  Elsewhere, toggle the section."
@@ -508,6 +534,12 @@ or person at point.  Elsewhere, toggle the section."
     ('commit (approve-nav--visit-commit (plist-get context :value)
                                         (plist-get context :url)))
     ('load-diff (approve-pr-load-local-patch (plist-get context :path)))
+    ((or 'line 'lines)
+     (if approve-context-file
+         (approve-nav-goto-diff-line context)
+       (approve-file-show (plist-get context :path) (plist-get context :side)
+                          (plist-get context :line))))
+    ('code (approve-nav-goto-diff-line context))
     (_ (approve-nav--toggle-or "Nothing to visit here"))))
 
 (defun approve-browse ()
@@ -529,6 +561,7 @@ or person at point.  Elsewhere, toggle the section."
                   (format "%s:%s" (plist-get context :path) end)
                 (format "%s:%s-%s" (plist-get context :path) start end))))
     ('file (plist-get context :path))
+    ('code (format "%s:%s" (plist-get context :name) (plist-get context :line)))
     ((or 'commit 'user 'team 'label 'branch 'milestone 'git-actor 'search)
      (format "%s" (plist-get context :value)))
     ('ref (format "#%s" (plist-get context :value)))
@@ -559,6 +592,11 @@ With a prefix argument URL, copy its URL instead."
 (keymap-set approve-pr-mode-map "[ t" #'approve-previous-thread)
 (keymap-set approve-pr-mode-map "T" #'approve-toggle-threads)
 (keymap-set approve-pr-mode-map "O" #'approve-fold-others)
+
+(keymap-set approve-file-mode-map "RET" #'approve-visit)
+(keymap-set approve-file-mode-map "<return>" #'approve-visit)
+(keymap-set approve-file-mode-map "o" #'approve-browse)
+(keymap-set approve-file-mode-map "y" #'approve-copy)
 
 (provide 'approve-nav)
 

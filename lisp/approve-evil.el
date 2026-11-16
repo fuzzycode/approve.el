@@ -54,6 +54,7 @@
 (require 'magit-section)
 (require 'approve-pr)
 (require 'approve-dashboard)
+(require 'approve-file)
 
 (declare-function evil-define-key* "evil-core" (state keymap key def &rest bindings))
 (declare-function evil-set-initial-state "evil-core" (mode state))
@@ -100,6 +101,7 @@
     ("S" . approve-submit-review)
     ("X" . approve-discard-review)
     ("gm" . approve-merge)
+    ("gf" . approve-visit-file)
     ("?" . approve-dispatch)
     ("q" . quit-window))
   "Keys of `approve-pr-mode' in evil's normal state: (KEY . COMMAND).")
@@ -115,6 +117,28 @@ They act on the selection: a comment or suggestion on the selected
 lines of the diff (\\`V' picks them), or a reply or conversation
 comment quoting the selected text.  The dispatch menu keeps the
 selection for the command picked in it.")
+
+(defconst approve-evil-file-bindings
+  '(("]c" . approve-file-next-change)
+    ("[c" . approve-file-previous-change)
+    ("]t" . approve-file-next-thread)
+    ("[t" . approve-file-previous-thread)
+    ("RET" . approve-visit)
+    ("TAB" . approve-file-toggle-threads)
+    ("za" . approve-file-toggle-threads)
+    ("gb" . approve-file-toggle-version)
+    ("gr" . approve-file-refresh)
+    ("go" . approve-browse)
+    ("gy" . approve-copy)
+    ("x" . approve-toggle-viewed)
+    ("c" . approve-comment)
+    ("s" . approve-suggest)
+    ("?" . approve-file-dispatch)
+    ("q" . quit-window))
+  "Keys of `approve-file-mode' in evil's normal state: (KEY . COMMAND).
+The PR buffer's keys for the same commands.  The changes are ]c and
+[c, as in vim's diff mode, since n and p are search and paste; b is
+a motion, so gb shows the other version.")
 
 (defconst approve-evil-dashboard-bindings
   '(("j" . evil-next-visual-line)
@@ -153,15 +177,22 @@ zp folds every list but the one at point, as in a PR buffer.")
 
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.
-Also `approve-evil-visual-bindings' in its visual state, and
-`approve-evil-dashboard-bindings' in the dashboard's normal state.
-Input buffers start in insert state."
+Also `approve-evil-visual-bindings' in its visual state,
+`approve-evil-dashboard-bindings' in the dashboard's normal state, and
+`approve-evil-file-bindings' in a file view's, where visual state
+comments or suggests on the selection.  Input buffers start in insert
+state."
   (dolist (binding approve-evil-pr-bindings)
     (evil-define-key* 'normal approve-pr-mode-map (kbd (car binding)) (cdr binding)))
   (dolist (binding approve-evil-visual-bindings)
     (evil-define-key* 'visual approve-pr-mode-map (kbd (car binding)) (cdr binding)))
   (dolist (binding approve-evil-dashboard-bindings)
     (evil-define-key* 'normal approve-dashboard-mode-map (kbd (car binding)) (cdr binding)))
+  (dolist (binding approve-evil-file-bindings)
+    (evil-define-key* 'normal approve-file-mode-map (kbd (car binding)) (cdr binding)))
+  (dolist (binding '(("c" . approve-comment) ("s" . approve-suggest)
+                     ("?" . approve-file-dispatch)))
+    (evil-define-key* 'visual approve-file-mode-map (kbd (car binding)) (cdr binding)))
   (evil-set-initial-state 'approve-input-mode 'insert))
 
 (approve-evil-setup)
