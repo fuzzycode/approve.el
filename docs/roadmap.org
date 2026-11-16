@@ -390,6 +390,15 @@ Not planned yet.  Each needs a decision before it enters a phase.
   through REST (=GET /repos/{o}/{r}/branches/{branch}=, readable without
   admin, where GraphQL's =branchProtectionRule= is null).  Until then
   the merge box says "blocked by the rules of main".
+- Change detection that notices the checks (D23, F16, F17): the header
+  line says "checks passed" or "1 check failed" once the head's checks
+  finish, so waiting to merge needs no =g= by hand.  The change query
+  (=queries/pull-request-changes.graphql=) would add the head's
+  =statusCheckRollup= state and counts, compared with the store as the
+  rest is.  Open questions: whether only finished checks count as news,
+  or every change of state; whether the poll runs more often than five
+  minutes while checks run; whether a finish also says so in the echo
+  area when the PR buffer isn't showing.
 - Create a PR from Magit (=createPullRequest=), with a template.
 - Org links to PRs, threads and comments (=approve:owner/repo#123=).
 - A "review queue" mode: walk unviewed files one by one, full-screen, with
