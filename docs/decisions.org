@@ -667,6 +667,96 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   once a second, ten times at most, until it is the new commit, and
   loads the PR then (=approve-query-await-head=).
 
+** D42 Merging as GitHub's merge box does, checked first (F13)
+- Status :: accepted (2026-11-16; the author chose how the message is
+  written, how auto-merge gets its method, what deletes the branch and
+  how it is updated)
+- Found :: On the scratch repository (fuzzycode/test-approve #11 and
+  #12, pull requests between scratch branches), with =gh api graphql=:
+  - =mergePullRequest= merges a closed pull request, without a word.
+    =reopenPullRequest= on a merged one fails ("Could not open the pull
+    request."); =closePullRequest= on one answers with it unchanged.  A
+    draft is refused ("Pull Request is still a draft"), and so is a stale
+    =expectedHeadOid= ("Head branch was modified. Review and try the merge
+    again.").
+  - =mergeable= and =mergeStateStatus= are =UNKNOWN= for a few seconds
+    after a push, after the base moves, and right after a merge or an
+    update.  =BEHIND= comes only where the base's rules want branches up
+    to date: without rules, a branch four commits behind is =CLEAN=.
+  - =viewerMergeHeadlineText= and =viewerMergeBodyText(mergeType)= are
+    the message the browser fills in, from the repository's settings:
+    "Merge pull request #12 from owner/branch" and the title for a merge
+    commit, the title with "(#12)" (or the commit's, for one) and the
+    commits' messages for a squash, nothing for a rebase.  Left out,
+    =mergePullRequest= uses them.
+  - =updatePullRequestBranch= (=MERGE= or =REBASE=) answers with the head
+    as it was; GitHub moves it a second or two later.  A stale
+    =expectedHeadOid=: "head sha didn't match the current head ref."
+    =viewerCanUpdateBranch= stayed false on branches behind their base
+    while the update worked: it follows the repository's "Always suggest
+    updating pull request branches" (=allowUpdateBranch=), off there.
+  - =viewerCanDeleteHeadRef= is false while the pull request is open,
+    and true once it is merged or closed.  =deleteRef(refId)= deletes the
+    branch (GraphQL: no REST is needed, [[*D09 REST only where GraphQL can't do it][D09]]); the PR's =headRef= is
+    null then.
+  - Auto-merge and merge queues can't be tried there: the repository
+    doesn't allow auto-merge ("Auto merge is not allowed for this
+    repository"), and merge queues need an organization ("Merge queues
+    are not enabled for fuzzycode/test-approve.").
+- Decision ::
+  - =m= merges with a merge commit, =s= squashes, =r= rebases, in the
+    merge menu ([[file:ui.org::*Merge / state (=m=)][ui.org]]).  =m= and =s= write the commit message in an
+    input buffer, starting from GitHub's, asked for when the command runs
+    (it changes with each push): its first line is the title, the rest
+    the body, which is sent empty when it is.  =C-c C-c= merges; the
+    input is the confirmation.  =C-u m= and =C-u s= merge with GitHub's
+    message after =y-or-n-p=, as =r= does (it has no message).
+  - Before anything is sent, merging needs: an open pull request (GitHub
+    would merge a closed one), not a draft, a method the repository
+    allows, the right to write to it (=viewerPermission= =WRITE=,
+    =MAINTAIN= or =ADMIN=), no conflicts (and =canBeRebased= for =r=),
+    GitHub done working it out (not =UNKNOWN=), no merge queue (=Q=), and
+    a =mergeStateStatus= that allows it: =CLEAN=, =UNSTABLE= or
+    =HAS_HOOKS=.  =BLOCKED= and =BEHIND= only for a viewer who may bypass
+    the rules (=viewerCanMergeAsAdmin=), and the input and the question
+    say it bypasses them.  The merge is of the head the store holds
+    (=expectedHeadOid=).
+  - =-d= deletes the head branch after the merge, when GitHub's answer
+    says the viewer may (=viewerCanDeleteHeadRef=).  It is off by default
+    (=C-x s= in the menu saves it on) and dimmed where the repository
+    deletes merged branches itself.  =k= deletes the branch of a merged
+    or closed pull request, as GitHub's button does.
+  - =a= enables auto-merge: it asks for the method among those allowed,
+    the viewer's default first (not when there is only one), then the
+    message as =m= and =s= do.  It is dimmed without
+    =viewerCanEnableAutoMerge=, and =x= (disable) without
+    =viewerCanDisableAutoMerge=.  =Q= adds the pull request to the merge
+    queue, or takes it out, where the base has one (=isMergeQueueEnabled=).
+  - =u= merges the base into the head branch and =U= rebases it on the
+    base, after =y-or-n-p=, from the head the store holds; both where the
+    pull request is open and the viewer may push to its branch
+    (=viewerCanUpdateBranch=, or =viewerCanEditFiles=, as the first
+    follows a setting).  The PR loads again once GitHub's head moved
+    (=approve-query-await-head=).
+  - =c= closes the pull request, or reopens it (=viewerCanClose=,
+    =viewerCanReopen=; a merged one stays merged), after =y-or-n-p=.  =D=
+    is F12's draft or ready.
+  - A merge loads the PR again, as =g= does: its conversation, commits
+    and header all change.  The other mutations answer with
+    =PullRequestMergeStateFields=, which the core spreads too, and the
+    store is patched with it ([[*D35 Mutations keep the store true: GitHub's answer, then list edits][D35]]); the events they add to the
+    conversation come with the next load, as the metadata's do.
+  - The menu's title line is GitHub's merge box in one line: conflicts,
+    checks, reviews, =BEHIND=, auto-merge, the queue; or who merged it.
+    It says "behind" without a count: GitHub gives the count only by
+    comparing the two branches by name, one more query per load.
+- Why :: The commit should read as GitHub's would, and the message is
+  GitHub's own until the user changes it, as in the browser.  GitHub's
+  API is laxer than its merge box (a closed pull request merges) and its
+  messages are terse ("Pull Request is not mergeable"), so Approve says
+  what stands in the way, and which key helps, before sending; the
+  menu dims the same (D06).  The head the user read is the head merged.
+
 * Rendering
 ** D13 Full redraw, point restored by section ident
 - Status :: accepted (revisit if measurements say so)
