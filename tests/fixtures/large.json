@@ -54,6 +54,7 @@
                   "id": "U_kgDOv83z5sps70VUO_",
                   "login": "dave-example",
                   "url": "https://github.com/dave-example",
+                  "databaseId": 1031676,
                   "name": "Dave Example"
                 },
                 "authorAssociation": "MEMBER",
@@ -156,6 +157,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       }
                     }
@@ -340,6 +342,7 @@
               "__typename": "User",
               "id": "U_kgDOiG_tAXiSV0JCKN",
               "login": "vera-example",
+              "databaseId": 1039595,
               "name": "Vera Example",
               "url": "https://github.com/vera-example"
             },
@@ -2654,6 +2657,7 @@
                               "id": "U_kgDOSBgazSKz7a68ik",
                               "login": "bob-example",
                               "url": "https://github.com/bob-example",
+                              "databaseId": 1015838,
                               "name": "Bob Example"
                             },
                             "authorAssociation": "COLLABORATOR",
@@ -2751,6 +2755,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -2878,6 +2883,7 @@
                               "id": "U_kgDOSBgazSKz7a68ik",
                               "login": "bob-example",
                               "url": "https://github.com/bob-example",
+                              "databaseId": 1015838,
                               "name": "Bob Example"
                             },
                             "authorAssociation": "COLLABORATOR",
@@ -2986,6 +2992,7 @@
                         "__typename": "User",
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example",
                         "url": "https://github.com/dave-example"
                       },
@@ -3008,6 +3015,7 @@
                               "id": "U_kgDOSBgazSKz7a68ik",
                               "login": "bob-example",
                               "url": "https://github.com/bob-example",
+                              "databaseId": 1015838,
                               "name": "Bob Example"
                             },
                             "authorAssociation": "COLLABORATOR",
@@ -3105,6 +3113,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3232,6 +3241,7 @@
                               "id": "U_kgDOSBgazSKz7a68ik",
                               "login": "bob-example",
                               "url": "https://github.com/bob-example",
+                              "databaseId": 1015838,
                               "name": "Bob Example"
                             },
                             "authorAssociation": "COLLABORATOR",
@@ -3356,6 +3366,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -3510,6 +3521,7 @@
                             "__typename": "User",
                             "id": "U_kgDOv83z5sps70VUO_",
                             "login": "dave-example",
+                            "databaseId": 1031676,
                             "name": "Dave Example",
                             "url": "https://github.com/dave-example"
                           }
@@ -3540,6 +3552,7 @@
                             "__typename": "User",
                             "id": "U_kgDOv83z5sps70VUO_",
                             "login": "dave-example",
+                            "databaseId": 1031676,
                             "name": "Dave Example",
                             "url": "https://github.com/dave-example"
                           }
@@ -3560,6 +3573,7 @@
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
                         "url": "https://github.com/dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -3644,6 +3658,7 @@
                         "id": "U_kgDOSBgazSKz7a68ik",
                         "login": "bob-example",
                         "url": "https://github.com/bob-example",
+                        "databaseId": 1015838,
                         "name": "Bob Example"
                       },
                       "authorAssociation": "COLLABORATOR",
@@ -3733,6 +3748,7 @@
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
                         "url": "https://github.com/dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -3822,6 +3838,7 @@
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
                         "url": "https://github.com/dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -3921,6 +3938,7 @@
                             "__typename": "User",
                             "id": "U_kgDOv83z5sps70VUO_",
                             "login": "dave-example",
+                            "databaseId": 1031676,
                             "name": "Dave Example",
                             "url": "https://github.com/dave-example"
                           }
@@ -3941,6 +3959,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       },
                       "authorAssociation": "CONTRIBUTOR",
@@ -4085,6 +4104,7 @@
                             "__typename": "User",
                             "id": "U_kgDOv83z5sps70VUO_",
                             "login": "dave-example",
+                            "databaseId": 1031676,
                             "name": "Dave Example",
                             "url": "https://github.com/dave-example"
                           }
@@ -4115,6 +4135,7 @@
                             "__typename": "User",
                             "id": "U_kgDOv83z5sps70VUO_",
                             "login": "dave-example",
+                            "databaseId": 1031676,
                             "name": "Dave Example",
                             "url": "https://github.com/dave-example"
                           }
@@ -4145,6 +4166,7 @@
                             "__typename": "User",
                             "id": "U_kgDOv83z5sps70VUO_",
                             "login": "dave-example",
+                            "databaseId": 1031676,
                             "name": "Dave Example",
                             "url": "https://github.com/dave-example"
                           }

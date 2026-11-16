@@ -133,6 +133,11 @@ vera is the viewer.")
       (approve-fixtures--id "BOT" (symbol-name who) "kgDO")
     (approve-fixtures--id "U" (symbol-name who) "kgDO")))
 
+(defun approve-fixtures--database-id (who)
+  "Return the database id of WHO, the same in every scenario."
+  (+ 1000000 (* 7919 (1+ (seq-position approve-fixtures--people
+                                        (approve-fixtures--person who))))))
+
 (defun approve-fixtures--user-url (who)
   "Return the profile URL of WHO."
   (if (equal (nth 3 (approve-fixtures--person who)) "Bot")
@@ -146,6 +151,7 @@ vera is the viewer.")
       (id . ,(approve-fixtures--user-id who))
       (login . ,login)
       (url . ,(approve-fixtures--user-url who))
+      (databaseId . ,(approve-fixtures--database-id who))
       ,@(and (equal type "User") `((name . ,name))))))
 
 (defun approve-fixtures--user (who)
@@ -154,6 +160,7 @@ vera is the viewer.")
     `((__typename . "User")
       (id . ,(approve-fixtures--user-id who))
       (login . ,login)
+      (databaseId . ,(approve-fixtures--database-id who))
       (name . ,name)
       (url . ,(approve-fixtures--user-url who)))))
 

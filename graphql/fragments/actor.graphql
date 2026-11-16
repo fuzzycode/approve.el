@@ -2,7 +2,8 @@ ${include:fragments/user.graphql}
 
 # Anyone who can act: User, Bot, Organization, Mannequin.  Actor has no id
 # field itself, so the id comes through Node.  Spread it on unions whose
-# members are actors, too (Assignee, Reactor, RequestedReviewer).
+# members are actors, too (Assignee, Reactor, RequestedReviewer).  A bot's
+# databaseId, like a user's, makes its noreply address (D41).
 fragment ActorFields on Actor {
   __typename
   ... on Node {
@@ -10,5 +11,8 @@ fragment ActorFields on Actor {
   }
   login
   url
+  ... on Bot {
+    databaseId
+  }
   ...UserFields
 }

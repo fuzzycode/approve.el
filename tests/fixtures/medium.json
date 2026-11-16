@@ -54,6 +54,7 @@
                   "id": "U_kgDOUisnajVr3zkBPf",
                   "login": "alice-example",
                   "url": "https://github.com/alice-example",
+                  "databaseId": 1007919,
                   "name": "Alice Example"
                 },
                 "authorAssociation": "MEMBER",
@@ -151,6 +152,7 @@
                       "__typename": "User",
                       "id": "U_kgDOUisnajVr3zkBPf",
                       "login": "alice-example",
+                      "databaseId": 1007919,
                       "name": "Alice Example",
                       "url": "https://github.com/alice-example"
                     }
@@ -178,6 +180,7 @@
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
                         "url": "https://github.com/dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example"
                       }
                     },
@@ -207,6 +210,7 @@
                         "id": "U_kgDOSBgazSKz7a68ik",
                         "login": "bob-example",
                         "url": "https://github.com/bob-example",
+                        "databaseId": 1015838,
                         "name": "Bob Example"
                       }
                     },
@@ -220,6 +224,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       }
                     }
@@ -426,6 +431,7 @@
                         "id": "U_kgDOiG_tAXiSV0JCKN",
                         "login": "vera-example",
                         "url": "https://github.com/vera-example",
+                        "databaseId": 1039595,
                         "name": "Vera Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -521,6 +527,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -618,6 +625,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -715,6 +723,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -814,6 +823,7 @@
               "__typename": "User",
               "id": "U_kgDOiG_tAXiSV0JCKN",
               "login": "vera-example",
+              "databaseId": 1039595,
               "name": "Vera Example",
               "url": "https://github.com/vera-example"
             },
@@ -1146,6 +1156,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -1243,6 +1254,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -1343,6 +1355,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -1470,6 +1483,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -1567,6 +1581,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -1678,6 +1693,7 @@
                         "__typename": "User",
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example",
                         "url": "https://github.com/alice-example"
                       },
@@ -1700,6 +1716,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -1797,6 +1814,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -1924,6 +1942,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -2021,6 +2040,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -2148,6 +2168,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -2272,6 +2293,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -2396,6 +2418,7 @@
                               "id": "U_kgDOSBgazSKz7a68ik",
                               "login": "bob-example",
                               "url": "https://github.com/bob-example",
+                              "databaseId": 1015838,
                               "name": "Bob Example"
                             },
                             "authorAssociation": "COLLABORATOR",
@@ -2504,6 +2527,7 @@
                         "__typename": "User",
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example",
                         "url": "https://github.com/carol-example"
                       },
@@ -2526,6 +2550,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -2623,6 +2648,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -2734,6 +2760,7 @@
                         "__typename": "User",
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example",
                         "url": "https://github.com/alice-example"
                       },
@@ -2756,6 +2783,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -2853,6 +2881,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -2953,6 +2982,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3080,6 +3110,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3177,6 +3208,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3277,6 +3309,7 @@
                               "id": "U_kgDOSBgazSKz7a68ik",
                               "login": "bob-example",
                               "url": "https://github.com/bob-example",
+                              "databaseId": 1015838,
                               "name": "Bob Example"
                             },
                             "authorAssociation": "COLLABORATOR",
@@ -3377,6 +3410,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3504,6 +3538,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3612,6 +3647,7 @@
                         "__typename": "User",
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example",
                         "url": "https://github.com/alice-example"
                       },
@@ -3634,6 +3670,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -3731,6 +3768,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3858,6 +3896,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -3955,6 +3994,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -4082,6 +4122,7 @@
                               "id": "U_kgDOiG_tAXiSV0JCKN",
                               "login": "vera-example",
                               "url": "https://github.com/vera-example",
+                              "databaseId": 1039595,
                               "name": "Vera Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -4206,6 +4247,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -4303,6 +4345,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -4403,6 +4446,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -4514,6 +4558,7 @@
                         "__typename": "User",
                         "id": "U_kgDOSBgazSKz7a68ik",
                         "login": "bob-example",
+                        "databaseId": 1015838,
                         "name": "Bob Example",
                         "url": "https://github.com/bob-example"
                       },
@@ -4536,6 +4581,7 @@
                               "id": "U_kgDOSBgazSKz7a68ik",
                               "login": "bob-example",
                               "url": "https://github.com/bob-example",
+                              "databaseId": 1015838,
                               "name": "Bob Example"
                             },
                             "authorAssociation": "COLLABORATOR",
@@ -4633,6 +4679,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -4760,6 +4807,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -4884,6 +4932,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -5008,6 +5057,7 @@
                               "id": "U_kgDOKLkrVu5kuS67ct",
                               "login": "carol-example",
                               "url": "https://github.com/carol-example",
+                              "databaseId": 1023757,
                               "name": "Carol Example"
                             },
                             "authorAssociation": "CONTRIBUTOR",
@@ -5105,6 +5155,7 @@
                               "id": "U_kgDOUisnajVr3zkBPf",
                               "login": "alice-example",
                               "url": "https://github.com/alice-example",
+                              "databaseId": 1007919,
                               "name": "Alice Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -5232,6 +5283,7 @@
                               "id": "U_kgDOv83z5sps70VUO_",
                               "login": "dave-example",
                               "url": "https://github.com/dave-example",
+                              "databaseId": 1031676,
                               "name": "Dave Example"
                             },
                             "authorAssociation": "MEMBER",
@@ -5386,6 +5438,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }
@@ -5416,6 +5469,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }
@@ -5435,6 +5489,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-01T09:02:00Z",
@@ -5455,6 +5510,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-01T09:02:30Z",
@@ -5475,6 +5531,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-01T09:03:00Z",
@@ -5483,6 +5540,7 @@
                         "id": "U_kgDOSBgazSKz7a68ik",
                         "login": "bob-example",
                         "url": "https://github.com/bob-example",
+                        "databaseId": 1015838,
                         "name": "Bob Example"
                       }
                     },
@@ -5494,6 +5552,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-01T09:04:00Z",
@@ -5513,6 +5572,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-01T09:05:00Z",
@@ -5521,6 +5581,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       }
                     },
@@ -5533,6 +5594,7 @@
                         "id": "U_kgDOSBgazSKz7a68ik",
                         "login": "bob-example",
                         "url": "https://github.com/bob-example",
+                        "databaseId": 1015838,
                         "name": "Bob Example"
                       },
                       "authorAssociation": "COLLABORATOR",
@@ -5617,6 +5679,7 @@
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
                         "url": "https://github.com/dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -5706,6 +5769,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       },
                       "authorAssociation": "CONTRIBUTOR",
@@ -5795,6 +5859,7 @@
                         "id": "U_kgDOiG_tAXiSV0JCKN",
                         "login": "vera-example",
                         "url": "https://github.com/vera-example",
+                        "databaseId": 1039595,
                         "name": "Vera Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -5884,6 +5949,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -5973,6 +6039,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6062,6 +6129,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       },
                       "authorAssociation": "CONTRIBUTOR",
@@ -6151,6 +6219,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6240,6 +6309,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6329,6 +6399,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6418,6 +6489,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6507,6 +6579,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6596,6 +6669,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6685,6 +6759,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       },
                       "authorAssociation": "CONTRIBUTOR",
@@ -6774,6 +6849,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6863,6 +6939,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -6952,6 +7029,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -7041,6 +7119,7 @@
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
                         "url": "https://github.com/dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -7130,6 +7209,7 @@
                         "id": "U_kgDOSBgazSKz7a68ik",
                         "login": "bob-example",
                         "url": "https://github.com/bob-example",
+                        "databaseId": 1015838,
                         "name": "Bob Example"
                       },
                       "authorAssociation": "COLLABORATOR",
@@ -7219,6 +7299,7 @@
                         "id": "U_kgDOv83z5sps70VUO_",
                         "login": "dave-example",
                         "url": "https://github.com/dave-example",
+                        "databaseId": 1031676,
                         "name": "Dave Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -7307,6 +7388,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-02T09:10:00Z",
@@ -7342,6 +7424,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }
@@ -7361,6 +7444,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-02T10:10:00Z",
@@ -7375,6 +7459,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-02T11:40:00Z",
@@ -7394,6 +7479,7 @@
                         "id": "U_kgDOSBgazSKz7a68ik",
                         "login": "bob-example",
                         "url": "https://github.com/bob-example",
+                        "databaseId": 1015838,
                         "name": "Bob Example"
                       },
                       "authorAssociation": "COLLABORATOR",
@@ -7483,6 +7569,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -7572,6 +7659,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       },
                       "authorAssociation": "CONTRIBUTOR",
@@ -7661,6 +7749,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "authorAssociation": "MEMBER",
@@ -7744,6 +7833,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       },
                       "createdAt": "2026-10-02T18:20:00Z",
@@ -7771,6 +7861,7 @@
                         "id": "U_kgDOUisnajVr3zkBPf",
                         "login": "alice-example",
                         "url": "https://github.com/alice-example",
+                        "databaseId": 1007919,
                         "name": "Alice Example"
                       },
                       "createdAt": "2026-10-02T20:00:00Z",
@@ -7795,6 +7886,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }
@@ -7814,7 +7906,8 @@
                         "__typename": "Bot",
                         "id": "BOT_kgDOWk_gg1nH-XOA5A",
                         "login": "fixture-ci",
-                        "url": "https://github.com/apps/fixture-ci"
+                        "url": "https://github.com/apps/fixture-ci",
+                        "databaseId": 1047514
                       },
                       "authorAssociation": "NONE",
                       "body": "Coverage: 81.4% (-0.3%) on `parser-rewrite`.",
@@ -7898,6 +7991,7 @@
                         "id": "U_kgDOKLkrVu5kuS67ct",
                         "login": "carol-example",
                         "url": "https://github.com/carol-example",
+                        "databaseId": 1023757,
                         "name": "Carol Example"
                       },
                       "authorAssociation": "CONTRIBUTOR",
@@ -8037,6 +8131,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }
@@ -8067,6 +8162,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }
@@ -8097,6 +8193,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }
@@ -8127,6 +8224,7 @@
                             "__typename": "User",
                             "id": "U_kgDOUisnajVr3zkBPf",
                             "login": "alice-example",
+                            "databaseId": 1007919,
                             "name": "Alice Example",
                             "url": "https://github.com/alice-example"
                           }

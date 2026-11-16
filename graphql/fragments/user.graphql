@@ -1,9 +1,12 @@
 # A GitHub user: the viewer, assignees, authors, reviewers.  No email: it
 # needs the user:email scope; eldoc's lazy user-details query fetches it.
+# databaseId makes the user's noreply address, for a Co-authored-by
+# trailer (D41).
 fragment UserFields on User {
   __typename
   id
   login
+  databaseId
   name
   url
 }
