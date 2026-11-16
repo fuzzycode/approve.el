@@ -387,6 +387,33 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   user's keys in the view were Emacs's until some other hook happened to
   turn it on.
 
+** D44 What is new since your last review: other people's comments, after it
+- Status :: accepted (2026-11-16, by the author)
+- Decision ::
+  - "Your last review" is the viewer's latest submitted review
+    (=viewerLatestReview=): its commit marks the new commits, its
+    =submittedAt= the new comments.  Without one nothing is marked.
+  - A comment is new when someone else published it after that: a
+    conversation comment by its =createdAt=, a review by its
+    =submittedAt=, a comment in a thread by its =publishedAt= (one written
+    before your review but submitted after it is new).  The viewer's own
+    and pending ones never are; edits don't count, nor events and pushes
+    (the commits have their marks).
+  - A new comment says "new" (=approve-new=) after its byline, and its
+    bar, the thread's or the timeline's, is drawn =┃= in =approve-new=, as
+    the new commits are.  The Conversation heading counts its new
+    entries, the Diff heading the new comments in threads, and a file's
+    heading its own.
+  - =j n= and =j N= move to the next and previous new comment in the
+    buffer (a conversation entry or a comment in a thread), unfolding
+    what hides it.  No direct key yet.
+- Why :: "What came after my last review" is what a returning reviewer
+  reads first; GitHub has no mark for it.  Not marking anything without a
+  review keeps the marks meaningful: on a first review everything would
+  be new.  The time a comment was published, not written, is when the
+  reviewer could first have seen it.  One look for everything new (the
+  commits already had it) makes it one thing to learn.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
