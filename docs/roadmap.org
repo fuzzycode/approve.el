@@ -482,12 +482,59 @@ the README says how to set a token.
 - Done when :: a user whose setup fails finds out why, and what to do,
   with one command.
 
+* Phase 13 — AI agents, plugged in
+AI agents on both sides of a pull request: getting feedback on one (an
+agent's review of your PR before people see it, and help with theirs:
+threads summed up, replies drafted, the code they ask for changed in
+your clone, [[*Phase 7 — Review feedback in your clone][Phase 7]]) and reviewing one (an agent reads the PR and
+proposes comments and suggestions, which the reviewer keeps, edits or
+drops).  Added (2026-11-16) at the author's request, last, with nothing
+designed yet: a design deep dive decides how when the phase comes, and
+writes its tasks.  An idea moved here from [[*Ideas][Ideas]] as a starting point:
+AI-assisted review in the spirit of Hutch, a gptel-backed command that
+reads the diff through the API and proposes comments and suggestions as
+pending review comments, which the user edits or deletes before
+submitting; nothing is posted without the user's submit.  Two things
+are settled already.  Approve works fine without AI: no AI package is
+required ([[file:decisions.org::*D25 Dependencies][D25]]), and with no agent plugged in nothing about AI shows,
+runs or slows Approve down.  And an agent is something the user plugs in
+if they want one, which is easy to do.
+- [ ] Design deep dive with the author, before any code.  To answer:
+      - What agents do on each side.  For the author: feedback before
+        people review, and a review's threads summed up, answered or
+        fixed.  For the reviewer: the PR summed up, comments and
+        suggestions proposed, questions about the diff answered.  Which
+        come first.
+      - What an agent is to Approve: an Emacs package (gptel, llm), a
+        coding agent run as a process (its CLI), or Approve's PR offered
+        to an agent the user runs elsewhere (an MCP server); which of
+        them work out of the box.
+      - How one is plugged in: what the user sets, the hooks and
+        functions the core offers (as =approve-visit-commit-functions=,
+        [[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]), and modules apart that the core never requires, as the
+        clone's are ([[file:decisions.org::*D36 No clone needed; a local clone adds to it][D36]]).
+      - What an agent reads (the store, the files at the head, a clone)
+        and what it may write: drafts and pending comments that only the
+        user's submit publishes (the starting point's answer, [[file:decisions.org::*D02 Durable state lives on GitHub][D02]]), or
+        more.
+      - Where its work shows (the PR buffer, input buffers, a buffer of
+        its own), and how it is told apart from what people wrote.
+      - What leaves the machine: a private repository's code sent to a
+        model's provider, and whether the user is told or asked first
+        ([[file:architecture.org::*Security and privacy][architecture.org]]).
+      - Speed: an agent takes seconds to minutes; nothing waits on it,
+        and it can be stopped.
+      - Tests with no network and no agent: a fake agent, as there is a
+        fake API.
+      Then a decision, the flows and mockups with their HTML views, and
+      this phase's tasks, written here.
+- Done when :: a user who plugs in an agent has its help both when
+  getting feedback on a PR and when reviewing one, after little setup;
+  a user who doesn't sees no change, and the tests run with no AI
+  package installed.
+
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.
-- AI-assisted review in the spirit of Hutch: a gptel-backed command that reads
-  the PR diff through the API and proposes comments and suggestions as
-  *pending* review comments, which the user edits or deletes before
-  submitting.  Nothing is ever posted without the user's submit.
 - A failing check's log in a buffer (Actions REST API), with timestamps.
 - Required checks that never reported, listed as GitHub's "Expected —
   Waiting for status to be reported" (F16).  =isRequired= exists only on

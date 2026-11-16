@@ -1149,3 +1149,7 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
 - Q7 :: What the eldoc echo lines show for users and reactions, given the
   store holds no email and no reactor names.
   → answered by [[*D29 Echo lines show what the store holds; names and emails wait for K][D29]] (the mockups changed).
+- Q8 :: How AI agents join getting feedback on a PR and reviewing one:
+  what they do, how the user plugs one in, what they read and write.
+  Settled: Approve works fine without AI, and plugging an agent in is
+  the user's choice and easy.  → [[file:roadmap.org::*Phase 13 — AI agents, plugged in][Phase 13]]'s design deep dive.

@@ -148,6 +148,12 @@ task only needs the files it touches.
   [[file:html/split.html][html/split.html]], a draft.  =approve-doctor= moved after it, to
   [[file:roadmap.org::*Phase 12 — The doctor][Phase 12]]: once Approve is feature complete and
   there is feedback, it is clear whether a doctor is needed.
+- Also on 2026-11-16, at the author's request, a last phase for AI
+  agents, [[file:roadmap.org::*Phase 13 — AI agents, plugged in][Phase 13]]: in getting feedback on a PR and in reviewing one.
+  Nothing is designed; a deep dive decides how when the phase comes
+  ([[file:decisions.org::*Open questions][Q8]]).  Settled: Approve works fine without AI, and an agent is
+  something the user plugs in if they want, easily.  The AI-assisted
+  review of the Ideas moved there.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |
