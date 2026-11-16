@@ -1,0 +1,30 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: merge the pull request by $mergeMethod (MERGE, SQUASH or REBASE), from
+# the head the store holds: GitHub refuses when the branch has moved since.
+# Without $commitHeadline and $commitBody, GitHub writes its own message.
+# GitHub would merge a closed pull request too: Approve checks first (D42).
+# The answer is the merge state; the PR loads again after a merge.
+mutation MergePullRequest(
+  $pullRequestId: ID!
+  $mergeMethod: PullRequestMergeMethod!
+  $commitHeadline: String
+  $commitBody: String
+  $expectedHeadOid: GitObjectID
+) {
+  mergePullRequest(
+    input: {
+      pullRequestId: $pullRequestId
+      mergeMethod: $mergeMethod
+      commitHeadline: $commitHeadline
+      commitBody: $commitBody
+      expectedHeadOid: $expectedHeadOid
+    }
+  ) {
+    pullRequest {
+      __typename
+      id
+      ...PullRequestMergeStateFields
+    }
+  }
+}

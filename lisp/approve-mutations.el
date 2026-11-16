@@ -58,6 +58,12 @@
 ;;   `approve-mutation-set-hidden'              hide (minimize) a comment, or show it
 ;;   `approve-mutation-commit-files'            F23  commit files to the PR's branch
 ;;                                                   (a suggestion applied)
+;;   `approve-mutation-merge'                   F13  merge the PR
+;;   `approve-mutation-set-auto-merge'          F13  merge it once it may, or no more
+;;   `approve-mutation-set-queued'              F13  in the merge queue, or out of it
+;;   `approve-mutation-update-branch'           F13  bring its branch up to date
+;;   `approve-mutation-set-closed'              F13  close or reopen it
+;;   `approve-mutation-delete-head-branch'      F13  delete its branch
 ;;
 ;; Each one queues its mutation (`approve-api-mutate': one at a time,
 ;; decision D15) for the PR of the current buffer's store.  Once GitHub
@@ -79,6 +85,10 @@
 ;;   goes too, as GitHub deletes it.  The events GitHub adds to the
 ;;   conversation for a change of the PR's metadata ("added the bug
 ;;   label") come with the next load: no answer holds them.
+;; - The mutations of the merge menu answer with the PR's merge state
+;;   (PullRequestMergeStateFields, decision D42).  A merge or an update
+;;   of the branch changes more (the commits, the diff, the
+;;   conversation), which only a load brings.
 ;;
 ;; Then it calls CALLBACK with the ref of the entity it changed.
 ;; ERRORBACK gets an approve-api error: GitHub's, or
@@ -879,6 +889,134 @@ Example:
                                        (format "%s has commits this buffer hasn't loaded; \
 refresh it, then try again" .headRefName))
                                err)))))))
+
+;;; Merging
+
+(defun approve-mutation--merge-variables (method headline body)
+  "Return the variables of a merge by METHOD with HEADLINE and BODY.
+The merge is of the head the store holds.  A nil HEADLINE or BODY is
+left out, so GitHub writes its own; an empty BODY is sent empty."
+  `((pullRequestId . ,(approve-mutation--pull-request-id))
+    (mergeMethod . ,method)
+    (commitHeadline . ,headline)
+    (commitBody . ,body)
+    (expectedHeadOid . ,(approve-pr-field 'headRefOid))))
+
+(cl-defun approve-mutation-merge (method &key headline body callback errorback)
+  "Merge the PR by METHOD: \"MERGE\", \"SQUASH\" or \"REBASE\".
+HEADLINE and BODY are the commit message; when nil, GitHub writes
+its own.  The merge is of the head the store holds: when the branch
+has moved, GitHub refuses.  GitHub also merges a closed PR, so the
+caller checks first (decision D42).  Once GitHub has merged it, the
+store has the PR's merge state and CALLBACK gets the PR's ref; the
+new commits and events come with a load.  ERRORBACK gets the error
+otherwise.  (Flow F13.)
+
+Example:
+  (approve-mutation-merge \"SQUASH\" :headline \"Retry (#12)\" :body \"\")"
+  (funcall (approve-mutation--step
+            "mutations/merge-pull-request.graphql"
+            (approve-mutation--merge-variables method headline body)
+            'mergePullRequest 'pullRequest "Merging")
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-auto-merge (enable &key method headline body
+                                                  callback errorback)
+  "Merge the PR by METHOD once it may, when ENABLE is non-nil; else no more.
+That is auto-merge: GitHub merges it once the base's rules allow it.
+METHOD, HEADLINE and BODY are as for `approve-mutation-merge'.  Once
+GitHub has, the store has the PR's merge state, with its
+`autoMergeRequest', and CALLBACK gets the PR's ref.  ERRORBACK gets
+the error otherwise.  (Flow F13.)"
+  (funcall (if enable
+               (approve-mutation--step
+                "mutations/enable-pull-request-auto-merge.graphql"
+                (approve-mutation--merge-variables method headline body)
+                'enablePullRequestAutoMerge 'pullRequest "Enabling auto-merge")
+             (approve-mutation--step
+              "mutations/disable-pull-request-auto-merge.graphql"
+              `((pullRequestId . ,(approve-mutation--pull-request-id)))
+              'disablePullRequestAutoMerge 'pullRequest "Disabling auto-merge"))
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-queued (queued &key callback errorback)
+  "Add the PR to its base's merge queue when QUEUED is non-nil, else take it out.
+It is added as the store holds it (its head).  Once GitHub has, the
+store has the PR's merge state and CALLBACK gets the PR's ref.
+ERRORBACK gets the error otherwise.  (Flow F13.)"
+  (let ((pr (approve-mutation--pull-request-id))
+        (entry (alist-get 'id (approve-pr-field 'mergeQueueEntry))))
+    (unless (or queued entry)
+      (signal 'approve-mutation-refused (list "The pull request is not in a merge queue")))
+    (approve-mutation--send
+     (if queued
+         "mutations/enqueue-pull-request.graphql"
+       "mutations/dequeue-pull-request.graphql")
+     (if queued
+         `((pullRequestId . ,pr) (expectedHeadOid . ,(approve-pr-field 'headRefOid)))
+       `((id . ,entry)))
+     :progress (if queued "Adding to the merge queue" "Taking out of the merge queue")
+     :apply (lambda (data)
+              (let ((entry (approve-mutation--answer
+                            data (if queued 'enqueuePullRequest 'dequeuePullRequest)
+                            'mergeQueueEntry)))
+                (approve-mutation--patch (alist-get 'pullRequest entry))))
+     :callback callback
+     :errorback errorback)))
+
+(cl-defun approve-mutation-update-branch (&key rebase callback errorback)
+  "Bring the PR's branch up to date with its base: merge the base in.
+With REBASE, rebase the branch on the base instead.  It starts from
+the head the store holds: when the branch has moved, GitHub refuses.
+GitHub makes the new commits a moment after it answers, so the store
+keeps the head it had; CALLBACK gets the PR's ref, and the caller
+waits for the new head (`approve-query-await-head' with :away) and
+loads the PR.  ERRORBACK gets the error otherwise.  (Flow F13.)"
+  (funcall (approve-mutation--step
+            "mutations/update-pull-request-branch.graphql"
+            `((pullRequestId . ,(approve-mutation--pull-request-id))
+              (expectedHeadOid . ,(approve-pr-field 'headRefOid))
+              (updateMethod . ,(if rebase "REBASE" "MERGE")))
+            'updatePullRequestBranch 'pullRequest
+            (if rebase "Rebasing the branch" "Updating the branch"))
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-set-closed (closed &key callback errorback)
+  "Close the PR when CLOSED is non-nil, else reopen it.
+Once GitHub has, the store has the PR's merge state (closed, and
+whether the viewer may now reopen it or delete its branch) and
+CALLBACK gets the PR's ref.  ERRORBACK gets the error otherwise.
+\(Flow F13.)"
+  (funcall (approve-mutation--step
+            (if closed
+                "mutations/close-pull-request.graphql"
+              "mutations/reopen-pull-request.graphql")
+            `((pullRequestId . ,(approve-mutation--pull-request-id)))
+            (if closed 'closePullRequest 'reopenPullRequest) 'pullRequest
+            (if closed "Closing" "Reopening"))
+           callback (or errorback #'approve-api-default-errorback)))
+
+(cl-defun approve-mutation-delete-head-branch (&key callback errorback)
+  "Delete the PR's head branch.
+GitHub allows it once the PR is merged or closed
+\(`viewerCanDeleteHeadRef').  Once GitHub has, the PR in the store has
+no head ref, and may delete none; CALLBACK gets the PR's ref.
+ERRORBACK gets the error otherwise.  (Flow F13.)"
+  (let ((pr (approve-model-root-ref))
+        (ref (alist-get 'id (approve-pr-field 'headRef))))
+    (unless ref
+      (signal 'approve-mutation-refused (list "The pull request's branch is gone")))
+    (approve-mutation--send
+     "mutations/delete-ref.graphql" `((refId . ,ref))
+     :progress (format "Deleting %s" (approve-pr-field 'headRefName))
+     :apply (lambda (_data)
+              ;; The answer holds nothing: a deletion is an edit (D35).
+              (approve-model-patch `((__typename . "PullRequest")
+                                     (id . ,(approve-model-ref-id pr))
+                                     (headRef) (viewerCanDeleteHeadRef)))
+              pr)
+     :callback callback
+     :errorback errorback)))
 
 (provide 'approve-mutations)
 

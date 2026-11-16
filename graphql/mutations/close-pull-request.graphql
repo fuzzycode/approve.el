@@ -1,0 +1,13 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: close the pull request without merging it.  The answer is the merge
+# state: closed, and what the viewer may do now (reopen, delete the branch).
+mutation ClosePullRequest($pullRequestId: ID!) {
+  closePullRequest(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      __typename
+      id
+      ...PullRequestMergeStateFields
+    }
+  }
+}

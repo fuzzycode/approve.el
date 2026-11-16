@@ -1,0 +1,13 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: reopen a closed pull request; a merged one stays merged.  The answer
+# is the merge state.
+mutation ReopenPullRequest($pullRequestId: ID!) {
+  reopenPullRequest(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      __typename
+      id
+      ...PullRequestMergeStateFields
+    }
+  }
+}

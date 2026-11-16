@@ -1,0 +1,17 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: take the pull request out of the merge queue, by its entry's id.  The
+# answer is the entry, with the merge state of its pull request (D42).
+mutation DequeuePullRequest($id: ID!) {
+  dequeuePullRequest(input: {id: $id}) {
+    mergeQueueEntry {
+      __typename
+      id
+      pullRequest {
+        __typename
+        id
+        ...PullRequestMergeStateFields
+      }
+    }
+  }
+}

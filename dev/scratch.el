@@ -189,7 +189,9 @@ and its comments; the reviews and comments of the conversation, in
 order; the review decision; the labels, assignees, milestone, review
 requests, title and description; whether it is a draft, how the viewer
 hears of it, whether its conversation is locked, the reactions to its
-description, and which comments of the conversation are hidden and why."
+description, which comments of the conversation are hidden and why,
+and its merge state: open, closed or merged, its branch, auto-merge and
+the merge queue."
   `((viewed . ,(mapcar (lambda (file)
                          (cons (alist-get 'path file) (alist-get 'viewerViewedState file)))
                        (approve-pr-files)))
@@ -234,7 +236,11 @@ description, and which comments of the conversation are hidden and why."
     (requested . ,(mapcar (lambda (request)
                             (let-alist (alist-get 'requestedReviewer request)
                               (or .login .combinedSlug)))
-                          (approve-pr-field 'reviewRequests)))))
+                          (approve-pr-field 'reviewRequests)))
+    (merge-state . ,(let-alist (approve-pr-fields '(state closed merged headRef
+                                                    autoMergeRequest isInMergeQueue))
+                      (list .state .closed .merged .headRef.name
+                            .autoMergeRequest.mergeMethod .isInMergeQueue)))))
 
 (defun approve-scratch--compare (what store)
   "Check that STORE's facts are GitHub's, after WHAT.
@@ -710,12 +716,158 @@ Each run leaves the comment, resolved, and the two commits."
             (approve-scratch--compare "the line put back" store)))
       (kill-buffer store))))
 
+(defun approve-scratch--gh (&rest args)
+  "Run `gh api' with ARGS, at most a minute; return its JSON answer.
+An empty answer is t.  Signal an error when gh fails."
+  (with-temp-buffer
+    (let ((status (apply #'call-process "timeout" nil (list t nil) nil
+                         "60" "gh" "api" args)))
+      (unless (eql status 0)
+        (error "gh api %s failed: %s" (string-join args " ") (buffer-string)))
+      (goto-char (point-min))
+      (if (eobp)
+          t
+        (json-parse-buffer :object-type 'alist :array-type 'list
+                           :null-object nil :false-object nil)))))
+
+(defun approve-scratch--repo-resource (&rest parts)
+  "Return the REST resource of the scratch repository, then PARTS."
+  (apply #'concat "repos/" (car approve-scratch-repository) "/"
+         (cdr approve-scratch-repository) parts))
+
+(defun approve-scratch--branch (name from)
+  "Make the branch NAME of the scratch repository at the commit FROM."
+  (approve-scratch--gh "-X" "POST" (approve-scratch--repo-resource "/git/refs")
+                       "-f" (concat "ref=refs/heads/" name) "-f" (concat "sha=" from)))
+
+(defun approve-scratch--add-file (branch path text)
+  "Commit the new file PATH with TEXT to BRANCH of the scratch repository."
+  (approve-scratch--gh "-X" "PUT" (approve-scratch--repo-resource "/contents/" path)
+                       "-f" (format "message=%s: add %s" approve-scratch-mark path)
+                       "-f" (concat "content=" (base64-encode-string text t))
+                       "-f" (concat "branch=" branch)))
+
+(defun approve-scratch--load-settled (store number)
+  "Load the pull request NUMBER into STORE, once GitHub has settled it.
+GitHub works out whether it merges a few seconds after a push
+\(decision D42), and subscribes the author of a new one a few seconds
+after it is opened: the viewer, here."
+  (approve-scratch--wait (lambda ()
+                           (approve-scratch--load store number)
+                           (or (with-current-buffer store
+                                 (and (not (equal (approve-pr-field 'mergeable) "UNKNOWN"))
+                                      (equal (approve-pr-field 'viewerSubscription)
+                                             "SUBSCRIBED")))
+                               (progn (sleep-for 2) nil)))
+                         "GitHub to settle the pull request" 60))
+
+(defun approve-scratch--merge-steps (_store)
+  "Run the checks of the merge menu's mutations (decision D42), on a new PR.
+Two branches are made from main, and a pull request between them.  It
+is closed and reopened; once its base moved, its branch is updated by
+a merge; a merge from the head it had is refused; it is squashed with
+its message and its branch deleted.  Auto-merge and the merge queue
+can't be tried in the repository.  The base branch is deleted after:
+each run leaves the merged pull request."
+  (let* ((stamp (format-time-string "%s"))
+         (base (concat "scratch/merge-base-" stamp))
+         (head (concat "scratch/merge-head-" stamp))
+         (main (let-alist (approve-scratch--gh (approve-scratch--repo-resource
+                                                "/git/ref/heads/main"))
+                 .object.sha))
+         (store (generate-new-buffer " *approve-scratch-merge*")))
+    (unwind-protect
+        (progn
+          (approve-scratch--branch base main)
+          (approve-scratch--branch head main)
+          (approve-scratch--add-file head (format "scratch/merge-%s.txt" stamp) "head\n")
+          (let ((number (alist-get
+                         'number
+                         (approve-scratch--gh
+                          "-X" "POST" (approve-scratch--repo-resource "/pulls")
+                          "-f" (format "title=%s: merge %s" approve-scratch-mark stamp)
+                          "-f" (concat "head=" head) "-f" (concat "base=" base)
+                          "-f" "body=Opened by dev/scratch.el to try the merge menu."))))
+            (approve-scratch--load-settled store number)
+            (with-current-buffer store
+              ;; Close and reopen.
+              (approve-scratch--ok "close the pull request"
+                                   (approve-scratch--run #'approve-mutation-set-closed t))
+              (approve-scratch--check "once closed, it may be reopened and its branch deleted"
+                                      (and (approve-pr-viewer-can 'reopen)
+                                           (approve-pr-viewer-can 'delete-head-ref)))
+              (approve-scratch--compare "closed" store)
+              (approve-scratch--ok "reopen it"
+                                   (approve-scratch--run #'approve-mutation-set-closed nil))
+              (approve-scratch--compare "reopened" store)
+              ;; The base moves on; the branch is brought up to date.
+              (approve-scratch--add-file base (format "scratch/base-%s.txt" stamp) "base\n")
+              (approve-scratch--load-settled store number)
+              (let ((old (approve-pr-field 'headRefOid))
+                    (done nil))
+                (approve-scratch--ok "update the branch by a merge"
+                                     (approve-scratch--run #'approve-mutation-update-branch))
+                (approve-query-await-head old :away t :callback (lambda () (setq done t)))
+                (approve-scratch--wait (lambda () done) "the new head")
+                (approve-scratch--load-settled store number)
+                (approve-scratch--check "the head moved"
+                                        (not (equal (approve-pr-field 'headRefOid) old)))
+                (approve-scratch--compare "the branch updated" store)
+                (let ((again (approve-scratch--run #'approve-mutation-update-branch)))
+                  (princ (format "NOTE updating a branch that is up to date: %s\n"
+                                 (if (car again)
+                                     "GitHub takes it"
+                                   (approve-api-error-message (cdr again))))))
+                ;; A merge from the head the store had is refused.
+                (let ((head-now (approve-pr-field 'headRefOid)))
+                  (approve-model-patch `((__typename . "PullRequest")
+                                         (id . ,(approve-model-ref-id (approve-model-root-ref)))
+                                         (headRefOid . ,old)))
+                  (let ((stale (approve-scratch--run #'approve-mutation-merge "SQUASH")))
+                    (approve-scratch--check "a merge from an old head is refused"
+                                            (not (car stale)) (format "%S" stale))
+                    (princ (format "NOTE GitHub says: %s\n"
+                                   (and (not (car stale))
+                                        (approve-api-error-message (cdr stale))))))
+                  (approve-model-patch `((__typename . "PullRequest")
+                                         (id . ,(approve-model-ref-id (approve-model-root-ref)))
+                                         (headRefOid . ,head-now)))))
+              ;; Squash it with a message of our own.
+              (let ((headline (format "%s: squashed %s" approve-scratch-mark stamp)))
+                (approve-scratch--ok "squash and merge"
+                                     (approve-scratch--run #'approve-mutation-merge "SQUASH"
+                                                           :headline headline
+                                                           :body "The body."))
+                (approve-scratch--check "it is merged, and its branch may be deleted"
+                                        (and (equal (approve-pr-field 'state) "MERGED")
+                                             (approve-pr-viewer-can 'delete-head-ref)))
+                (approve-scratch--check
+                 "the base's new commit has the message"
+                 (equal (let-alist (approve-scratch--gh (approve-scratch--repo-resource
+                                                         "/commits/" base))
+                          .commit.message)
+                        (concat headline "\n\nThe body."))))
+              (approve-scratch--compare "merged" store)
+              (approve-scratch--ok "delete its branch"
+                                   (approve-scratch--run
+                                    #'approve-mutation-delete-head-branch))
+              (approve-scratch--check "the pull request has no branch"
+                                      (null (approve-pr-field 'headRef)))
+              (approve-scratch--compare "its branch deleted" store))))
+      (kill-buffer store)
+      (dolist (branch (list base head))
+        (ignore-errors
+          (approve-scratch--gh "-X" "DELETE"
+                               (approve-scratch--repo-resource "/git/refs/heads/" branch)))))))
+
 (defconst approve-scratch-step-groups
   '((review . approve-scratch--review-steps)
     (metadata . approve-scratch--metadata-steps)
-    (suggestions . approve-scratch--suggestion-steps))
+    (suggestions . approve-scratch--suggestion-steps)
+    (merge . approve-scratch--merge-steps))
   "The groups of checks, in the order they run: (NAME . FUNCTION).
-The suggestions' run on #10, in a store of their own.")
+The suggestions' run on #10, the merge's on a pull request they open,
+each in a store of their own.")
 
 (defun approve-scratch-run (&optional only)
   "Run the checks on the scratch pull request; return the failures.

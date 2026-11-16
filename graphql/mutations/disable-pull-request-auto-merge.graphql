@@ -1,0 +1,13 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: merge the pull request no more once the rules allow it.  The answer
+# is the merge state, without the auto-merge request (D42).
+mutation DisablePullRequestAutoMerge($pullRequestId: ID!) {
+  disablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId}) {
+    pullRequest {
+      __typename
+      id
+      ...PullRequestMergeStateFields
+    }
+  }
+}

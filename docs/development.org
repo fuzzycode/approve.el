@@ -168,6 +168,9 @@ repository: commands under development, spikes, recording fixtures.
   timeout 60 gh workflow run bot-suggest.yml -R fuzzycode/test-approve \
     -f pr=10 -f path=sp7/plain.txt -f line=10 -f body='```suggestion\nnew\n```'
   #+end_src
+- #11 and #12 were the D42 experiments ([[file:decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]]): pull requests between
+  scratch branches, merged.  The scratch script's =merge= group opens
+  and merges one more on each run.
 - Operations can be tried there by hand with =gh api graphql=
   ([[file:../graphql/README.org][graphql/README.org]]).
 - =dev/scratch.el= is the live check of the writes: it runs every function
@@ -190,7 +193,12 @@ repository: commands under development, spikes, recording fixtures.
   of =sp7/plain.txt=, which is committed through Approve, a second
   commit from the old head is refused, and the line is put back; each
   run leaves the resolved comment and two commits; #10 must have no
-  pending review).
+  pending review) and =merge= (on a pull request it opens between two
+  new branches made from =main=: closed and reopened, its branch
+  updated by a merge once its base moved, a merge from the old head
+  refused, squashed with its message, its branch deleted; the base
+  branch is deleted after, and each run leaves the merged pull request.
+  Auto-merge and the merge queue can't be tried there, [[file:decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]]).
   =APPROVE_SCRATCH_ONLY=metadata= runs one group alone:
   #+begin_src sh
   env APPROVE_SCRATCH_ONLY=metadata timeout 900 cask exec emacs -Q --batch \

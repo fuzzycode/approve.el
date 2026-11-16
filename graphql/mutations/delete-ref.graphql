@@ -1,0 +1,8 @@
+# F13: delete a branch, the head of a merged or closed pull request, by its
+# ref's id.  The answer holds nothing: the pull request loses its head ref
+# by a field edit (D42), as deletions are list edits (D35).
+mutation DeleteRef($refId: ID!) {
+  deleteRef(input: {refId: $refId}) {
+    clientMutationId
+  }
+}

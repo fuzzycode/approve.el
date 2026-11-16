@@ -1,0 +1,28 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: merge the pull request by $mergeMethod once the base's rules allow it
+# (auto-merge), with the message given, or GitHub's.  The answer is the merge
+# state, with the auto-merge request (D42).
+mutation EnablePullRequestAutoMerge(
+  $pullRequestId: ID!
+  $mergeMethod: PullRequestMergeMethod!
+  $commitHeadline: String
+  $commitBody: String
+  $expectedHeadOid: GitObjectID
+) {
+  enablePullRequestAutoMerge(
+    input: {
+      pullRequestId: $pullRequestId
+      mergeMethod: $mergeMethod
+      commitHeadline: $commitHeadline
+      commitBody: $commitBody
+      expectedHeadOid: $expectedHeadOid
+    }
+  ) {
+    pullRequest {
+      __typename
+      id
+      ...PullRequestMergeStateFields
+    }
+  }
+}

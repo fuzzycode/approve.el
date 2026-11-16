@@ -1,0 +1,25 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: bring the head branch up to date with the base, by a merge commit or a
+# rebase ($updateMethod: MERGE or REBASE), from the head the store holds
+# ($expectedHeadOid).  GitHub makes the commits a moment after it answers, so
+# the answer still has the old head; the PR loads again once it moved (D42).
+mutation UpdatePullRequestBranch(
+  $pullRequestId: ID!
+  $expectedHeadOid: GitObjectID
+  $updateMethod: PullRequestBranchUpdateMethod
+) {
+  updatePullRequestBranch(
+    input: {
+      pullRequestId: $pullRequestId
+      expectedHeadOid: $expectedHeadOid
+      updateMethod: $updateMethod
+    }
+  ) {
+    pullRequest {
+      __typename
+      id
+      ...PullRequestMergeStateFields
+    }
+  }
+}

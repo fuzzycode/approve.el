@@ -660,6 +660,137 @@ ANSWERS is an alist (QUERY-FILE . DATA)."
               :to-equal `((milestoneId . :null) (pullRequestId . ,test-mutations--pr)))
       (expect (approve-pr-field 'milestone) :to-be nil))))
 
+(defun test-mutations--merge-state (&rest fields)
+  "Return the PR with FIELDS, an alist, as a merge mutation answers."
+  `((__typename . "PullRequest") (id . ,test-mutations--pr) ,@fields))
+
+(describe "The merge mutations"
+  (it "merge by a method from the head the store holds, with the message given"
+    (test-mutations--with-pr
+      (let ((head (approve-pr-field 'headRefOid)))
+        (test-mutations--answer-with
+         `((mergePullRequest
+            (pullRequest ,@(test-mutations--merge-state
+                            '(state . "MERGED") '(merged . t) '(closed . t)
+                            '(viewerCanDeleteHeadRef . t))))))
+        (expect (test-mutations--run #'approve-mutation-merge "SQUASH"
+                                     :headline "Rewrite the parser (#202)" :body "")
+                :to-equal `(t . ,(test-mutations--ref "PullRequest" test-mutations--pr)))
+        (expect (test-mutations--sent)
+                :to-equal `("mutations/merge-pull-request.graphql"
+                            ((commitBody . "")
+                             (commitHeadline . "Rewrite the parser (#202)")
+                             (expectedHeadOid . ,head) (mergeMethod . "SQUASH")
+                             (pullRequestId . ,test-mutations--pr))))
+        (expect (approve-pr-field 'state) :to-equal "MERGED")
+        (expect (approve-pr-viewer-can 'delete-head-ref) :to-be t)
+        (test-mutations--run #'approve-mutation-merge "MERGE")
+        (expect (cadr (test-mutations--sent))
+                :to-equal `((expectedHeadOid . ,head) (mergeMethod . "MERGE")
+                            (pullRequestId . ,test-mutations--pr))))))
+
+  (it "enable auto-merge with a method, and disable it"
+    (test-mutations--with-pr
+      (test-mutations--answer-by-name
+       `(("mutations/enable-pull-request-auto-merge.graphql"
+          (enablePullRequestAutoMerge
+           (pullRequest ,@(test-mutations--merge-state
+                           '(autoMergeRequest (mergeMethod . "REBASE")
+                                              (enabledAt . "2026-11-16T09:00:00Z"))
+                           '(viewerCanDisableAutoMerge . t)))))
+         ("mutations/disable-pull-request-auto-merge.graphql"
+          (disablePullRequestAutoMerge
+           (pullRequest ,@(test-mutations--merge-state '(autoMergeRequest)))))))
+      (test-mutations--run #'approve-mutation-set-auto-merge t :method "REBASE")
+      (expect (car (test-mutations--sent))
+              :to-equal "mutations/enable-pull-request-auto-merge.graphql")
+      (expect (alist-get 'mergeMethod (cadr (test-mutations--sent))) :to-equal "REBASE")
+      (expect (let-alist (approve-pr-field 'autoMergeRequest) .mergeMethod) :to-equal "REBASE")
+      (test-mutations--run #'approve-mutation-set-auto-merge nil)
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/disable-pull-request-auto-merge.graphql"
+                          ((pullRequestId . ,test-mutations--pr))))
+      (expect (approve-pr-field 'autoMergeRequest) :to-be nil)))
+
+  (it "add to the merge queue, and take out by the entry"
+    (test-mutations--with-pr
+      (let ((entry '(mergeQueueEntry (__typename . "MergeQueueEntry") (id . "MQE_1")
+                                     (position . 2) (state . "QUEUED"))))
+        (test-mutations--answer-by-name
+         `(("mutations/enqueue-pull-request.graphql"
+            (enqueuePullRequest
+             (mergeQueueEntry (__typename . "MergeQueueEntry") (id . "MQE_1")
+                              (pullRequest ,@(test-mutations--merge-state
+                                              '(isInMergeQueue . t) entry)))))
+           ("mutations/dequeue-pull-request.graphql"
+            (dequeuePullRequest
+             (mergeQueueEntry (__typename . "MergeQueueEntry") (id . "MQE_1")
+                              (pullRequest ,@(test-mutations--merge-state
+                                              '(isInMergeQueue) '(mergeQueueEntry))))))))
+        (expect (approve-mutation-set-queued nil) :to-throw 'approve-mutation-refused)
+        (expect test-mutations--requests :to-be nil)
+        (expect (test-mutations--run #'approve-mutation-set-queued t)
+                :to-equal `(t . ,(test-mutations--ref "PullRequest" test-mutations--pr)))
+        (expect (test-mutations--sent)
+                :to-equal `("mutations/enqueue-pull-request.graphql"
+                            ((expectedHeadOid . ,(approve-pr-field 'headRefOid))
+                             (pullRequestId . ,test-mutations--pr))))
+        (expect (approve-pr-field 'isInMergeQueue) :to-be t)
+        (expect (alist-get 'position (approve-pr-field 'mergeQueueEntry)) :to-equal 2)
+        (test-mutations--run #'approve-mutation-set-queued nil)
+        (expect (test-mutations--sent)
+                :to-equal '("mutations/dequeue-pull-request.graphql" ((id . "MQE_1"))))
+        (expect (approve-pr-field 'isInMergeQueue) :to-be nil))))
+
+  (it "update the branch by a merge or a rebase, from the head the store holds"
+    (test-mutations--with-pr
+      (test-mutations--answer-with
+       `((updatePullRequestBranch
+          (pullRequest ,@(test-mutations--merge-state '(mergeable . "UNKNOWN"))))))
+      (test-mutations--run #'approve-mutation-update-branch)
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/update-pull-request-branch.graphql"
+                          ((expectedHeadOid . ,(approve-pr-field 'headRefOid))
+                           (pullRequestId . ,test-mutations--pr)
+                           (updateMethod . "MERGE"))))
+      (test-mutations--run #'approve-mutation-update-branch :rebase t)
+      (expect (alist-get 'updateMethod (cadr (test-mutations--sent))) :to-equal "REBASE")
+      (expect (approve-pr-field 'mergeable) :to-equal "UNKNOWN")))
+
+  (it "close and reopen the pull request"
+    (test-mutations--with-pr
+      (test-mutations--answer-by-name
+       `(("mutations/close-pull-request.graphql"
+          (closePullRequest
+           (pullRequest ,@(test-mutations--merge-state
+                           '(state . "CLOSED") '(closed . t) '(viewerCanReopen . t)))))
+         ("mutations/reopen-pull-request.graphql"
+          (reopenPullRequest
+           (pullRequest ,@(test-mutations--merge-state
+                           '(state . "OPEN") '(closed) '(viewerCanReopen)))))))
+      (test-mutations--run #'approve-mutation-set-closed t)
+      (expect (test-mutations--sent)
+              :to-equal `("mutations/close-pull-request.graphql"
+                          ((pullRequestId . ,test-mutations--pr))))
+      (expect (approve-pr-field 'state) :to-equal "CLOSED")
+      (test-mutations--run #'approve-mutation-set-closed nil)
+      (expect (car (test-mutations--sent)) :to-equal "mutations/reopen-pull-request.graphql")
+      (expect (approve-pr-field 'state) :to-equal "OPEN")))
+
+  (it "delete the head branch: the PR has no head ref then, and refuses another"
+    (test-mutations--with-pr
+      (let ((ref (alist-get 'id (approve-pr-field 'headRef))))
+        (approve-model-patch (test-mutations--merge-state '(viewerCanDeleteHeadRef . t)))
+        (test-mutations--answer-with '((deleteRef (clientMutationId))))
+        (expect (test-mutations--run #'approve-mutation-delete-head-branch)
+                :to-equal `(t . ,(test-mutations--ref "PullRequest" test-mutations--pr)))
+        (expect (test-mutations--sent)
+                :to-equal `("mutations/delete-ref.graphql" ((refId . ,ref))))
+        (expect (approve-pr-field 'headRef) :to-be nil)
+        (expect (approve-pr-viewer-can 'delete-head-ref) :to-be nil)
+        (expect (approve-pr-field 'headRefName) :to-equal "parser-rewrite")
+        (expect (approve-mutation-delete-head-branch) :to-throw 'approve-mutation-refused)))))
+
 (provide 'test-approve-mutations)
 
 ;;; test-approve-mutations.el ends here

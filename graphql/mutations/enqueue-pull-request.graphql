@@ -1,0 +1,22 @@
+${include:fragments/pull-request-merge-state.graphql}
+
+# F13: add the pull request to its base's merge queue, as it is in the store
+# ($expectedHeadOid).  The answer is the queue entry, with the merge state of
+# its pull request (D42).
+mutation EnqueuePullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID) {
+  enqueuePullRequest(
+    input: {pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid}
+  ) {
+    mergeQueueEntry {
+      __typename
+      id
+      position
+      state
+      pullRequest {
+        __typename
+        id
+        ...PullRequestMergeStateFields
+      }
+    }
+  }
+}

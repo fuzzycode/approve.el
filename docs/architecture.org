@@ -268,11 +268,13 @@ schema on 2026-11-08.
 | Milestone                       | =updatePullRequest(milestoneId)=                                            |
 | Draft / ready                   | =convertPullRequestToDraft= / =markPullRequestReadyForReview=               |
 | Reactions                       | =addReaction= / =removeReaction=                                            |
-| Merge                           | =mergePullRequest(mergeMethod, commitHeadline, commitBody)=                 |
+| Merge                           | =mergePullRequest(mergeMethod, commitHeadline, commitBody,=                 |
+|                                 | =expectedHeadOid)=: only an open pull request, checked first (D42)          |
 | Auto-merge                      | =enablePullRequestAutoMerge= / =disablePullRequestAutoMerge=                |
-| Merge queue                     | =enqueuePullRequest= / =dequeuePullRequest=                                 |
-| Update branch                   | =updatePullRequestBranch=                                                   |
+| Merge queue                     | =enqueuePullRequest= / =dequeuePullRequest= (by the entry's id)             |
+| Update branch                   | =updatePullRequestBranch(updateMethod: MERGE or REBASE, expectedHeadOid)=   |
 | Close / reopen                  | =closePullRequest= / =reopenPullRequest=                                    |
+| Delete the head branch          | =deleteRef(refId)=, once merged or closed (=viewerCanDeleteHeadRef=)        |
 | Lock / unlock                   | =lockLockable= / =unlockLockable=                                           |
 | Subscription                    | =updateSubscription=: the token needs the =notifications= scope             |
 | Apply a suggestion (Phase 5)    | =createCommitOnBranch(branch, expectedHeadOid, message, fileChanges)=: the  |
