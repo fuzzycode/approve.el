@@ -16,6 +16,7 @@
     <a href="review.html">Reviewing</a>
     <a href="find.html">Finding PRs</a>
     <a href="manage.html">Managing &amp; more</a>
+    <a href="clone.html">Your clone</a>
     <a href="flows.html" aria-current="page">Flows</a>
     <a href="icons.html">Icons</a>
   </nav>
@@ -61,6 +62,8 @@ flow. Write actions all run the same pipeline (<a href="#F00">F00</a>); their ow
   <li><a href="#F18">F18 Switch layout</a></li>
   <li><a href="#F19">F19 Notifications</a></li>
   <li><a href="#F20">F20 Look up details (eldoc)</a></li>
+  <li><a href="#F21">F21 Review feedback in a file you edit</a></li>
+  <li><a href="#F22">F22 A buffer's PR, and a PR's clone</a></li>
   <li><a href="#F23">F23 Commit a suggestion, or a batch</a></li>
 </ul>
 
@@ -4214,6 +4217,882 @@ Moving point never touches the network: missing details are fetched only when wa
 <path fill="none" stroke="#908caa" stroke-width="1.2" d="M554.34,-99.49C570.82,-88.56 594.38,-72.92 615.3,-59.04"/>
 <polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="616.58,-61.13 621.06,-55.22 613.87,-57.05 616.58,-61.13"/>
 <text xml:space="preserve" text-anchor="middle" x="613.7" y="-71.64" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+</g>
+</svg>
+</div>
+</section>
+
+<section class="shot" id="F21">
+<h2>F21 Review feedback in a file you edit <span class="ref">approve-feedback-mode · D45 · D46 · Phase 7</span></h2>
+<p>In a clone with the PR's branch checked out, the PR's threads in your own buffer, folded to their bubbles. A
+<code>diff</code> of GitHub's file against the buffer's text places them whatever the clone's state; between diffs the
+overlays move with the text. One store per PR, shared with its PR buffer. Mockups: <a href="clone.html">Your
+clone</a>.</p>
+<div class="flow">
+<svg width="1296pt" height="1741pt"
+ viewBox="0.00 0.00 1296.00 1741.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="F21-graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 1730.03)">
+<title>F21</title>
+<g id="F21-clust1" class="cluster">
+<title>cluster_on</title>
+<polygon fill="none" stroke="black" points="8,-1206.99 8,-1711.23 512,-1711.23 512,-1206.99 8,-1206.99"/>
+<text xml:space="preserve" text-anchor="middle" x="260" y="-1696.78" font-family="JetBrains Mono" font-size="11.00" fill="#6e6a86">turning on</text>
+</g>
+<g id="F21-clust2" class="cluster">
+<title>cluster_act</title>
+<polygon fill="none" stroke="black" points="776,-8 776,-580.26 1266,-580.26 1266,-8 776,-8"/>
+<text xml:space="preserve" text-anchor="middle" x="1021" y="-565.81" font-family="JetBrains Mono" font-size="11.00" fill="#6e6a86">actions (Phase 7&#39;s later tasks)</text>
+</g>
+<!-- cmd -->
+<g id="F21-node1" class="node user">
+<title>cmd</title>
+<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M240.08,-1680.23C240.08,-1680.23 27.92,-1680.23 27.92,-1680.23 21.92,-1680.23 15.92,-1674.23 15.92,-1668.23 15.92,-1668.23 15.92,-1653.59 15.92,-1653.59 15.92,-1647.59 21.92,-1641.59 27.92,-1641.59 27.92,-1641.59 240.08,-1641.59 240.08,-1641.59 246.08,-1641.59 252.08,-1647.59 252.08,-1653.59 252.08,-1653.59 252.08,-1668.23 252.08,-1668.23 252.08,-1674.23 246.08,-1680.23 240.08,-1680.23"/>
+<text xml:space="preserve" text-anchor="middle" x="134" y="-1665.46" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">[user] M&#45;x approve&#45;feedback&#45;mode</text>
+<text xml:space="preserve" text-anchor="middle" x="134" y="-1650.46" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">in a file&#39;s buffer</text>
+</g>
+<!-- f22 -->
+<g id="F21-node3" class="node goto">
+<title>f22</title>
+<g id="F21-a_node3"><a xlink:href="#F22" xlink:title="F22 &#160;the buffer&#39;s PR" target="_top">
+<path fill="none" stroke="#c4a7e7" stroke-width="1.4" stroke-dasharray="5,2" d="M339.7,-1612.59C339.7,-1612.59 200.3,-1612.59 200.3,-1612.59 196.36,-1612.59 192.42,-1608.65 192.42,-1604.71 192.42,-1604.71 192.42,-1596.83 192.42,-1596.83 192.42,-1592.89 196.36,-1588.95 200.3,-1588.95 200.3,-1588.95 339.7,-1588.95 339.7,-1588.95 343.64,-1588.95 347.58,-1592.89 347.58,-1596.83 347.58,-1596.83 347.58,-1604.71 347.58,-1604.71 347.58,-1608.65 343.64,-1612.59 339.7,-1612.59"/>
+<text xml:space="preserve" text-anchor="middle" x="270" y="-1597.82" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">F22 &#160;the buffer&#39;s PR</text>
+</a>
+</g>
+</g>
+<!-- cmd&#45;&gt;f22 -->
+<g id="F21-edge1" class="edge">
+<title>cmd&#45;&gt;f22</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M178.16,-1641.03C196.72,-1633.09 218,-1624 235.4,-1616.56"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="235.95,-1618.99 241.42,-1613.98 234.02,-1614.48 235.95,-1618.99"/>
+</g>
+<!-- glob -->
+<g id="F21-node2" class="node act">
+<title>glob</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M491.7,-1680.23C491.7,-1680.23 286.3,-1680.23 286.3,-1680.23 280.3,-1680.23 274.3,-1674.23 274.3,-1668.23 274.3,-1668.23 274.3,-1653.59 274.3,-1653.59 274.3,-1647.59 280.3,-1641.59 286.3,-1641.59 286.3,-1641.59 491.7,-1641.59 491.7,-1641.59 497.7,-1641.59 503.7,-1647.59 503.7,-1653.59 503.7,-1653.59 503.7,-1668.23 503.7,-1668.23 503.7,-1674.23 497.7,-1680.23 491.7,-1680.23"/>
+<text xml:space="preserve" text-anchor="middle" x="389" y="-1665.46" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">a file opens, with</text>
+<text xml:space="preserve" text-anchor="middle" x="389" y="-1650.46" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">approve&#45;feedback&#45;global&#45;mode on</text>
+</g>
+<!-- glob&#45;&gt;f22 -->
+<g id="F21-edge2" class="edge">
+<title>glob&#45;&gt;f22</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M350.36,-1641.03C334.41,-1633.24 316.17,-1624.33 301.11,-1616.96"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="302.54,-1614.94 295.18,-1614.07 300.39,-1619.34 302.54,-1614.94"/>
+</g>
+<!-- one -->
+<g id="F21-node4" class="node dec">
+<title>one</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="314.02,-1540.64 292.01,-1559.95 247.99,-1559.95 225.98,-1540.64 247.99,-1521.34 292.01,-1521.34 314.02,-1540.64"/>
+<text xml:space="preserve" text-anchor="middle" x="270" y="-1537.69" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">a PR?</text>
+</g>
+<!-- f22&#45;&gt;one -->
+<g id="F21-edge3" class="edge">
+<title>f22&#45;&gt;one</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M270,-1588.28C270,-1582.7 270,-1575.73 270,-1568.9"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="272.45,-1569.24 270,-1562.24 267.55,-1569.24 272.45,-1569.24"/>
+</g>
+<!-- nopr -->
+<g id="F21-node5" class="node err">
+<title>nopr</title>
+<path fill="#2a273f" stroke="#eb6f92" stroke-width="1.4" d="M344.83,-1479.84C344.83,-1479.84 65.17,-1479.84 65.17,-1479.84 59.17,-1479.84 53.17,-1473.84 53.17,-1467.84 53.17,-1467.84 53.17,-1453.2 53.17,-1453.2 53.17,-1447.2 59.17,-1441.2 65.17,-1441.2 65.17,-1441.2 344.83,-1441.2 344.83,-1441.2 350.83,-1441.2 356.83,-1447.2 356.83,-1453.2 356.83,-1453.2 356.83,-1467.84 356.83,-1467.84 356.83,-1473.84 350.83,-1479.84 344.83,-1479.84"/>
+<text xml:space="preserve" text-anchor="middle" x="205" y="-1465.07" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">the command: &quot;No pull request for spike/x&quot;</text>
+<text xml:space="preserve" text-anchor="middle" x="205" y="-1450.07" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">the global mode: nothing</text>
+</g>
+<!-- one&#45;&gt;nopr -->
+<g id="F21-edge4" class="edge no">
+<title>one&#45;&gt;nopr</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M254.27,-1520.73C245.86,-1510.64 235.41,-1498.07 226.29,-1487.11"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="228.34,-1485.74 221.98,-1481.93 224.57,-1488.87 228.34,-1485.74"/>
+<text xml:space="preserve" text-anchor="middle" x="250.39" y="-1497.84" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- open -->
+<g id="F21-node6" class="node dec">
+<title>open</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="467.02,-1460.52 445.01,-1479.82 400.99,-1479.82 378.98,-1460.52 400.99,-1441.22 445.01,-1441.22 467.02,-1460.52"/>
+<text xml:space="preserve" text-anchor="middle" x="423" y="-1457.57" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">open?</text>
+</g>
+<!-- one&#45;&gt;open -->
+<g id="F21-edge5" class="edge yes">
+<title>one&#45;&gt;open</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M297.71,-1525.5C322.87,-1512.65 360.11,-1493.63 387.45,-1479.67"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="388.5,-1481.89 393.62,-1476.52 386.27,-1477.52 388.5,-1481.89"/>
+<text xml:space="preserve" text-anchor="middle" x="367.66" y="-1497.84" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- ask -->
+<g id="F21-node7" class="node dec">
+<title>ask</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="504.34,-1355.91 405.17,-1399.7 206.83,-1399.7 107.66,-1355.91 206.83,-1312.11 405.17,-1312.11 504.34,-1355.91"/>
+<text xml:space="preserve" text-anchor="middle" x="306" y="-1367.96" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the command asks: &quot;#14 is merged:</text>
+<text xml:space="preserve" text-anchor="middle" x="306" y="-1352.96" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">show its threads anyway?&quot;</text>
+<text xml:space="preserve" text-anchor="middle" x="306" y="-1337.96" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the global mode: nothing</text>
+</g>
+<!-- open&#45;&gt;ask -->
+<g id="F21-edge6" class="edge no">
+<title>open&#45;&gt;ask</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M401.54,-1440.7C390.33,-1430.87 376.03,-1418.33 361.93,-1405.96"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="363.72,-1404.28 356.85,-1401.5 360.49,-1407.96 363.72,-1404.28"/>
+<text xml:space="preserve" text-anchor="middle" x="394.16" y="-1417.7" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- loaded -->
+<g id="F21-node9" class="node dec">
+<title>loaded</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="839.76,-1226.81 759.88,-1270.61 600.12,-1270.61 520.24,-1226.81 600.12,-1183.02 759.88,-1183.02 839.76,-1226.81"/>
+<text xml:space="preserve" text-anchor="middle" x="680" y="-1238.86" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the PR&#39;s store loaded?</text>
+<text xml:space="preserve" text-anchor="middle" x="680" y="-1223.86" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">(its PR buffer, or another</text>
+<text xml:space="preserve" text-anchor="middle" x="680" y="-1208.86" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">file of the clone)</text>
+</g>
+<!-- open&#45;&gt;loaded -->
+<g id="F21-edge8" class="edge yes">
+<title>open&#45;&gt;loaded</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M449.49,-1444.52C468.5,-1433.23 494.3,-1416.83 515,-1399.7 560.16,-1362.34 605.87,-1313.69 637.69,-1277.68"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="639.49,-1279.35 642.27,-1272.47 635.81,-1276.11 639.49,-1279.35"/>
+<text xml:space="preserve" text-anchor="middle" x="618" y="-1353.16" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- off -->
+<g id="F21-node8" class="node note">
+<title>off</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="372.89,-1238.63 235.17,-1238.63 235.17,-1214.99 376.83,-1214.99 376.83,-1234.69 372.89,-1238.63"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="372.89,-1238.63 372.89,-1234.69"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="376.83,-1234.69 372.89,-1234.69"/>
+<text xml:space="preserve" text-anchor="middle" x="306" y="-1223.86" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">the mode stays off</text>
+</g>
+<!-- ask&#45;&gt;off -->
+<g id="F21-edge7" class="edge no">
+<title>ask&#45;&gt;off</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M306,-1311.52C306,-1289.92 306,-1264.86 306,-1247.82"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="308.45,-1248.08 306,-1241.08 303.55,-1248.08 308.45,-1248.08"/>
+<text xml:space="preserve" text-anchor="middle" x="315" y="-1288.61" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- ask&#45;&gt;loaded -->
+<g id="F21-edge9" class="edge yes">
+<title>ask&#45;&gt;loaded</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M417.71,-1316.95C467.15,-1300.14 525.03,-1280.48 573.81,-1263.9"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="574.31,-1266.31 580.15,-1261.74 572.74,-1261.67 574.31,-1266.31"/>
+<text xml:space="preserve" text-anchor="middle" x="516.21" y="-1288.61" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- load -->
+<g id="F21-node10" class="node goto">
+<title>load</title>
+<g id="F21-a_node10"><a xlink:href="#F02" xlink:title="F02 &#160;load it in the background, once\nthe lighter says &quot;#15 …&quot;" target="_top">
+<path fill="none" stroke="#c4a7e7" stroke-width="1.4" stroke-dasharray="5,2" d="M676.58,-1141.52C676.58,-1141.52 437.42,-1141.52 437.42,-1141.52 431.42,-1141.52 425.42,-1135.52 425.42,-1129.52 425.42,-1129.52 425.42,-1114.88 425.42,-1114.88 425.42,-1108.88 431.42,-1102.88 437.42,-1102.88 437.42,-1102.88 676.58,-1102.88 676.58,-1102.88 682.58,-1102.88 688.58,-1108.88 688.58,-1114.88 688.58,-1114.88 688.58,-1129.52 688.58,-1129.52 688.58,-1135.52 682.58,-1141.52 676.58,-1141.52"/>
+<text xml:space="preserve" text-anchor="middle" x="557" y="-1126.75" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">F02 &#160;load it in the background, once</text>
+<text xml:space="preserve" text-anchor="middle" x="557" y="-1111.75" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the lighter says &quot;#15 …&quot;</text>
+</a>
+</g>
+</g>
+<!-- loaded&#45;&gt;load -->
+<g id="F21-edge10" class="edge no">
+<title>loaded&#45;&gt;load</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M628.19,-1182.59C613.9,-1170.67 598.89,-1158.15 586.36,-1147.69"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="588.01,-1145.88 581.07,-1143.27 584.87,-1149.64 588.01,-1145.88"/>
+<text xml:space="preserve" text-anchor="middle" x="620.14" y="-1159.52" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- changes -->
+<g id="F21-node16" class="node dec">
+<title>changes</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="832.22,-1042.33 760.61,-1073.88 617.39,-1073.88 545.78,-1042.33 617.39,-1010.78 760.61,-1010.78 832.22,-1042.33"/>
+<text xml:space="preserve" text-anchor="middle" x="689" y="-1046.88" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the PR changes this</text>
+<text xml:space="preserve" text-anchor="middle" x="689" y="-1031.88" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">file, or threads on it?</text>
+</g>
+<!-- loaded&#45;&gt;changes -->
+<g id="F21-edge11" class="edge yes">
+<title>loaded&#45;&gt;changes</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M692.34,-1182.41C695.49,-1169.37 698.43,-1154.96 700,-1141.52 702,-1124.46 701.57,-1119.98 700,-1102.88 699.4,-1096.32 698.44,-1089.42 697.32,-1082.72"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="699.8,-1082.65 696.16,-1076.18 694.97,-1083.5 699.8,-1082.65"/>
+<text xml:space="preserve" text-anchor="middle" x="713.34" y="-1119.45" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- load&#45;&gt;changes -->
+<g id="F21-edge12" class="edge">
+<title>load&#45;&gt;changes</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M588.95,-1102.35C600.93,-1095.28 614.96,-1087 628.67,-1078.92"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="629.88,-1081.05 634.67,-1075.38 627.39,-1076.82 629.88,-1081.05"/>
+</g>
+<!-- has -->
+<g id="F21-node11" class="node dec">
+<title>has</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="624.2,-937.73 558.1,-969.28 425.9,-969.28 359.8,-937.73 425.9,-906.18 558.1,-906.18 624.2,-937.73"/>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-942.28" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the clone has</text>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-927.28" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">GitHub&#39;s head commit?</text>
+</g>
+<!-- git -->
+<g id="F21-node12" class="node act">
+<title>git</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M469.07,-857.18C469.07,-857.18 322.93,-857.18 322.93,-857.18 318.99,-857.18 315.05,-853.24 315.05,-849.3 315.05,-849.3 315.05,-841.42 315.05,-841.42 315.05,-837.48 318.99,-833.54 322.93,-833.54 322.93,-833.54 469.07,-833.54 469.07,-833.54 473.01,-833.54 476.95,-837.48 476.95,-841.42 476.95,-841.42 476.95,-849.3 476.95,-849.3 476.95,-853.24 473.01,-857.18 469.07,-857.18"/>
+<text xml:space="preserve" text-anchor="middle" x="396" y="-842.41" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">git cat&#45;file OID:PATH</text>
+</g>
+<!-- has&#45;&gt;git -->
+<g id="F21-edge15" class="edge yes">
+<title>has&#45;&gt;git</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M458.96,-905.63C444,-891.54 426.88,-875.42 414.27,-863.56"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="416.22,-862.03 409.45,-859.02 412.87,-865.6 416.22,-862.03"/>
+<text xml:space="preserve" text-anchor="middle" x="456" y="-882.68" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- blob -->
+<g id="F21-node13" class="node api">
+<title>blob</title>
+<polygon fill="#2a273f" stroke="#3e8fb0" stroke-width="1.4" points="681.08,-864.68 498.92,-864.68 498.92,-826.04 681.08,-826.04 681.08,-864.68"/>
+<text xml:space="preserve" text-anchor="middle" x="590" y="-849.91" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">the file through the API</text>
+<text xml:space="preserve" text-anchor="middle" x="590" y="-834.91" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">(the file view&#39;s cache)</text>
+</g>
+<!-- has&#45;&gt;blob -->
+<g id="F21-edge16" class="edge no">
+<title>has&#45;&gt;blob</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M525.73,-905.63C538.06,-894.25 551.83,-881.56 563.45,-870.84"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="564.84,-872.89 568.32,-866.35 561.52,-869.29 564.84,-872.89"/>
+<text xml:space="preserve" text-anchor="middle" x="561.66" y="-882.68" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- run -->
+<g id="F21-node14" class="node act">
+<title>run</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M608.21,-797.04C608.21,-797.04 375.79,-797.04 375.79,-797.04 369.79,-797.04 363.79,-791.04 363.79,-785.04 363.79,-785.04 363.79,-770.4 363.79,-770.4 363.79,-764.4 369.79,-758.4 375.79,-758.4 375.79,-758.4 608.21,-758.4 608.21,-758.4 614.21,-758.4 620.21,-764.4 620.21,-770.4 620.21,-770.4 620.21,-785.04 620.21,-785.04 620.21,-791.04 614.21,-797.04 608.21,-797.04"/>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-782.27" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">diff it against the buffer&#39;s text</text>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-767.27" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">asynchronous, temporary files (D45)</text>
+</g>
+<!-- git&#45;&gt;run -->
+<g id="F21-edge17" class="edge">
+<title>git&#45;&gt;run</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M412.72,-832.92C424.91,-824.59 441.86,-813 456.96,-802.67"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="458.31,-804.72 462.7,-798.75 455.54,-800.68 458.31,-804.72"/>
+</g>
+<!-- blob&#45;&gt;run -->
+<g id="F21-edge18" class="edge">
+<title>blob&#45;&gt;run</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M561.65,-825.37C550.99,-818.23 538.73,-810.01 527.49,-802.49"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="528.97,-800.53 521.79,-798.67 526.24,-804.6 528.97,-800.53"/>
+</g>
+<!-- show -->
+<g id="F21-node15" class="node ok">
+<title>show</title>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M675.71,-729.4C675.71,-729.4 308.29,-729.4 308.29,-729.4 302.29,-729.4 296.29,-723.4 296.29,-717.4 296.29,-717.4 296.29,-642.76 296.29,-642.76 296.29,-636.76 302.29,-630.76 308.29,-630.76 308.29,-630.76 675.71,-630.76 675.71,-630.76 681.71,-630.76 687.71,-636.76 687.71,-642.76 687.71,-642.76 687.71,-717.4 687.71,-717.4 687.71,-723.4 681.71,-729.4 675.71,-729.4"/>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-714.63" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">threads as overlays, folded to their bubble (D46):</text>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-699.63" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">unchanged line: under it · changed here: under the line</text>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-684.63" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">in its place, &quot;edited&quot; · deleted here: where it was</text>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-669.63" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">outdated: where it was · removed lines: between lines</text>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-654.63" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">whole file: above the first line</text>
+<text xml:space="preserve" text-anchor="middle" x="492" y="-639.63" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">lighter: &quot; #15&quot;, unresolved threads, the clone&#39;s state</text>
+</g>
+<!-- run&#45;&gt;show -->
+<g id="F21-edge19" class="edge">
+<title>run&#45;&gt;show</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M492,-757.82C492,-752.16 492,-745.62 492,-738.81"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="494.45,-738.89 492,-731.89 489.55,-738.89 494.45,-738.89"/>
+</g>
+<!-- life -->
+<g id="F21-node18" class="node note">
+<title>life</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="758.83,-601.76 191.17,-601.76 191.17,-458.12 764.83,-458.12 764.83,-595.76 758.83,-601.76"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="758.83,-601.76 758.83,-595.76"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="764.83,-595.76 758.83,-595.76"/>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-586.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">while the buffer lives:</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-571.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;[user] edits → the overlays move with the text; once Emacs is idle,</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-556.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;&#160;&#160;&#160;&#160;the diff again (coalesced; an answer for older text is dropped)</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-541.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;HEAD moves (a commit, a checkout, a pull) → the branch&#39;s PR again (F22):</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-526.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;&#160;&#160;&#160;&#160;the same: the clone&#39;s state again · another: its threads · none: overlays go</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-511.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;D23&#39;s check (focus, timer) → ↻ in the lighter; [user] g in the map → F17</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-496.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;[user] TAB · T in the map, mouse&#45;1 on a bubble → unfold / fold the line, or all</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-481.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;[user] n / p in the map (evil ]t / [t) → the next / previous unresolved</text>
+<text xml:space="preserve" text-anchor="start" x="201.25" y="-466.99" font-family="JetBrains Mono" font-size="11.00" fill="#908caa"> &#160;&#160;&#160;&#160;&#160;thread, unfolded; past the file&#39;s last, the PR&#39;s next file, in the clone</text>
+</g>
+<!-- show&#45;&gt;life -->
+<g id="F21-edge20" class="edge">
+<title>show&#45;&gt;life</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" stroke-dasharray="5,2" d="M487.38,-630.16C486.78,-623.88 486.16,-617.32 485.54,-610.71"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="488.01,-610.86 484.92,-604.12 483.14,-611.32 488.01,-610.86"/>
+</g>
+<!-- act -->
+<g id="F21-node19" class="node user">
+<title>act</title>
+<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M1051.33,-549.26C1051.33,-549.26 798.67,-549.26 798.67,-549.26 792.67,-549.26 786.67,-543.26 786.67,-537.26 786.67,-537.26 786.67,-522.62 786.67,-522.62 786.67,-516.62 792.67,-510.62 798.67,-510.62 798.67,-510.62 1051.33,-510.62 1051.33,-510.62 1057.33,-510.62 1063.33,-516.62 1063.33,-522.62 1063.33,-522.62 1063.33,-537.26 1063.33,-537.26 1063.33,-543.26 1057.33,-549.26 1051.33,-549.26"/>
+<text xml:space="preserve" text-anchor="middle" x="925" y="-534.49" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">[user] r R e k + on the line&#39;s threads</text>
+<text xml:space="preserve" text-anchor="middle" x="925" y="-519.49" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">c s on the line or region</text>
+</g>
+<!-- show&#45;&gt;act -->
+<g id="F21-edge28" class="edge">
+<title>show&#45;&gt;act</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" stroke-dasharray="5,2" d="M688.23,-630.57C717.92,-621.82 747.97,-612.14 776,-601.76 812.74,-588.15 852.75,-568.87 882.05,-553.86"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="882.93,-556.16 888.03,-550.78 880.68,-551.81 882.93,-556.16"/>
+</g>
+<!-- changes&#45;&gt;has -->
+<g id="F21-edge14" class="edge yes">
+<title>changes&#45;&gt;has</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M629.09,-1010.13C607.12,-998.68 582.11,-985.66 559.52,-973.89"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="560.91,-971.86 553.57,-970.8 558.65,-976.2 560.91,-971.86"/>
+<text xml:space="preserve" text-anchor="middle" x="614.29" y="-987.28" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- alone -->
+<g id="F21-node17" class="node note">
+<title>alone</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="777.51,-949.55 646.54,-949.55 646.54,-925.91 781.46,-925.91 781.46,-945.61 777.51,-949.55"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="777.51,-949.55 777.51,-945.61"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="781.46,-945.61 777.51,-945.61"/>
+<text xml:space="preserve" text-anchor="middle" x="714" y="-934.78" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">the lighter alone</text>
+</g>
+<!-- changes&#45;&gt;alone -->
+<g id="F21-edge13" class="edge no">
+<title>changes&#45;&gt;alone</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M696.57,-1010.26C700.66,-993.46 705.6,-973.21 709.17,-958.55"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="711.49,-959.37 710.77,-951.99 706.73,-958.21 711.49,-959.37"/>
+<text xml:space="preserve" text-anchor="middle" x="712" y="-987.28" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- sev -->
+<g id="F21-node20" class="node dec">
+<title>sev</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="1024.13,-397.57 974.57,-429.12 875.43,-429.12 825.87,-397.57 875.43,-366.02 974.57,-366.02 1024.13,-397.57"/>
+<text xml:space="preserve" text-anchor="middle" x="925" y="-402.12" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">several threads</text>
+<text xml:space="preserve" text-anchor="middle" x="925" y="-387.12" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">on the line?</text>
+</g>
+<!-- act&#45;&gt;sev -->
+<g id="F21-edge21" class="edge">
+<title>act&#45;&gt;sev</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M925,-509.98C925,-491.24 925,-461.99 925,-438.16"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="927.45,-438.48 925,-431.48 922.55,-438.48 927.45,-438.48"/>
+</g>
+<!-- pick -->
+<g id="F21-node21" class="node act">
+<title>pick</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M1038.58,-324.52C1038.58,-324.52 799.42,-324.52 799.42,-324.52 793.42,-324.52 787.42,-318.52 787.42,-312.52 787.42,-312.52 787.42,-297.88 787.42,-297.88 787.42,-291.88 793.42,-285.88 799.42,-285.88 799.42,-285.88 1038.58,-285.88 1038.58,-285.88 1044.58,-285.88 1050.58,-291.88 1050.58,-297.88 1050.58,-297.88 1050.58,-312.52 1050.58,-312.52 1050.58,-318.52 1044.58,-324.52 1038.58,-324.52"/>
+<text xml:space="preserve" text-anchor="middle" x="919" y="-309.75" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">completing&#45;read:</text>
+<text xml:space="preserve" text-anchor="middle" x="919" y="-294.75" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">&quot;@bob: Should this be configurable…&quot;</text>
+</g>
+<!-- sev&#45;&gt;pick -->
+<g id="F21-edge22" class="edge yes">
+<title>sev&#45;&gt;pick</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M922.94,-365.47C922.25,-355.15 921.49,-343.74 920.83,-333.71"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="923.27,-333.59 920.37,-326.77 918.39,-333.92 923.27,-333.59"/>
+<text xml:space="preserve" text-anchor="middle" x="934" y="-342.52" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- lines -->
+<g id="F21-node22" class="node dec">
+<title>lines</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="1201.29,-225.33 1113.14,-256.88 936.86,-256.88 848.71,-225.33 936.86,-193.78 1113.14,-193.78 1201.29,-225.33"/>
+<text xml:space="preserve" text-anchor="middle" x="1025" y="-229.88" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">c, s: every line as on</text>
+<text xml:space="preserve" text-anchor="middle" x="1025" y="-214.88" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">GitHub, and in the PR&#39;s diff?</text>
+</g>
+<!-- sev&#45;&gt;lines -->
+<g id="F21-edge23" class="edge no">
+<title>sev&#45;&gt;lines</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M993.66,-377.38C1019.77,-366.38 1046.86,-349.59 1062,-324.52 1073.22,-305.93 1065.98,-283.37 1055.03,-264.57"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1057.24,-263.49 1051.46,-258.83 1053.08,-266.07 1057.24,-263.49"/>
+<text xml:space="preserve" text-anchor="middle" x="1076.63" y="-302.45" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- pick&#45;&gt;lines -->
+<g id="F21-edge24" class="edge">
+<title>pick&#45;&gt;lines</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M944.66,-285.35C954.01,-278.48 964.92,-270.47 975.63,-262.6"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="976.97,-264.65 981.16,-258.53 974.07,-260.7 976.97,-264.65"/>
+</g>
+<!-- why -->
+<g id="F21-node23" class="node err">
+<title>why</title>
+<path fill="#2a273f" stroke="#eb6f92" stroke-width="1.4" d="M1048.33,-152.28C1048.33,-152.28 795.67,-152.28 795.67,-152.28 789.67,-152.28 783.67,-146.28 783.67,-140.28 783.67,-140.28 783.67,-110.64 783.67,-110.64 783.67,-104.64 789.67,-98.64 795.67,-98.64 795.67,-98.64 1048.33,-98.64 1048.33,-98.64 1054.33,-98.64 1060.33,-104.64 1060.33,-110.64 1060.33,-110.64 1060.33,-140.28 1060.33,-140.28 1060.33,-146.28 1054.33,-152.28 1048.33,-152.28"/>
+<text xml:space="preserve" text-anchor="middle" x="922" y="-137.51" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">&quot;Line 41 was edited here; GitHub takes</text>
+<text xml:space="preserve" text-anchor="middle" x="922" y="-122.51" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">comments only on its own lines&quot;, or</text>
+<text xml:space="preserve" text-anchor="middle" x="922" y="-107.51" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">&quot;… isn&#39;t in the pull request&#39;s diff&quot;</text>
+</g>
+<!-- lines&#45;&gt;why -->
+<g id="F21-edge25" class="edge no">
+<title>lines&#45;&gt;why</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M992.13,-193.09C980.6,-182.14 967.64,-169.83 956.02,-158.79"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="957.8,-157.1 951.04,-154.05 954.43,-160.65 957.8,-157.1"/>
+<text xml:space="preserve" text-anchor="middle" x="985.59" y="-170.28" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- flows -->
+<g id="F21-node24" class="node goto">
+<title>flows</title>
+<g id="F21-a_node24"><a xlink:href="#F00" xlink:title="F05 F06 F07 F08 F11\non GitHub&#39;s lines → F00" target="_top">
+<path fill="none" stroke="#c4a7e7" stroke-width="1.4" stroke-dasharray="5,2" d="M1245.7,-144.78C1245.7,-144.78 1094.3,-144.78 1094.3,-144.78 1088.3,-144.78 1082.3,-138.78 1082.3,-132.78 1082.3,-132.78 1082.3,-118.14 1082.3,-118.14 1082.3,-112.14 1088.3,-106.14 1094.3,-106.14 1094.3,-106.14 1245.7,-106.14 1245.7,-106.14 1251.7,-106.14 1257.7,-112.14 1257.7,-118.14 1257.7,-118.14 1257.7,-132.78 1257.7,-132.78 1257.7,-138.78 1251.7,-144.78 1245.7,-144.78"/>
+<text xml:space="preserve" text-anchor="middle" x="1170" y="-130.01" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">F05 F06 F07 F08 F11</text>
+<text xml:space="preserve" text-anchor="middle" x="1170" y="-115.01" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">on GitHub&#39;s lines → F00</text>
+</a>
+</g>
+</g>
+<!-- lines&#45;&gt;flows -->
+<g id="F21-edge26" class="edge yes">
+<title>lines&#45;&gt;flows</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1071.28,-193.09C1091.86,-179.2 1115.69,-163.12 1134.79,-150.23"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1135.92,-152.42 1140.35,-146.47 1133.18,-148.36 1135.92,-152.42"/>
+<text xml:space="preserve" text-anchor="middle" x="1122.49" y="-170.28" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- redraw -->
+<g id="F21-node25" class="node ok">
+<title>redraw</title>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M1245.7,-69.64C1245.7,-69.64 1040.3,-69.64 1040.3,-69.64 1034.3,-69.64 1028.3,-63.64 1028.3,-57.64 1028.3,-57.64 1028.3,-28 1028.3,-28 1028.3,-22 1034.3,-16 1040.3,-16 1040.3,-16 1245.7,-16 1245.7,-16 1251.7,-16 1257.7,-22 1257.7,-28 1257.7,-28 1257.7,-57.64 1257.7,-57.64 1257.7,-63.64 1251.7,-69.64 1245.7,-69.64"/>
+<text xml:space="preserve" text-anchor="middle" x="1143" y="-54.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the store patched: every buffer</text>
+<text xml:space="preserve" text-anchor="middle" x="1143" y="-39.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">of the PR redrawn (PR buffer,</text>
+<text xml:space="preserve" text-anchor="middle" x="1143" y="-24.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">file views, the clone&#39;s)</text>
+</g>
+<!-- flows&#45;&gt;redraw -->
+<g id="F21-edge27" class="edge">
+<title>flows&#45;&gt;redraw</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1163.74,-105.76C1160.99,-97.55 1157.68,-87.65 1154.51,-78.2"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1156.91,-77.64 1152.36,-71.78 1152.26,-79.2 1156.91,-77.64"/>
+</g>
+</g>
+</svg>
+</div>
+</section>
+
+<section class="shot" id="F22">
+<h2>F22 Find a buffer's PR, and a PR's clone <span class="ref">P · f (evil: gF) · D45 · Phase 7</span></h2>
+<p>A branch, not a clone, has the PR: the head repository's ref finds it, a fork's too. A clone is found by its
+remotes among <code>approve-clone-directories</code>; one <code>git for-each-ref</code> then says which worktree has
+the branch.</p>
+<div class="flow">
+<svg width="1507pt" height="1212pt"
+ viewBox="0.00 0.00 1507.00 1212.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="F22-graph0" class="graph" transform="scale(1 1) rotate(0) translate(10.8 1200.91)">
+<title>F22</title>
+<g id="F22-clust1" class="cluster">
+<title>cluster_pr</title>
+<polygon fill="none" stroke="black" points="8,-272.88 8,-1182.11 748,-1182.11 748,-272.88 8,-272.88"/>
+<text xml:space="preserve" text-anchor="middle" x="378" y="-1167.66" font-family="JetBrains Mono" font-size="11.00" fill="#6e6a86">a buffer&#39;s PR</text>
+</g>
+<g id="F22-clust2" class="cluster">
+<title>cluster_P</title>
+<polygon fill="none" stroke="black" points="231,-8 231,-250.38 679,-250.38 679,-8 231,-8"/>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-235.93" font-family="JetBrains Mono" font-size="11.00" fill="#6e6a86">P — pick another</text>
+</g>
+<g id="F22-clust3" class="cluster">
+<title>cluster_f</title>
+<polygon fill="none" stroke="black" points="795,-373.02 795,-1182.11 1477,-1182.11 1477,-373.02 795,-373.02"/>
+<text xml:space="preserve" text-anchor="middle" x="1136" y="-1167.66" font-family="JetBrains Mono" font-size="11.00" fill="#6e6a86">f — a PR&#39;s line in your clone (evil: gF)</text>
+</g>
+<g id="F22-clust4" class="cluster">
+<title>cluster_ret</title>
+<polygon fill="none" stroke="black" points="780,-8 780,-343.02 1142,-343.02 1142,-8 780,-8"/>
+<text xml:space="preserve" text-anchor="middle" x="961" y="-328.57" font-family="JetBrains Mono" font-size="11.00" fill="#6e6a86">RET in the map — back to the PR buffer</text>
+</g>
+<!-- why -->
+<g id="F22-node1" class="node user">
+<title>why</title>
+<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M373.21,-1151.11C373.21,-1151.11 140.79,-1151.11 140.79,-1151.11 134.79,-1151.11 128.79,-1145.11 128.79,-1139.11 128.79,-1139.11 128.79,-1124.47 128.79,-1124.47 128.79,-1118.47 134.79,-1112.47 140.79,-1112.47 140.79,-1112.47 373.21,-1112.47 373.21,-1112.47 379.21,-1112.47 385.21,-1118.47 385.21,-1124.47 385.21,-1124.47 385.21,-1139.11 385.21,-1139.11 385.21,-1145.11 379.21,-1151.11 373.21,-1151.11"/>
+<text xml:space="preserve" text-anchor="middle" x="257" y="-1136.34" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">a file&#39;s buffer: the mode turns on,</text>
+<text xml:space="preserve" text-anchor="middle" x="257" y="-1121.34" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">HEAD moved, or [user] P (pick)</text>
+</g>
+<!-- dotgit -->
+<g id="F22-node2" class="node dec">
+<title>dotgit</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="339.6,-1051.92 298.3,-1083.47 215.7,-1083.47 174.4,-1051.92 215.7,-1020.38 298.3,-1020.38 339.6,-1051.92"/>
+<text xml:space="preserve" text-anchor="middle" x="257" y="-1056.47" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">a .git above</text>
+<text xml:space="preserve" text-anchor="middle" x="257" y="-1041.47" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the file?</text>
+</g>
+<!-- why&#45;&gt;dotgit -->
+<g id="F22-edge1" class="edge">
+<title>why&#45;&gt;dotgit</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M257,-1111.94C257,-1106.06 257,-1099.33 257,-1092.57"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="259.45,-1092.87 257,-1085.87 254.55,-1092.87 259.45,-1092.87"/>
+</g>
+<!-- none -->
+<g id="F22-node3" class="node note">
+<title>none</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="185.45,-966.65 110.55,-966.65 110.55,-928.01 191.45,-928.01 191.45,-960.65 185.45,-966.65"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="185.45,-966.65 185.45,-960.65"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="191.45,-960.65 185.45,-960.65"/>
+<text xml:space="preserve" text-anchor="middle" x="151" y="-951.88" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">no PR</text>
+<text xml:space="preserve" text-anchor="middle" x="151" y="-936.88" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">(0.02 ms)</text>
+</g>
+<!-- dotgit&#45;&gt;none -->
+<g id="F22-edge2" class="edge no">
+<title>dotgit&#45;&gt;none</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M224.91,-1019.86C209.34,-1004.79 190.9,-986.95 176.34,-972.85"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="178.39,-971.43 171.66,-968.32 174.99,-974.95 178.39,-971.43"/>
+<text xml:space="preserve" text-anchor="middle" x="219.35" y="-996.88" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- remote -->
+<g id="F22-node4" class="node dec">
+<title>remote</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="400.62,-947.33 353.81,-978.88 260.19,-978.88 213.38,-947.33 260.19,-915.78 353.81,-915.78 400.62,-947.33"/>
+<text xml:space="preserve" text-anchor="middle" x="307" y="-951.88" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">a remote on</text>
+<text xml:space="preserve" text-anchor="middle" x="307" y="-936.88" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">a GitHub host?</text>
+</g>
+<!-- dotgit&#45;&gt;remote -->
+<g id="F22-edge3" class="edge yes">
+<title>dotgit&#45;&gt;remote</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M272.14,-1019.86C277.18,-1009.52 282.86,-997.86 288.15,-987.01"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="290.25,-988.28 291.12,-980.91 285.85,-986.13 290.25,-988.28"/>
+<text xml:space="preserve" text-anchor="middle" x="296.99" y="-996.88" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- hosts -->
+<g id="F22-node5" class="node note">
+<title>hosts</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="252.45,-869.55 15.55,-869.55 15.55,-815.91 258.45,-815.91 258.45,-863.55 252.45,-869.55"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="252.45,-869.55 252.45,-863.55"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="258.45,-863.55 252.45,-863.55"/>
+<text xml:space="preserve" text-anchor="middle" x="137" y="-854.78" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">from the config file: github.com,</text>
+<text xml:space="preserve" text-anchor="middle" x="137" y="-839.78" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">approve&#45;api&#45;host&#39;s; an SSH alias</text>
+<text xml:space="preserve" text-anchor="middle" x="137" y="-824.78" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">through ssh &#45;G once a session</text>
+</g>
+<!-- remote&#45;&gt;hosts -->
+<g id="F22-edge4" class="edge">
+<title>remote&#45;&gt;hosts</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" stroke-dasharray="1,5" d="M257.83,-916.65C233.51,-901.97 204.4,-884.41 180.85,-870.19"/>
+</g>
+<!-- none2 -->
+<g id="F22-node6" class="node note">
+<title>none2</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="330.06,-854.55 280,-854.55 280,-830.91 334,-830.91 334,-850.61 330.06,-854.55"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="330.06,-854.55 330.06,-850.61"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="334,-850.61 330.06,-850.61"/>
+<text xml:space="preserve" text-anchor="middle" x="307" y="-839.78" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">no PR</text>
+</g>
+<!-- remote&#45;&gt;none2 -->
+<g id="F22-edge5" class="edge no">
+<title>remote&#45;&gt;none2</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M307,-915.26C307,-898.62 307,-878.59 307,-863.97"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="309.45,-864.04 307,-857.04 304.55,-864.04 309.45,-864.04"/>
+<text xml:space="preserve" text-anchor="middle" x="316" y="-892.28" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- branch -->
+<g id="F22-node7" class="node act">
+<title>branch</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M728.33,-869.55C728.33,-869.55 367.67,-869.55 367.67,-869.55 361.67,-869.55 355.67,-863.55 355.67,-857.55 355.67,-857.55 355.67,-827.91 355.67,-827.91 355.67,-821.91 361.67,-815.91 367.67,-815.91 367.67,-815.91 728.33,-815.91 728.33,-815.91 734.33,-815.91 740.33,-821.91 740.33,-827.91 740.33,-827.91 740.33,-857.55 740.33,-857.55 740.33,-863.55 734.33,-869.55 728.33,-869.55"/>
+<text xml:space="preserve" text-anchor="middle" x="548" y="-854.78" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">git: the toplevel and the branch; its head on GitHub =</text>
+<text xml:space="preserve" text-anchor="middle" x="548" y="-839.78" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the push branch, else the upstream, else the same</text>
+<text xml:space="preserve" text-anchor="middle" x="548" y="-824.78" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">name on the push remote (a detached HEAD: no PR)</text>
+</g>
+<!-- remote&#45;&gt;branch -->
+<g id="F22-edge6" class="edge yes">
+<title>remote&#45;&gt;branch</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M364.11,-922.01C398.15,-907.52 441.61,-889.02 477.74,-873.64"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="478.65,-875.91 484.13,-870.92 476.73,-871.41 478.65,-875.91"/>
+<text xml:space="preserve" text-anchor="middle" x="453.93" y="-892.28" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- asked -->
+<g id="F22-node8" class="node dec">
+<title>asked</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="674.69,-738.13 611.34,-769.68 484.66,-769.68 421.31,-738.13 484.66,-706.58 611.34,-706.58 674.69,-738.13"/>
+<text xml:space="preserve" text-anchor="middle" x="548" y="-742.68" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">asked this session?</text>
+<text xml:space="preserve" text-anchor="middle" x="548" y="-727.68" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">(repository, branch)</text>
+</g>
+<!-- branch&#45;&gt;asked -->
+<g id="F22-edge7" class="edge">
+<title>branch&#45;&gt;asked</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M548,-815.31C548,-804.22 548,-791.09 548,-778.88"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="550.45,-779.01 548,-772.01 545.55,-779.01 550.45,-779.01"/>
+</g>
+<!-- query -->
+<g id="F22-node9" class="node api">
+<title>query</title>
+<polygon fill="#2a273f" stroke="#3e8fb0" stroke-width="1.4" points="512.08,-639.94 167.92,-639.94 167.92,-571.3 512.08,-571.3 512.08,-639.94"/>
+<text xml:space="preserve" text-anchor="middle" x="340" y="-625.17" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">query, cost 1: the head repository&#39;s</text>
+<text xml:space="preserve" text-anchor="middle" x="340" y="-610.17" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">ref(&quot;refs/heads/BRANCH&quot;).associatedPullRequests,</text>
+<text xml:space="preserve" text-anchor="middle" x="340" y="-595.17" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">pullRequests(headRefName) on it and its parent,</text>
+<text xml:space="preserve" text-anchor="middle" x="340" y="-580.17" font-family="JetBrains Mono" font-size="11.00" fill="#9ccfd8">kept when their head repository is the branch&#39;s</text>
+</g>
+<!-- asked&#45;&gt;query -->
+<g id="F22-edge9" class="edge no">
+<title>asked&#45;&gt;query</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M498.44,-706.03C469.3,-687.75 432.21,-664.47 401.24,-645.04"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="402.69,-643.06 395.46,-641.42 400.09,-647.21 402.69,-643.06"/>
+<text xml:space="preserve" text-anchor="middle" x="483.78" y="-670.51" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- opens -->
+<g id="F22-node10" class="node dec">
+<title>opens</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="450.57,-495.48 414.79,-514.78 343.21,-514.78 307.43,-495.48 343.21,-476.18 414.79,-476.18 450.57,-495.48"/>
+<text xml:space="preserve" text-anchor="middle" x="379" y="-492.53" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">open ones?</text>
+</g>
+<!-- asked&#45;&gt;opens -->
+<g id="F22-edge8" class="edge yes">
+<title>asked&#45;&gt;opens</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M551.25,-705.92C553.32,-670.07 551.45,-611.09 523,-571.3 501.94,-541.84 465.74,-523.11 434.9,-511.75"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="435.9,-509.51 428.49,-509.48 434.27,-514.13 435.9,-509.51"/>
+<text xml:space="preserve" text-anchor="middle" x="560.36" y="-602.87" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- query&#45;&gt;opens -->
+<g id="F22-edge10" class="edge">
+<title>query&#45;&gt;opens</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M352.23,-570.7C357.76,-555.37 364.2,-537.53 369.37,-523.17"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="371.57,-524.3 371.64,-516.88 366.96,-522.63 371.57,-524.3"/>
+</g>
+<!-- closed -->
+<g id="F22-node11" class="node note">
+<title>closed</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="274.83,-412.16 85.17,-412.16 85.17,-373.52 280.83,-373.52 280.83,-406.16 274.83,-412.16"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="274.83,-412.16 274.83,-406.16"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="280.83,-406.16 274.83,-406.16"/>
+<text xml:space="preserve" text-anchor="middle" x="183" y="-397.39" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">the closed and merged ones</text>
+<text xml:space="preserve" text-anchor="middle" x="183" y="-382.39" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">(F21: the command asks)</text>
+</g>
+<!-- opens&#45;&gt;closed -->
+<g id="F22-edge11" class="edge no">
+<title>opens&#45;&gt;closed</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M342.59,-475.79C310.07,-459.09 262.33,-434.57 227.54,-416.71"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="228.84,-414.62 221.49,-413.6 226.6,-418.98 228.84,-414.62"/>
+<text xml:space="preserve" text-anchor="middle" x="290" y="-437.66" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- chosen -->
+<g id="F22-node12" class="node ok">
+<title>chosen</title>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M594.83,-419.66C594.83,-419.66 315.17,-419.66 315.17,-419.66 309.17,-419.66 303.17,-413.66 303.17,-407.66 303.17,-407.66 303.17,-378.02 303.17,-378.02 303.17,-372.02 309.17,-366.02 315.17,-366.02 315.17,-366.02 594.83,-366.02 594.83,-366.02 600.83,-366.02 606.83,-372.02 606.83,-378.02 606.83,-378.02 606.83,-407.66 606.83,-407.66 606.83,-413.66 600.83,-419.66 594.83,-419.66"/>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-404.89" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the one picked with P this session,</text>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-389.89" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">else the one updated last</text>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-374.89" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">(&quot;1/2&quot; in the lighter when there are more)</text>
+</g>
+<!-- opens&#45;&gt;chosen -->
+<g id="F22-edge12" class="edge yes">
+<title>opens&#45;&gt;chosen</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M393.3,-475.55C403.6,-461.9 417.79,-443.11 429.96,-427"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="431.68,-428.79 433.94,-421.73 427.77,-425.84 431.68,-428.79"/>
+<text xml:space="preserve" text-anchor="middle" x="435.81" y="-437.66" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- f21 -->
+<g id="F22-node13" class="node goto">
+<title>f21</title>
+<g id="F22-a_node13"><a xlink:href="#F21" xlink:title="F21" target="_top">
+<path fill="none" stroke="#c4a7e7" stroke-width="1.4" stroke-dasharray="5,2" d="M474.12,-304.52C474.12,-304.52 435.88,-304.52 435.88,-304.52 431.94,-304.52 428,-300.58 428,-296.64 428,-296.64 428,-288.76 428,-288.76 428,-284.82 431.94,-280.88 435.88,-280.88 435.88,-280.88 474.12,-280.88 474.12,-280.88 478.06,-280.88 482,-284.82 482,-288.76 482,-288.76 482,-296.64 482,-296.64 482,-300.58 478.06,-304.52 474.12,-304.52"/>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-289.75" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">F21</text>
+</a>
+</g>
+</g>
+<!-- chosen&#45;&gt;f21 -->
+<g id="F22-edge13" class="edge">
+<title>chosen&#45;&gt;f21</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M455,-365.54C455,-349.18 455,-328.47 455,-313.5"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="457.45,-313.82 455,-306.82 452.55,-313.82 457.45,-313.82"/>
+</g>
+<!-- P -->
+<g id="F22-node14" class="node user">
+<title>P</title>
+<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M521.33,-219.38C521.33,-219.38 388.68,-219.38 388.68,-219.38 384.74,-219.38 380.8,-215.44 380.8,-211.5 380.8,-211.5 380.8,-203.62 380.8,-203.62 380.8,-199.68 384.74,-195.74 388.68,-195.74 388.68,-195.74 521.33,-195.74 521.33,-195.74 525.26,-195.74 529.21,-199.68 529.21,-203.62 529.21,-203.62 529.21,-211.5 529.21,-211.5 529.21,-215.44 525.27,-219.38 521.33,-219.38"/>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-204.61" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">[user] P in the map</text>
+</g>
+<!-- f21&#45;&gt;P -->
+<!-- list -->
+<g id="F22-node15" class="node act">
+<title>list</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M658.96,-154.51C658.96,-154.51 251.04,-154.51 251.04,-154.51 245.04,-154.51 239.04,-148.51 239.04,-142.51 239.04,-142.51 239.04,-112.87 239.04,-112.87 239.04,-106.87 245.04,-100.87 251.04,-100.87 251.04,-100.87 658.96,-100.87 658.96,-100.87 664.96,-100.87 670.96,-106.87 670.96,-112.87 670.96,-112.87 670.96,-142.51 670.96,-142.51 670.96,-148.51 664.96,-154.51 658.96,-154.51"/>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-139.74" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">completing&#45;read of the branch&#39;s PRs, open first:</text>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-124.74" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">#15 SP8: the clone and its lines · open · into spike/sp8&#45;base</text>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-109.74" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">#16 SP8: a second pull request… · open · into main</text>
+</g>
+<!-- P&#45;&gt;list -->
+<g id="F22-edge14" class="edge">
+<title>P&#45;&gt;list</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M455,-195.07C455,-186.71 455,-174.91 455,-163.58"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="457.45,-163.88 455,-156.88 452.55,-163.88 457.45,-163.88"/>
+</g>
+<!-- keep -->
+<g id="F22-node16" class="node ok">
+<title>keep</title>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M564.46,-54.64C564.46,-54.64 345.55,-54.64 345.55,-54.64 339.55,-54.64 333.55,-48.64 333.55,-42.64 333.55,-42.64 333.55,-28 333.55,-28 333.55,-22 339.55,-16 345.55,-16 345.55,-16 564.46,-16 564.46,-16 570.46,-16 576.46,-22 576.46,-28 576.46,-28 576.46,-42.64 576.46,-42.64 576.46,-48.64 570.46,-54.64 564.46,-54.64"/>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-39.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">remembered for the session; every</text>
+<text xml:space="preserve" text-anchor="middle" x="455" y="-24.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">buffer of the branch shows it</text>
+</g>
+<!-- list&#45;&gt;keep -->
+<g id="F22-edge15" class="edge">
+<title>list&#45;&gt;keep</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M455,-100.55C455,-89 455,-75.42 455,-63.73"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="457.45,-64.04 455,-57.04 452.55,-64.04 457.45,-64.04"/>
+</g>
+<!-- f -->
+<g id="F22-node17" class="node user">
+<title>f</title>
+<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M1185.45,-1151.11C1185.45,-1151.11 966.54,-1151.11 966.54,-1151.11 960.54,-1151.11 954.54,-1145.11 954.54,-1139.11 954.54,-1139.11 954.54,-1124.47 954.54,-1124.47 954.54,-1118.47 960.54,-1112.47 966.54,-1112.47 966.54,-1112.47 1185.45,-1112.47 1185.45,-1112.47 1191.45,-1112.47 1197.45,-1118.47 1197.45,-1124.47 1197.45,-1124.47 1197.45,-1139.11 1197.45,-1139.11 1197.45,-1145.11 1191.45,-1151.11 1185.45,-1151.11"/>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-1136.34" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">[user] f on a diff line, a thread</text>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-1121.34" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">or a file of the PR buffer</text>
+</g>
+<!-- clones -->
+<g id="F22-node18" class="node act">
+<title>clones</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M1229.33,-1071.24C1229.33,-1071.24 922.67,-1071.24 922.67,-1071.24 916.67,-1071.24 910.67,-1065.24 910.67,-1059.24 910.67,-1059.24 910.67,-1044.6 910.67,-1044.6 910.67,-1038.6 916.67,-1032.6 922.67,-1032.6 922.67,-1032.6 1229.33,-1032.6 1229.33,-1032.6 1235.33,-1032.6 1241.33,-1038.6 1241.33,-1044.6 1241.33,-1044.6 1241.33,-1059.24 1241.33,-1059.24 1241.33,-1065.24 1235.33,-1071.24 1229.33,-1071.24"/>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-1056.47" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the clones of approve&#45;clone&#45;directories</text>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-1041.47" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">whose remotes name the base or head repository</text>
+</g>
+<!-- f&#45;&gt;clones -->
+<g id="F22-edge16" class="edge">
+<title>f&#45;&gt;clones</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1076,-1111.94C1076,-1102.54 1076,-1090.99 1076,-1080.61"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1078.45,-1080.69 1076,-1073.69 1073.55,-1080.69 1078.45,-1080.69"/>
+</g>
+<!-- refs -->
+<g id="F22-node19" class="node act">
+<title>refs</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M1263.08,-966.65C1263.08,-966.65 888.92,-966.65 888.92,-966.65 882.92,-966.65 876.92,-960.65 876.92,-954.65 876.92,-954.65 876.92,-940.01 876.92,-940.01 876.92,-934.01 882.92,-928.01 888.92,-928.01 888.92,-928.01 1263.08,-928.01 1263.08,-928.01 1269.08,-928.01 1275.08,-934.01 1275.08,-940.01 1275.08,-940.01 1275.08,-954.65 1275.08,-954.65 1275.08,-960.65 1269.08,-966.65 1263.08,-966.65"/>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-951.88" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">for&#45;each&#45;ref in each: the branches that push to</text>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-936.88" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the PR&#39;s head branch, else track it, and their worktrees</text>
+</g>
+<!-- clones&#45;&gt;refs -->
+<g id="F22-edge17" class="edge">
+<title>clones&#45;&gt;refs</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1076,-1032.11C1076,-1016.34 1076,-993.63 1076,-975.82"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1078.45,-975.84 1076,-968.84 1073.55,-975.84 1078.45,-975.84"/>
+</g>
+<!-- count -->
+<g id="F22-node20" class="node dec">
+<title>count</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="1147.57,-842.73 1111.79,-874.28 1040.21,-874.28 1004.43,-842.73 1040.21,-811.18 1111.79,-811.18 1147.57,-842.73"/>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-847.28" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">how many</text>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-832.28" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">worktrees?</text>
+</g>
+<!-- refs&#45;&gt;count -->
+<g id="F22-edge18" class="edge">
+<title>refs&#45;&gt;count</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1076,-927.51C1076,-915.22 1076,-898.72 1076,-883.61"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1078.45,-883.73 1076,-876.73 1073.55,-883.73 1078.45,-883.73"/>
+</g>
+<!-- nowt -->
+<g id="F22-node21" class="node err">
+<title>nowt</title>
+<path fill="#2a273f" stroke="#eb6f92" stroke-width="1.4" d="M1060.95,-692.58C1060.95,-692.58 815.04,-692.58 815.04,-692.58 809.04,-692.58 803.04,-686.58 803.04,-680.58 803.04,-680.58 803.04,-665.94 803.04,-665.94 803.04,-659.94 809.04,-653.94 815.04,-653.94 815.04,-653.94 1060.95,-653.94 1060.95,-653.94 1066.95,-653.94 1072.95,-659.94 1072.95,-665.94 1072.95,-665.94 1072.95,-680.58 1072.95,-680.58 1072.95,-686.58 1066.95,-692.58 1060.95,-692.58"/>
+<text xml:space="preserve" text-anchor="middle" x="938" y="-677.81" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">&quot;No clone has spike/sp8 checked out;</text>
+<text xml:space="preserve" text-anchor="middle" x="938" y="-662.81" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">show the file view instead? (y or n)&quot;</text>
+</g>
+<!-- count&#45;&gt;nowt -->
+<g id="F22-edge19" class="edge no">
+<title>count&#45;&gt;nowt</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1023.88,-824.75C997.44,-813.39 967.34,-795.67 950,-769.68 936.74,-749.8 934.56,-722.34 935.21,-701.97"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="937.65,-702.1 935.58,-694.98 932.76,-701.84 937.65,-702.1"/>
+<text xml:space="preserve" text-anchor="middle" x="989.65" y="-787.68" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> none</text>
+</g>
+<!-- several -->
+<g id="F22-node23" class="node act">
+<title>several</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M1178.7,-764.95C1178.7,-764.95 973.29,-764.95 973.29,-764.95 967.29,-764.95 961.29,-758.95 961.29,-752.95 961.29,-752.95 961.29,-723.31 961.29,-723.31 961.29,-717.31 967.29,-711.31 973.29,-711.31 973.29,-711.31 1178.7,-711.31 1178.7,-711.31 1184.7,-711.31 1190.7,-717.31 1190.7,-723.31 1190.7,-723.31 1190.7,-752.95 1190.7,-752.95 1190.7,-758.95 1184.7,-764.95 1178.7,-764.95"/>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-750.18" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the one that pushes there;</text>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-735.18" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">still several: completing&#45;read,</text>
+<text xml:space="preserve" text-anchor="middle" x="1076" y="-720.18" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">remembered for the session</text>
+</g>
+<!-- count&#45;&gt;several -->
+<g id="F22-edge21" class="edge">
+<title>count&#45;&gt;several</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1076,-810.67C1076,-799.2 1076,-786.12 1076,-774.32"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1078.45,-774.4 1076,-767.4 1073.55,-774.4 1078.45,-774.4"/>
+<text xml:space="preserve" text-anchor="middle" x="1100" y="-787.68" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> several</text>
+</g>
+<!-- there -->
+<g id="F22-node24" class="node dec">
+<title>there</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="1287.13,-605.62 1237.57,-624.92 1138.43,-624.92 1088.87,-605.62 1138.43,-586.32 1237.57,-586.32 1287.13,-605.62"/>
+<text xml:space="preserve" text-anchor="middle" x="1188" y="-602.67" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the file there?</text>
+</g>
+<!-- count&#45;&gt;there -->
+<g id="F22-edge22" class="edge">
+<title>count&#45;&gt;there</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1129.12,-825.71C1156.03,-814.6 1186.26,-796.81 1202,-769.68 1226.64,-727.2 1211.63,-667.74 1199.27,-633.61"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1201.62,-632.88 1196.85,-627.2 1197.03,-634.61 1201.62,-632.88"/>
+<text xml:space="preserve" text-anchor="middle" x="1227.25" y="-735.38" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> one</text>
+</g>
+<!-- f15 -->
+<g id="F22-node22" class="node goto">
+<title>f15</title>
+<g id="F22-a_node22"><a xlink:href="#F15" xlink:title="F15 &#160;the file view" target="_top">
+<path fill="none" stroke="#c4a7e7" stroke-width="1.4" stroke-dasharray="5,2" d="M1011.95,-404.66C1011.95,-404.66 886.05,-404.66 886.05,-404.66 882.11,-404.66 878.17,-400.72 878.17,-396.78 878.17,-396.78 878.17,-388.9 878.17,-388.9 878.17,-384.96 882.11,-381.02 886.05,-381.02 886.05,-381.02 1011.95,-381.02 1011.95,-381.02 1015.89,-381.02 1019.83,-384.96 1019.83,-388.9 1019.83,-388.9 1019.83,-396.78 1019.83,-396.78 1019.83,-400.72 1015.89,-404.66 1011.95,-404.66"/>
+<text xml:space="preserve" text-anchor="middle" x="949" y="-389.89" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">F15 &#160;the file view</text>
+</a>
+</g>
+</g>
+<!-- nowt&#45;&gt;f15 -->
+<g id="F22-edge20" class="edge">
+<title>nowt&#45;&gt;f15</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M912.43,-653.42C865.23,-616.28 773,-531.12 816,-461.16 832.34,-434.57 862.8,-418.09 890.45,-408.1"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="891,-410.5 896.82,-405.92 889.41,-405.87 891,-410.5"/>
+<text xml:space="preserve" text-anchor="middle" x="827.44" y="-547.8" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> y</text>
+</g>
+<!-- ret -->
+<g id="F22-node27" class="node user">
+<title>ret</title>
+<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M1021.33,-312.02C1021.33,-312.02 876.67,-312.02 876.67,-312.02 870.67,-312.02 864.67,-306.02 864.67,-300.02 864.67,-300.02 864.67,-285.38 864.67,-285.38 864.67,-279.38 870.67,-273.38 876.67,-273.38 876.67,-273.38 1021.33,-273.38 1021.33,-273.38 1027.33,-273.38 1033.33,-279.38 1033.33,-285.38 1033.33,-285.38 1033.33,-300.02 1033.33,-300.02 1033.33,-306.02 1027.33,-312.02 1021.33,-312.02"/>
+<text xml:space="preserve" text-anchor="middle" x="949" y="-297.25" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">[user] RET in the map,</text>
+<text xml:space="preserve" text-anchor="middle" x="949" y="-282.25" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">in a file&#39;s buffer</text>
+</g>
+<!-- f15&#45;&gt;ret -->
+<!-- several&#45;&gt;there -->
+<g id="F22-edge23" class="edge">
+<title>several&#45;&gt;there</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1098.66,-710.72C1118.36,-687.77 1146.7,-654.74 1166.15,-632.07"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1168,-633.68 1170.7,-626.77 1164.29,-630.49 1168,-633.68"/>
+</g>
+<!-- nofile -->
+<g id="F22-node25" class="node err">
+<title>nofile</title>
+<path fill="#2a273f" stroke="#eb6f92" stroke-width="1.4" d="M1084.95,-514.8C1084.95,-514.8 839.04,-514.8 839.04,-514.8 833.04,-514.8 827.04,-508.8 827.04,-502.8 827.04,-502.8 827.04,-488.16 827.04,-488.16 827.04,-482.16 833.04,-476.16 839.04,-476.16 839.04,-476.16 1084.95,-476.16 1084.95,-476.16 1090.95,-476.16 1096.95,-482.16 1096.95,-488.16 1096.95,-488.16 1096.95,-502.8 1096.95,-502.8 1096.95,-508.8 1090.95,-514.8 1084.95,-514.8"/>
+<text xml:space="preserve" text-anchor="middle" x="962" y="-500.03" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">&quot;sp8/lines.txt isn&#39;t in /tmp/wt;</text>
+<text xml:space="preserve" text-anchor="middle" x="962" y="-485.03" font-family="JetBrains Mono" font-size="11.00" fill="#eb6f92">show the file view instead? (y or n)&quot;</text>
+</g>
+<!-- there&#45;&gt;nofile -->
+<g id="F22-edge24" class="edge no">
+<title>there&#45;&gt;nofile</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1148.38,-585.66C1109.6,-567.11 1050.53,-538.84 1009.32,-519.12"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1010.59,-517.01 1003.22,-516.2 1008.47,-521.43 1010.59,-517.01"/>
+<text xml:space="preserve" text-anchor="middle" x="1097.53" y="-547.8" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
+</g>
+<!-- visit -->
+<g id="F22-node26" class="node ok">
+<title>visit</title>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M1457.45,-529.8C1457.45,-529.8 1130.55,-529.8 1130.55,-529.8 1124.55,-529.8 1118.55,-523.8 1118.55,-517.8 1118.55,-517.8 1118.55,-473.16 1118.55,-473.16 1118.55,-467.16 1124.55,-461.16 1130.55,-461.16 1130.55,-461.16 1457.45,-461.16 1457.45,-461.16 1463.45,-461.16 1469.45,-467.16 1469.45,-473.16 1469.45,-473.16 1469.45,-517.8 1469.45,-517.8 1469.45,-523.8 1463.45,-529.8 1457.45,-529.8"/>
+<text xml:space="preserve" text-anchor="middle" x="1294" y="-515.03" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">visit it in the worktree, the mode on (F21)</text>
+<text xml:space="preserve" text-anchor="middle" x="1294" y="-500.03" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">point on GitHub&#39;s line mapped onto the buffer,</text>
+<text xml:space="preserve" text-anchor="middle" x="1294" y="-485.03" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">its threads unfolded (an edited line: the line in</text>
+<text xml:space="preserve" text-anchor="middle" x="1294" y="-470.03" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">its place, the echo area says so)</text>
+</g>
+<!-- there&#45;&gt;visit -->
+<g id="F22-edge26" class="edge yes">
+<title>there&#45;&gt;visit</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M1206.46,-585.78C1219.78,-572.2 1238.24,-553.37 1254.78,-536.49"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1256.35,-538.39 1259.5,-531.68 1252.85,-534.96 1256.35,-538.39"/>
+<text xml:space="preserve" text-anchor="middle" x="1259.35" y="-547.8" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- nofile&#45;&gt;f15 -->
+<g id="F22-edge25" class="edge">
+<title>nofile&#45;&gt;f15</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M959.55,-475.55C957.27,-457.9 953.89,-431.67 951.57,-413.72"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="954.02,-413.61 950.7,-406.98 949.16,-414.24 954.02,-413.61"/>
+<text xml:space="preserve" text-anchor="middle" x="961.5" y="-437.66" font-family="JetBrains Mono" font-size="10.00" fill="#908caa"> y</text>
+</g>
+<!-- prbuf -->
+<g id="F22-node28" class="node act">
+<title>prbuf</title>
+<path fill="#2a273f" stroke="#393552" stroke-width="1.4" d="M1075.33,-226.88C1075.33,-226.88 822.67,-226.88 822.67,-226.88 816.67,-226.88 810.67,-220.88 810.67,-214.88 810.67,-214.88 810.67,-200.24 810.67,-200.24 810.67,-194.24 816.67,-188.24 822.67,-188.24 822.67,-188.24 1075.33,-188.24 1075.33,-188.24 1081.33,-188.24 1087.33,-194.24 1087.33,-200.24 1087.33,-200.24 1087.33,-214.88 1087.33,-214.88 1087.33,-220.88 1081.33,-226.88 1075.33,-226.88"/>
+<text xml:space="preserve" text-anchor="middle" x="949" y="-212.11" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the PR buffer</text>
+<text xml:space="preserve" text-anchor="middle" x="949" y="-197.11" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">(opened if need be, on the same store)</text>
+</g>
+<!-- ret&#45;&gt;prbuf -->
+<g id="F22-edge27" class="edge">
+<title>ret&#45;&gt;prbuf</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M949,-272.83C949,-261.99 949,-248.18 949,-236.13"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="951.45,-236.17 949,-229.17 946.55,-236.17 951.45,-236.17"/>
+</g>
+<!-- indiff -->
+<g id="F22-node29" class="node dec">
+<title>indiff</title>
+<polygon fill="#2a283e" stroke="#c4a7e7" stroke-width="1.4" points="1097.73,-127.69 1023.37,-159.24 874.63,-159.24 800.27,-127.69 874.63,-96.14 1023.37,-96.14 1097.73,-127.69"/>
+<text xml:space="preserve" text-anchor="middle" x="949" y="-132.24" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">the line at point as on</text>
+<text xml:space="preserve" text-anchor="middle" x="949" y="-117.24" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">GitHub, and in the diff?</text>
+</g>
+<!-- prbuf&#45;&gt;indiff -->
+<g id="F22-edge28" class="edge">
+<title>prbuf&#45;&gt;indiff</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M949,-187.71C949,-181.82 949,-175.09 949,-168.33"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="951.45,-168.63 949,-161.63 946.55,-168.63 951.45,-168.63"/>
+</g>
+<!-- line -->
+<g id="F22-node30" class="node ok">
+<title>line</title>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M937.96,-54.64C937.96,-54.64 800.04,-54.64 800.04,-54.64 794.04,-54.64 788.04,-48.64 788.04,-42.64 788.04,-42.64 788.04,-28 788.04,-28 788.04,-22 794.04,-16 800.04,-16 800.04,-16 937.96,-16 937.96,-16 943.96,-16 949.96,-22 949.96,-28 949.96,-28 949.96,-42.64 949.96,-42.64 949.96,-48.64 943.96,-54.64 937.96,-54.64"/>
+<text xml:space="preserve" text-anchor="middle" x="869" y="-39.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the line in the diff,</text>
+<text xml:space="preserve" text-anchor="middle" x="869" y="-24.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">its threads unfolded</text>
+</g>
+<!-- indiff&#45;&gt;line -->
+<g id="F22-edge29" class="edge yes">
+<title>indiff&#45;&gt;line</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M921.47,-95.59C911.59,-84.43 900.58,-71.99 891.21,-61.4"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="893.28,-60.06 886.81,-56.44 889.62,-63.3 893.28,-60.06"/>
+<text xml:space="preserve" text-anchor="middle" x="921" y="-72.64" font-family="JetBrains Mono" font-size="10.00" fill="#9ccfd8"> yes</text>
+</g>
+<!-- head -->
+<g id="F22-node31" class="node ok">
+<title>head</title>
+<path fill="#2a273f" stroke="#9ccfd8" stroke-width="1.4" d="M1121.95,-54.64C1121.95,-54.64 984.04,-54.64 984.04,-54.64 978.04,-54.64 972.04,-48.64 972.04,-42.64 972.04,-42.64 972.04,-28 972.04,-28 972.04,-22 978.04,-16 984.04,-16 984.04,-16 1121.95,-16 1121.95,-16 1127.95,-16 1133.95,-22 1133.95,-28 1133.95,-28 1133.95,-42.64 1133.95,-42.64 1133.95,-48.64 1127.95,-54.64 1121.95,-54.64"/>
+<text xml:space="preserve" text-anchor="middle" x="1053" y="-39.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">the file&#39;s heading</text>
+<text xml:space="preserve" text-anchor="middle" x="1053" y="-24.87" font-family="JetBrains Mono" font-size="11.00" fill="#e0def4">in the diff, unfolded</text>
+</g>
+<!-- indiff&#45;&gt;head -->
+<g id="F22-edge30" class="edge no">
+<title>indiff&#45;&gt;head</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M984.79,-95.59C997.88,-84.22 1012.49,-71.52 1024.82,-60.81"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="1026.36,-62.71 1030.04,-56.27 1023.15,-59.01 1026.36,-62.71"/>
+<text xml:space="preserve" text-anchor="middle" x="1022.37" y="-72.64" font-family="JetBrains Mono" font-size="10.00" fill="#eb6f92"> no</text>
 </g>
 </g>
 </svg>

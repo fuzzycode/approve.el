@@ -583,6 +583,56 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   reviewer could first have seen it.  One look for everything new (the
   commits already had it) makes it one thing to learn.
 
+** D46 The feedback mode: no keys of its own, threads folded, the mode line speaks
+- Status :: proposed (2026-11-16).  The author chose: no default prefix,
+  every thread folded, the mode line only.  The rest is in the mockups
+  (ui.org, html/clone.html) and waits for their review.
+- Decision ::
+  - The feedback mode ([[file:flows.org::*F21 Review feedback in a file you edit][F21]]) binds no key in the user's buffers, except
+    evil's =]t= and =[t= (next and previous thread, as in Approve's
+    buffers; they are not motions, [[*D17 Evil is supported, never required][D17]]).  Its commands are in
+    =approve-feedback-command-map=, for the user to bind, under a leader
+    key for example.  =approve-feedback-dispatch= lists them all;
+    =M-x= or mouse-1 on the lighter opens it.  The map uses Approve's
+    letters: =TAB T n p c s r R e k + RET P g o S X ?=.  Thread boxes in
+    a file's buffer name no keys; the dispatch does.
+  - Every thread starts folded to the bubble at the end of its line.  The
+    bubble counts the line's threads and says what is special about
+    them: "edited" (the line changed here), "outdated", "removed lines".
+    It is red while a thread asks for changes ([[*D34 A thread mark is red only while it asks for changes][D34]]) and dim when all
+    are resolved.  =TAB= in the map, or mouse-1 on the bubble, unfolds a
+    line, and =T= unfolds all; =n=, =p=, =]t= and =[t= unfold the thread
+    they reach.  Unfolded, an edited line's threads start with GitHub's
+    text of the line, an outdated thread with its line at its own
+    commit, and a thread on removed lines with those lines.
+  - The mark for removed lines is in the right fringe (the left one is
+    diff-hl's, Flymake's and the like), and the bubble says it too.  In a
+    terminal only the bubble does.
+  - Approve speaks in the mode line: a lighter with the PR's icon and
+    number.  It adds the file's unresolved threads, =1/2= when the branch
+    has more open PRs, and =↑N= / =↓N= for commits not pushed and not
+    pulled (both when diverged, =↓?= when GitHub's head isn't in the
+    clone).  It shows =…= while the PR loads, =↻= when GitHub has
+    changes ([[*D23 Remote changes are announced, never auto-applied][D23]]), and =merged= or =closed= when the command took one.
+    Its tooltip says all of it in words.  The header line is left alone,
+    and messages go to the echo area.
+  - In the PR buffer and the file view, =f= (evil =gF=) opens the line,
+    thread or file at point in the clone ([[file:flows.org::*F22 Find a buffer's PR, and a PR's clone][F22]]).  =F= and =gf= still
+    open Approve's file view.
+- Why ::
+  - The user's buffers have their own keys, and only the user knows
+    where Approve's fit: Org takes almost every =C-c= and punctuation
+    key, which Emacs leaves to minor modes.  A keymap to bind is how
+    Projectile and others do it, and the dispatch makes every command
+    reachable without a binding.  Going to the next thread is the first
+    thing wanted, and evil's =]= keys already mean "the next thing".
+  - Folded threads keep the code's shape while it is edited.  The bubbles
+    say where feedback is, and the lighter how much.
+  - The header line belongs to the buffer's other modes (breadcrumbs,
+    LSP), and the mode line has room for a lighter.
+  - Vim's =gF= opens a file at a line, and =f= next to =F= reads as "your
+    file" next to Approve's.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)

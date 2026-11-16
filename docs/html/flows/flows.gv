@@ -450,6 +450,110 @@ ctx -> desc; desc -> none [@no]; desc -> build [@yes];
 build -> need; need -> show [@no]; need -> load [@yes];
 load -> q -> okq; okq -> fail [@no]; okq -> full [@yes];
 
+%% F21
+subgraph cluster_on { label="turning on";
+  cmd    [label="[user] M-x approve-feedback-mode\nin a file's buffer" @user];
+  glob   [label="a file opens, with\napprove-feedback-global-mode on"];
+  f22    [label="F22  the buffer's PR" @goto, href="#F22"];
+  one    [label="a PR?" @dec];
+  nopr   [label="the command: \"No pull request for spike/x\"\nthe global mode: nothing" @err];
+  open   [label="open?" @dec];
+  ask    [label="the command asks: \"#14 is merged:\nshow its threads anyway?\"\nthe global mode: nothing" @dec];
+  off    [label="the mode stays off" @note];
+  cmd -> f22; glob -> f22; f22 -> one; one -> nopr [@no]; one -> open [@yes];
+  open -> ask [@no]; ask -> off [@no];
+}
+loaded [label="the PR's store loaded?\n(its PR buffer, or another\nfile of the clone)" @dec];
+load   [label="F02  load it in the background, once\nthe lighter says \"#15 …\"" @goto, href="#F02"];
+has    [label="the clone has\nGitHub's head commit?" @dec];
+git    [label="git cat-file OID:PATH"];
+blob   [label="the file through the API\n(the file view's cache)" @api];
+run    [label="diff it against the buffer's text\nasynchronous, temporary files (D45)"];
+show   [label="threads as overlays, folded to their bubble (D46):\nunchanged line: under it · changed here: under the line\nin its place, \"edited\" · deleted here: where it was\noutdated: where it was · removed lines: between lines\nwhole file: above the first line\nlighter: \" #15\", unresolved threads, the clone's state" @ok];
+open -> loaded [@yes]; ask -> loaded [@yes];
+changes [label="the PR changes this\nfile, or threads on it?" @dec];
+alone  [label="the lighter alone" @note];
+loaded -> load [@no]; loaded -> changes [@yes]; load -> changes;
+changes -> alone [@no]; changes -> has [@yes];
+has -> git [@yes]; has -> blob [@no]; git -> run; blob -> run; run -> show;
+
+life   [label="while the buffer lives:\l\
+  [user] edits → the overlays move with the text; once Emacs is idle,\l\
+      the diff again (coalesced; an answer for older text is dropped)\l\
+  HEAD moves (a commit, a checkout, a pull) → the branch's PR again (F22):\l\
+      the same: the clone's state again · another: its threads · none: overlays go\l\
+  D23's check (focus, timer) → ↻ in the lighter; [user] g in the map → F17\l\
+  [user] TAB · T in the map, mouse-1 on a bubble → unfold / fold the line, or all\l\
+  [user] n / p in the map (evil ]t / [t) → the next / previous unresolved\l\
+      thread, unfolded; past the file's last, the PR's next file, in the clone\l" @note];
+show -> life [style=dashed];
+
+subgraph cluster_act { label="actions (Phase 7's later tasks)";
+  act    [label="[user] r R e k + on the line's threads\nc s on the line or region" @user];
+  sev    [label="several threads\non the line?" @dec];
+  pick   [label="completing-read:\n\"@bob: Should this be configurable…\""];
+  lines  [label="c, s: every line as on\nGitHub, and in the PR's diff?" @dec];
+  why    [label="\"Line 41 was edited here; GitHub takes\ncomments only on its own lines\", or\n\"… isn't in the pull request's diff\"" @err];
+  flows  [label="F05 F06 F07 F08 F11\non GitHub's lines → F00" @goto, href="#F00"];
+  redraw [label="the store patched: every buffer\nof the PR redrawn (PR buffer,\nfile views, the clone's)" @ok];
+  act -> sev; sev -> pick [@yes]; sev -> lines [@no]; pick -> lines;
+  lines -> why [@no]; lines -> flows [@yes]; flows -> redraw;
+}
+show -> act [style=dashed];
+
+%% F22
+subgraph cluster_pr { label="a buffer's PR";
+  why    [label="a file's buffer: the mode turns on,\nHEAD moved, or [user] P (pick)" @user];
+  dotgit [label="a .git above\nthe file?" @dec];
+  none   [label="no PR\n(0.02 ms)" @note];
+  remote [label="a remote on\na GitHub host?" @dec];
+  hosts  [label="from the config file: github.com,\napprove-api-host's; an SSH alias\nthrough ssh -G once a session" @note];
+  none2  [label="no PR" @note];
+  branch [label="git: the toplevel and the branch; its head on GitHub =\nthe push branch, else the upstream, else the same\nname on the push remote (a detached HEAD: no PR)"];
+  asked  [label="asked this session?\n(repository, branch)" @dec];
+  query  [label="query, cost 1: the head repository's\nref(\"refs/heads/BRANCH\").associatedPullRequests,\npullRequests(headRefName) on it and its parent,\nkept when their head repository is the branch's" @api];
+  opens  [label="open ones?" @dec];
+  closed [label="the closed and merged ones\n(F21: the command asks)" @note];
+  chosen [label="the one picked with P this session,\nelse the one updated last\n(\"1/2\" in the lighter when there are more)" @ok];
+  f21    [label="F21" @goto, href="#F21"];
+  why -> dotgit; dotgit -> none [@no]; dotgit -> remote [@yes];
+  remote -> hosts [style=dotted, arrowhead=none];
+  remote -> none2 [@no]; remote -> branch [@yes]; branch -> asked;
+  asked -> opens [@yes]; asked -> query [@no]; query -> opens;
+  opens -> closed [@no]; opens -> chosen [@yes]; chosen -> f21;
+}
+subgraph cluster_P { label="P — pick another";
+  P      [label="[user] P in the map" @user];
+  list   [label="completing-read of the branch's PRs, open first:\n#15 SP8: the clone and its lines · open · into spike/sp8-base\n#16 SP8: a second pull request… · open · into main"];
+  keep   [label="remembered for the session; every\nbuffer of the branch shows it" @ok];
+  P -> list -> keep;
+}
+subgraph cluster_f { label="f — a PR's line in your clone (evil: gF)";
+  f      [label="[user] f on a diff line, a thread\nor a file of the PR buffer" @user];
+  clones [label="the clones of approve-clone-directories\nwhose remotes name the base or head repository"];
+  refs   [label="for-each-ref in each: the branches that push to\nthe PR's head branch, else track it, and their worktrees"];
+  count  [label="how many\nworktrees?" @dec];
+  nowt   [label="\"No clone has spike/sp8 checked out;\nshow the file view instead? (y or n)\"" @err];
+  f15    [label="F15  the file view" @goto, href="#F15"];
+  several [label="the one that pushes there;\nstill several: completing-read,\nremembered for the session"];
+  there  [label="the file there?" @dec];
+  nofile [label="\"sp8/lines.txt isn't in /tmp/wt;\nshow the file view instead? (y or n)\"" @err];
+  visit  [label="visit it in the worktree, the mode on (F21)\npoint on GitHub's line mapped onto the buffer,\nits threads unfolded (an edited line: the line in\nits place, the echo area says so)" @ok];
+  f -> clones -> refs -> count;
+  count -> nowt [label=" none", class="no", fontcolor="#eb6f92"]; nowt -> f15 [label=" y"];
+  count -> several [label=" several"]; count -> there [label=" one"]; several -> there;
+  there -> nofile [@no]; nofile -> f15 [label=" y"]; there -> visit [@yes];
+}
+subgraph cluster_ret { label="RET in the map — back to the PR buffer";
+  ret    [label="[user] RET in the map,\nin a file's buffer" @user];
+  prbuf  [label="the PR buffer\n(opened if need be, on the same store)"];
+  indiff [label="the line at point as on\nGitHub, and in the diff?" @dec];
+  line   [label="the line in the diff,\nits threads unfolded" @ok];
+  head   [label="the file's heading\nin the diff, unfolded" @ok];
+  ret -> prbuf -> indiff; indiff -> line [@yes]; indiff -> head [@no];
+}
+f21 -> P [style=invis]; f15 -> ret [style=invis];
+
 %% F23
 subgraph cluster_x { label="x — commit (evil: a)";
   x      [label="[user] x on a suggestion" @user];

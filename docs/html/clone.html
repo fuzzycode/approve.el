@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — review feedback in your clone</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html">PR buffer</a>
+    <a href="review.html">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html">Managing &amp; more</a>
+    <a href="clone.html" aria-current="page">Your clone</a>
+    <a href="flows.html">Flows</a>
+    <a href="icons.html">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>Review feedback in your clone</h1>
+<p class="lead">A pull request's threads in your own buffers of its files, on a branch with the PR checked out
+(Phase 7, F21, F22, D45, D46). The buffer stays yours: its mode, hooks and keys. Approve adds overlays and a
+mode-line lighter, and never changes the text.
+<span class="hint-click">Click a line with a bubble to unfold its threads, like <code>TAB</code> in the map.</span></p>
+
+<ul class="toc">
+  <li><a href="#buffer">A file's buffer, as it opens</a></li>
+  <li><a href="#unfolded">A line's threads, unfolded</a></li>
+  <li><a href="#file-threads">Threads on the whole file</a></li>
+  <li><a href="#lighter">The mode line</a></li>
+  <li><a href="#dispatch">Feedback dispatch</a></li>
+  <li><a href="#keys">Keys</a></li>
+  <li><a href="#find">Finding the PR and the clone</a></li>
+</ul>
+
+<!-- ================================================================== -->
+<section class="shot" id="buffer">
+<h2>A file's buffer, as it opens <span class="ref">approve-feedback-mode · F21 · D45 · D46</span></h2>
+<p>Pull request #1234 of fuzzycode/approve, from <code>feature/retry</code>, with one commit not pushed and line 41
+edited since. Every thread starts folded to the bubble at the end of its line, so code keeps its shape while it is
+edited. The bubble counts the line's threads and says what is special about them.</p>
+<div class="emacs">
+<div class="tb">approve-api.el — ~/workspace/approve</div>
+<div class="win">
+<div class="buf">
+<p>  <span class="ln">36</span> (<span class="kw">cl-defun</span> <span class="fn">approve-api-graphql</span> (query variables</p>
+<p>  <span class="ln">37</span>                               <span class="vr">&amp;key</span> callback error-callback)</p>
+<p>  <span class="ln">38</span>   <span class="st">"Send QUERY with VARIABLES; call CALLBACK with the data."</span></p>
+<p>  <span class="ln">39</span>   (<span class="kw">let*</span> ((request-id (approve-api--generate-request-id))</p>
+<div class="s closed">
+<p class="hd">  <span class="ln">40</span>          (timeout approve-api-timeout)                                        <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<div class="sb">
+<p>          <span class="d">╭─</span> <span class="u">@dave</span> <span class="d">· 1 day ago ─────────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Should the timeout be per request too?</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd cur">  <span class="ln">41</span>          (retries (approve-api--retries)))                             <span class="wa">edited</span> <span class="er"><i data-i="comment">💬</i> 2</span></p>
+<div class="sb">
+<p>          <span class="d">┊ on GitHub:</span>   <span class="er">(retries approve-api-retries))</span></p>
+<p>          <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Should this be configurable per call?</p>
+<p>          <span class="d">│</span></p>
+<p>          <span class="d">│</span> <span class="u">@fuzzycode</span> <span class="d">· yesterday</span></p>
+<p>          <span class="d">│</span> Yes: <span class="code">approve-api--retries</span> reads the option now.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+<p>          <span class="d">╭─</span> <span class="u">@carol</span> <span class="d">· 5 hours ago ──────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Cap it: three retries at most.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd">  <span class="ln">42</span>     (<span class="kw">when</span> progress-message                                           <span class="d">outdated</span> <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<div class="sb">
+<p>          <span class="d">┊ at 3f2a1b9:</span>  <span class="d">(when (and progress-message (not quiet))</span></p>
+<p>          <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 4 days ago · outdated ──────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Why <span class="code">quiet</span>? Nothing sets it.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+</div>
+</div>
+<p>  <span class="ln">43</span>       (make-progress-reporter progress-message))</p>
+<div class="s closed">
+<p class="hd">  <span class="ln">44</span>     <span class="cm">;; Remember the request so it can be cancelled.</span>             <span class="d">removed lines</span> <span class="bubble"><i data-i="comment">💬</i> 1</span><span class="fr-del" style="float: right">◂</span></p>
+<div class="sb">
+<p>          <span class="d">┊ removed:</span>     <span class="er">(setq request (approve-api--make-request query))</span></p>
+<p>          <span class="d">╭─</span> <span class="u">@alice</span> <span class="d">· 2 days ago ───────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Who builds the request now?</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+</div>
+</div>
+<p>  <span class="ln">45</span>     (puthash request-id (list <span class="vr">:timer</span> timer <span class="vr">:buffer</span> buffer)</p>
+<p>  <span class="ln">46</span>              approve-api--pending-requests)</p>
+<div class="s closed">
+<p class="hd">  <span class="ln">47</span>     (<span class="fn">apply</span> #'ghub-graphql query variables <span class="st">"…"</span>)))                              <span class="d"><i data-i="comment">💬</i> 1</span></p>
+<div class="sb">
+<p>          <span class="d">╭─ @dave · 3 days ago · resolved by @fuzzycode ───────────────────</span></p>
+<p>          <span class="d">│ Pass the host too.</span></p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+</div>
+</div>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>4 <span class="wa">↑1</span></div>
+</div>
+<div class="echo"></div>
+</div>
+<ul>
+  <li>The bubble is red while a thread asks for changes (D34: @carol's came with a review that requested changes),
+  and dim when all are resolved (line 47). <span class="wa">edited</span>: the line changed here since GitHub's head;
+  <span class="d">outdated</span>: shown where it was, at its own commit; <span class="d">removed lines</span>: on lines the
+  PR removed, which were after this one.</li>
+  <li>Removed lines have the file view's triangle <span class="fr-del">◂</span> in the <em>right</em> fringe: the left
+  one is diff-hl's, Flymake's and the like. In a terminal only the bubble says it. Nothing else marks the PR's changes:
+  the buffer is for editing, and diff-hl or Magit show what changed.</li>
+  <li>The boxes are the file view's, and name no keys: the dispatch does. Point never enters them; the commands act on
+  the threads of the line at point, and ask which one when there are several.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="unfolded">
+<h2>A line's threads, unfolded <span class="ref">TAB in the map · mouse-1 on a bubble</span></h2>
+<p>An edited line's threads start with GitHub's text of the line; an outdated one's with the line as it was at its
+commit; one on removed lines with those lines.</p>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<p>  <span class="ln">40</span>          (timeout approve-api-timeout)                                        <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<p class="cur">  <span class="ln">41</span>          (retries (approve-api--retries)))                             <span class="wa">edited</span> <span class="er"><i data-i="comment">💬</i> 2</span></p>
+<p>          <span class="d">┊ on GitHub:</span>   <span class="er">(retries approve-api-retries))</span></p>
+<p>          <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Should this be configurable per call?</p>
+<p>          <span class="d">│</span></p>
+<p>          <span class="d">│</span> <span class="u">@fuzzycode</span> <span class="d">· yesterday</span></p>
+<p>          <span class="d">│</span> Yes: <span class="code">approve-api--retries</span> reads the option now.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+<p>          <span class="d">╭─</span> <span class="u">@carol</span> <span class="d">· 5 hours ago ──────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Cap it: three retries at most.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+<p>  <span class="ln">42</span>     (<span class="kw">when</span> progress-message                                           <span class="d">outdated</span> <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>4 <span class="wa">↑1</span></div>
+</div>
+<div class="echo"></div>
+</div>
+<ul>
+  <li><code>T</code> in the map unfolds or folds every thread. <code>n</code>/<code>p</code> in the map (evil:
+  <code>]t</code>/<code>[t</code>) go to the next or previous unresolved thread and unfold it; past the last one of
+  the file, the next of the PR's files opens in the clone.</li>
+  <li><code>c</code> on line 41 says "Line 41 was edited here; GitHub takes comments only on its own lines".</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="file-threads">
+<h2>Threads on the whole file <span class="ref">above the first line</span></h2>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<div class="s closed">
+<p class="hd">     <span class="d">On this file</span>                                                                  <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<div class="sb">
+<p>          <span class="d">╭─</span> <span class="u">@carol</span> <span class="d">· 3 days ago ───────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Please add tests for the retry path.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+</div>
+</div>
+<p>  <span class="ln"> 1</span> <span class="cm">;;; approve-api.el --- Talk to GitHub's API  -*- lexical-binding: t; -*-</span></p>
+<p>  <span class="ln"> 2</span></p>
+<p>  <span class="ln"> 3</span> <span class="cm">;; Copyright (c) 2026 Björn Larsson</span></p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="lighter">
+<h2>The mode line <span class="ref">D46 · the header line is left alone</span></h2>
+<p>The lighter says what Approve knows; its tooltip says it in words, and mouse-1 opens the dispatch. Messages go to the
+echo area.</p>
+<div class="emacs">
+<div class="buf">
+<p><span class="pi"><i data-i="open">●</i> #1234</span>                 the PR; no unresolved thread in this file</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>3              3 unresolved threads in this file</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="loading">…</i>               the PR is loading</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> 1/2             the branch has 2 open PRs; <span class="k">P</span> in the map picks another</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↑1</span>              1 commit not pushed</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↓2</span>              GitHub has 2 commits the clone hasn't: pull to see them</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="er">↑1↓3</span>            the branch and GitHub's differ (rebased, or pushed from elsewhere)</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↓?</span>              GitHub's head isn't in the clone: fetch to compare</p>
+<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↻</span>               updated on GitHub (D23): <span class="k">g</span> in the map refreshes</p>
+<p><span class="pi"><i data-i="merged">⮌</i> #14</span> <span class="d">merged</span>            a merged PR, taken by the command after asking</p>
+</div>
+</div>
+<p>Its tooltip:</p>
+<div class="emacs">
+<div class="buf short">
+<p><span class="b">fuzzycode/approve#1234</span>  Add retry logic to the GraphQL client <span class="d">· open</span></p>
+<p><span class="d">feature/retry into main · 1 of 2 open pull requests of this branch</span></p>
+<p>1 commit not pushed</p>
+<p>3 unresolved threads in this file, 7 in the pull request</p>
+<p><span class="wa">Updated on GitHub:</span> <span class="k">g</span> to refresh</p>
+<p><span class="d">mouse-1: Approve's menu</span></p>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="dispatch">
+<h2>Feedback dispatch <span class="ref">M-x approve-feedback-dispatch · ? in the map · mouse-1 on the lighter</span></h2>
+<p>Every command of the map, dimmed where its preflight says it can't run: here point is on line 41, edited, so
+<span class="k">c</span> and <span class="k">s</span> are.</p>
+<div class="emacs">
+<div class="win stack">
+<div class="win">
+<div class="buf short">
+<p class="cur">  <span class="ln">41</span>          (retries (approve-api--retries)))                             <span class="wa">edited</span> <span class="er"><i data-i="comment">💬</i> 2</span></p>
+</div>
+<div class="ml off"> <span class="b">approve-api.el</span>   42%  L41  ELisp/l  #1234 <i data-i="comment">💬</i>4 ↑1</div>
+</div>
+<div class="tr">
+<p><span class="kh">#1234 Add retry logic to the GraphQL client</span> <span class="d">· 1/2 ·</span> <span class="wa">↑1</span></p>
+<p><span class="kh">Threads on this line</span>        <span class="kh">Comment</span>                    <span class="kh">Pull request</span></p>
+<p> <span class="k">TAB</span> Fold or unfold          <span class="ina">c Comment</span>                  <span class="k">RET</span> The PR buffer, at this line</p>
+<p> <span class="k">T</span>   Fold or unfold all      <span class="ina">s Suggest a change</span>         <span class="k">P</span>   Pick another pull request</p>
+<p> <span class="k">n</span>   Next unresolved         <span class="k">C</span> On the pull request      <span class="k">g</span>   Refresh</p>
+<p> <span class="k">p</span>   Previous unresolved                                <span class="k">o</span>   Open in browser</p>
+<p> <span class="k">r</span>   Reply                                              <span class="k">S</span>   Submit review…</p>
+<p> <span class="k">R</span>   Resolve                                            <span class="k">X</span>   Discard pending review</p>
+<p> <span class="k">e</span>   Edit</p>
+<p> <span class="ina">k   Delete</span></p>
+<p> <span class="k">+</span>   React</p>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="keys">
+<h2>Keys <span class="ref">approve-feedback-command-map · D46</span></h2>
+<p>The mode binds no key in your buffers but evil's <code>]t</code> and <code>[t</code>. Its commands are in
+<code>approve-feedback-command-map</code>, for you to bind, under a leader key for example:</p>
+<div class="emacs">
+<div class="buf short">
+<p>(<span class="fn">keymap-set</span> approve-feedback-mode-map <span class="st">"C-c a"</span> approve-feedback-command-map)</p>
+</div>
+</div>
+<ul>
+  <li><code>?</code> dispatch · <code>TAB</code> fold the line's threads · <code>T</code> all · <code>n</code>/<code>p</code>
+  next/previous unresolved thread (evil: <code>]t</code>/<code>[t</code>)</li>
+  <li><code>c</code> <code>s</code> comment, suggest · <code>r</code> <code>R</code> <code>e</code> <code>k</code> <code>+</code>
+  on the line's threads · <code>C</code> on the pull request</li>
+  <li><code>RET</code> the PR buffer at this line · <code>P</code> pick another PR · <code>g</code> refresh ·
+  <code>o</code> browser · <code>S</code> <code>X</code> submit, discard</li>
+  <li>In the PR buffer and the file view, <code>f</code> (evil: <code>gF</code>) opens the line, thread or file at point
+  in your clone; <code>F</code> and <code>gf</code> still open Approve's file view.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="find">
+<h2>Finding the PR and the clone <span class="ref">P · f (evil: gF) · F22</span></h2>
+<p><code>P</code> in the map, when the branch has more than one PR. Until one is picked, the one updated last is shown.</p>
+<div class="emacs">
+<div class="mini">
+<p><span class="pi">Pull request of spike/sp8:</span> <span class="cursor"> </span></p>
+<p class="sel">  <span class="b">#15</span> SP8: the clone and its lines          <span class="ok"><i data-i="open">●</i> open</span> <span class="m">· into spike/sp8-base · 2 hours ago</span></p>
+<p>  <span class="b">#16</span> SP8: a second pull request from…      <span class="ok"><i data-i="open">●</i> open</span> <span class="m">· into main · 3 hours ago</span></p>
+</div>
+</div>
+<p><code>f</code> in the PR buffer, when more than one worktree tracks the branch and none pushes there (one that pushes
+there is taken at once). The choice is kept for the session.</p>
+<div class="emacs">
+<div class="mini">
+<p><span class="pi">Worktree for #15 (spike/sp8):</span> <span class="cursor"> </span></p>
+<p class="sel">  ~/src/test-approve/          <span class="b">sp8-mine</span>     <span class="m">tracks origin/spike/sp8</span></p>
+<p>  ~/src/test-approve-review/   <span class="b">sp8-review</span>   <span class="m">tracks origin/spike/sp8</span></p>
+</div>
+</div>
+<p>What the echo area says on the way:</p>
+<div class="emacs">
+<div class="buf short">
+<p>No clone has spike/sp8 checked out; show the file view instead? (y or n)</p>
+<p>No pull request for spike/x</p>
+<p>#14 is merged: show its threads anyway? (y or n)</p>
+<p>Line 41 was edited here; GitHub takes comments only on its own lines</p>
+<p>Line 12 isn't in the pull request's diff; GitHub takes no comment there</p>
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>

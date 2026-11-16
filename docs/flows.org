@@ -41,9 +41,9 @@ show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutation
 | F18 | Switch layout                              |    11 |
 | F19 | Notifications                              |     8 |
 | F20 | Look up details (eldoc)                    |     1 |
+| F21 | Review feedback in a file you edit         |     7 |
+| F22 | Find a buffer's PR, and a PR's clone       |     7 |
 | F23 | Commit a suggestion, or a batch of them     |     5 |
-
-F21 and F22 (review feedback in a clone) come with [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]].
 
 * F00 The action pipeline
 Every command that changes something on GitHub runs this pipeline.  Code
@@ -761,6 +761,189 @@ lives in =approve-eldoc.el= ([[file:architecture.org::*Extended information (eld
 
 Pressing =K= also shows the eldoc buffer (=eldoc-doc-buffer=) in a side
 window; =q= there closes it.  With the buffer open, details follow point.
+
+* F21 Review feedback in a file you edit
+The PR's threads in your own buffer of a file, in a clone with the PR's
+branch checked out ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]], [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]).  The buffer stays yours: its mode, its
+hooks, its keys.  Approve adds overlays and a mode-line lighter, and
+changes no text.  Code lives in =approve-feedback.el=, and the clone's side
+in =approve-clone.el=.
+
+#+begin_example
+ [user] M-x approve-feedback-mode     a file opens, with                 F22: the PR buffer
+        in a file's buffer            approve-feedback-global-mode on    opens a line here
+        │                                    │                                  │
+        ▼                                    ▼                                  │
+     the buffer's PR (F22) ◀──────────────────────────┘                                  │
+        │                                                                       │
+     ◇ one? ◇──none──▶ the command: "No pull request for spike/x" · the global  │
+        │ yes            mode: nothing                                          │
+        ▼                                                                       │
+     ◇ open? ◇──no──▶ the global mode: nothing · the command: "#14 is merged:   │
+        │ yes          show its threads anyway?" ──no──▶ the mode stays off       │
+        │                                   │ yes                               │
+        ◀────────────────────────────────────┘◀─────────────────────────────────┘
+        ▼
+     ◇ the PR's store loaded? (its PR buffer, or another file of the clone) ◇
+        │ yes                                │ no
+        │                                    ▼
+        │                     load it in the background (F02), once;
+        │                     the lighter says "#15 …" meanwhile
+        ◀────────────────────────────────────┘
+        ▼
+     GitHub's file at headRefOid: ◇ the clone has the commit? ◇
+        │ yes: git cat-file                  │ no: the API (the file view's cache)
+        ◀────────────────────────────────────┘
+        ▼
+     ◇ the PR changes this file? ◇──no, and no thread on it──▶ the lighter alone
+        │ yes
+        ▼
+     diff it against the buffer's text (asynchronous, temporary files)
+        │
+        ▼
+ ┌──────────────────────────────────────────────────────────────┐
+ │ threads as overlays, each line's folded to its bubble:           │
+ │   a line as on GitHub        under it                            │
+ │   a line changed here        under the line in its place, "edited"│
+ │   lines deleted here         where they were, "edited"           │
+ │   outdated                   where it was (its original commit)  │
+ │   on removed lines           between lines, "removed lines"      │
+ │   on the whole file          above the first line                │
+ │ the lighter: " #15", unresolved threads, the clone's state       │
+ └────────────────────────────────────────────────────────────────┘
+   │
+   ├─ [user] edits ──▶ overlays move with the text ──▶ Emacs idle (coalesced)
+   │                  ──▶ diff again ──▶ "edited" marks and places updated
+   │                  (an answer for older text is dropped)
+   │
+   ├─ HEAD moves (a commit, a checkout, a pull) ──▶ the branch's PR again (F22)
+   │      same PR: the clone's state again · another: its threads · none: overlays go
+   │
+   ├─ D23's check (focus, timer) ──▶ ↻ in the lighter: updated on GitHub
+   │      [user] g in the map or the dispatch ──▶ F17 ──▶ every buffer of the PR redrawn
+   │
+   ├─ [user] TAB · T in the map, or mouse-1 on a bubble ──▶ unfold / fold the line's threads, or all
+   │
+   ├─ [user] n / p in the map (evil ]t [t) ──▶ the next / previous unresolved thread,
+   │      unfolded; past the last in this file, the next of the PR's files, visited in the clone
+   │
+   └─ [user] r R e k + on the line's threads, c s on the line or region
+          │
+          ▼
+       ◇ threads on the line? ◇──several──▶ completing-read: "@bob: Should this be configurable…"
+          │ one                                   │
+          ◀────────────────────────────────────────┘
+          ▼
+       c, s: ◇ every line as on GitHub, and in the PR's diff? ◇──no──▶ user-error: "Line 42 was
+          │ yes                                            edited here; GitHub takes
+          ▼                                                comments only on its own lines"
+       F05 · F06 · F07 · F08 · F11 with GitHub's lines      or "… isn't in the pull request's diff"
+          │
+          ▼
+       F00: the store patched ──▶ every buffer of the PR redrawn (PR buffer, file views, the clone's)
+#+end_example
+
+- The commands are in =approve-feedback-command-map=, which no key reaches
+  until the user binds it ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]); =M-x approve-feedback-dispatch= and
+  mouse-1 on the lighter open the dispatch either way.  Evil's =]t= and
+  =[t= go to the next and previous thread, as in Approve's buffers.
+- Every thread starts folded to the bubble at the end of its line ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]),
+  so code keeps its shape while it is edited.  Point never enters a thread:
+  the commands act on the threads of the line at point.
+- One store per PR, shared by its PR buffer, its file views and the clone's
+  buffers ([[file:decisions.org::*D10 Normalized, buffer-local store][D10]]).  A write anywhere redraws them all; killing the last
+  of them drops it.
+- The global mode is off by default.  With it on, a file of a branch with
+  an open PR turns the mode on; outside GitHub clones it costs nothing
+  ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]).
+
+* F22 Find a buffer's PR, and a PR's clone
+Both ways between a clone and GitHub ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]): a file's buffer finds its
+branch's PR, and the PR buffer finds the worktree that has the PR's
+branch checked out.  Code lives in =approve-clone.el=.
+
+#+begin_example
+ a file's buffer: the mode turns on, HEAD moved, or [user] P (pick)
+        │
+        ▼
+     ◇ a .git above the file? ◇──no──▶ no PR (0.02 ms)
+        │ yes
+        ▼
+     ◇ a remote on a GitHub host? ◇──no──▶ no PR
+        │ yes   (its config file; github.com, approve-api-host's,
+        │        an SSH alias through ssh -G once a session)
+        ▼
+     git: the toplevel and the branch; its head on GitHub = the push branch,
+     else the upstream, else the same name on the push remote
+        │                         (a detached HEAD, a branch on no GitHub remote: no PR)
+        ▼
+     ◇ asked this session (repository, branch)? ◇──yes──▶ the answer kept
+        │ no                                                   │
+        ▼                                                      │
+     query, cost 1: the head repository's                      │
+     ref("refs/heads/BRANCH").associatedPullRequests,          │
+     pullRequests(headRefName) on it and its parent,           │
+     kept when their head repository is the branch's           │
+        │                                                      │
+        ◀──────────────────────────────────────────────────────┘
+        ▼
+     ◇ open ones? ◇──none──▶ the closed and merged ones (F21: the command asks)
+        │ one or more
+        ▼
+     the one picked with P this session, else the one updated last
+     (the lighter says "1/2" when there are more) ──▶ F21
+
+ [user] P (pick another)
+        │
+        ▼
+     completing-read of the branch's PRs, open first:
+       #15 SP8: the clone and its lines · open · into spike/sp8-base · 2 hours ago
+       #16 SP8: a second pull request…  · open · into main · 3 hours ago
+        │
+        ▼
+     remembered for the session ──▶ every buffer of the branch shows it (F21)
+
+
+ [user] f on a diff line, a thread or a file of the PR buffer   (evil: gF)
+        │
+        ▼
+     the clones of approve-clone-directories whose remotes name the base
+     or the head repository (their config files)
+        │
+        ▼
+     for-each-ref in each: the branches that push to the PR's head branch,
+     else track it, and the worktrees that have them checked out
+        │
+        ▼
+     ◇ how many worktrees? ◇──none──▶ "No clone has spike/sp8 checked out; show the
+        │                              file view instead? (y or n)" ──y──▶ F15
+        │ several ──▶ the one that pushes there; still several: completing-read,
+        │              remembered for the session
+        │ one
+        ▼
+     ◇ the file there? ◇──no──▶ "sp8/lines.txt isn't in /tmp/wt (deleted or moved
+        │ yes                 there); show the file view instead? (y or n)"
+        ▼
+     visit it in the worktree, the mode on (F21); point on GitHub's line mapped
+     onto the buffer, its threads unfolded (a line edited there: the line in
+     its place, the echo area says so; a removed line: between the lines)
+
+
+ [user] RET in the map, in a file's buffer
+        │
+        ▼
+     the PR buffer (opened if need be, on the same store)
+        │
+        ▼
+     ◇ the line at point as on GitHub, and in the diff? ◇──no──▶ the file's heading in
+        │ yes                                               the diff, unfolded
+        ▼
+     the line in the diff, its threads unfolded
+#+end_example
+
+The PR buffer and the clone's buffers share one store, so going between
+them loads nothing.  =f= and =gF= join the dispatch (=?=) of the PR buffer
+and the file view; without a clone they say why and offer the file view.
 
 * F23 Commit a suggestion, or a batch of them
 As GitHub's "Commit suggestion" and "Add suggestion to batch", without a
