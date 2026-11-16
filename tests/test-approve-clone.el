@@ -12,6 +12,7 @@
 (require 'buttercup)
 (require 'approve)
 (require 'approve-clone)
+(require 'approve-test-helpers "helpers")
 
 (defun test-clone--git (directory &rest args)
   "Run git with ARGS in DIRECTORY; return its output, trimmed.
@@ -320,5 +321,192 @@ config."
         (expect (approve-clone-branch-head two) :to-be nil)
         (test-clone--git two "remote" "add" "origin" "https://gitlab.com/me/project.git")
         (expect (approve-clone-branch-head two) :to-be nil)))))
+
+;;; The pull requests of a branch
+
+(defconst test-clone--head
+  '(:host "github.com" :owner "me" :repo "project" :branch "feature")
+  "The branch whose pull requests the tests ask for.")
+
+(defun test-clone--pr (id state updated &rest props)
+  "Return a pull request ID in STATE, UPDATED at that time, as GitHub sends it.
+PROPS may give :number, :head (the head repository), :branch and :draft."
+  `((__typename . "PullRequest") (id . ,id)
+    (number . ,(or (plist-get props :number) 1))
+    (title . ,(format "Pull request %s" id))
+    (state . ,state) (isDraft . ,(if (plist-get props :draft) t :json-false))
+    (updatedAt . ,updated) (baseRefName . "main")
+    (headRefName . ,(or (plist-get props :branch) "feature"))
+    (headRefOid . "abc")
+    (headRepository (__typename . "Repository") (id . "R_head")
+                    (nameWithOwner . ,(or (plist-get props :head) "me/project")))))
+
+(defun test-clone--answer (&rest lists)
+  "Return the data of an answer whose LISTS are (:ref :own :parent) nodes."
+  `((repository
+     (__typename . "Repository") (id . "R_head")
+     (ref . ,(and (plist-member lists :ref)
+                  `((__typename . "Ref") (id . "REF")
+                    (associatedPullRequests (nodes ,@(plist-get lists :ref))))))
+     (pullRequests (nodes ,@(plist-get lists :own)))
+     (parent . ,(and (plist-member lists :parent)
+                     `((__typename . "Repository") (id . "R_base")
+                       (pullRequests (nodes ,@(plist-get lists :parent)))))))
+    (rateLimit (cost . 1) (remaining . 4999) (resetAt . "2026-11-16T20:00:00Z"))))
+
+(describe "approve-clone--branch-pull-requests"
+  (it "keeps the branch's own, once each, open first and the latest first"
+    (let* ((merged (test-clone--pr "PR_1" "MERGED" "2026-11-16T10:00:00Z"))
+           (old (test-clone--pr "PR_2" "OPEN" "2026-11-10T10:00:00Z"))
+           (new (test-clone--pr "PR_3" "OPEN" "2026-11-15T10:00:00Z"))
+           (fork (test-clone--pr "PR_4" "OPEN" "2026-11-16T11:00:00Z" :head "someone/project"))
+           (other (test-clone--pr "PR_5" "OPEN" "2026-11-16T11:00:00Z" :branch "other"))
+           (prs (approve-clone--branch-pull-requests
+                 (test-clone--answer :ref (list old merged) :own (list new old fork other)
+                                     :parent (list new))
+                 test-clone--head)))
+      (expect (mapcar (lambda (pr) (alist-get 'id pr)) prs)
+              :to-equal '("PR_3" "PR_2" "PR_1"))))
+
+  (it "matches the head repository whatever its case, and copes without lists"
+    (let ((pr (test-clone--pr "PR_1" "OPEN" "2026-11-16T10:00:00Z" :head "Me/Project")))
+      (expect (length (approve-clone--branch-pull-requests
+                       (test-clone--answer :own (list pr)) test-clone--head))
+              :to-equal 1)
+      (expect (approve-clone--branch-pull-requests (test-clone--answer) test-clone--head)
+              :to-be nil))))
+
+(defvar test-clone--sent nil
+  "Requests the fake transport received, newest first.")
+
+(defvar test-clone--reply nil
+  "Function of a request giving the data of its answer, or nil to fail it.")
+
+(defun test-clone--transport (request)
+  "Answer REQUEST with `test-clone--reply', later."
+  (push request test-clone--sent)
+  (let ((timer (if test-clone--reply
+                   (run-at-time 0 nil (plist-get request :on-success)
+                                `((data . ,(funcall test-clone--reply request))) nil)
+                 (run-at-time 0 nil (plist-get request :on-failure)
+                              '(:status 502 :payload ((message . "Bad Gateway")))))))
+    (lambda () (cancel-timer timer))))
+
+(defmacro test-clone--with-api (&rest body)
+  "Run BODY with the fake transport and empty caches."
+  (declare (indent 0) (debug t))
+  `(let ((approve-api-transport #'test-clone--transport)
+         (approve-api-timeout nil)
+         (approve-api-host nil)
+         (inhibit-message t)
+         (test-clone--sent nil)
+         (test-clone--reply
+          (lambda (_request)
+            (test-clone--answer
+             :own (list (test-clone--pr "PR_1" "OPEN" "2026-11-16T10:00:00Z" :number 15)
+                        (test-clone--pr "PR_2" "OPEN" "2026-11-16T12:00:00Z" :number 16))))))
+     (clrhash approve-clone--pull-requests)
+     (clrhash approve-clone--asking)
+     (clrhash approve-clone--picked)
+     ,@body))
+
+(describe "approve-clone-branch-pull-requests"
+  (it "asks the head repository about the branch, on its host"
+    (test-clone--with-api
+      (let (prs)
+        (approve-clone-branch-pull-requests test-clone--head :callback (lambda (v) (setq prs v)))
+        (approve-test-wait-for (lambda () prs))
+        (let ((request (car test-clone--sent)))
+          (expect (plist-get request :name) :to-equal "queries/branch-pull-requests.graphql")
+          (expect (plist-get request :variables)
+                  :to-equal '((owner . "me") (name . "project") (branch . "feature")
+                              (qualifiedName . "refs/heads/feature")))
+          (expect (plist-get request :host) :to-equal "api.github.com"))
+        (expect (mapcar (lambda (pr) (alist-get 'number pr)) prs) :to-equal '(16 15)))))
+
+  (it "asks once a session, and once for questions at the same time"
+    (test-clone--with-api
+      (let (one two three)
+        (approve-clone-branch-pull-requests test-clone--head :callback (lambda (v) (setq one v)))
+        (approve-clone-branch-pull-requests test-clone--head :callback (lambda (v) (setq two v)))
+        (approve-test-wait-for (lambda () (and one two)))
+        (approve-clone-branch-pull-requests test-clone--head :callback (lambda (v) (setq three v)))
+        (expect three :to-equal one)
+        (expect (length test-clone--sent) :to-equal 1)
+        (approve-clone-branch-pull-requests test-clone--head :refresh t
+                                            :callback (lambda (v) (setq three (list v))))
+        (approve-test-wait-for (lambda () (= (length three) 1)))
+        (expect (length test-clone--sent) :to-equal 2))))
+
+  (it "keeps no failure, and answers in the buffer that asked, if it lives"
+    (test-clone--with-api
+      (let ((test-clone--reply nil) (failed nil) (answered nil)
+            (asker (generate-new-buffer " asker"))
+            (gone (generate-new-buffer " gone")))
+        (with-current-buffer asker
+          (approve-clone-branch-pull-requests
+           test-clone--head :errorback (lambda (_) (setq failed (current-buffer)))))
+        (with-current-buffer gone
+          (approve-clone-branch-pull-requests
+           test-clone--head :errorback (lambda (_) (setq answered t))))
+        (kill-buffer gone)
+        (approve-test-wait-for (lambda () failed))
+        (expect failed :to-be asker)
+        (expect answered :to-be nil)
+        (kill-buffer asker)
+        (setq test-clone--reply (lambda (_) (test-clone--answer)))
+        (let ((prs 'none))
+          (approve-clone-branch-pull-requests test-clone--head :callback (lambda (v) (setq prs v)))
+          (approve-test-wait-for (lambda () (not (eq prs 'none))))
+          (expect prs :to-be nil)
+          (expect (length test-clone--sent) :to-equal 2))))))
+
+(describe "approve-clone-shown-pull-request"
+  (it "is the one picked, else the open one updated last, else none"
+    (test-clone--with-api
+      (let ((open (test-clone--pr "PR_1" "OPEN" "2026-11-15T10:00:00Z"))
+            (other (test-clone--pr "PR_2" "OPEN" "2026-11-14T10:00:00Z"))
+            (merged (test-clone--pr "PR_3" "MERGED" "2026-11-16T10:00:00Z")))
+        (expect (approve-clone-shown-pull-request test-clone--head (list open other merged))
+                :to-be open)
+        (puthash (approve-clone--head-key test-clone--head) "PR_2" approve-clone--picked)
+        (expect (approve-clone-shown-pull-request test-clone--head (list open other merged))
+                :to-be other)
+        (clrhash approve-clone--picked)
+        (expect (approve-clone-shown-pull-request test-clone--head (list merged)) :to-be nil)
+        (expect (approve-clone-shown-pull-request test-clone--head (list merged) t)
+                :to-be merged)))))
+
+(describe "approve-clone-pick-pull-request"
+  (it "offers the branch's pull requests and keeps the one picked"
+    (test-clone--with-api
+      (let ((picked nil) (offered nil))
+        (spy-on 'approve-clone-branch-head
+                :and-return-value (list :clone "/tmp/x/" :branch "feature" :remote "origin"
+                                        :head test-clone--head))
+        (spy-on 'completing-read
+                :and-call-fake (lambda (_prompt collection &rest args)
+                                 (setq offered (all-completions "" collection))
+                                 (expect (nth 4 args) :to-match "\\`#16 ")
+                                 (car (last offered))))
+        (let ((approve-clone-picked-functions
+               (list (lambda (head pr) (setq picked (list head (alist-get 'number pr)))))))
+          (approve-clone-pick-pull-request))
+        (expect (length offered) :to-equal 2)
+        (expect (car offered) :to-match "\\`#16 Pull request PR_2  open · into main · ")
+        (expect picked :to-equal (list test-clone--head 15))
+        (expect (alist-get 'number (approve-clone-shown-pull-request
+                                    test-clone--head (approve-clone-wait-pull-requests
+                                                      test-clone--head)))
+                :to-equal 15))))
+
+  (it "says so where there is no branch, or no pull request"
+    (test-clone--with-api
+      (spy-on 'approve-clone-branch-head :and-return-value nil)
+      (expect (approve-clone-pick-pull-request) :to-throw 'user-error)
+      (spy-on 'approve-clone-branch-head
+              :and-return-value (list :clone "/tmp/x/" :branch "feature" :head test-clone--head))
+      (setq test-clone--reply (lambda (_) (test-clone--answer)))
+      (expect (approve-clone-pick-pull-request) :to-throw 'user-error))))
 
 ;;; test-approve-clone.el ends here

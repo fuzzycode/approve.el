@@ -30,6 +30,10 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   =pull-request-summary.graphql= is one such row by =$owner=, =$name=
   and =$number=, for the dashboard's "Recently opened", and
   =viewer.graphql= says who the token belongs to, for its title line.
+  =branch-pull-requests.graphql= is a clone's ([[file:../docs/decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]): the pull requests a
+  branch heads (=$owner=, =$name= of its repository, =$branch=,
+  =$qualifiedName=), the same rows with their head repository and head
+  commit, asked once a session for each branch.
 - =queries/details/= :: eldoc's lazy details ([[file:../docs/decisions.org::*D27 Extended information through eldoc: one line, then the eldoc buffer][D27]]); they don't go into the
   store.
 - =queries/metadata/= :: repository metadata, fetched once per session and

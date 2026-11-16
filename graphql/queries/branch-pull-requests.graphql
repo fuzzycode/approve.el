@@ -1,0 +1,64 @@
+${include:fragments/pull-request-summary.graphql}
+
+# The pull requests of a branch (D45), for a clone's buffers: Approve finds
+# the branch's place on GitHub (the head repository and the branch's name) and
+# asks for the pull requests it heads.  The ref's associatedPullRequests are
+# those whose head is the ref, into the repository or into its parent (a
+# fork's), but nothing once the branch is deleted.  pullRequests(headRefName:)
+# finds those too, merged ones whose branch is gone, but lists the pull
+# requests into its repository from any repository with a branch of that
+# name: Approve keeps those whose head repository is the branch's.  Each is a
+# row of the lists (PullRequestSummaryFields), with its head repository and
+# head commit.  It never goes into a store.
+query BranchPullRequests($owner: String!, $name: String!, $branch: String!, $qualifiedName: String!) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    ref(qualifiedName: $qualifiedName) {
+      __typename
+      id
+      associatedPullRequests(first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
+        nodes {
+          ...PullRequestSummaryFields
+          headRefOid
+          headRepository {
+            __typename
+            id
+            nameWithOwner
+          }
+        }
+      }
+    }
+    pullRequests(headRefName: $branch, first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes {
+        ...PullRequestSummaryFields
+        headRefOid
+        headRepository {
+          __typename
+          id
+          nameWithOwner
+        }
+      }
+    }
+    parent {
+      __typename
+      id
+      pullRequests(headRefName: $branch, first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
+        nodes {
+          ...PullRequestSummaryFields
+          headRefOid
+          headRepository {
+            __typename
+            id
+            nameWithOwner
+          }
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

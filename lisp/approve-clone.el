@@ -51,10 +51,17 @@
 ;;   SSH alias followed through ssh -G.
 ;; - `approve-clone-branch-head' gives a buffer's clone, its branch, and
 ;;   the repository and branch it goes to on GitHub.
+;; - `approve-clone-branch-pull-requests' asks GitHub, once a session,
+;;   for the pull requests a branch heads (a fork's into its parent
+;;   too); `approve-clone-shown-pull-request' is the one Approve shows,
+;;   the open one updated last unless `approve-clone-pick-pull-request'
+;;   picked another.
 ;;
 ;; Layer rules: this is the operations layer, and only the clone
 ;; modules touch a clone.  It reads clones through Magit and never
-;; changes them.  The core never requires it: approve.el does, and
+;; changes them; what it asks GitHub stays out of the store.  Its two
+;; commands, showing a commit and picking a branch's pull request, are
+;; the clone's own.  The core never requires it: approve.el does, and
 ;; puts its functions on the hooks the core offers.
 
 ;;; Code:
@@ -62,10 +69,12 @@
 (require 'seq)
 (require 'cl-lib)
 (require 'subr-x)
+(require 'parse-time)
 (require 'magit-git)
 (require 'magit-diff)
 (require 'magit-repos)
 (require 'approve-api)
+(require 'approve-log)
 
 (defcustom approve-clone-directories 'magit
   "Where Approve finds the user's local clones, or `magit' for Magit's.
@@ -339,6 +348,225 @@ reading its config file too; else two git calls through Magit."
                              (cdr (assoc (car target) remotes)))))
       (list :clone clone :branch branch :remote (car target)
             :head (append repository (list :branch (cadr target)))))))
+
+;;; The pull requests of a branch
+
+(defvar approve-clone--pull-requests (make-hash-table :test #'equal)
+  "The pull requests of the branches asked about this session, by key.
+A key is `approve-clone--head-key''s; a value, the list of
+`approve-clone--branch-pull-requests'.")
+
+(defvar approve-clone--asking (make-hash-table :test #'equal)
+  "Branches whose pull requests are on their way, by key: who waits.
+Each waiter is (BUFFER CALLBACK ERRORBACK), newest first.")
+
+(defvar approve-clone--picked (make-hash-table :test #'equal)
+  "The pull request picked for a branch this session, by key: its id.")
+
+(defvar approve-clone-picked-functions nil
+  "Functions called when a pull request is picked for a branch.
+Each is called with the branch, (:host :owner :repo :branch), and the
+pull request picked, as in `approve-clone-branch-pull-requests'.")
+
+(defun approve-clone-clear-cache ()
+  "Forget the pull requests of branches asked about this session.
+The ones picked are kept."
+  (clrhash approve-clone--pull-requests))
+
+(defun approve-clone--head-key (head)
+  "Return the cache key of HEAD, a branch on GitHub (:host :owner :repo :branch)."
+  (list (downcase (plist-get head :host)) (downcase (plist-get head :owner))
+        (downcase (plist-get head :repo)) (plist-get head :branch)))
+
+(defun approve-clone--name-with-owner (repository)
+  "Return OWNER/NAME of REPOSITORY, (:host :owner :repo)."
+  (format "%s/%s" (plist-get repository :owner) (plist-get repository :repo)))
+
+(defun approve-clone--branch-pull-requests (data head)
+  "Return the pull requests in DATA whose head is HEAD.
+DATA is the answer to graphql/queries/branch-pull-requests.graphql;
+HEAD is the branch, (:host :owner :repo :branch).  Each pull request
+is an alist in the shape of the query's nodes, once each; open ones
+come first, then the rest, each by the time they were updated, the
+latest first."
+  (let* ((name (approve-clone--name-with-owner head))
+         (nodes (let-alist data
+                  (append .repository.ref.associatedPullRequests.nodes
+                          .repository.pullRequests.nodes
+                          .repository.parent.pullRequests.nodes)))
+         (ours (seq-filter
+                (lambda (pr)
+                  (let-alist pr
+                    (and (equal .headRefName (plist-get head :branch))
+                         .headRepository.nameWithOwner
+                         (eq t (compare-strings .headRepository.nameWithOwner nil nil
+                                                name nil nil t)))))
+                nodes)))
+    (sort (seq-uniq ours (lambda (a b) (equal (alist-get 'id a) (alist-get 'id b))))
+          (lambda (a b)
+            (let ((open-a (equal (alist-get 'state a) "OPEN"))
+                  (open-b (equal (alist-get 'state b) "OPEN")))
+              (if (eq open-a open-b)
+                  (string> (alist-get 'updatedAt a) (alist-get 'updatedAt b))
+                open-a))))))
+
+(defun approve-clone--buffer ()
+  "Return the buffer the questions about branches are answered in.
+It lives for the session, so an answer is kept even when the buffer
+that asked was killed meanwhile."
+  (get-buffer-create " *approve-clone*"))
+
+(defun approve-clone--settle (key function argument)
+  "End the question about KEY: call each waiter's FUNCTION with ARGUMENT.
+FUNCTION is `cadr' for the callback or `caddr' for the errorback; each
+runs in its waiter's buffer, and not at all when it was killed."
+  (let ((waiters (reverse (gethash key approve-clone--asking))))
+    (remhash key approve-clone--asking)
+    (dolist (waiter waiters)
+      (when-let* ((continuation (funcall function waiter))
+                  ((buffer-live-p (car waiter))))
+        (with-current-buffer (car waiter)
+          (condition-case-unless-debug err
+              (funcall continuation argument)
+            (error (approve-log-condition "The pull requests of a branch" err))))))))
+
+(cl-defun approve-clone-branch-pull-requests (head &key refresh callback errorback)
+  "Get the pull requests of HEAD, a branch on GitHub, asking GitHub once.
+HEAD is (:host :owner :repo :branch), as `approve-clone-branch-head'
+gives it.  CALLBACK is called with the list, open ones first, each by
+the time it was updated, the latest first; each is a row of the lists
+\(graphql/fragments/pull-request-summary.graphql) with headRefOid and
+headRepository.  It is called at once when the branch was asked about
+this session, unless REFRESH.  ERRORBACK is called with the error
+\(see `approve-api-graphql'), which is not kept.  Both run in the
+current buffer, and not at all when it was killed.  One query, of
+cost 1 (decision D45); questions about a branch already on their way
+wait for its answer.
+
+Example:
+  (approve-clone-branch-pull-requests
+   \='(:host \"github.com\" :owner \"magit\" :repo \"magit\" :branch \"main\")
+   :callback (lambda (prs) (message \"%d\" (length prs))))"
+  (let* ((key (approve-clone--head-key head))
+         (none (make-symbol "none"))
+         (known (if refresh none (gethash key approve-clone--pull-requests none)))
+         (waiter (list (current-buffer) callback errorback)))
+    (cond
+     ((not (eq known none))
+      (when callback
+        (funcall callback known)))
+     ((gethash key approve-clone--asking)
+      (push waiter (gethash key approve-clone--asking)))
+     (t
+      (puthash key (list waiter) approve-clone--asking)
+      (approve-api-graphql
+       "queries/branch-pull-requests.graphql"
+       `((owner . ,(plist-get head :owner))
+         (name . ,(plist-get head :repo))
+         (branch . ,(plist-get head :branch))
+         (qualifiedName . ,(concat "refs/heads/" (plist-get head :branch))))
+       :buffer (approve-clone--buffer)
+       :host (approve-api-host-from-web-host (plist-get head :host))
+       :progress nil
+       :callback (lambda (data)
+                   (let ((prs (approve-clone--branch-pull-requests data head)))
+                     (puthash key prs approve-clone--pull-requests)
+                     (approve-clone--settle key #'cadr prs)))
+       :errorback (lambda (err)
+                    (approve-clone--settle key #'caddr err)))))
+    nil))
+
+(defun approve-clone-shown-pull-request (head prs &optional any-state)
+  "Return the pull request of HEAD that Approve shows, among PRS.
+HEAD is the branch, (:host :owner :repo :branch); PRS its pull
+requests, as `approve-clone-branch-pull-requests' gives them.  It is
+the one picked for the branch this session, else the open one
+updated last.  nil when none is open, unless ANY-STATE: then the
+closed or merged one updated last."
+  (let ((picked (gethash (approve-clone--head-key head) approve-clone--picked)))
+    (or (and picked
+             (seq-find (lambda (pr) (equal (alist-get 'id pr) picked)) prs))
+        (seq-find (lambda (pr) (equal (alist-get 'state pr) "OPEN")) prs)
+        (and any-state (car prs)))))
+
+(defun approve-clone--ago (iso)
+  "Return how long ago the ISO 8601 time ISO was, in words.
+Example: \"3 hours ago\"."
+  (let ((seconds (float-time (time-subtract nil (parse-iso8601-time-string iso)))))
+    (cl-flet ((ago (count unit)
+                (format "%d %s%s ago" count unit (if (= count 1) "" "s"))))
+      (cond ((< seconds 60) "just now")
+            ((< seconds 3600) (ago (floor seconds 60) "minute"))
+            ((< seconds 86400) (ago (floor seconds 3600) "hour"))
+            (t (ago (floor seconds 86400) "day"))))))
+
+(defun approve-clone--describe-pull-request (pr)
+  "Return the line PR is listed as when one is picked, without its number.
+Example: \"SP8: the clone and its lines  open · into main · 2 hours ago\"."
+  (let-alist pr
+    (format "%s  %s · into %s · %s"
+            .title (if (and (eq .isDraft t) (equal .state "OPEN")) "draft" (downcase .state))
+            .baseRefName (approve-clone--ago .updatedAt))))
+
+(defun approve-clone-read-pull-request (prompt prs &optional default)
+  "Read one of PRS with PROMPT, DEFAULT the one first offered.
+PRS are pull requests as `approve-clone-branch-pull-requests' gives
+them; return the one read."
+  (let* ((choices (mapcar (lambda (pr)
+                            (cons (format "#%s %s" (alist-get 'number pr)
+                                          (approve-clone--describe-pull-request pr))
+                                  pr))
+                          prs))
+         (default (car (rassq default choices)))
+         (choice (completing-read prompt
+                                  (lambda (string predicate action)
+                                    (if (eq action 'metadata)
+                                        '(metadata (display-sort-function . identity))
+                                      (complete-with-action action choices string predicate)))
+                                  nil t nil nil default)))
+    (cdr (assoc choice choices))))
+
+(defun approve-clone-wait-pull-requests (head)
+  "Return the pull requests of HEAD, asking GitHub first if need be.
+HEAD is a branch on GitHub, (:host :owner :repo :branch).  It waits,
+saying so in the echo area; \\[keyboard-quit] stops waiting.  Signal a
+`user-error' with GitHub's message when the question fails."
+  (let* ((none (make-symbol "none"))
+         (prs none)
+         (failure nil))
+    (approve-clone-branch-pull-requests
+     head
+     :callback (lambda (answer) (setq prs answer))
+     :errorback (lambda (err) (setq failure err)))
+    (when (eq prs none)
+      (with-temp-message (format "Asking GitHub for the pull requests of %s..."
+                                 (plist-get head :branch))
+        (while (and (eq prs none) (not failure))
+          (accept-process-output nil 0.05))))
+    (when failure
+      (user-error "Could not ask GitHub for the pull requests of %s: %s"
+                  (plist-get head :branch) (approve-api-error-message failure)))
+    prs))
+
+(defun approve-clone-pick-pull-request ()
+  "Pick which pull request of the current branch Approve shows here.
+The branch is the one checked out where the current buffer is; its
+pull requests are offered, open ones first, the one shown now first
+of all.  The choice is kept for the session, for every buffer of the
+branch (decision D45), and `approve-clone-picked-functions' are run."
+  (interactive)
+  (let* ((branch (or (approve-clone-branch-head)
+                     (user-error "No branch on GitHub here")))
+         (head (plist-get branch :head))
+         (prs (or (approve-clone-wait-pull-requests head)
+                  (user-error "%s has no pull request on GitHub" (plist-get head :branch))))
+         (shown (approve-clone-shown-pull-request head prs t))
+         (pr (approve-clone-read-pull-request
+              (format "Pull request of %s: " (plist-get head :branch)) prs shown)))
+    (puthash (approve-clone--head-key head) (alist-get 'id pr) approve-clone--picked)
+    (run-hook-with-args 'approve-clone-picked-functions head pr)
+    (message "Showing #%s for %s" (alist-get 'number pr) (plist-get head :branch))
+    pr))
 
 (provide 'approve-clone)
 
