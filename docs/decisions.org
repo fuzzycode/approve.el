@@ -88,7 +88,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     (=approve-nav.el=).  =approve-clone.el= has the function that shows
     the commit, and =approve.el= puts it on the hook, so the core never
     requires the clone module.
-  - How a PR, rather than a commit, finds its clone (Phase 8, SP8)
+  - How a PR, rather than a commit, finds its clone (Phase 7, SP8)
     starts from this option.
 - Why :: Magit's revision buffer shows more than a browser (the diff,
   the message, refs, blame from there) and is where later extras can
@@ -377,7 +377,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   mode; in a buffer with no file on disk they start servers for the wrong
   project, or complain about a file they can't find.  The highlighting a
   review needs comes from the mode alone, as in the diff ([[*D30 Diff hunks are syntax-highlighted by default][D30]]).  Thread
-  actions from overlays need a context that sections don't give; Phase 8
+  actions from overlays need a context that sections don't give; Phase 7
   plans them for a clone's buffers, which use the same overlays, and the
   file view can take them then.  Until then the diff is one key away.
 - Amended (2026-11-16) :: Global minor modes turn themselves on from
@@ -925,8 +925,8 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
   =private-user-images.githubusercontent.com= URLs that expire after a few
   minutes) load reliably?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]]: public images do; private ones are
   still to check on a private repository.
-- Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 7.
-- Q6 :: Should the dashboard show unread state from notifications?  → Phase 7.
+- Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 8.
+- Q6 :: Should the dashboard show unread state from notifications?  → Phase 8.
 - Q7 :: What the eldoc echo lines show for users and reactions, given the
   store holds no email and no reactor names.
   → answered by [[*D29 Echo lines show what the store holds; names and emails wait for K][D29]] (the mockups changed).

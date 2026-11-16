@@ -276,7 +276,7 @@ Mockups: file view.
       [[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]): =RET= on a diff line or =F= (evil =gf=) opens it; the
       mode's hooks never run; =n p= (evil =]c [c=), =]t [t=, =TAB=, =b=
       (evil =gb=), =c s v=, =RET= back to the line in the diff, =?=.
-      Threads are read there and acted on in the diff, until Phase 8's
+      Threads are read there and acted on in the diff, until Phase 7's
       actions from overlays reach it.
 - [X] "New since your last review" marks on comments and commits; =j n=.
       Done (2026-11-16, [[file:decisions.org::*D44 What is new since your last review: other people's comments, after it][D44]]): comments and reviews others published
@@ -292,27 +292,13 @@ Mockups: file view.
   it went to Phase 10, at the author's request: nice to have, not
   essential.
 
-* Phase 7 — Notifications, polish, release
-Implements F19.
-- [ ] =approve-notifications.el= and the filter transient.
-- [ ] Dashboard unread marks ([[file:decisions.org::*Open questions][Q6]]).
-- [ ] Performance pass on the large fixture and on real huge PRs.
-- [ ] User manual ([[file:decisions.org::*Open questions][Q5]]), README with screenshots, customization docs.
-- [ ] MELPA recipe and release.
-- Done when :: a new user can install from MELPA, set a token, run
-  =approve-dashboard= and review, following only the README.
-- Moved (2026-11-16) :: the split layout and =L= (F18) went to
-  [[*Phase 11 — The split layout][Phase 11]], at the author's request: nice to have, done once
-  Approve has been used in the wild and there is feedback.
-- Moved (2026-11-16) :: =approve-doctor= went to
-  [[*Phase 12 — The doctor][Phase 12]], at the author's request: once Approve is feature
-  complete and there is feedback, it is clear whether a doctor is needed.
-
-* Phase 8 — Review feedback in your clone
+* Phase 7 — Review feedback in your clone
 Extras for a local clone ([[file:decisions.org::*D36 No clone needed; a local clone adds to it][D36]]): the PR's threads in the buffers of the
 files the user edits, as CLion and VS Code show them, and ways between
 those buffers and the PR buffer.  Without a clone none of it shows, and
-nothing else changes.  Moved from Ideas (2026-11-15).  Builds on the file
+nothing else changes.  Moved from Ideas (2026-11-15), and ahead of
+notifications and the release (2026-11-16), at the author's request:
+this comes before the documentation and the nice to haves.  Builds on the file
 view: its overlays, and the store it shares with its PR buffer (Phase 6).
 Implements F21, F22 (written in this phase's first task).
 Mockups: a file's buffer with its threads (written with F21).
@@ -377,6 +363,22 @@ On a clone of the scratch repository, find out and note in
 - Whether the mode turns itself on (a global mode, =find-file-hook=), and
   what that costs in a clone with no PR.
 
+* Phase 8 — Notifications, polish, release
+Implements F19.
+- [ ] =approve-notifications.el= and the filter transient.
+- [ ] Dashboard unread marks ([[file:decisions.org::*Open questions][Q6]]).
+- [ ] Performance pass on the large fixture and on real huge PRs.
+- [ ] User manual ([[file:decisions.org::*Open questions][Q5]]), README with screenshots, customization docs.
+- [ ] MELPA recipe and release.
+- Done when :: a new user can install from MELPA, set a token, run
+  =approve-dashboard= and review, following only the README.
+- Moved (2026-11-16) :: the split layout and =L= (F18) went to
+  [[*Phase 11 — The split layout][Phase 11]], at the author's request: nice to have, done once
+  Approve has been used in the wild and there is feedback.
+- Moved (2026-11-16) :: =approve-doctor= went to
+  [[*Phase 12 — The doctor][Phase 12]], at the author's request: once Approve is feature
+  complete and there is feedback, it is clear whether a doctor is needed.
+
 * Phase 9 — More ways to find a PR
 The rest of F01: a search of any pull requests, and a PR opened from a link
 or from Magit/Forge.  Moved from Phase 3 (2026-11-15): nice to have, not
@@ -407,7 +409,7 @@ Mockups: commits with range, review range transient.
 
 * Phase 11 — The split layout
 The diff in its own buffer, beside an overview of the rest of the pull
-request ([[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]]).  Moved from Phase 7 (2026-11-16), at the author's
+request ([[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]]).  Moved from Phase 8 (2026-11-16), at the author's
 request: nice to have.  It waits until Approve has been used in the wild
 and there is feedback on how the single buffer works, so the split
 answers what users miss.  An exploration, with mockups and the open
@@ -435,7 +437,7 @@ Mockups: PR buffer — split layout.
 ([[file:architecture.org::*Errors][architecture.org]]): the token ghub finds and the user GitHub sees, its
 kind and scopes and the features they allow, the host, the rate limits,
 Emacs (libxml2, images) and the versions of the packages.  Moved from
-Phase 7 (2026-11-16), at the author's request: it waits until Approve is
+Phase 8 (2026-11-16), at the author's request: it waits until Approve is
 feature complete and has been used in the wild, so the feedback says
 whether a doctor is needed at all, and what it should check.  Until then,
 each error says what went wrong where it shows ([[file:architecture.org::*Errors][architecture.org]]), and

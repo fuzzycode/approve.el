@@ -65,7 +65,7 @@ task only needs the files it touches.
   it there (D36).
 - Phase 2 was called done by the author on 2026-11-15: what is left is
   tuning and fixing what using Approve brings up.  The split layout (F18)
-  moved to Phase 7: nothing before it needs it.  SP1 is
+  moved to the release phase (now Phase 8): nothing before it needs it.  SP1 is
   done ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]): comments, replies, submit and discard need only the PR's
   id, and GitHub's silent or misleading answers are checked by Approve.
   Writes are tried on the scratch repository ([[file:development.org::*Scratch repository][development.org]]).
@@ -124,14 +124,17 @@ task only needs the files it touches.
   comments and reviews others published after it say "new", the
   headings count them, and =j n= / =j N= go from one to the next.  Every
   task of Phase 6 is done; its done-when is for the author to call.
-- Next step: =approve-notifications.el= and its filter transient
-  ([[file:flows.org::*F19 Notifications][F19]]), the first task of
-  [[file:roadmap.org::*Phase 7 — Notifications, polish, release][Phase 7]].  The split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
-  phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]] (2026-11-16), at the author's request: nice to
+- Next step: [[file:roadmap.org::*SP8 The clone and its lines][SP8]] (the clone and its lines), then F21 and F22
+  with their mockups: the first task of [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback
+  in your clone).  It came ahead of notifications and the release, now
+  [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], on 2026-11-16 at the author's request: the feature before
+  the documentation and the nice to haves.
+- On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
+  phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]], at the author's request: nice to
   have, done once Approve has been used in the wild and there is
   feedback.  Its exploration, mockups and open questions are in
   [[file:html/split.html][html/split.html]], a draft.  =approve-doctor= moved after it, to
-  [[file:roadmap.org::*Phase 12 — The doctor][Phase 12]] (2026-11-16): once Approve is feature complete and
+  [[file:roadmap.org::*Phase 12 — The doctor][Phase 12]]: once Approve is feature complete and
   there is feedback, it is clear whether a doctor is needed.
 
 * Reading order

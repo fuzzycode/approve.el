@@ -39,11 +39,11 @@ show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutation
 | F16 | Inspect checks                             |   1/5 |
 | F17 | Refresh and detect remote changes          |   1/2 |
 | F18 | Switch layout                              |    11 |
-| F19 | Notifications                              |     7 |
+| F19 | Notifications                              |     8 |
 | F20 | Look up details (eldoc)                    |     1 |
 | F23 | Commit a suggestion, or a batch of them     |     5 |
 
-F21 and F22 (review feedback in a clone) come with [[file:roadmap.org::*Phase 8 — Review feedback in your clone][Phase 8]].
+F21 and F22 (review feedback in a clone) come with [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]].
 
 * F00 The action pipeline
 Every command that changes something on GitHub runs this pipeline.  Code
@@ -628,7 +628,7 @@ have.
 #+end_example
 
 The threads are read in the file view and acted on in the diff, one =RET=
-away ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]); Phase 8 brings actions from the overlays, for a
+away ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]); Phase 7 brings actions from the overlays, for a
 clone's buffers, and the file view can take them then.
 
 * F16 Inspect checks
