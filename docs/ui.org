@@ -262,9 +262,11 @@ redraw.
 * PR buffer — split layout
 =approve-layout= = =split=.  The overview keeps everything except the =Diff=
 section.  A file in the overview opens the linked diff buffer at that file;
-the key is chosen with F18 ([[file:roadmap.org][Phase 7]]), as =RET= opens the file whole
+the key is chosen with F18 ([[file:roadmap.org::*Phase 11 — The split layout][Phase 11]]), as =RET= opens the file whole
 and =d= edits the description.
-Both buffers share one store; a change in one redraws both.
+Both buffers share one store; a change in one redraws both.  An
+exploration, with mockups and open questions, is in [[file:html/split.html][html/split.html]]
+(a draft, not decided).
 
 #+begin_example
  *approve: fuzzycode/approve#1234*            *approve-diff: fuzzycode/approve#1234*

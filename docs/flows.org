@@ -38,7 +38,7 @@ show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutation
 | F15 | View the whole file                        |     6 |
 | F16 | Inspect checks                             |   1/5 |
 | F17 | Refresh and detect remote changes          |   1/2 |
-| F18 | Switch layout                              |     7 |
+| F18 | Switch layout                              |    11 |
 | F19 | Notifications                              |     7 |
 | F20 | Look up details (eldoc)                    |     1 |
 | F23 | Commit a suggestion, or a batch of them     |     5 |

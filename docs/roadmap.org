@@ -293,13 +293,7 @@ Mockups: file view.
   essential.
 
 * Phase 7 — Notifications, polish, release
-Implements F18, F19.
-- [ ] Split layout and =L= (F18, [[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]]).  Moved from Phase 2 (2026-11-15):
-      nothing before it needs it; once Phase 10 brings the review range,
-      the diff buffer's heading names it too.  Until then, code that
-      works on a PR buffer reads and writes through the shared store and
-      session (=approve-model-store-buffer=) and updates every buffer of the
-      PR (=approve-action--buffers=), so the diff buffer can join later.
+Implements F19.
 - [ ] =approve-notifications.el= and the filter transient.
 - [ ] Dashboard unread marks ([[file:decisions.org::*Open questions][Q6]]).
 - [ ] =approve-doctor=.
@@ -308,13 +302,16 @@ Implements F18, F19.
 - [ ] MELPA recipe and release.
 - Done when :: a new user can install from MELPA, set a token, run
   =approve-dashboard= and review, following only the README.
+- Moved (2026-11-16) :: the split layout and =L= (F18) went to
+  [[*Phase 11 — The split layout][Phase 11]], at the author's request: nice to have, done once
+  Approve has been used in the wild and there is feedback.
 
 * Phase 8 — Review feedback in your clone
 Extras for a local clone ([[file:decisions.org::*D36 No clone needed; a local clone adds to it][D36]]): the PR's threads in the buffers of the
 files the user edits, as CLion and VS Code show them, and ways between
 those buffers and the PR buffer.  Without a clone none of it shows, and
 nothing else changes.  Moved from Ideas (2026-11-15).  Builds on the file
-view's overlays (Phase 6) and the store shared by a PR's buffers (Phase 7).
+view: its overlays, and the store it shares with its PR buffer (Phase 6).
 Implements F21, F22 (written in this phase's first task).
 Mockups: a file's buffer with its threads (written with F21).
 - [X] Done early (2026-11-15), at the author's request: =RET= on a commit
@@ -405,6 +402,31 @@ Mockups: commits with range, review range transient.
       the commit-range view open): try it on the scratch repository first.
 - Done when :: re-reviewing after a push can show only the new changes,
   and comments from that view land where GitHub puts them.
+
+* Phase 11 — The split layout
+The diff in its own buffer, beside an overview of the rest of the pull
+request ([[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]]).  Moved from Phase 7 (2026-11-16), at the author's
+request: nice to have.  It waits until Approve has been used in the wild
+and there is feedback on how the single buffer works, so the split
+answers what users miss.  An exploration, with mockups and the open
+questions, is in [[file:html/split.html][html/split.html]] (a draft, not decided).
+Implements F18.
+Mockups: PR buffer — split layout.
+- [ ] Settle the open questions of the exploration with the author, in the
+      light of the feedback: the key from the file list to the diff (=RET=
+      opens the file whole now), where the diff buffer shows, viewed marks
+      in the file list, whether the overview follows the diff, evil's way
+      back (=^= is a motion there), what the diff buffer holds.  Then D05,
+      F18 and the split mockup (ui.org, pr.html) say what was decided.
+- [ ] Split layout and =L= (F18).  Code that works on a PR buffer already
+      reads and writes through the shared store and session
+      (=approve-model-store-buffer=) and updates every buffer of the PR
+      (=approve-action--buffers=), as the file view does, so the diff
+      buffer can join; the jumps into the diff (=]u ]t j n j /=, =RET= on a
+      review, a pending comment or a file view's line) learn to reach it.
+      With Phase 10's review range, the diff buffer's heading names it.
+- Done when :: =L= moves any PR's diff to its own buffer and back, point
+  on the same line, and every command and jump works from either buffer.
 
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.

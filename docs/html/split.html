@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve — the split layout (draft)</title>
+<link rel="stylesheet" href="assets/approve.css">
+<script src="assets/approve.js"></script>
+<style>
+  /* Page-local: wide frames for two windows side by side. */
+  .wide { width: min(1580px, calc(100vw - 2.8rem)); margin-left: 50%; transform: translateX(-50%); }
+  .ratio > .win:first-child { flex: 0 0 43%; }
+  .ratio > .win:last-child { flex: 1 1 0; }
+  .callout {
+    max-width: 62rem; margin: 1rem 0; padding: .7rem 1rem; border-radius: 8px;
+    background: var(--bg); border-left: 3px solid var(--iris); color: var(--page-fg);
+  }
+  .callout.warn { border-left-color: var(--gold); }
+  .callout p { margin: .3rem 0; }
+  .tag {
+    display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: .02em;
+    padding: 0 .45rem; border-radius: 4px; vertical-align: 2px;
+    color: var(--bg); background: var(--iris);
+  }
+  .tag.open { background: var(--gold); }
+  .step { color: var(--iris); font-family: var(--mono, ui-monospace, Menlo, monospace); margin: .4rem 0 .2rem; }
+  pre.ascii {
+    margin: .8rem 0; padding: 1rem 1.2rem; overflow-x: auto;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--overlay); border-radius: 10px;
+    font: 13px/1.4 "JetBrainsMono Nerd Font Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  pre.ascii .a { color: var(--iris); }
+  pre.ascii .u { color: var(--gold); }
+  table.keys { border-collapse: collapse; margin: .8rem 0; max-width: 62rem; width: 100%; }
+  table.keys th, table.keys td { text-align: left; padding: .35rem .7rem; border-bottom: 1px solid var(--overlay); vertical-align: top; }
+  table.keys th { color: var(--page-muted); font-weight: 600; }
+  table.keys td code { white-space: nowrap; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; max-width: 62rem; }
+  .grid2 h3 { margin: .2rem 0; font-size: 1rem; }
+  .grid2 ul { padding-left: 1.1rem; color: var(--page-muted); margin: .3rem 0; }
+  .opt { margin: .2rem 0 .2rem 1.2rem; color: var(--page-muted); }
+  .opt b { color: var(--page-fg); }
+  .q { max-width: 62rem; margin: 1.2rem 0; padding: .8rem 1rem; background: var(--bg); border: 1px solid var(--overlay); border-radius: 8px; }
+  .q h3 { margin: 0 0 .3rem; font-size: 1rem; }
+  .q p { margin: .3rem 0; color: var(--page-muted); }
+  .rec { color: var(--foam); }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="index.html">Approve</a>
+  <nav>
+    <a href="pr.html">PR buffer</a>
+    <a href="split.html" aria-current="page">Split layout (draft)</a>
+    <a href="review.html">Reviewing</a>
+    <a href="find.html">Finding PRs</a>
+    <a href="manage.html">Managing &amp; more</a>
+    <a href="flows.html">Flows</a>
+    <a href="icons.html">Icons</a>
+  </nav>
+  <div class="toggles"><button id="theme-btn">Theme</button><button id="icons-btn">Icons</button></div>
+</header>
+
+<main>
+<h1>The split layout <span class="tag open">draft · F18 · D05</span></h1>
+<p class="lead">An exploration of F18, moved to the end of the roadmap (<a href="../roadmap.org">Phase 11</a>,
+2026-11-16) until Approve has been used in the wild and there is feedback. Nothing here is decided.
+It builds on what exists (the PR buffer, the file view, the shared store) and on what
+<a href="../decisions.org">D05</a>, <a href="../flows.org">F18</a> and the split mockup in
+<a href="pr.html#split">pr.html</a> already say. Marks: <span class="tag">proposal</span> is new here;
+<span class="tag open">open</span> needs your decision (see the end).
+<span class="hint-click">Click any <b>▾/▸</b> heading to fold it.</span></p>
+
+<ul class="toc">
+  <li><a href="#what">What it means</a></li>
+  <li><a href="#why">What it is good for</a></li>
+  <li><a href="#look">What it looks like</a></li>
+  <li><a href="#toggle">L: from one buffer to two</a></li>
+  <li><a href="#between">Moving between the two</a></li>
+  <li><a href="#narrow">One window: a narrow frame</a></li>
+  <li><a href="#menus">The menus in the diff buffer</a></li>
+  <li><a href="#keys">Keys</a></li>
+  <li><a href="#flow">The flow (F18, grown)</a></li>
+  <li><a href="#open">Open questions</a></li>
+</ul>
+
+<!-- ================================================================== -->
+<section class="shot" id="what">
+<h2>What it means <span class="ref">D05 · architecture.org › Data model</span></h2>
+<p>Today one PR buffer holds everything, the diff last. The split layout moves the <b>Diff</b> section out into a
+second buffer, <code>*approve-diff: fuzzycode/approve#1234*</code>, linked to the first. The PR buffer becomes an
+<b>overview</b>: header, pending review, description, checks, commits, conversation and the file list. Nothing is
+copied: the diff buffer points at the overview's store (<code>approve-model-store-buffer</code>, as the file view
+already does), so a comment, a reply or a viewed mark made in either buffer redraws both.</p>
+
+<pre class="ascii"> <span class="u">single layout (default)</span>                    <span class="u">split layout</span>  (L, or approve-layout = split)
+
+ *approve: …#1234*                         *approve: …#1234*              *approve-diff: …#1234*
+ ┌──────────────────────────────┐          ┌──────────────────────────┐   ┌──────────────────────────────┐
+ │ header, metadata             │          │ header, metadata         │   │ ▾ Diff (12)  4/12 viewed …   │
+ │ Your pending review          │          │ Your pending review      │   │   ▾ lisp/approve-api.el      │
+ │ Description                  │          │ Description              │   │     @@ hunks, lines          │
+ │ Checks · Commits             │          │ Checks · Commits         │   │       ╭─ threads             │
+ │ Conversation                 │          │ Conversation             │   │   ▸ lisp/approve-model.el    │
+ │ Files changed                │          │ Files changed  <span class="a">──RET──▶</span>  │   │   ▸ …                        │
+ │ Diff  ◀── the long part:     │          │                <span class="a">◀───^───</span>  │   │                              │
+ │   files, hunks, threads …    │          └──────────────────────────┘   └──────────────────────────────┘
+ └──────────────────────────────┘                     one store, one session: a change redraws both</pre>
+
+<p>Both layouts are the same sections over the same store; only which buffer runs <code>approve-insert-diff-section</code>
+differs. <code>approve-layout</code> picks the default for new PRs, <code>L</code> switches the PR at hand.</p>
+
+<div class="callout warn">
+<p><b>Not GitHub's “split” diff.</b> GitHub's Files changed tab has a <i>Unified / Split</i> switch that puts the old
+and new code in two columns. That is a different feature, and not planned: Approve's diff stays unified (D12's
+parsed patches), and the file view (<code>F</code>, <code>b</code> for the other version) is where a file is read
+whole. “Split” here means <i>the diff in its own buffer</i>, as Magit splits its status and diff buffers.</p>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="why">
+<h2>What it is good for</h2>
+<div class="grid2">
+<div>
+<h3 class="ok">Gains</h3>
+<ul>
+  <li><b>Talk and code side by side.</b> The conversation or a review's summary on the left, its threads open on the
+    right. <code>RET</code> on “@bob approved · 3 comments on code” shows them in the diff without moving the
+    overview.</li>
+  <li><b>Two places, two points.</b> Each buffer keeps its own point, scroll and folds. Reading the conversation no
+    longer means leaving your place in a 3 000-line diff and finding it again.</li>
+  <li><b>The file list becomes a navigator.</b> Progress (viewed, threads) on one side, the code on the other.</li>
+  <li><b>Search where you mean.</b> <code>C-s</code>, <code>occur</code>, <code>consult-line</code> in the diff buffer
+    hit only code and threads; in the overview, only the discussion.</li>
+  <li><b>Room.</b> The diff in a wide window, its own frame, tab or monitor; the overview short and quick to move in.</li>
+  <li><b>Familiar.</b> Magit's status and diff buffers; GitHub's Conversation and Files changed tabs.</li>
+</ul>
+</div>
+<div>
+<h3 class="wa">Costs</h3>
+<ul>
+  <li>Two buffers to place, and people disagree on windows: the display needs an option, as the file view has
+    (<code>approve-file-display-action</code>).</li>
+  <li>Every jump that now moves inside one buffer must learn to cross to the other: <code>]u [u ]t [t</code>,
+    <code>j n</code>, <code>j /</code>, <code>RET</code> on a pending comment or a review, <code>RET</code> back from a
+    file view, and the input buffer's highlighted target lines.</li>
+  <li>One more key, from a file in the list to its diff, as <code>RET</code> opens the file whole today.</li>
+  <li>Speed: diff bodies are already drawn lazily, so the split mostly helps ergonomics; a store change still redraws
+    both buffers.</li>
+</ul>
+</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="look">
+<h2>What it looks like <span class="ref">a wide frame · approve-page-width 80 in the overview</span></h2>
+<p>The overview on the left, the diff on the right, chosen by the display action when the frame is wide. Point is in
+the diff, on a line with threads. The overview marks the file the diff is on <span class="tag">proposal</span>, and
+its file list says which files are viewed, with the count on its heading <span class="tag open">open</span>: in the
+split layout it is where you steer from. The diff buffer's header line names the PR and what the diff shows (Phase 10
+names a review range there).</p>
+
+<div class="emacs wide">
+<div class="tb">Emacs — approve</div>
+<div class="split ratio">
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p><span class="m">Author</span>      <span class="u">@alice</span></p>
+<p><span class="m">Repository</span>  fuzzycode/approve</p>
+<p><span class="m">Branch</span>      <span class="pi">feature/retry</span> <span class="d">→</span> <span class="pi">main</span></p>
+<p><span class="m">Reviewers</span>   <span class="ok"><i data-i="approved">✓</i></span> <span class="u">@bob</span>  <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">@dave</span>  <span class="d"><i data-i="requested">○</i></span> <span class="u">@fuzzycode/core</span></p>
+<p><span class="m">Status</span>      <span class="er"><i data-i="changes-requested">✗</i> Changes requested</span> <span class="d">·</span> <span class="ok"><i data-i="check-success">✓</i> No conflicts</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> 7 of 9 checks</span></p>
+<p></p>
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Your pending review</span> (3)                                <span class="k">S</span> <span class="d">submit ·</span> <span class="k">X</span> <span class="d">discard</span></p>
+<div class="sb">
+<p>    <span class="pi">lisp/approve-api.el:42</span>      Should <span class="code">retries</span> be part of the defgroup?</p>
+<p>    <span class="pi">lisp/approve-api.el:87–91</span>   <i data-i="pending-comment">✎</i> suggestion: use <span class="code">cl-incf</span></p>
+<p>    <span class="d">↳ reply on</span> <span class="pi">lisp/approve-model.el:12</span></p>
+</div>
+</div>
+<p></p>
+<div class="s closed">
+<p class="hd"><span class="tog"></span> <span class="h">Description</span> <span class="d">·</span> <span class="d it">edited</span>                                                 <span class="k">e</span> <span class="d">edit</span></p>
+<div class="sb"><p>  Adds exponential back-off to <span class="code">approve-api-graphql</span>. …</p></div>
+</div>
+<div class="s closed">
+<p class="hd"><span class="tog"></span> <span class="h">Checks</span> (9)      <span class="wa"><i data-i="check-pending">◐</i></span> <span class="ok">7 passed</span> <span class="d">·</span> <span class="er">1 failed</span> <span class="d">·</span> <span class="wa">1 running</span></p>
+<div class="sb"><p>    <span class="er"><i data-i="check-failure">✗</i></span> lint                      32s      <span class="m">required</span></p></div>
+</div>
+<div class="s closed">
+<p class="hd"><span class="tog"></span> <span class="h">Commits (4)</span>     <span class="wa">2 new since your review</span></p>
+<div class="sb"><p>    <span class="m">a1b2c3d</span>  Add retry option          <span class="u">@alice</span>  <span class="d">3 days ago</span></p></div>
+</div>
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Conversation (6)</span>                                     <span class="wa">1 new since your review</span></p>
+<div class="sb">
+<p>  <span class="u">@alice</span> <span class="d">opened this 3 days ago</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <span class="ok"><i data-i="approved">✓</i></span> <span class="u">@bob</span> <span class="ok">approved</span> <span class="d">· 2 days ago · 3 comments on code</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <i data-i="push">↑</i> <span class="u">@alice</span> pushed 2 commits <span class="d">· 1 day ago</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span> <span class="er">requested changes</span> <span class="d">· 5 hours ago ·</span> <span class="wa">new</span></p>
+<p>  <span class="wa">┃</span>   Please add a test for the retry limit.</p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">╰</span> <span class="k">C</span> <span class="d">comment on this pull request</span></p>
+</div>
+</div>
+<p></p>
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Files changed</span> (12)  <span class="ok">+340</span> <span class="er">−56</span>            4/12 viewed <span class="d">·</span> <span class="wa">1 unresolved file thread</span></p>
+<div class="sb">
+<p class="cur">  <span class="d"><i data-i="viewed">✓</i></span> lisp/approve-api.el         <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span></p>
+<p>  <span class="d"><i data-i="unviewed">·</i></span> lisp/approve-model.el        <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
+<p>  <span class="wa"><i data-i="dismissed">↻</i></span> lisp/approve-graphql.el      <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
+<p>  <span class="d"><i data-i="unviewed">·</i></span> tests/test-approve-api.el   <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
+<p>  <span class="d">…  8 more</span></p>
+</div>
+</div>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   Bot  L61       Approve-PR</div>
+</div>
+
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span> <span class="d">· all changes</span>                                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Diff</span> (12)                                   4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span> <span class="d">·</span> <span class="wa">1 new comment</span></p>
+<div class="sb">
+<div class="s">
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                         <span class="wa">1 new</span>  <i data-i="comment">💬</i> 2</p>
+<div class="sb">
+<div class="s">
+<p class="hd hunk">    <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
+<div class="sb">
+<p>       <span class="ln">40  40</span>      (let* ((request-id (approve-api--generate-request-id))</p>
+<p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
+<p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
+<div class="s">
+<p class="hd add">       <span class="ln">    42</span>  +          <span class="cursor">(</span>retries approve-api-retries))                                  <span class="bubble"><i data-i="comment">💬</i> 2</span></p>
+<div class="sb">
+<p>                 <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ────────────────────────────────────────</span></p>
+<p>                 <span class="d">│</span> Should this be configurable per call?</p>
+<p>                 <span class="d">│</span></p>
+<p>                 <span class="wa">┃</span> <span class="u">@alice</span> <span class="d">· 1 day ago ·</span> <span class="wa">new</span></p>
+<p>                 <span class="wa">┃</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
+<p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────</span></p>
+<p>                 <span class="d">╭─</span> <span class="wa"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ─────────────────────────────────────────</span></p>
+<p>                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup?</p>
+<p>                 <span class="d">╰─</span> <span class="k">e</span> <span class="d">edit ·</span> <span class="k">k</span> <span class="d">delete ────────────────────────────────────────</span></p>
+</div>
+</div>
+<p>       <span class="ln">42  43</span>        (when progress-message</p>
+<p>       <span class="ln">43  44</span>          (make-progress-reporter progress-message))</p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd hunk">    <span class="tog"></span> @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id</p>
+<div class="sb">
+<p>       <span class="ln">87  92</span>    (approve-api--cleanup-request request-id)</p>
+<p class="add">       <span class="ln">    93</span>  +  (when (approve-api--retry-p request-id)</p>
+</div>
+</div>
+</div>
+</div>
+<p></p>
+<div class="s closed">
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-model.el</span></p>
+<div class="sb">
+<p class="hunk">    ▸ @@ -12,6 +12,9 @@ (defvar-local approve-model--store nil</p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd">  <span class="tog"></span> <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span>                                                            <i data-i="comment">💬</i> 2</p>
+<div class="sb">
+<p>    ▸ <span class="h">On this file (1)</span></p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="ok"><i data-i="file-added">+</i></span> <span class="fh">tests/test-approve-api.el</span></p>
+<div class="sb">
+<p class="hunk">    ▸ @@ -0,0 +1,160 @@</p>
+</div>
+</div>
+<p>  <span class="d">…</span></p>
+</div>
+</div>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve-diff: fuzzycode/approve#1234*</span>   Top  L7        <span class="pi">Approve-Diff</span></div>
+</div>
+</div>
+<div class="echo"><span class="u">@bob</span> <span class="d">·</span> 2 days ago <span class="d">· thread on</span> <span class="pi">lisp/approve-api.el:42</span> <span class="d">· 2 comments</span></div>
+</div>
+
+<ul>
+  <li>The diff buffer holds the same <b>Diff</b> section as the single layout, the only top-level one: its heading
+    keeps the counts (viewed, unresolved threads, new comments); <code>TAB</code> on it folds every file.</li>
+  <li>Every key of the diff works there as it does now (<code>c s x b r R e k + v S X T O ? j g</code>): commands read
+    the shared store, and their redraw reaches both buffers (<code>approve-action--buffers</code> already collects the
+    buffers of a PR).</li>
+  <li>Change detection (D23) is per PR: its notice shows in both header lines, and <code>g</code> in either loads the
+    PR once and redraws both.</li>
+  <li>Killing the overview kills its diff buffer and file views, as it already kills its file views.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="toggle">
+<h2>L: from one buffer to two <span class="ref">F18</span></h2>
+<p>Reading a long diff in the single layout, point on a line of <code>lisp/approve-api.el</code>.</p>
+
+<div class="emacs" style="max-width:900px">
+<div class="tb">Emacs — approve</div>
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                                      <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p><span class="tog"></span> <span class="h">Files changed</span> (12)  <span class="ok">+340</span> <span class="er">−56</span>                                <span class="wa">1 unresolved file thread</span></p>
+<p>    lisp/approve-api.el            <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span></p>
+<p>    <span class="d">…  11 more</span></p>
+<p></p>
+<p><span class="tog"></span> <span class="h">Diff</span> (12)                         4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span> <span class="d">·</span> <span class="wa">1 new comment</span></p>
+<p>  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                              <span class="wa">1 new</span>  <i data-i="comment">💬</i> 2</p>
+<p class="hunk">    <span class="tog"></span> @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id</p>
+<p>       <span class="ln">87  92</span>    (approve-api--cleanup-request request-id)</p>
+<p class="add">       <span class="ln">    93</span>  +  (when (approve-api--<span class="cursor">r</span>etry-p request-id)</p>
+<p class="add">       <span class="ln">    94</span>  +    (cl-return-from approve-api--handle-timeout</p>
+<p class="add">       <span class="ln">    95</span>  +      (approve-api--retry request-id)))</p>
+<p>       <span class="ln">88  96</span>    (when error-callback</p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   71%  L298       <span class="pi">Approve-PR</span></div>
+</div>
+<div class="echo"></div>
+</div>
+
+<p class="step">▼ L   (evil gL)</p>
+<p>The PR becomes split. The Diff leaves the PR buffer, which stays in its window as the overview, point on the
+file's entry in the list; the diff buffer opens beside it, point on the same line. <code>L</code> again joins them:
+the diff buffer is killed (its window closed when it was made for it) and point goes to the same line in the
+PR buffer.</p>
+
+<div class="emacs wide">
+<div class="tb">Emacs — approve</div>
+<div class="split ratio">
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p>▸ <span class="h">Commits (4)</span>     <span class="wa">2 new since your review</span></p>
+<p>▸ <span class="h">Conversation (6)</span>                                     <span class="wa">1 new since your review</span></p>
+<p></p>
+<p><span class="tog"></span> <span class="h">Files changed</span> (12)  <span class="ok">+340</span> <span class="er">−56</span>            4/12 viewed <span class="d">·</span> <span class="wa">1 unresolved file thread</span></p>
+<p class="cur">  <span class="d"><i data-i="viewed">✓</i></span> lisp/approve-api.el         <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span></p>
+<p>  <span class="d"><i data-i="unviewed">·</i></span> lisp/approve-model.el        <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
+<p>  <span class="wa"><i data-i="dismissed">↻</i></span> lisp/approve-graphql.el      <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
+<p>  <span class="d"><i data-i="unviewed">·</i></span> tests/test-approve-api.el   <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
+<p>  <span class="d">…  8 more</span></p>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   Bot  L58       Approve-PR</div>
+</div>
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span> <span class="d">· all changes</span>                                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p><span class="tog"></span> <span class="h">Diff</span> (12)                                   4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span> <span class="d">·</span> <span class="wa">1 new comment</span></p>
+<p>  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                         <span class="wa">1 new</span>  <i data-i="comment">💬</i> 2</p>
+<p class="hunk">    ▸ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
+<p class="hunk">    <span class="tog"></span> @@ -87,6 +92,22 @@ (defun approve-api--handle-timeout (request-id</p>
+<p>       <span class="ln">87  92</span>    (approve-api--cleanup-request request-id)</p>
+<p class="add">       <span class="ln">    93</span>  +  (when (approve-api--<span class="cursor">r</span>etry-p request-id)</p>
+<p class="add">       <span class="ln">    94</span>  +    (cl-return-from approve-api--handle-timeout</p>
+<p class="add">       <span class="ln">    95</span>  +      (approve-api--retry request-id)))</p>
+<p>       <span class="ln">88  96</span>    (when error-callback</p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve-diff: fuzzycode/approve#1234*</span>   Top  L6        <span class="pi">Approve-Diff</span></div>
+</div>
+</div>
+<div class="echo">Approve: split layout <span class="d">·</span> <span class="k">L</span> joins the diff to the overview again</div>
+</div>
+<ul>
+  <li>The folds come along: what was folded in the Diff section is folded in the diff buffer, and back
+    (each buffer has its own visibility cache, so <code>L</code> carries it over).</li>
+  <li><code>L</code> changes this PR only (the session's <code>:layout</code>); <code>approve-layout</code> is the default
+    for PRs opened later. With <code>approve-layout</code> set to <code>split</code>, a PR opens as the overview alone and
+    the diff buffer is made the first time something goes to the diff.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="between">
+<h2>Moving between the two</h2>
+<p><b>From the conversation to the code.</b> <code>RET</code> on Bob's review: the diff shows beside the overview, at
+his first thread, and is selected, so <code>r</code> replies at once. The overview stays where it was; <code>]t</code>
+walks his other threads.</p>
+
+<div class="emacs wide">
+<div class="tb">Emacs — approve</div>
+<div class="split ratio">
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p><span class="tog"></span> <span class="h">Conversation (6)</span>                                     <span class="wa">1 new since your review</span></p>
+<p>  <span class="u">@alice</span> <span class="d">opened this 3 days ago</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <i data-i="commented">💬</i> <span class="u">@bob</span> commented <span class="d">· 2 days ago</span>                      <span class="k">r</span> <span class="d">quote ·</span> <span class="k">+</span> <span class="d">react</span></p>
+<p>  <span class="d">│</span>   Looks good overall, a few nits inline.</p>
+<p>  <span class="d">│</span></p>
+<p class="cur">  <span class="d">├</span> <span class="ok"><i data-i="approved">✓</i></span> <span class="u">@bob</span> <span class="ok">approved</span> <span class="d">· 2 days ago · 3 comments on code</span></p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <i data-i="push">↑</i> <span class="u">@alice</span> pushed 2 commits <span class="d">· 1 day ago</span></p>
+<p>  <span class="d">│</span>     <span class="m">d4e5f6a</span>  Handle 502 responses</p>
+<p>  <span class="d">│</span>     <span class="m">e5f6a7b</span>  Add tests</p>
+<p>  <span class="d">│</span></p>
+<p>  <span class="d">├</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span> <span class="er">requested changes</span> <span class="d">· 5 hours ago ·</span> <span class="wa">new</span></p>
+<p>  <span class="wa">┃</span>   Please add a test for the retry limit.</p>
+</div>
+<div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   44%  L37       Approve-PR</div>
+</div>
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span> <span class="d">· all changes</span>                                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p>  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                         <span class="wa">1 new</span>  <i data-i="comment">💬</i> 2</p>
+<p class="hunk">    <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
+<p>       <span class="ln">40  40</span>      (let* ((request-id (approve-api--generate-request-id))</p>
+<p class="del">       <span class="ln">41    </span>  -          (timeout approve-api-timeout))</p>
+<p class="add">       <span class="ln">    41</span>  +          (timeout approve-api-timeout)</p>
+<p class="add">       <span class="ln">    42</span>  +          (retries approve-api-retries))                                  <span class="bubble"><i data-i="comment">💬</i> 2</span></p>
+<p>                 <span class="cursor">╭</span><span class="d">─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ────────────────────────────────────────</span></p>
+<p>                 <span class="d">│</span> Should this be configurable per call?</p>
+<p>                 <span class="d">│</span></p>
+<p>                 <span class="wa">┃</span> <span class="u">@alice</span> <span class="d">· 1 day ago ·</span> <span class="wa">new</span></p>
+<p>                 <span class="wa">┃</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
+<p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────</span></p>
+<p>       <span class="ln">42  43</span>        (when progress-message</p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve-diff: fuzzycode/approve#1234*</span>   Top  L7        <span class="pi">Approve-Diff</span></div>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+
+<p style="margin-top:1.6rem"><b>From the code back to the overview.</b> <code>^</code> is Magit's “up to the parent
+section” <span class="tag">proposal</span>: from a line to its hunk, from a hunk to its file, and from a file heading
+up to the overview, on the file's entry. <code>q</code> quits the diff's window, which leaves the overview.</p>
+
+<div class="emacs wide">
+<div class="tb">Emacs — approve</div>
+<div class="split ratio">
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span>                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p><span class="tog"></span> <span class="h">Files changed</span> (12)  <span class="ok">+340</span> <span class="er">−56</span>            4/12 viewed <span class="d">·</span> <span class="wa">1 unresolved file thread</span></p>
+<p>  <span class="d"><i data-i="viewed">✓</i></span> lisp/approve-api.el         <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span></p>
+<p>  <span class="d"><i data-i="unviewed">·</i></span> lisp/approve-model.el        <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
+<p class="cur">  <span class="wa"><i data-i="dismissed">↻</i></span> <span class="cursor">l</span>isp/approve-graphql.el      <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
+<p>  <span class="d"><i data-i="unviewed">·</i></span> tests/test-approve-api.el   <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
+<p>  <span class="d">…  8 more</span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   Bot  L60       <span class="pi">Approve-PR</span></div>
+</div>
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic to the GraphQL client</span> <span class="d">· all changes</span>                                  <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p>  ▸ <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-model.el</span></p>
+<p class="cur">  <span class="tog"></span> <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span>                                                            <i data-i="comment">💬</i> 2</p>
+<p>    <span class="tog"></span> <span class="h">On this file (1)</span></p>
+<p>        <span class="d">╭─</span> <span class="u">@dave</span> <span class="d">· 1 day ago ────────────────────────────────────────────</span></p>
+<p>        <span class="d">│</span> Could this file be split in two?</p>
+<p>        <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ───────────────────────────────────────────</span></p>
+<p>    ▸ <span class="h">Outdated (2)</span>                         <span class="d">threads on lines no longer in the diff</span></p>
+<p>  ▸ <span class="d"><i data-i="unviewed">·</i></span> <span class="ok"><i data-i="file-added">+</i></span> <span class="fh">tests/test-approve-api.el</span></p>
+</div>
+<div class="ml off"> <span class="b">*approve-diff: fuzzycode/approve#1234*</span>   31%  L112      Approve-Diff</div>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+<ul>
+  <li>Everything that goes to the diff today goes to the diff buffer, making it when there is none and showing it by
+    the display action: a file from the list, <code>]u [u</code>, <code>]t [t</code>, <code>j n</code> /
+    <code>j N</code> (the conversation's new comments first, then the diff's), <code>j /</code>, <code>RET</code> on a
+    pending comment or a review, and <code>RET</code> on a line of a file view.</li>
+  <li>From the diff buffer, the jump menu's sections (<code>j d</code>, <code>j c</code>, <code>j f</code>, …) go to the
+    overview.</li>
+  <li><code>RET</code> on a diff line still opens the file whole (F15); the file view's <code>RET</code> comes back to
+    the diff buffer.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="narrow">
+<h2>One window: a narrow frame <span class="ref">approve-diff-display-action</span></h2>
+<p>Where the frame is too narrow for two windows of code (the proposal: under 160 columns, Emacs's
+<code>split-width-threshold</code>), the diff buffer takes the overview's window, like a Magit diff, and
+<code>q</code> or <code>^</code> brings the overview back. Here GitHub has changed meanwhile: the notice of change
+detection shows in the diff buffer's header line as well.</p>
+
+<div class="emacs" style="max-width:900px">
+<div class="tb">*approve-diff: fuzzycode/approve#1234*</div>
+<div class="win">
+<div class="hl"><span class="t">#1234 Add retry logic …</span> <span class="d">·</span> <span class="ir"><i data-i="loading">⟳</i> updated on GitHub — <span class="k">g</span> to refresh · 2 new commits · 1 new comment</span>   <span class="ok"><i data-i="open">●</i> Open</span></div>
+<div class="buf">
+<p><span class="tog"></span> <span class="h">Diff</span> (12)                         4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span> <span class="d">·</span> <span class="wa">1 new comment</span></p>
+<p>  ▸ <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                              <span class="wa">1 new</span>  <i data-i="comment">💬</i> 2</p>
+<p class="cur">  <span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-model.el</span></p>
+<p class="hunk">    <span class="tog"></span> @@ -12,6 +12,9 @@ (defvar-local approve-model--store nil</p>
+<p>       <span class="ln">12  12</span>    "Buffer-local normalized data store."</p>
+<p class="add">       <span class="ln">    13</span>  +(defvar-local approve-model--extra nil</p>
+<p class="add">       <span class="ln">    14</span>  +  "Data without node ids, keyed by name.")</p>
+<p>  ▸ <span class="wa"><i data-i="dismissed">↻</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-graphql.el</span>                                                 <i data-i="comment">💬</i> 2</p>
+</div>
+<div class="ml off"> <span class="b">*approve-diff: fuzzycode/approve#1234*</span>   12%  L41      Approve-Diff</div>
+</div>
+<div class="tr">
+<p><span class="kh">Approve</span>  <span class="t">#1234 Add retry logic to the GraphQL client</span>  <span class="d">· diff</span></p>
+<p><span class="kh">Review</span>                     <span class="kh">Comments</span>                 <span class="kh">Pull request</span>          <span class="kh">Buffer</span></p>
+<p> <span class="k">c</span> Comment at point         <span class="ina">r Reply</span>                  <span class="k">t</span> Title               <span class="k">g</span> Refresh</p>
+<p> <span class="ina">s Suggest change</span>           <span class="ina">R Resolve / unresolve</span>    <span class="k">d</span> Description         <span class="k">RET</span> Visit at point</p>
+<p> <span class="ina">x Commit suggestion</span>        <span class="ina">e Edit at point</span>           <span class="k">l</span> Labels              <span class="k">F</span> Whole file</p>
+<p> <span class="ina">b Add to batch</span>             <span class="ina">k Delete at point</span>         <span class="k">a</span> Assignees           <span class="k">o</span> Open in browser</p>
+<p> <span class="k">v</span> Toggle viewed            <span class="ina">+ React</span>                  <span class="k">A</span> Request reviewers   <span class="k">y</span> Copy URL / sha</p>
+<p> <span class="k">S</span> Submit review…           <span class="ina">H Hide / unhide</span>          <span class="k">M</span> Milestone           <span class="k">j</span> Jump…</p>
+<p> <span class="k">X</span> Discard pending review   <span class="k">C</span> Conversation comment   <span class="k">D</span> Draft / ready       <span class="k">K</span> Details (eldoc)</p>
+<p>                                                     <span class="k">w</span> Subscription        <span class="k">T</span> Fold all threads</p>
+<p>                                                     <span class="k">#</span> Lock conversation   <span class="k">O</span> Fold all but this</p>
+<p>                                                     <span class="k">m</span> Merge / close…      <span class="k">^</span> Overview</p>
+<p>                                                                           <span class="k">L</span> <span class="ir">Single layout</span></p>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+<ul>
+  <li>The dispatch is the PR's: every command works from the diff buffer. <code>L</code> says what it will do, as
+    <code>T</code> and <code>#</code> do: “Single layout” here, “Split layout” in the single layout.</li>
+  <li><code>^ Overview</code> joins the Buffer column in the diff buffer only.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="menus">
+<h2>The jump menu in the diff buffer <span class="ref">j · evil J</span></h2>
+<p>The same menu; its first column takes you to the overview, so it says so.</p>
+<div class="emacs" style="max-width:900px">
+<div class="win stack">
+<div class="win">
+<div class="buf short" style="max-height:5.6em">
+<p class="cur">  <span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-model.el</span></p>
+<p class="hunk">    <span class="tog"></span> @@ -12,6 +12,9 @@ (defvar-local approve-model--store nil</p>
+<p>       <span class="ln">12  12</span>    "Buffer-local normalized data store."</p>
+</div>
+<div class="ml off"> <span class="b">*approve-diff: fuzzycode/approve#1234*</span>   12%  L41      Approve-Diff</div>
+</div>
+<div class="tr">
+<p><span class="kh">In the overview</span>        <span class="kh">Next to review</span>                                       <span class="kh">Find</span></p>
+<p> <span class="k">d</span> Description          <span class="k">u</span> Next unviewed file         <span class="k">U</span> Previous           <span class="k">/</span> File…</p>
+<p> <span class="k">c</span> Conversation         <span class="k">t</span> Next unresolved thread     <span class="k">T</span> Previous</p>
+<p> <span class="k">k</span> Checks               <span class="k">n</span> Next new comment <span class="wa">(4 since your review)</span></p>
+<p> <span class="k">m</span> Commits              <span class="k">N</span> Previous new comment</p>
+<p> <span class="k">f</span> Files</p>
+<p> <span class="k">p</span> Pending review</p>
+</div>
+</div>
+<div class="echo"></div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="keys">
+<h2>Keys <span class="ref">ui.org › Keys</span></h2>
+<table class="keys">
+<tr><th>Key (evil)</th><th>Where</th><th>Does in the split layout</th></tr>
+<tr><td><code>L</code> (<code>gL</code>)</td><td>both</td><td>Single ⇄ split for this PR, point on the same file and line.</td></tr>
+<tr><td><span class="tag open">open</span></td><td>overview, a file in the list</td><td>Its diff in the diff buffer (see question 1).</td></tr>
+<tr><td><code>]u [u ]t [t</code></td><td>overview</td><td>The next unviewed file / unresolved thread, in the diff buffer.</td></tr>
+<tr><td><code>j n</code> <code>j N</code> (<code>J n</code>)</td><td>both</td><td>Next new comment: the conversation's, then the diff's.</td></tr>
+<tr><td><code>RET</code></td><td>overview, a review or pending comment</td><td>Its thread in the diff buffer.</td></tr>
+<tr><td><code>RET</code></td><td>file view, a line</td><td>The line in the diff buffer, its threads unfolded.</td></tr>
+<tr><td><code>^</code> <span class="tag open">evil?</span></td><td>diff buffer</td><td>Up a section; from a file heading, up to the overview at the file.</td></tr>
+<tr><td><code>q</code></td><td>diff buffer</td><td>Quit its window: the overview stays, or comes back in it.</td></tr>
+<tr><td><code>g</code> (<code>gr</code>)</td><td>both</td><td>Load the PR again; both redraw.</td></tr>
+<tr><td><code>c s x b r R e k + v S X ? j T O K</code></td><td>both</td><td>As today: the store is shared.</td></tr>
+</table>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="flow">
+<h2>The flow <span class="ref">F18, grown · flows.org</span></h2>
+<pre class="ascii"> <span class="u">[user] L</span>
+   │
+   ▼
+ ◇ this PR split? ◇──no──▶ session :layout split
+   │ yes                  overview redrawn without Diff; point on the file's entry
+   │                      *approve-diff: …* made, sharing the store (approve-model-store-buffer)
+   │                      shown by approve-diff-display-action; point on the same file and line
+   ▼
+ session :layout single; the diff buffer killed (its window closed when made for it)
+ PR buffer redrawn with Diff; point on the same file and line
+
+ <span class="u">[user] a file in the list · ]u ]t · j n · j / · RET on a review or pending comment</span>   (overview)
+ <span class="u">[user] RET on a line</span>                                                            (file view)
+   │
+   ▼
+ ◇ split? ◇──no──▶ as today: the Diff section of the PR buffer
+   │ yes
+   ▼
+ diff buffer (made if missing) shown and selected, at the file / thread / line
+
+ <span class="u">[user] ^ on a file heading</span> ──▶ overview at the file's entry       <span class="u">[user] q</span> ──▶ quit-window
+ a store change (mutation, g) ──▶ both buffers redraw; change notices in both header lines
+ overview killed ──▶ its diff buffer and file views killed too</pre>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="open">
+<h2>Open questions</h2>
+<p>What the docs don't settle yet. A recommendation is marked <span class="rec">→</span>.</p>
+
+<div class="q">
+<h3>1. The key from a file in the list to its diff</h3>
+<p><code>RET</code> on a file opens it whole today, in the list and on the diff's heading (Phase 6).</p>
+<p class="opt"><span class="rec">→</span> <b>a. <code>RET</code> goes one step deeper, in both layouts:</b> in the list to the file's diff
+  (in the single layout, a few lines down), on the diff's heading or a line to the whole file, in the file view back
+  to the diff. <code>F</code> (<code>gf</code>) opens it whole from anywhere. Changes the list's <code>RET</code>.</p>
+<p class="opt"><b>b. <code>RET</code> to the diff in the split layout only;</b> the single layout keeps it as today.
+  The same row does two things depending on the layout.</p>
+<p class="opt"><b>c. A new key,</b> <code>=</code> (“diff”, as in Dired, Ibuffer and VC), evil <code>g=</code>;
+  <code>RET</code> unchanged.</p>
+</div>
+
+<div class="q">
+<h3>2. Where the diff buffer shows</h3>
+<p class="opt"><span class="rec">→</span> <b>Beside the overview when the frame is wide enough, else in the same
+  window;</b> a window that shows it already is reused. <code>approve-diff-display-action</code> changes it, as
+  <code>approve-file-display-action</code> does for the file view.</p>
+<p class="opt"><b>Alternatives:</b> always the same window (Magit's traditional way), or always a window to the
+  right.</p>
+</div>
+
+<div class="q">
+<h3>3. Viewed marks in the file list</h3>
+<p>ui.org says the list doesn't show which files are viewed: the diff's headings do, a few lines below. In the
+split layout the diff is elsewhere and the list is the navigator.</p>
+<p class="opt"><span class="rec">→</span> <b>In the split layout, the list shows <i data-i="viewed">✓</i>
+  <i data-i="unviewed">·</i> <i data-i="dismissed">↻</i> and its heading “4/12 viewed”;</b> the single layout stays
+  as it is. <code>v</code> already works on a file in the list.</p>
+<p class="opt"><b>Or</b> in both layouts, or in neither.</p>
+</div>
+
+<div class="q">
+<h3>4. Does the overview follow the diff?</h3>
+<p class="opt"><span class="rec">→</span> <b>The overview marks the file the diff buffer's point is in</b> (a
+  highlight on its row, cheap, no scrolling). Nothing moves by itself.</p>
+<p class="opt"><b>More:</b> moving in the list scrolls the diff to the file under point (as Magit's log follows
+  into its revision buffer), behind an option.</p>
+</div>
+
+<div class="q">
+<h3>5. The way back, for evil</h3>
+<p><code>^</code> is evil's first-non-blank motion, and Approve's evil keys never shadow motions.</p>
+<p class="opt"><span class="rec">→</span> <b><code>q</code> is enough</b> (it quits the diff's window), with
+  <code>J f</code> for the file list; no new evil key.</p>
+<p class="opt"><b>Or</b> a key for “the overview at this file”, such as <code>gO</code>.</p>
+</div>
+
+<div class="q">
+<h3>6. What the diff buffer holds</h3>
+<p class="opt"><span class="rec">→</span> <b>The Diff section only,</b> from its own hook
+  (<code>approve-diff-sections-hook</code>), so a user can add the pending review above it with
+  <code>approve-add-section-hook</code>.</p>
+<p class="opt"><b>Or</b> “Your pending review” on top by default, so <code>S</code>'s context is in view while
+  reviewing.</p>
+</div>
+</section>
+</main>
+</body>
+</html>

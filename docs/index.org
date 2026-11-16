@@ -124,9 +124,13 @@ task only needs the files it touches.
   comments and reviews others published after it say "new", the
   headings count them, and =j n= / =j N= go from one to the next.  Every
   task of Phase 6 is done; its done-when is for the author to call.
-- Next step: the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]), the first task of
-  [[file:roadmap.org::*Phase 7 — Notifications, polish, release][Phase 7]]; its key from the file list to the diff buffer is to be
-  chosen, as =RET= now opens a file whole.
+- Next step: =approve-notifications.el= and its filter transient
+  ([[file:flows.org::*F19 Notifications][F19]]), the first task of
+  [[file:roadmap.org::*Phase 7 — Notifications, polish, release][Phase 7]].  The split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
+  phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]] (2026-11-16), at the author's request: nice to
+  have, done once Approve has been used in the wild and there is
+  feedback.  Its exploration, mockups and open questions are in
+  [[file:html/split.html][html/split.html]], a draft.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |
