@@ -266,6 +266,14 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     requests as files open, and that is the user's choice.  Opening a
     file then costs less than VC already spends: about 14 ms of git for
     the first file of a clone and branch, nothing after.
+- Amended (2026-11-16) :: Found writing =approve-clone.el=: git can't
+  resolve a =simple= push (its default) to a remote other than the one
+  the branch pulls from, so =@{push}= is empty in a triangular setup.
+  The head is then the same name on the remote the branch pushes to,
+  when that is not the remote it pulls from.  A branch with no config
+  goes to the same name on origin, as =git push= does.  A buffer's clone
+  is the directory above it that holds =.git=, found without git, so a
+  file outside GitHub clones costs no git call at all.
 
 * UI
 ** D04 Buffers are magit-section trees built from section hooks

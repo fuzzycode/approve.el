@@ -49,6 +49,8 @@
 ;; - `approve-clone-repository' says which GitHub repository a remote's
 ;;   URL names: on github.com or the host of `approve-api-host', an
 ;;   SSH alias followed through ssh -G.
+;; - `approve-clone-branch-head' gives a buffer's clone, its branch, and
+;;   the repository and branch it goes to on GitHub.
 ;;
 ;; Layer rules: this is the operations layer, and only the clone
 ;; modules touch a clone.  It reads clones through Magit and never
@@ -254,6 +256,89 @@ config file, without git: a remote's first url.  Includes and
 REMOTE is a remote's name; the value is as `approve-clone-repository'."
   (when-let* ((url (cdr (assoc remote (approve-clone-remotes clone)))))
     (approve-clone-repository url)))
+
+;;; A buffer's branch
+
+(defconst approve-clone--ref-format
+  (concat "--format=%(refname:lstrip=2)%09%(upstream:remotename)%09%(upstream:remoteref)"
+          "%09%(push:remotename)%09%(push)%09%(worktreepath)")
+  "The `git for-each-ref' format of a branch, one line per branch.
+It says where the branch pulls from and pushes to, and the worktree
+that has it checked out.  Fields are separated by tabs, which no
+branch or remote name holds.")
+
+(defun approve-clone--ref-fields (line)
+  "Return the branch that LINE of `approve-clone--ref-format' describes.
+The value is a plist of :branch, :upstream-remote, :upstream-ref,
+:push-remote, :push and :worktree, each nil when empty."
+  (let ((fields (mapcar (lambda (field) (and (not (string-empty-p field)) field))
+                        (split-string line "\t"))))
+    (list :branch (nth 0 fields) :upstream-remote (nth 1 fields)
+          :upstream-ref (nth 2 fields) :push-remote (nth 3 fields)
+          :push (nth 4 fields) :worktree (nth 5 fields))))
+
+(defun approve-clone--branch-target (fields remotes)
+  "Return where the branch of FIELDS is on its remote: (REMOTE NAME HOW).
+FIELDS are as `approve-clone--ref-fields'; REMOTES are the clone's
+\(NAME . URL).  HOW is `push' when git says where the branch pushes
+to, or where it pushes is not where it pulls from (a triangular
+setup, whose `simple' push git can't resolve); `upstream' when it is
+the branch it tracks; `name' for the same name on the remote a push
+goes to, `origin' unless the config says otherwise.  nil when the
+branch goes to no remote."
+  (cl-destructuring-bind (&key branch upstream-remote upstream-ref push-remote push
+                               &allow-other-keys)
+      fields
+    (let ((upstream-remote (and (not (equal upstream-remote ".")) upstream-remote))
+          (push-remote (or push-remote (and (assoc "origin" remotes) "origin"))))
+      (cond
+       ((and push push-remote
+             (string-prefix-p (format "refs/remotes/%s/" push-remote) push))
+        (list push-remote
+              (string-remove-prefix (format "refs/remotes/%s/" push-remote) push)
+              'push))
+       ((and push-remote upstream-remote (not (equal push-remote upstream-remote)))
+        (list push-remote branch 'push))
+       ((and upstream-remote upstream-ref (string-prefix-p "refs/heads/" upstream-ref))
+        (list upstream-remote (string-remove-prefix "refs/heads/" upstream-ref) 'upstream))
+       (push-remote
+        (list push-remote branch 'name))))))
+
+(defun approve-clone--branches (clone &optional branch)
+  "Return the branches of CLONE as plists of `approve-clone--ref-fields'.
+With BRANCH, only that one.  One git call."
+  (let ((default-directory clone))
+    (mapcar #'approve-clone--ref-fields
+            (magit-git-lines "for-each-ref" approve-clone--ref-format
+                             (if branch (concat "refs/heads/" branch) "refs/heads")))))
+
+(defun approve-clone-branch-head (&optional directory)
+  "Return the branch checked out where DIRECTORY is, and its place on GitHub.
+DIRECTORY is `default-directory' by default.  The value is a plist:
+:clone, the top directory; :branch, the branch checked out; :remote,
+the remote it goes to; and :head, the repository and branch on
+GitHub, (:host :owner :repo :branch).  The branch goes where it
+pushes to, else where it pulls from, else to the same name on
+\"origin\" (decision D45).  nil outside a clone, on a detached HEAD,
+and when the branch goes to no GitHub repository.
+
+The clone is the directory above DIRECTORY that holds .git.  Outside
+a clone it costs that look; in a clone with no remote on GitHub,
+reading its config file too; else two git calls through Magit."
+  (let ((directory (or directory default-directory)))
+    (when-let* ((top (locate-dominating-file directory ".git"))
+                (clone (file-name-as-directory (expand-file-name top)))
+                (remotes (approve-clone-remotes clone))
+                ((seq-some (lambda (remote) (approve-clone-repository (cdr remote)))
+                           remotes))
+                (branch (let ((default-directory clone))
+                          (magit-get-current-branch)))
+                (fields (car (approve-clone--branches clone branch)))
+                (target (approve-clone--branch-target fields remotes))
+                (repository (approve-clone-repository
+                             (cdr (assoc (car target) remotes)))))
+      (list :clone clone :branch branch :remote (car target)
+            :head (append repository (list :branch (cadr target)))))))
 
 (provide 'approve-clone)
 

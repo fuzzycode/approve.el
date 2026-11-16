@@ -234,4 +234,91 @@ clone's commit; the root is the only entry of
       (expect (approve-clone-remotes (expand-file-name "notes" test-clone--root))
               :to-be nil))))
 
+;;; A buffer's branch
+
+(defmacro test-clone--with-branches (&rest body)
+  "Run BODY in the clone \"one\" of `test-clone--with-clones', set up with branches.
+Its remotes are origin (me/project) and fork (you/project) on
+github.com.  Its branches: feature tracks origin/feature; local-name
+tracks origin/other-name; tri pulls from origin/main and pushes to
+fork; bare has no config.  Git and Magit run without the user's
+config."
+  (declare (indent 0) (debug t))
+  `(test-clone--with-clones
+     (let ((process-environment (append '("GIT_CONFIG_NOSYSTEM=1" "GIT_CONFIG_GLOBAL=/dev/null")
+                                        process-environment))
+           (approve-api-host nil)
+           (one (test-clone--dir "one")))
+       (test-clone--git one "remote" "add" "origin" "git@github.com:me/project.git")
+       (test-clone--git one "remote" "add" "fork" "https://github.com/you/project")
+       (dolist (branch '("feature" "local-name" "tri" "bare"))
+         (test-clone--git one "branch" branch))
+       (dolist (config '(("branch.feature.remote" "origin")
+                         ("branch.feature.merge" "refs/heads/feature")
+                         ("branch.local-name.remote" "origin")
+                         ("branch.local-name.merge" "refs/heads/other-name")
+                         ("branch.tri.remote" "origin")
+                         ("branch.tri.merge" "refs/heads/main")
+                         ("branch.tri.pushRemote" "fork")))
+         (apply #'test-clone--git one "config" config))
+       ,@body)))
+
+(defun test-clone--head-on (directory branch)
+  "Check out BRANCH where DIRECTORY is; return its :head and :remote."
+  (test-clone--git directory "checkout" "-q" branch)
+  (let ((head (approve-clone-branch-head directory)))
+    (list (plist-get head :remote) (plist-get head :head))))
+
+(describe "approve-clone-branch-head"
+  (it "goes where the branch pushes: its own name on the remote it tracks"
+    (test-clone--with-branches
+      (expect (test-clone--head-on one "feature")
+              :to-equal '("origin" (:host "github.com" :owner "me" :repo "project"
+                                    :branch "feature")))))
+
+  (it "goes to the branch it tracks under another name"
+    (test-clone--with-branches
+      (expect (test-clone--head-on one "local-name")
+              :to-equal '("origin" (:host "github.com" :owner "me" :repo "project"
+                                    :branch "other-name")))))
+
+  (it "goes to the fork it pushes to, not the base it pulls from"
+    (test-clone--with-branches
+      (expect (test-clone--head-on one "tri")
+              :to-equal '("fork" (:host "github.com" :owner "you" :repo "project"
+                                  :branch "tri")))))
+
+  (it "goes to the same name on origin when nothing is set"
+    (test-clone--with-branches
+      (expect (test-clone--head-on one "bare")
+              :to-equal '("origin" (:host "github.com" :owner "me" :repo "project"
+                                    :branch "bare")))))
+
+  (it "names the clone and the branch, from a subdirectory too"
+    (test-clone--with-branches
+      (test-clone--git one "checkout" "-q" "feature")
+      (make-directory (expand-file-name "lisp" one))
+      (let ((head (approve-clone-branch-head (expand-file-name "lisp/" one))))
+        (expect (plist-get head :clone) :to-equal one)
+        (expect (plist-get head :branch) :to-equal "feature"))))
+
+  (it "works in a worktree, with the clone's remotes"
+    (test-clone--with-branches
+      (let ((tree (file-name-as-directory (expand-file-name "tree" test-clone--root))))
+        (test-clone--git one "worktree" "add" "-q" tree "local-name")
+        (let ((head (approve-clone-branch-head tree)))
+          (expect (plist-get head :clone) :to-equal tree)
+          (expect (plist-get (plist-get head :head) :branch) :to-equal "other-name")))))
+
+  (it "is nil on a detached HEAD, outside a clone, and off GitHub"
+    (test-clone--with-branches
+      (test-clone--git one "checkout" "-q" "--detach")
+      (expect (approve-clone-branch-head one) :to-be nil)
+      (expect (approve-clone-branch-head (expand-file-name "notes/" test-clone--root))
+              :to-be nil)
+      (let ((two (test-clone--dir "two")))
+        (expect (approve-clone-branch-head two) :to-be nil)
+        (test-clone--git two "remote" "add" "origin" "https://gitlab.com/me/project.git")
+        (expect (approve-clone-branch-head two) :to-be nil)))))
+
 ;;; test-approve-clone.el ends here
