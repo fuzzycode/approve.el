@@ -137,4 +137,101 @@ clone's commit; the root is the only entry of
     (expect (memq #'approve-clone-show-commit approve-visit-commit-functions)
             :to-be-truthy)))
 
+;;; Remotes
+
+(describe "approve-clone-parse-remote"
+  (it "reads the host, owner and name of scp-like and scheme URLs"
+    (dolist (url '("git@github.com:fuzzycode/test-approve.git"
+                   "git@github.com:fuzzycode/test-approve"
+                   "github.com:fuzzycode/test-approve.git"
+                   "https://github.com/fuzzycode/test-approve.git"
+                   "https://github.com/fuzzycode/test-approve"
+                   "https://github.com/fuzzycode/test-approve/"
+                   "https://user@GitHub.com/fuzzycode/test-approve.git"
+                   "ssh://git@github.com/fuzzycode/test-approve.git"
+                   "ssh://git@github.com:22/fuzzycode/test-approve.git"
+                   "git+ssh://git@github.com/fuzzycode/test-approve.git"
+                   "git://github.com/fuzzycode/test-approve.git"))
+      (expect (approve-clone-parse-remote url)
+              :to-equal '(:host "github.com" :owner "fuzzycode" :repo "test-approve"))))
+
+  (it "keeps dots in a name and drops only the .git"
+    (expect (approve-clone-parse-remote "git@github.com:magit/magit.el.git")
+            :to-equal '(:host "github.com" :owner "magit" :repo "magit.el")))
+
+  (it "reads other hosts too, and nothing from a local path"
+    (expect (approve-clone-parse-remote "git@git.example.com:team/project.git")
+            :to-equal '(:host "git.example.com" :owner "team" :repo "project"))
+    (expect (approve-clone-parse-remote "/srv/git/project.git") :to-be nil)
+    (expect (approve-clone-parse-remote "../project") :to-be nil)
+    (expect (approve-clone-parse-remote nil) :to-be nil)))
+
+(describe "approve-clone-repository"
+  (before-each
+    (clrhash approve-clone--ssh-hosts))
+
+  (it "names a repository on github.com"
+    (let ((approve-api-host nil))
+      (expect (approve-clone-repository "https://github.com/magit/magit.git")
+              :to-equal '(:host "github.com" :owner "magit" :repo "magit"))))
+
+  (it "names one on the GitHub Enterprise of approve-api-host"
+    (let ((approve-api-host "git.example.com/api/v3"))
+      (expect (approve-clone-repository "git@git.example.com:team/project.git")
+              :to-equal '(:host "git.example.com" :owner "team" :repo "project"))))
+
+  (it "names nothing on other hosts, asking ssh only about SSH ones"
+    (let ((approve-api-host nil))
+      (spy-on 'approve-clone--ssh-hostname :and-call-fake #'identity)
+      (expect (approve-clone-repository "https://gitlab.com/team/project.git") :to-be nil)
+      (expect 'approve-clone--ssh-hostname :not :to-have-been-called)
+      (expect (approve-clone-repository "git@gitlab.com:team/project.git") :to-be nil)
+      (expect 'approve-clone--ssh-hostname :to-have-been-called-with "gitlab.com")))
+
+  (it "follows an SSH alias to the host it stands for"
+    (let ((approve-api-host nil))
+      (puthash "github-work" "github.com" approve-clone--ssh-hosts)
+      (expect (approve-clone-repository "git@github-work:fuzzycode/test-approve.git")
+              :to-equal '(:host "github.com" :owner "fuzzycode" :repo "test-approve")))))
+
+(describe "approve-clone-same-repository-p"
+  (it "ignores case, as GitHub does"
+    (expect (approve-clone-same-repository-p
+             '(:host "github.com" :owner "Magit" :repo "magit")
+             '(:host "github.com" :owner "magit" :repo "Magit"))
+            :to-be-truthy)
+    (expect (approve-clone-same-repository-p
+             '(:host "github.com" :owner "magit" :repo "magit")
+             '(:host "github.com" :owner "magit" :repo "forge"))
+            :not :to-be-truthy)
+    (expect (approve-clone-same-repository-p nil '(:host "github.com")) :to-be nil)))
+
+(describe "approve-clone-remotes"
+  (it "reads the remotes from the config file, in order"
+    (test-clone--with-clones
+      (let ((one (test-clone--dir "one")))
+        (test-clone--git one "remote" "add" "origin" "git@github.com:me/project.git")
+        (test-clone--git one "remote" "add" "upstream" "https://github.com/them/project")
+        (expect (approve-clone-remotes one)
+                :to-equal '(("origin" . "git@github.com:me/project.git")
+                            ("upstream" . "https://github.com/them/project")))
+        (expect (approve-clone-remote-repository one "upstream")
+                :to-equal '(:host "github.com" :owner "them" :repo "project"))
+        (expect (approve-clone-remote-repository one "nowhere") :to-be nil))))
+
+  (it "reads a worktree's from the clone it shares them with"
+    (test-clone--with-clones
+      (let ((one (test-clone--dir "one"))
+            (tree (expand-file-name "tree" test-clone--root)))
+        (test-clone--git one "remote" "add" "origin" "git@github.com:me/project.git")
+        (test-clone--git one "worktree" "add" "-q" "-b" "other" tree)
+        (expect (approve-clone-remotes tree)
+                :to-equal '(("origin" . "git@github.com:me/project.git"))))))
+
+  (it "is nil for a clone without remotes, or a directory that is none"
+    (test-clone--with-clones
+      (expect (approve-clone-remotes (test-clone--dir "two")) :to-be nil)
+      (expect (approve-clone-remotes (expand-file-name "notes" test-clone--root))
+              :to-be nil))))
+
 ;;; test-approve-clone.el ends here
