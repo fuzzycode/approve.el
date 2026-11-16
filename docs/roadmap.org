@@ -314,13 +314,21 @@ Mockups: a file's buffer with its threads (written with F21).
       [[file:ui.org::*A file's buffer in your clone (feedback mode)][the mockup]] and =html/clone.html=, with [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]] (no keys of its own,
       threads folded with their bubbles in the right margin, the mode
       line), reviewed and accepted by the author the same day.
-- [ ] =approve-clone.el=, grown, as [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]] decides: a buffer's clone,
+- [X] =approve-clone.el=, grown, as [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]] decides: a buffer's clone,
       repository and branch (git through Magit, remotes from the =config=
       file), the PRs of a branch (the head repository's ref, and by
       =headRefName=), the one shown and a command to pick another, the
       clone's state against the PR's head, and a PR's worktree among
       the clones of =approve-clone-directories=.  Tests without the
-      network, on a throwaway repository.
+      network, on a throwaway repository.  Done (2026-11-16):
+      =approve-clone-remotes= and =approve-clone-repository= (SSH aliases
+      through =ssh -G=), =approve-clone-branch-head= (about 14 ms in a
+      GitHub clone, none outside), =approve-clone-branch-pull-requests=
+      (=graphql/queries/branch-pull-requests.graphql=, once a session),
+      =approve-clone-shown-pull-request= and =approve-clone-pick-pull-request=,
+      =approve-clone-state=, and =approve-clone-pull-request-worktree=.
+      Checked live on the scratch repository's #14, #15 and #16 and a fork
+      of magit.
 - [ ] Line mapping: GitHub's lines at the PR head to the buffer's and
       back, from a =diff= of the head blob and the buffer's text (D45:
       temporary files, an asynchronous process), redone when the buffer

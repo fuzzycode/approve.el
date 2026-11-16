@@ -58,6 +58,10 @@
 ;;   picked another.
 ;; - `approve-clone-state' says how a clone's HEAD stands to GitHub's
 ;;   head: the same, ahead, behind, diverged, or missing it.
+;; - `approve-clone-pull-request-worktree' gives the worktree a pull
+;;   request's lines open in: among the clones of its repositories, one
+;;   whose branch pushes to its head branch, else one that tracks it,
+;;   read when several are as good and kept for the session.
 ;;
 ;; Layer rules: this is the operations layer, and only the clone
 ;; modules touch a clone.  It reads clones through Magit and never
@@ -594,6 +598,97 @@ never acted on (decision D45).  Two git calls at most."
                            ((zerop ahead) 'behind)
                            (t 'diverged))
               :ahead ahead :behind behind))))))
+
+;;; A pull request's worktree
+
+(defvar approve-clone--worktrees (make-hash-table :test #'equal)
+  "The worktree picked for a pull request's branch this session, by key.
+A key is `approve-clone--head-key''s; a value, a top directory.")
+
+(defun approve-clone-repository-clones (repositories)
+  "Return the clones that have a remote naming one of REPOSITORIES.
+REPOSITORIES are (:host :owner :repo); the clones are those of
+`approve-clone-list', in its order, their remotes read from their
+config files (decision D45)."
+  (seq-filter (lambda (clone)
+                (seq-some (lambda (remote)
+                            (when-let* ((repository (approve-clone-repository (cdr remote))))
+                              (seq-some (lambda (wanted)
+                                          (approve-clone-same-repository-p repository wanted))
+                                        repositories)))
+                          (approve-clone-remotes clone)))
+              (approve-clone-list)))
+
+(defun approve-clone-pull-request-worktrees (head base)
+  "Return the worktrees that have the branch HEAD checked out, best first.
+HEAD is a pull request's head on GitHub, (:host :owner :repo :branch);
+BASE its base repository, (:host :owner :repo).  They are found in
+the clones of either repository (`approve-clone-repository-clones'),
+one git call for each repository however many worktrees it has.  A
+worktree's branch goes to HEAD as `approve-clone-branch-head' says.
+Each is a plist: :worktree, its top directory; :branch, the branch
+checked out; :how, `push' when the branch pushes to HEAD, `name' when
+it has its name on the remote a push goes to, `upstream' when it only
+tracks it.  Those that push come first (decision D45)."
+  (let ((seen nil) (found nil))
+    (dolist (clone (approve-clone-repository-clones (list head base)))
+      (let ((common (file-truename (approve-clone--common-dir clone))))
+        (unless (member common seen)
+          (push common seen)
+          (let ((remotes (approve-clone-remotes clone)))
+            (dolist (fields (approve-clone--branches clone))
+              (when-let* ((worktree (plist-get fields :worktree))
+                          (target (approve-clone--branch-target fields remotes))
+                          ((equal (cadr target) (plist-get head :branch)))
+                          (repository (approve-clone-repository
+                                       (cdr (assoc (car target) remotes))))
+                          ((approve-clone-same-repository-p repository head)))
+                (push (list :worktree (file-name-as-directory worktree)
+                            :branch (plist-get fields :branch)
+                            :how (nth 2 target))
+                      found)))))))
+    (seq-sort-by (lambda (worktree) (if (eq (plist-get worktree :how) 'upstream) 1 0))
+                 #'< (nreverse found))))
+
+(defun approve-clone--describe-worktree (worktree head)
+  "Return how WORKTREE goes to HEAD, for a choice among worktrees."
+  (format "%s  %s" (plist-get worktree :branch)
+          (if (eq (plist-get worktree :how) 'upstream)
+              (format "tracks %s" (plist-get head :branch))
+            (format "pushes to %s" (plist-get head :branch)))))
+
+(defun approve-clone-pull-request-worktree (head base)
+  "Return the top directory of the worktree a pull request opens in, or nil.
+HEAD and BASE are as `approve-clone-pull-request-worktrees'.  It is
+the one picked for HEAD this session, else the best one, else the
+one read with `completing-read' when several are as good, which is
+then kept for the session (decision D45).  nil when no clone has the
+branch checked out."
+  (let* ((key (approve-clone--head-key head))
+         (worktrees (approve-clone-pull-request-worktrees head base))
+         (picked (gethash key approve-clone--worktrees))
+         (best (seq-filter (lambda (worktree)
+                             (eq (eq (plist-get worktree :how) 'upstream)
+                                 (eq (plist-get (car worktrees) :how) 'upstream)))
+                           worktrees)))
+    (cond
+     ((null worktrees) nil)
+     ((and picked (seq-find (lambda (worktree) (equal (plist-get worktree :worktree) picked))
+                            worktrees))
+      picked)
+     ((null (cdr best)) (plist-get (car best) :worktree))
+     (t
+      (let* ((choices (mapcar (lambda (worktree)
+                                (cons (format "%s  %s" (abbreviate-file-name
+                                                        (plist-get worktree :worktree))
+                                              (approve-clone--describe-worktree worktree head))
+                                      worktree))
+                              best))
+             (choice (completing-read (format "Worktree for %s: " (plist-get head :branch))
+                                      choices nil t nil nil (caar choices)))
+             (worktree (plist-get (cdr (assoc choice choices)) :worktree)))
+        (puthash key worktree approve-clone--worktrees)
+        worktree)))))
 
 (provide 'approve-clone)
 

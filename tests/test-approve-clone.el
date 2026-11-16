@@ -536,4 +536,117 @@ PROPS may give :number, :head (the head repository), :branch and :draft."
                                    (alist-get "two" test-clone--shas nil nil #'equal))
               :to-equal '(:state missing)))))
 
+;;; A pull request's worktree
+
+(defconst test-clone--pr-head
+  '(:host "github.com" :owner "me" :repo "project" :branch "feature")
+  "The head of the pull request whose worktree the tests look for.")
+
+(defconst test-clone--pr-base
+  '(:host "github.com" :owner "them" :repo "project")
+  "The base repository of that pull request.")
+
+(defmacro test-clone--with-worktrees (&rest body)
+  "Run BODY with clones of the pull request's repositories, and worktrees.
+Clone \"one\" has origin me/project; its branch feature (tracking
+origin/feature) is checked out in the worktree trees/pushes, and mine
+\(tracking origin/feature too) in trees/tracks, which are not listed.  Clone \"two\" has
+upstream them/project and a branch feature of its own, which goes
+nowhere.  The clone \"three\", elsewhere, has nothing to do with them."
+  (declare (indent 0) (debug t))
+  `(test-clone--with-clones
+     (let* ((process-environment (append '("GIT_CONFIG_NOSYSTEM=1" "GIT_CONFIG_GLOBAL=/dev/null")
+                                         process-environment))
+            (approve-api-host nil)
+            (one (test-clone--dir "one"))
+            (two (test-clone--dir "two"))
+            (pushes (file-name-as-directory (expand-file-name "trees/pushes" test-clone--root)))
+            (tracks (file-name-as-directory (expand-file-name "trees/tracks" test-clone--root))))
+       (clrhash approve-clone--worktrees)
+       (test-clone--make (expand-file-name "three" test-clone--root) "Third")
+       (test-clone--git (test-clone--dir "three") "remote" "add" "origin"
+                        "https://github.com/me/other.git")
+       (test-clone--git one "remote" "add" "origin" "git@github.com:me/project.git")
+       (test-clone--git two "remote" "add" "upstream" "https://github.com/them/project")
+       (test-clone--git two "branch" "feature")
+       (dolist (branch '("feature" "mine"))
+         (test-clone--git one "branch" branch)
+         (test-clone--git one "config" (format "branch.%s.remote" branch) "origin")
+         (test-clone--git one "config" (format "branch.%s.merge" branch) "refs/heads/feature"))
+       (test-clone--git one "worktree" "add" "-q" pushes "feature")
+       (test-clone--git one "worktree" "add" "-q" tracks "mine")
+       ,@body)))
+
+(defun test-clone--truenames (worktrees)
+  "Return the true names of the :worktree of WORKTREES, with their :how."
+  (mapcar (lambda (worktree)
+            (list (file-truename (plist-get worktree :worktree)) (plist-get worktree :how)))
+          worktrees))
+
+(describe "approve-clone-repository-clones"
+  (it "finds the clones of the head and the base repository"
+    (test-clone--with-worktrees
+      (expect (sort (approve-clone-repository-clones (list test-clone--pr-head test-clone--pr-base))
+                    #'string<)
+              :to-equal (list one two))
+      (expect (approve-clone-repository-clones (list test-clone--pr-base))
+              :to-equal (list two)))))
+
+(describe "approve-clone-pull-request-worktrees"
+  (it "finds the worktrees with the head branch, the one that pushes first"
+    (test-clone--with-worktrees
+      (expect (test-clone--truenames
+               (approve-clone-pull-request-worktrees test-clone--pr-head test-clone--pr-base))
+              :to-equal (list (list (file-truename pushes) 'push)
+                              (list (file-truename tracks) 'upstream)))))
+
+  (it "lists each once, also when the worktrees are listed as clones"
+    (test-clone--with-worktrees
+      (let ((approve-clone-directories
+             (list (cons test-clone--root 1)
+                   (cons (expand-file-name "trees" test-clone--root) 1))))
+        (expect (length (approve-clone-pull-request-worktrees
+                         test-clone--pr-head test-clone--pr-base))
+                :to-equal 2))))
+
+  (it "finds none for a branch no clone has checked out"
+    (test-clone--with-worktrees
+      (expect (approve-clone-pull-request-worktrees
+               (plist-put (copy-sequence test-clone--pr-head) :branch "other")
+               test-clone--pr-base)
+              :to-be nil))))
+
+(describe "approve-clone-pull-request-worktree"
+  (it "takes the one that pushes to the head branch at once"
+    (test-clone--with-worktrees
+      (spy-on 'completing-read)
+      (expect (file-truename (approve-clone-pull-request-worktree
+                              test-clone--pr-head test-clone--pr-base))
+              :to-equal (file-truename pushes))
+      (expect 'completing-read :not :to-have-been-called)))
+
+  (it "asks among those as good, once a session"
+    (test-clone--with-worktrees
+      (test-clone--git one "config" "branch.feature.merge" "refs/heads/elsewhere")
+      (test-clone--git one "branch" "-m" "feature" "local")
+      (test-clone--git one "config" "branch.local.merge" "refs/heads/feature")
+      (spy-on 'completing-read
+              :and-call-fake (lambda (_prompt choices &rest _)
+                               (expect (length choices) :to-equal 2)
+                               (car (seq-find (lambda (choice)
+                                                (string-match-p "tracks/" (car choice)))
+                                              choices))))
+      (let ((first (approve-clone-pull-request-worktree test-clone--pr-head test-clone--pr-base)))
+        (expect (file-truename first) :to-equal (file-truename tracks))
+        (expect (approve-clone-pull-request-worktree test-clone--pr-head test-clone--pr-base)
+                :to-equal first)
+        (expect 'completing-read :to-have-been-called-times 1))))
+
+  (it "is nil when no clone has the branch"
+    (test-clone--with-worktrees
+      (expect (approve-clone-pull-request-worktree
+               (plist-put (copy-sequence test-clone--pr-head) :branch "other")
+               test-clone--pr-base)
+              :to-be nil))))
+
 ;;; test-approve-clone.el ends here

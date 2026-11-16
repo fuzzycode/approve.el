@@ -137,8 +137,12 @@ task only needs the files it touches.
   threads start folded with their bubbles in the right margin, and it
   speaks in the mode line.  Details are adjusted as the work finds the
   need.
-- Next step: =approve-clone.el= grown and the line mapping, the next
-  tasks of [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).  It came ahead of
+- =approve-clone.el= has grown (2026-11-16): a buffer's branch and its
+  place on GitHub, the branch's pull requests (one query a session), the
+  one shown and =approve-clone-pick-pull-request=, the clone's state
+  against GitHub's head, and a pull request's worktree among the clones.
+- Next step: the line mapping, the next task of
+  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).  It came ahead of
   notifications and the release, now [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], on 2026-11-16 at the
   author's request: the feature before the documentation and the nice
   to haves.
