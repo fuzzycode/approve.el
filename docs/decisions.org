@@ -356,6 +356,31 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   buffer, Org's capture and message-mode, without thinking whether the text
   is one line or many, in a buffer or the minibuffer.
 
+** D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff
+- Status :: accepted (2026-11-16, by the author)
+- Decision ::
+  - The file view ([[file:flows.org::*F15 View the whole file][F15]], =approve-file.el=) holds the file's own text, in
+    the major mode =set-auto-mode= chooses for its path, with the mode's
+    hooks delayed and never run.  Approve turns on font-lock and
+    which-function as their global modes would; =approve-file-mode-hook=
+    (its minor mode's) is where a user turns on more.
+  - Its decorations are overlays: fringe marks (the margin in a
+    terminal), and the threads with their speech bubble under their
+    lines, drawn as the diff draws them.  Point never enters a thread
+    there, so the threads are read in the file view and acted on in the
+    diff: =RET= goes to the line in the diff, its threads unfolded, where
+    =r R e k += work.  Their boxes name no keys in the file view.
+  - Its lines that are in the diff carry the diff's =approve-line=, so =c=,
+    =s= and =v= work there as in the diff; on its other lines (the context
+    =code=), =c= says GitHub takes no comment there.
+- Why :: Hooks hang checkers, language servers and editing helpers on a
+  mode; in a buffer with no file on disk they start servers for the wrong
+  project, or complain about a file they can't find.  The highlighting a
+  review needs comes from the mode alone, as in the diff ([[*D30 Diff hunks are syntax-highlighted by default][D30]]).  Thread
+  actions from overlays need a context that sections don't give; Phase 8
+  plans them for a clone's buffers, which use the same overlays, and the
+  file view can take them then.  Until then the diff is one key away.
+
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
