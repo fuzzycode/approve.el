@@ -174,4 +174,37 @@ The requests are pushed to `test-queries--requests'."
       (expect (plist-get (car test-queries--requests) :name)
               :to-equal "queries/viewer.graphql"))))
 
+(describe "approve-query-blob"
+  :var (result failure)
+  (before-each
+    (setq test-queries--requests nil result nil failure nil)
+    (approve-model-init '(:host "github.com" :owner "acme" :repo "rocket" :number 7)))
+
+  (cl-flet ((fetch (text bytes &optional exact)
+              (let ((approve-api-transport
+                     (test-queries--answering
+                      `((data (repository (object (__typename . "Blob") (id . "B_1")
+                                                  (text . ,text) (isBinary . nil)
+                                                  (isTruncated . nil)
+                                                  (byteSize . ,bytes)))))))
+                    (approve-graphql-directory approve-test-graphql-directory)
+                    (inhibit-message t))
+                (approve-query-blob "abc" "a.txt" :exact exact
+                                    :callback (lambda (text) (setq result text))
+                                    :errorback (lambda (err) (setq failure err)))
+                (approve-test-wait-for (lambda () (or result failure))))))
+    (it "gives a file's text at a commit"
+      (fetch "été\r\n" 7)
+      (expect result :to-equal "été\r\n")
+      (expect (plist-get (car test-queries--requests) :variables)
+              :to-equal '((owner . "acme") (name . "rocket") (expression . "abc:a.txt"))))
+
+    (it "refuses a text that is not the file's bytes when they must be exact"
+      (fetch "été\r\n" 9 t)
+      (expect result :to-be nil)
+      (expect (approve-api-error-message failure) :to-equal "a.txt is not UTF-8 text")
+      (setq result nil failure nil)
+      (fetch "été\r\n" 7 t)
+      (expect result :to-equal "été\r\n"))))
+
 ;;; test-approve-queries.el ends here

@@ -1,0 +1,25 @@
+# D41: commit files to the pull request's branch, as GitHub's "Commit
+# suggestion" button does.  The branch is named by its repository and
+# name; expectedHeadOid makes GitHub refuse (STALE_DATA) when the branch
+# has moved since.  The commit is not stored: it changes the diff, the
+# threads and the commits, which the PR loaded again brings.
+mutation CreateCommitOnBranch(
+  $branch: CommittableBranch!
+  $expectedHeadOid: GitObjectID!
+  $message: CommitMessage!
+  $fileChanges: FileChanges!
+) {
+  createCommitOnBranch(
+    input: {
+      branch: $branch
+      expectedHeadOid: $expectedHeadOid
+      message: $message
+      fileChanges: $fileChanges
+    }
+  ) {
+    commit {
+      oid
+      url
+    }
+  }
+}

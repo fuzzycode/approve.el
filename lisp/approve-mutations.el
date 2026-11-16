@@ -56,6 +56,8 @@
 ;;   `approve-mutation-set-locked'              lock or unlock the conversation
 ;;   `approve-mutation-react'                   F11  give or take back a reaction
 ;;   `approve-mutation-set-hidden'              hide (minimize) a comment, or show it
+;;   `approve-mutation-commit-files'            F23  commit files to the PR's branch
+;;                                                   (a suggestion applied)
 ;;
 ;; Each one queues its mutation (`approve-api-mutate': one at a time,
 ;; decision D15) for the PR of the current buffer's store.  Once GitHub
@@ -810,6 +812,73 @@ otherwise."
               "mutations/unminimize-comment.graphql" `((subjectId . ,subject-id))
               'unminimizeComment 'unminimizedComment "Showing the comment"))
            callback (or errorback #'approve-api-default-errorback)))
+
+;;; Commits
+
+(defun approve-mutation--commit-message (message)
+  "Return MESSAGE as a CommitMessage: its first line, then the rest.
+The body is what follows the first line, without the blank lines
+around it; it is left out when there is none."
+  (let* ((lines (split-string (string-trim message) "\n"))
+         (body (string-trim (string-join (cdr lines) "\n"))))
+    `((headline . ,(string-trim (car lines)))
+      ,@(and (not (string-empty-p body)) `((body . ,body))))))
+
+(defun approve-mutation--stale-p (err)
+  "Return non-nil if ERR says the branch is not where it was expected."
+  (seq-some (lambda (error) (equal (alist-get 'type error) "STALE_DATA"))
+            (plist-get (cddr err) :errors)))
+
+(cl-defun approve-mutation-commit-files (files message &key callback errorback)
+  "Commit FILES to the PR's branch with MESSAGE, as GitHub's button does.
+FILES is a list of (PATH . TEXT): each file's whole new text.
+MESSAGE's first line is the commit's headline, the rest its body.
+The commit goes on the head branch in the head repository, a fork's
+too, and only if the branch is still at the head the store holds:
+else GitHub refuses, and ERRORBACK says the branch has moved.  The
+commit is the viewer's, signed by GitHub (decision D41).
+
+The store is not changed: a commit changes the diff, the threads and
+the commits, which only loading the PR again brings.  It keeps the
+head it had, so another commit before that load is refused too.
+CALLBACK gets the new commit's oid.  ERRORBACK gets the error
+otherwise.  (Flow F23.)
+
+Example:
+  (approve-mutation-commit-files (list (cons \"a.el\" text))
+                                 \"Apply suggestion from @bob\"
+                                 :callback #\='ignore)"
+  (let-alist (approve-pr-fields '(headRefName headRefOid headRepository))
+    (unless .headRepository.nameWithOwner
+      (signal 'approve-mutation-refused (list "The pull request's branch is gone")))
+    (let ((errorback (or errorback #'approve-api-default-errorback)))
+      (approve-mutation--send
+       "mutations/create-commit-on-branch.graphql"
+       `((branch (repositoryNameWithOwner . ,.headRepository.nameWithOwner)
+                 (branchName . ,.headRefName))
+         (expectedHeadOid . ,.headRefOid)
+         (message . ,(approve-mutation--commit-message message))
+         (fileChanges
+          (additions . ,(vconcat
+                         (mapcar (lambda (file)
+                                   `((path . ,(car file))
+                                     (contents . ,(base64-encode-string
+                                                   (encode-coding-string (cdr file)
+                                                                         'utf-8-unix)
+                                                   t))))
+                                 files)))))
+       :progress (format "Committing to %s" .headRefName)
+       :apply (lambda (data)
+                (let-alist (approve-mutation--answer data 'createCommitOnBranch 'commit)
+                  .oid))
+       :callback callback
+       :errorback (lambda (err)
+                    (funcall errorback
+                             (if (approve-mutation--stale-p err)
+                                 (list 'approve-api-graphql-error
+                                       (format "%s has commits this buffer hasn't loaded; \
+refresh it, then try again" .headRefName))
+                               err)))))))
 
 (provide 'approve-mutations)
 

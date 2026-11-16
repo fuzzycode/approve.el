@@ -286,6 +286,54 @@ without, there is none."
           (expect (approve-model-raw-field thread 'isResolved) :to-be resolved)
           (expect (test-mutations--total 'comments thread) :to-equal 3)))))
 
+  (describe "approve-mutation-commit-files"
+    (it "commits whole files to the head branch, from the head the store holds"
+      (test-mutations--with-pr
+        (test-mutations--answer-with
+         '((createCommitOnBranch (commit (oid . "c0ffee") (url . "https://x/c0ffee")))))
+        (let ((head (approve-pr-field 'headRefOid))
+              (version (approve-model-version)))
+          (expect (test-mutations--run #'approve-mutation-commit-files
+                                       '(("a.txt" . "été\r\nlast"))
+                                       "Apply suggestion from @bob\n\nCo-authored-by: Bob <1+bob@x>\n")
+                  :to-equal '(t . "c0ffee"))
+          (pcase-let ((`(,name ,variables) (test-mutations--sent)))
+            (expect name :to-equal "mutations/create-commit-on-branch.graphql")
+            (let-alist variables
+              (expect .branch.branchName :to-equal (approve-pr-field 'headRefName))
+              (expect .branch.repositoryNameWithOwner
+                      :to-equal (let-alist (approve-pr-field 'headRepository) .nameWithOwner))
+              (expect .expectedHeadOid :to-equal head)
+              (expect .message :to-equal '((headline . "Apply suggestion from @bob")
+                                           (body . "Co-authored-by: Bob <1+bob@x>")))
+              (let ((file (aref .fileChanges.additions 0)))
+                (expect (alist-get 'path file) :to-equal "a.txt")
+                (expect (decode-coding-string (base64-decode-string (alist-get 'contents file))
+                                              'utf-8-unix)
+                        :to-equal "été\r\nlast"))))
+          (expect (approve-model-version) :to-equal version))))
+
+    (it "sends a one-line message without a body"
+      (test-mutations--with-pr
+        (test-mutations--answer-with '((createCommitOnBranch (commit (oid . "c0ffee")))))
+        (test-mutations--run #'approve-mutation-commit-files '(("a.txt" . "a\n")) "Fix it")
+        (expect (let-alist (cadr (test-mutations--sent)) .message)
+                :to-equal '((headline . "Fix it")))))
+
+    (it "says the branch moved when GitHub finds it elsewhere"
+      (test-mutations--with-pr
+        (setq test-mutations--answer
+              (lambda (_request)
+                '((data (createCommitOnBranch))
+                  (errors ((type . "STALE_DATA")
+                           (message . "Expected branch to point to \"abc\" but it did not."))))))
+        (let ((outcome (test-mutations--run #'approve-mutation-commit-files
+                                            '(("a.txt" . "a\n")) "Fix it")))
+          (expect (car outcome) :to-be nil)
+          (expect (approve-api-error-message (cdr outcome))
+                  :to-equal (format "%s has commits this buffer hasn't loaded; \
+refresh it, then try again" (approve-pr-field 'headRefName)))))))
+
   (describe "approve-mutation-add-review"
     (it "sends comments on lines, keeping the new threads of that review"
       (test-mutations--with-pr

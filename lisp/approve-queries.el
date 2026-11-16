@@ -216,11 +216,14 @@ ON-PAGE, CALLBACK, ERRORBACK and ATOMIC are as for
 
 ;;; Diffs GitHub did not send
 
-(cl-defun approve-query-blob (oid path &key callback errorback)
+(cl-defun approve-query-blob (oid path &key exact callback errorback)
   "Fetch the text of PATH at commit OID of the PR's repository.
 CALLBACK is called with the text, or \"\" when the file does not exist
 at OID (it was added or deleted).  ERRORBACK is called with the
-error, also when the file is binary or too large for GitHub to send."
+error, also when the file is binary or too large for GitHub to send.
+With EXACT, the text must be the file's bytes, to be written back:
+ERRORBACK is called too when it is not (the file is not UTF-8, so
+GitHub's text is not its content)."
   (approve-api-graphql
    "queries/blob.graphql"
    `((owner . ,(approve-model-meta :owner)) (name . ,(approve-model-meta :repo))
@@ -238,6 +241,11 @@ error, also when the file is binary or too large for GitHub to send."
         ((or .repository.object.isTruncated (null .repository.object.text))
          (funcall errorback (list 'approve-api-error
                                   "The file is too large for GitHub's API")))
+        ((and exact (not (eql (string-bytes (encode-coding-string
+                                             .repository.object.text 'utf-8-unix))
+                              .repository.object.byteSize)))
+         (funcall errorback (list 'approve-api-error
+                                  (format "%s is not UTF-8 text" path))))
         (t (funcall callback .repository.object.text)))))))
 
 (defun approve-query--unified-diff (old new)

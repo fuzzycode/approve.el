@@ -266,7 +266,9 @@ schema on 2026-11-08.
 | Close / reopen                  | =closePullRequest= / =reopenPullRequest=                                    |
 | Lock / unlock                   | =lockLockable= / =unlockLockable=                                           |
 | Subscription                    | =updateSubscription=: the token needs the =notifications= scope             |
-| Apply a suggestion (Phase 5)    | =createCommitOnBranch= (file additions with full contents; SP7)             |
+| Apply a suggestion (Phase 5)    | =createCommitOnBranch(branch, expectedHeadOid, message, fileChanges)=: the  |
+|                                 | files' whole new text, on the head branch, from the head the store holds;   |
+|                                 | then =resolveReviewThread= (D41)                                            |
 
 * Loading a PR
 Several smaller queries in parallel instead of one huge one: the header shows
