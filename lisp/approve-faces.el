@@ -50,6 +50,8 @@
 ;; libraries it loads (magit-diff, magit-log).  Without them they would
 ;; have no colour until magit itself is loaded.
 (require 'magit)
+;; diff-mode's indicator of a changed line, which themes style.
+(require 'diff-mode)
 
 (defgroup approve-faces nil
   "Faces used by Approve."
@@ -407,16 +409,21 @@ file headings and of the file list."
 
 (defface approve-file-change-added
   '((t :inherit magit-diffstat-added))
-  "Face of the fringe marks of the file view on the head's side.
-They mark the lines the pull request added or changed, and where it
-added lines when the view shows the base."
+  "Face of the file view's fringe marks of lines the pull request added.
+The head shows a bar on them, the base a triangle where they go."
   :group 'approve-faces)
 
 (defface approve-file-change-removed
   '((t :inherit magit-diffstat-removed))
-  "Face of the fringe marks of the file view on the base's side.
-They mark the lines the pull request removed or changed, when the
-view shows the base, and where it removed lines in the head."
+  "Face of the file view's fringe marks of lines the pull request removed.
+The base shows a bar on them, the head a triangle where they were."
+  :group 'approve-faces)
+
+(defface approve-file-change-changed
+  '((t :inherit diff-indicator-changed))
+  "Face of the file view's fringe marks of lines the pull request changed.
+Those are lines removed and others added in their place: both
+versions show a bar on their own."
   :group 'approve-faces)
 
 (defface approve-diffstat-removed

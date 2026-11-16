@@ -203,6 +203,7 @@ section.shot code, .lead code, .card code {
 .badge.merged { background: var(--iris); color: var(--bg); }
 .fr-add { color: var(--foam); }
 .fr-del { color: var(--love); }
+.fr-chg { color: var(--gold); }
 .cursor { background: var(--fg); color: var(--bg); }
 
 /* corfu popup under point */

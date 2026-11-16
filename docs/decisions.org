@@ -380,6 +380,12 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   actions from overlays need a context that sections don't give; Phase 8
   plans them for a clone's buffers, which use the same overlays, and the
   file view can take them then.  Until then the diff is one key away.
+- Amended (2026-11-16) :: Global minor modes turn themselves on from
+  =after-change-major-mode-hook=, which runs with the mode's hooks, so it
+  doesn't run either.  Evil is turned on there as its global mode would
+  ([[*D17 Evil is supported, never required][D17]]), with font-lock and which-function: without it, an evil
+  user's keys in the view were Emacs's until some other hook happened to
+  turn it on.
 
 * Data and network
 ** D07 ghub, wrapped by approve-api

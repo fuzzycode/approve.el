@@ -40,6 +40,8 @@ Nil means the default: a text file of 600 lines, \"<oid> N\".")
 (defvar test-file--answer nil
   "A function of a mutation request that returns GitHub's data.")
 
+(defvar evil-mode)
+
 (defun test-file--text (oid)
   "Return the text of a file of 600 lines at commit OID."
   (mapconcat (lambda (n) (format "%s %d\n" (substring oid 0 4) n))
@@ -136,13 +138,18 @@ It is asked from the PR buffer, in the selected window, and shown there."
     (window-buffer)))
 
 (defun test-file--marks ()
-  "Return the fringe marks of the current view: (LINE . KIND), in order.
-KIND is `changed' or `removed'."
+  "Return the fringe marks of the current view: (LINE KIND SHAPE), in order.
+KIND is what the pull request did, `added', `removed' or `changed';
+SHAPE is `bar' on a line, `above' or `below' at its edge."
   (let ((marks nil))
     (dolist (overlay (overlays-in (point-min) (point-max)))
-      (when-let* ((kind (overlay-get overlay 'approve-file-mark)))
-        (push (cons (line-number-at-pos (overlay-start overlay)) kind) marks)))
+      (when-let* ((mark (overlay-get overlay 'approve-file-mark)))
+        (push (cons (line-number-at-pos (overlay-start overlay)) mark) marks)))
     (sort marks (lambda (a b) (< (car a) (car b))))))
+
+(defun test-file--bars (kind from to)
+  "Return the marks of bars of KIND on the lines FROM to TO."
+  (mapcar (lambda (line) (list line kind 'bar)) (number-sequence from to)))
 
 (defun test-file--threads ()
   "Return the lines of the current view with threads: (LINE . SHOWN), in order.
@@ -167,8 +174,22 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
 (describe "What a version of a file shows"
   (it "lists the changes each version has, and where the other one has lines"
     (let ((hunks (approve-diff-parse test-file--patch)))
-      (expect (approve-file--blocks hunks nil) :to-equal '((2 . 2) (5 . 0)))
-      (expect (approve-file--blocks hunks t) :to-equal '((2 . 1) (4 . 1)))))
+      (expect (approve-file--blocks hunks nil)
+              :to-equal '((2 2 changed) (5 0 removed)))
+      (expect (approve-file--blocks hunks t)
+              :to-equal '((2 1 changed) (4 1 removed)))
+      ;; A file that only gains lines, at its end.
+      (expect (approve-file--blocks (approve-diff-parse "@@ -1,2 +1,3 @@\n a\n b\n+c") t)
+              :to-equal '((3 0 added)))))
+
+  (it "marks lines with a bar, and where the other version has lines with a triangle"
+    (with-temp-buffer
+      (insert "a\nb\nc\n")
+      (approve-file--put-marks '((1 0 removed) (2 1 changed) (4 0 added)))
+      ;; Lines removed before the first line go above it; lines added
+      ;; after the last one, below it.
+      (expect (test-file--marks)
+              :to-equal '((1 removed above) (2 changed bar) (3 added below)))))
 
   (it "finds a line's place in the other version"
     (let ((hunks (approve-diff-parse test-file--patch)))
@@ -240,26 +261,28 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
   (it "is in the file's major mode, without running the mode's hooks"
     (require 'make-mode)
     (test-file--with-pr
-      (let ((ran nil))
+      (let ((ran nil)
+            ;; Evil is on everywhere: it turns on in the view too.
+            (evil-mode t))
         (cl-letf (((default-value 'makefile-mode-hook) (list (lambda () (push 'makefile ran))))
                   ((default-value 'prog-mode-hook) (list (lambda () (push 'prog ran))))
-                  ((default-value 'approve-file-mode-hook) (list (lambda () (push 'file ran)))))
+                  ((default-value 'approve-file-mode-hook) (list (lambda () (push 'file ran))))
+                  ((symbol-function 'evil-initialize) (lambda () (push 'evil ran))))
           (with-current-buffer (test-file--open "RIGHT" 1 "Makefile")
             (expect (derived-mode-p 'makefile-mode) :to-be-truthy)
             ;; Font-lock is not turned on in batch Emacs; its keywords are set.
             (expect font-lock-defaults :to-be-truthy)
             (expect approve-file-mode :to-be t)
-            (expect ran :to-equal '(file)))))))
+            (expect ran :to-equal '(file evil)))))))
 
   (it "marks the changes, and gives diff lines and other lines their context"
     (test-file--with-pr
       (with-current-buffer (test-file--open "RIGHT" 15)
         (expect (test-file--marks)
-                :to-equal (append (mapcar (lambda (line) (cons line 'changed))
-                                          (append (number-sequence 13 18)
-                                                  (number-sequence 55 57)
-                                                  (number-sequence 126 137)))
-                                  '((218 . removed))))
+                :to-equal (append (test-file--bars 'changed 13 18)
+                                  (test-file--bars 'changed 55 57)
+                                  (test-file--bars 'added 126 137)
+                                  '((218 removed above))))
         (expect (approve-context-at-point)
                 :to-equal (list :kind 'line :path test-file--path :side "RIGHT" :line 15
                                 :old nil :new 15 :line-kind 'add
@@ -276,12 +299,10 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
         (test-file--view)
         (approve-test-wait-for (lambda () (equal (plist-get approve-context-file :side) "LEFT")))
         (expect (test-file--marks)
-                :to-equal (append '((13 . changed) (14 . changed))
-                                  (mapcar (lambda (line) (cons line 'changed))
-                                          (number-sequence 51 54))
-                                  '((123 . removed))
-                                  (mapcar (lambda (line) (cons line 'changed))
-                                          (number-sequence 203 207)))))))
+                :to-equal (append (test-file--bars 'changed 13 14)
+                                  (test-file--bars 'changed 51 54)
+                                  '((123 added above))
+                                  (test-file--bars 'removed 203 207))))))
 
   (it "shows threads under their lines, the resolved ones folded"
     (test-file--with-pr

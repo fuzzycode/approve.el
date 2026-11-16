@@ -240,10 +240,10 @@ shows the other version.</p>
 <div class="buf">
 <p>  <span class="ln"> 38</span> (<span class="kw">cl-defun</span> <span class="fn">approve-api-graphql</span> (query variables</p>
 <p>  <span class="ln"> 39</span>                                 <span class="vr">&amp;key</span> callback error-callback</p>
-<p><span class="fr-add">▌</span> <span class="ln"> 40</span>   (<span class="kw">let*</span> ((request-id (approve-api--generate-request-id))</p>
-<p class="cur"><span class="fr-add">▌</span> <span class="ln"> 41</span>          (timeout approve-api-timeout)</p>
+<p>  <span class="ln"> 40</span>   (<span class="kw">let*</span> ((request-id (approve-api--generate-request-id))</p>
+<p class="cur"><span class="fr-chg">▌</span> <span class="ln"> 41</span>          (timeout approve-api-timeout)</p>
 <div class="s">
-<p class="hd"><span class="fr-add">▌</span> <span class="ln"> 42</span>          (retries approve-api-retries))                                       <i data-i="comment">💬</i> 2</p>
+<p class="hd"><span class="fr-chg">▌</span> <span class="ln"> 42</span>          (retries approve-api-retries))                                       <i data-i="comment">💬</i> 2</p>
 <div class="sb">
 <p>        <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────────</span></p>
 <p>        <span class="d">│</span> Should this be configurable per call?</p>
@@ -265,8 +265,11 @@ shows the other version.</p>
 <div class="echo"><span class="fn">approve-api-graphql</span> <span class="m">(which-function)</span></div>
 </div>
 <ul>
-  <li><span class="ok">▌</span> lines this version has and the other hasn't (in the base, removed lines, in red), <span class="er">▸</span> where the
-  other version has lines this one hasn't. In a terminal they are in the margin.</li>
+  <li>A bar <span class="fr-add">▌</span> on the lines this version has and the other hasn't, a small triangle
+  <span class="fr-del">▸</span> at the top edge of the line where the other version has lines this one hasn't. The colour
+  says what the pull request did: <span class="fr-add">added</span>, <span class="fr-del">removed</span>, or
+  <span class="fr-chg">changed</span> (lines removed and others added in their place). In a terminal they are in the
+  margin.</li>
   <li><code>n</code>/<code>p</code> (evil: <code>]c</code>/<code>[c</code>) move between changes, <code>]t</code>/<code>[t</code>
   between unresolved threads; <code>v</code> (evil: <code>x</code>) marks the file viewed; <code>?</code> opens the
   file view's dispatch.</li>

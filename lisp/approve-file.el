@@ -51,11 +51,13 @@
 ;;   others are the context `code' (`approve-context-file'), on which
 ;;   c says why GitHub takes no comment.
 ;; - Its decorations are overlays, as the buffer holds the file's own
-;;   text: a mark in the fringe (the margin in a terminal) on the
-;;   lines the pull request changed and where it removed lines, and
-;;   the threads under their lines as in the diff, with the speech
-;;   bubble at the right edge; TAB folds them.  Threads are read here
-;;   and acted on in the diff (D43), so their boxes name no keys.
+;;   text: marks in the fringe (the margin in a terminal), a bar on the
+;;   lines this version has and the other has not, a triangle at the
+;;   edge where the other has lines this one has not, coloured by what
+;;   the pull request did (added, removed, changed); and the threads
+;;   under their lines as in the diff, with the speech bubble at the
+;;   right edge; TAB folds them.  Threads are read here and acted on
+;;   in the diff (D43), so their boxes name no keys.
 ;; - Each redraw of the PR buffer redraws its file views
 ;;   (`approve-pr-redraw-hook'); a view whose commit is no longer the
 ;;   pull request's head (or base) fetches the new version.  Killing
@@ -84,6 +86,7 @@
 (require 'approve-diff)
 
 (declare-function evil-normalize-keymaps "evil-core" (&optional state))
+(declare-function evil-initialize "evil-core" ())
 (declare-function which-func-ff-hook "which-func" ())
 (defvar which-function-mode)
 
@@ -111,21 +114,39 @@ By default the file takes the window of the pull request, and
 ;;; Fringe marks
 
 (when (fboundp 'define-fringe-bitmap)
-  (define-fringe-bitmap 'approve-file-change [#b00111100] nil nil '(center t)))
+  (define-fringe-bitmap 'approve-file-change [#b00111100] nil nil '(center t))
+  ;; A small triangle at the edge of a line: the other version has
+  ;; lines there, between this line and the one above (or below).
+  (let ((triangle [#b10000000 #b11000000 #b11100000 #b11110000
+                   #b11100000 #b11000000 #b10000000]))
+    (define-fringe-bitmap 'approve-file-gap-above triangle nil nil 'top)
+    (define-fringe-bitmap 'approve-file-gap-below triangle nil nil 'bottom)))
 
-(defun approve-file--mark (kind face)
-  "Return the mark of KIND for the left fringe, in FACE.
-KIND is `changed', a bar on a line this version has and the other
-has not, or `removed', a triangle where the other version has lines
-this one has not.  A terminal, which has no fringe, shows it in the
+(defconst approve-file--change-faces
+  '((added . approve-file-change-added)
+    (removed . approve-file-change-removed)
+    (changed . approve-file-change-changed))
+  "The face of the marks of each kind of change the pull request made.")
+
+(defun approve-file--mark (shape kind)
+  "Return the mark of SHAPE for the left fringe, for a change of KIND.
+SHAPE is `bar', on a line this version has and the other has not, or
+`above' or `below', a triangle at that edge of the line where the
+other version has lines this one has not.  KIND is what the pull
+request did there, `added', `removed' or `changed', and gives the
+face.  A terminal, which has no fringe, shows the mark in the
 margin."
-  (propertize " " 'display
-              (if (display-graphic-p)
-                  (list 'left-fringe
-                        (if (eq kind 'changed) 'approve-file-change 'right-triangle)
-                        face)
-                (list '(margin left-margin)
-                      (approve-face (if (eq kind 'changed) "▌" "▸") face)))))
+  (let ((face (alist-get kind approve-file--change-faces)))
+    (propertize " " 'display
+                (if (display-graphic-p)
+                    (list 'left-fringe
+                          (pcase shape
+                            ('bar 'approve-file-change)
+                            ('above 'approve-file-gap-above)
+                            (_ 'approve-file-gap-below))
+                          face)
+                  (list '(margin left-margin)
+                        (approve-face (if (eq shape 'bar) "▌" "▸") face))))))
 
 ;;; The texts of files
 
@@ -272,25 +293,31 @@ It is \"\" outside a file view."
 (defun approve-file--blocks (hunks left)
   "Return the changes of HUNKS as the version on one side shows them.
 The version is the base when LEFT, else the head.  Each change is
-\(LINE . COUNT): COUNT lines from LINE that this version has and the
-other has not (added lines in the head, removed ones in the base),
-or COUNT 0 where the other version has lines this one has not,
-before LINE.  They are in order."
+\(LINE COUNT KIND): COUNT lines from LINE that this version has and
+the other has not, or COUNT 0 where the other version has lines this
+one has not, before LINE.  KIND is what the pull request did there:
+`added' or `removed' lines, or `changed' when it removed some and
+added others in their place.  They are in order."
   (let ((blocks nil))
     (dolist (hunk hunks)
       (let ((old (approve-diff-hunk-old-start hunk))
             (new (approve-diff-hunk-new-start hunk))
-            (start nil) (count 0))
+            (start nil) (count 0) (kinds nil))
         (cl-flet ((finish ()
                     (when start
-                      (push (cons start count) blocks))
-                    (setq start nil count 0)))
+                      (push (list start count (cond ((cdr kinds) 'changed)
+                                                    ((eq (car kinds) 'add) 'added)
+                                                    (t 'removed)))
+                            blocks))
+                    (setq start nil count 0 kinds nil)))
           (dolist (line (approve-diff-hunk-lines hunk))
             (pcase (car line)
               ('ctx (finish) (cl-incf old) (cl-incf new))
               ((and kind (or 'add 'del))
                (unless start
                  (setq start (if left old new)))
+               (unless (memq kind kinds)
+                 (push kind kinds))
                (when (eq kind (if left 'del 'add))
                  (cl-incf count))
                (if (eq kind 'add) (cl-incf new) (cl-incf old)))))
@@ -408,26 +435,30 @@ Lines past the end of the buffer are left out."
     (overlay-put overlay 'approve-file t)
     overlay))
 
-(defun approve-file--put-marks (blocks left)
-  "Mark the changes of BLOCKS in the fringe; the version is the base when LEFT.
-See `approve-file--blocks'."
-  (let* ((own (if left 'approve-file-change-removed 'approve-file-change-added))
-         (other (if left 'approve-file-change-added 'approve-file-change-removed))
-         (changed (cons 'changed (approve-file--mark 'changed own)))
-         (removed (cons 'removed (approve-file--mark 'removed other)))
-         (lines (count-lines (point-min) (point-max)))
-         (entries nil))
-    (dolist (block blocks)
-      (if (zerop (cdr block))
-          (push (cons (min (car block) (max 1 lines)) removed) entries)
-        (dotimes (i (cdr block))
-          (push (cons (+ (car block) i) changed) entries))))
+(defun approve-file--put-marks (blocks)
+  "Mark the changes of BLOCKS in the fringe, as `approve-file--blocks' gives them.
+Lines this version has get a bar; where the other version has lines
+this one has not, a triangle at the top of the line after them, or
+at the bottom of the last line when they were at the end.  The
+colour says what the pull request did: added, removed or changed.
+Each overlay's `approve-file-mark' is (KIND SHAPE)."
+  (let ((lines (max 1 (count-lines (point-min) (point-max))))
+        (entries nil))
+    (pcase-dolist (`(,start ,count ,kind) blocks)
+      (if (zerop count)
+          (push (if (> start lines)
+                    (list lines kind 'below)
+                  (list start kind 'above))
+                entries)
+        (dotimes (i count)
+          (push (list (+ start i) kind 'bar) entries))))
     (approve-file--at-lines
      (sort entries (lambda (a b) (< (car a) (car b))))
      (lambda (mark)
        (let ((overlay (approve-file--overlay (point) (point))))
-         (overlay-put overlay 'approve-file-mark (car mark))
-         (overlay-put overlay 'before-string (cdr mark)))))))
+         (overlay-put overlay 'approve-file-mark mark)
+         (overlay-put overlay 'before-string
+                      (approve-file--mark (nth 1 mark) (car mark))))))))
 
 (defun approve-file--threads-text (threads)
   "Return THREADS drawn as the diff draws them, indented, as a string.
@@ -486,7 +517,7 @@ after them stay theirs."
                                 (put-text-property (point) (min (1+ (line-end-position))
                                                                 (point-max))
                                                    'approve-line property)))
-      (approve-file--put-marks blocks left)
+      (approve-file--put-marks blocks)
       (approve-file--put-threads (plist-get index :lines)))
     (setq approve-file--changes (delete-dups (mapcar #'car blocks))
           approve-file--threads (plist-get index :lines)
@@ -570,8 +601,10 @@ fetches the new version, and shows it once it is in."
   "Put the current buffer in the major mode of the file NAME, without its hooks.
 The mode is the one `set-auto-mode' chooses for NAME and the text.
 Its hooks are delayed and never run (decision D43): no checker or
-language server starts for a file that is not on disk.  Font-lock
-and which-function are turned on as their global modes would."
+language server starts for a file that is not on disk.  Nor does
+`after-change-major-mode-hook', where global minor modes turn
+themselves on, so font-lock, which-function and evil are turned on
+here as their global modes would."
   (condition-case err
       (let ((buffer-file-name (expand-file-name name "/"))
             (enable-local-variables nil)
@@ -584,7 +617,11 @@ and which-function are turned on as their global modes would."
   (when (bound-and-true-p global-font-lock-mode)
     (turn-on-font-lock-if-desired))
   (when (and (bound-and-true-p which-function-mode) (fboundp 'which-func-ff-hook))
-    (which-func-ff-hook)))
+    (which-func-ff-hook))
+  ;; Evil turns itself on from that hook too, and the view is meant
+  ;; for it as much as the PR buffer (decision D17).
+  (when (and (bound-and-true-p evil-mode) (fboundp 'evil-initialize))
+    (evil-initialize)))
 
 (defun approve-file--buffer-name (name oid)
   "Return the name of the file view of the file NAME at commit OID."

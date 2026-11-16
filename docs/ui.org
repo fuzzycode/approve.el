@@ -686,9 +686,16 @@ file is fetched through the API and kept for the session ([[file:flows.org::*F15
   for more.  Line numbers are =display-line-numbers-mode='s
   (=approve-file-line-numbers=); the file takes the PR buffer's window
   (=approve-file-display-action=), and =q= goes back.
-- Fringe (the margin in a terminal): =▌= lines this version has and the
-  other hasn't (added or changed in the head, removed or changed in the
-  base), =▸= where the other version has lines this one hasn't.
+- Fringe (the margin in a terminal): a bar =▌= on the lines this version
+  has and the other hasn't, a small triangle =▸= at the top edge of the
+  line where the other version has lines this one hasn't (at the bottom
+  edge of the last line when they were at the end).  The colour says what
+  the pull request did: added (=approve-file-change-added=), removed
+  (=approve-file-change-removed=) or changed, lines removed and others
+  added in their place (=approve-file-change-changed=).  So the head shows
+  added lines as green bars, changed ones as yellow bars and removed ones
+  as a red triangle where they were; the base shows removed lines as red
+  bars, changed ones as yellow bars and added ones as a green triangle.
 - The header line says which version it is, how many changes and threads
   it shows, how many threads only the diff shows (on the whole file,
   outdated, or on lines of the other version), whether the file is viewed,
@@ -942,6 +949,7 @@ inherit:
 | =approve-line-number=                            | =line-number=                                | Diff line numbers         |
 | =approve-target=                                 | =region=                                     | Lines being commented on  |
 | =approve-file-change-added= / =-removed=         | =magit-diffstat-added= / =-removed=          | File view's fringe marks  |
+| =approve-file-change-changed=                    | =diff-indicator-changed=                     | File view: changed lines  |
 | =approve-input-prompt= / =approve-input-context= | =bold= / =font-lock-keyword-face=            | Input header line         |
 | =approve-inflight=                               | =shadow=, italic                             | Things waiting for GitHub |
 | =approve-check-success/failure/pending/skipped=  | =success= / =error= / =warning= / =shadow=   | Checks                    |
