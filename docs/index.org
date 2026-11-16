@@ -87,10 +87,15 @@ task only needs the files it touches.
   (=approve-commands.el=).  The scratch script's =metadata= group checks
   them all live (=APPROVE_SCRATCH_ONLY=metadata=).  Not covered from
   GitHub's sidebar: projects and linked issues.
-- Next step: [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]] (merge and checks), starting with applying
-  suggestions.  SP7 is done ([[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]], 2026-11-15): a suggestion is
-  committed as GitHub's button commits it, through =createCommitOnBranch=
-  on the files at the head, and its threads resolved after.
+- Phase 5 (Merge and checks) started on 2026-11-15 with SP7 ([[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]):
+  a suggestion is committed as GitHub's button commits it, through
+  =createCommitOnBranch= on the files at the head, and its threads
+  resolved after.  Applying suggestions is done (2026-11-16,
+  =approve-suggestions.el=, [[file:flows.org::*F23 Commit a suggestion, or a batch of them][F23]]): =x= commits the suggestion at point,
+  or the batch =b= fills, after its commit message; the PR is loaded
+  again once GitHub's head is the new commit.  The scratch script's
+  =suggestions= group checks it live on #10.
+- Next step: the merge transient of [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]].
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

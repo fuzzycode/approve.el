@@ -221,11 +221,13 @@ Notes:
 #+begin_example
                   ╭─ @carol · 5 hours ago ─────────────────────────────────────
                   │ Use `cl-incf` here:
-                  │ ┌ Suggested change ─────────────────────────────────────────
+                  │ ┌ Suggested change · x commit · b add to batch ──────────────
                   │ │ -      (setq count (1+ count))
                   │ │ +      (cl-incf count)
                   │ └───────────────────────────────────────────────────────────
                   ╰─ r reply · R resolve ───────────────────────────────────────
+
+                  │ ┌ Suggested change · ✓ in the batch · b take out ────────────
 
    ▾ ↻ ~ lisp/approve-graphql.el                                                    💬 2
      ▾ On this file (1)
@@ -234,6 +236,16 @@ Notes:
          ╰─ r reply · R resolve ───────────────────────────────────────────────
      ▸ Outdated (2)                         threads on lines no longer in the diff
 #+end_example
+
+A suggested change that can be committed names the keys after its title
+([[file:flows.org::*F23 Commit a suggestion, or a batch of them][F23]], [[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]): =x= commits it, =b= adds it to the batch (=a= and =A=
+in evil).  With a batch, the others say "b add to batch" alone, as =x=
+then commits the batch.  One in the batch says "✓ in the batch"
+(=approve-suggestion-batched=), even when =approve-show-hints= is nil.  A
+suggestion that can't be committed (pending, outdated, on removed lines,
+in a closed pull request) says nothing; =K= and the dispatch say why.
+These are overlays on the box GitHub's HTML draws, put back after each
+redraw.
 
 * PR buffer — split layout
 =approve-layout= = =split=.  The overview keeps everything except the =Diff=
@@ -267,6 +279,7 @@ Checks).
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
  #1234 Add retry logic … · ⟳ updated on GitHub — g to refresh · 2 new commits  ● Open
  #1234 · loading pull request, files, threads…
+ #1234 Add retry logic … · 2 suggestions in the batch · x commits them  ● Open
 #+end_example
 
 The second form appears when change detection ([[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]) finds that the PR
@@ -277,7 +290,8 @@ reviews"; an edit alone (the title, the description, a comment) adds
 nothing.  It is in =approve-updated=, the key in =approve-hint-key=, and it
 names the key bound to =approve-pr-refresh=.  It stays until =g=, which
 drops it as the load starts.  The third is the first moment, before the
-title has loaded.
+title has loaded.  The fourth counts the suggestions waiting in the batch
+([[file:flows.org::*F23 Commit a suggestion, or a batch of them][F23]]), in =approve-suggestion-batched=.
 
 * Loading, empty and error states
 #+begin_example
@@ -446,7 +460,8 @@ buffer until the input is committed or aborted.
 
 The header-line text names the action: "Comment on…", "Reply to @bob on…",
 "Edit comment", "Edit description", "Review body — Approve", "New title"
-(single line).  Its right end names the keys: send and abort, then suggest
+(single line), "Commit the suggestion on a.go:13–14 · to feature/x" (=C-c C-c=
+commits; the text starts as GitHub's message, [[file:flows.org::*F23 Commit a suggestion, or a batch of them][F23]]).  Its right end names the keys: send and abort, then suggest
 while the text is on code and has no suggestion yet, else preview (not for
 a single line).  They are the keys bound in the input buffer, shown even
 when =approve-show-hints= is nil.  Evil users start in insert state.
@@ -458,12 +473,12 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
  Review                     Comments                 Pull request          Buffer
   c Comment at point         r Reply                  t Title               g Refresh
   s Suggest change           R Resolve / unresolve    d Description         RET Visit at point
-  v Toggle viewed            e Edit at point          l Labels              o Open in browser
-  S Submit review…           k Delete at point        a Assignees           y Copy URL / sha
-  X Discard pending review   + React                  A Request reviewers   j Jump…
-  V Review range…            H Hide / unhide          M Milestone           L Layout
-                             C Conversation comment   D Draft / ready       ! Doctor
-                                                      w Subscription        K Details (eldoc)
+  x Commit suggestion        e Edit at point          l Labels              o Open in browser
+  b Add to batch             k Delete at point        a Assignees           y Copy URL / sha
+  v Toggle viewed            + React                  A Request reviewers   j Jump…
+  S Submit review…           H Hide / unhide          M Milestone           L Layout
+  X Discard pending review   C Conversation comment   D Draft / ready       ! Doctor
+  V Review range…                                     w Subscription        K Details (eldoc)
                                                       # Lock conversation   T Fold all threads
                                                       m Merge / close…      O Fold all but this
 #+end_example
@@ -473,7 +488,9 @@ Suffixes that don't apply to the context, or that the viewer may not use
 doesn't jump around.  A command is dimmed exactly where it would refuse to
 run: the menu asks the command's preflight ([[file:decisions.org::*D06 Menus are transients; everything is reachable from =?=][D06]]).  =T= says what it will
 do: "Fold all threads", or "Unfold all threads" once they are folded; =#=
-"Lock conversation", or "Unlock conversation" once it is locked.  =#= has
+"Lock conversation", or "Unlock conversation" once it is locked; =x=
+"Commit the batch (2)" while there is one; =b= "Take out of batch" on a
+suggestion in it.  =#= has
 no key in the buffer: it is seldom used.
 
 The mockup is the whole menu; the menu lists only the commands that exist.
@@ -762,6 +779,9 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Copy URL / sha / value        | =y=           | =gy=                  | any                       |
 | Comment at point (DWIM)       | =c=           | =c=                   | line, region, file, PR    |
 | Suggest change                | =s=           | =s=                   | line, region (new side)   |
+| Commit suggestion (or batch)  | =x=           | =a=                   | suggestion; any (batch)   |
+| Add to batch / take out       | =b= (=C-u=:   | =A=                   | suggestion                |
+|                               | empty it)     |                       |                           |
 | Reply / quote                 | =r=           | =r=                   | thread, comment           |
 | Resolve / unresolve           | =R=           | =R=                   | thread                    |
 | Edit at point                 | =e=           | =i=                   | own comment, description  |
@@ -833,6 +853,7 @@ inherit:
 | =approve-state-open/closed/merged/draft=         | =success= / =error= / =magit-tag= / =shadow= | State badges              |
 | =approve-approved= / =approve-changes-requested= | =success= / =error=                          | Review marks              |
 | =approve-pending=                                | =warning=                                    | "Pending" label           |
+| =approve-suggestion-batched=                     | =success=                                    | "✓ in the batch"          |
 | =approve-thread-border=                          | =shadow=                                     | Thread box lines          |
 | =approve-resolved= / =approve-outdated=          | =shadow= / =warning=                         | Thread states             |
 | =approve-new= / =approve-dismissed=              | =warning=                                    | New since your review     |

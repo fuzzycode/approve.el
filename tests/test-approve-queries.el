@@ -207,4 +207,31 @@ The requests are pushed to `test-queries--requests'."
       (fetch "été\r\n" 7 t)
       (expect result :to-equal "été\r\n"))))
 
+(describe "approve-query-await-head"
+  (before-each
+    (setq test-queries--requests nil)
+    (approve-model-init '(:host "github.com" :owner "acme" :repo "rocket" :number 7)))
+
+  (it "asks for the head until it is the commit, or tries no more"
+    (let ((approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t)
+          (done nil))
+      (let ((approve-api-transport
+             (test-queries--answering
+              '((data (repository (pullRequest (__typename . "PullRequest") (id . "PR")
+                                               (headRefOid . "new"))))))))
+        (approve-query-await-head "new" :callback (lambda () (setq done t)))
+        (approve-test-wait-for (lambda () done))
+        (expect (length test-queries--requests) :to-equal 1)
+        (expect (plist-get (car test-queries--requests) :name)
+                :to-equal "queries/pull-request-changes.graphql"))
+      (setq done nil test-queries--requests nil)
+      (let ((approve-api-transport
+             (test-queries--answering
+              '((data (repository (pullRequest (__typename . "PullRequest") (id . "PR")
+                                               (headRefOid . "old"))))))))
+        (approve-query-await-head "new" :tries 2 :callback (lambda () (setq done t)))
+        (approve-test-wait-for (lambda () done) 5)
+        (expect (length test-queries--requests) :to-equal 2)))))
+
 ;;; test-approve-queries.el ends here

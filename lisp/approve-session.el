@@ -63,6 +63,9 @@
 :checking  non-nil while a check for changes is out
 :checked   when the last check was sent or the last load started,
            as a float time
+:suggestions  the batch of suggestions to commit together, each
+           (COMMENT-ID . INDEX), in the order added
+           (approve-suggestions.el)
 Read and change it with `approve-session-get' and friends; they use
 the session of `approve-model-owner-buffer'.")
 

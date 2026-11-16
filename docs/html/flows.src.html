@@ -61,6 +61,7 @@ flow. Write actions all run the same pipeline (<a href="#F00">F00</a>); their ow
   <li><a href="#F18">F18 Switch layout</a></li>
   <li><a href="#F19">F19 Notifications</a></li>
   <li><a href="#F20">F20 Look up details (eldoc)</a></li>
+  <li><a href="#F23">F23 Commit a suggestion, or a batch</a></li>
 </ul>
 
 <section class="shot" id="arch">
@@ -237,6 +238,15 @@ and cached (D24).</p>
 Moving point never touches the network: missing details are fetched only when wanted.</p>
 <div class="flow">
 <!-- svg F20 -->
+</div>
+</section>
+<section class="shot" id="F23">
+<h2>F23 Commit a suggestion, or a batch of them <span class="ref">x · b · D41 · Phase 5</span></h2>
+<p>As GitHub's "Commit suggestion" and "Add suggestion to batch", without a clone: the files at the head the
+buffer has, the suggested lines spliced in, one commit, then the threads resolved and the PR loaded again.
+With a batch, <code>x</code> commits the batch wherever point is.</p>
+<div class="flow">
+<!-- svg F23 -->
 </div>
 </section>
 </main>

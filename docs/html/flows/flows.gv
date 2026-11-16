@@ -439,3 +439,42 @@ idle -> ctx; K -> want -> ctx;
 ctx -> desc; desc -> none [@no]; desc -> build [@yes];
 build -> need; need -> show [@no]; need -> load [@yes];
 load -> q -> okq; okq -> fail [@no]; okq -> full [@yes];
+
+%% F23
+subgraph cluster_x { label="x — commit (evil: a)";
+  x      [label="[user] x on a suggestion" @user];
+  batch  [label="batch empty?" @dec];
+  all    [label="the batch,\nwherever point is"];
+  here   [label="the suggestion at point"];
+  can    [label="each can be committed?\nopen PR · viewerCanApplySuggestion · published\nnew side · not outdated · not a file's · a change" @dec];
+  why    [label="user-error saying why\n(GitHub's words where it has them)" @err];
+  cu     [label="C-u?" @dec];
+  input  [label="input \"Commit the suggestion on a.go:13–14 · to feature/x\"\nApply suggestion from @carol\nCo-authored-by: Carol <123+carol noreply address>"];
+  blob   [label="blob of each file at the store's headRefOid\n(UTF-8, whole)" @api];
+  same   [label="its lines there, and not\nthe suggestion already?" @dec];
+  nochg  [label="\"This suggestion is invalid because\nno changes were made to the code\"" @err];
+  splice [label="splice each file from the bottom up\nline ends and the last newline kept"];
+  commit [label="createCommitOnBranch\nexpectedHeadOid = the store's head" @api];
+  stale  [label="\"feature/x has commits this buffer hasn't\nloaded; refresh it, then try again\"" @err];
+  res    [label="resolveReviewThread\nfor each thread, in turn" @api];
+  wait   [label="wait until GitHub's PR head\nis the new commit (≤ 10 s)"];
+  done   [label="empty the batch · load the PR again\nthe threads are outdated now" @ok];
+  x -> batch; batch -> all [@no]; batch -> here [@yes]; all -> can; here -> can;
+  can -> why [@no]; can -> cu [@yes]; cu -> input [@no]; cu -> blob [@yes];
+  input -> blob [label=" C-c C-c"]; blob -> same; same -> nochg [@no]; same -> splice [@yes];
+  splice -> commit; commit -> stale [label=" STALE_DATA", class="no", fontcolor="#eb6f92"];
+  commit -> res; res -> wait -> done;
+}
+subgraph cluster_b { label="b — batch (evil: A)";
+  b      [label="[user] b on a suggestion" @user];
+  inb    [label="in the batch?" @dec];
+  out    [label="take it out" @ok];
+  bcan   [label="can be committed?" @dec];
+  berr   [label="user-error saying why" @err];
+  lap    [label="changes a line one\nin the batch does?" @dec];
+  lerr   [label="\"Unable to commit due to other\npending changes affecting this line\"" @err];
+  add    [label="add it: \"✓ in the batch\" on its box\nheader line: \"2 suggestions in the batch\"" @ok];
+  cub    [label="[user] C-u b — empty the batch" @user];
+  b -> inb; inb -> out [@yes]; inb -> bcan [@no]; bcan -> berr [@no]; bcan -> lap [@yes];
+  lap -> lerr [@yes]; lap -> add [@no];
+}

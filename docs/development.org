@@ -160,7 +160,7 @@ repository: commands under development, spikes, recording fixtures.
 - #10 holds the SP7 experiments ([[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]): suggestions on an LF file, a
   CRLF file, a last line without a newline and lines a later commit
   moved or changed, some committed in the browser and some through
-  =createCommitOnBranch=, with a pending one left.  Its base is the
+  =createCommitOnBranch=, and the scratch script's.  Its base is the
   branch =spike/suggestions-base=, not =main=.  The "Bot review comment"
   workflow (=bot-suggest.yml=, run by hand) leaves a review comment from
   github-actions[bot] on a line, such as a suggestion for =Co-authored-by=:
@@ -184,8 +184,13 @@ repository: commands under development, spikes, recording fixtures.
   grep -E '^(PASS|FAIL|ERROR)' /tmp/scratch.log
   #+end_src
   The checks come in groups (=approve-scratch-step-groups=): =review=
-  (the review's writes, above) and =metadata= (labels, assignees,
-  milestone and review requests on #8, each undone after).
+  (the review's writes, above), =metadata= (labels, assignees,
+  milestone and review requests on #8, each undone after) and
+  =suggestions= (on #10: a single comment suggests a change of line 20
+  of =sp7/plain.txt=, which is committed through Approve, a second
+  commit from the old head is refused, and the line is put back; each
+  run leaves the resolved comment and two commits; #10 must have no
+  pending review).
   =APPROVE_SCRATCH_ONLY=metadata= runs one group alone:
   #+begin_src sh
   env APPROVE_SCRATCH_ONLY=metadata timeout 900 cask exec emacs -Q --batch \

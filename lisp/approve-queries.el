@@ -319,6 +319,26 @@ the error."
                  (funcall (or errorback #'approve-api-default-errorback)
                           (list 'approve-api-not-found "Pull request not found"))))))
 
+(cl-defun approve-query-await-head (oid &key callback (tries 10))
+  "Call CALLBACK once GitHub's head of the PR is OID, the commit just made.
+GitHub moves a pull request's head a moment after a commit to its
+branch, so the PR loaded at once could still show the old one.  The
+head is asked for (the change detection query) up to TRIES times, a
+second apart; CALLBACK is called after the last try too, and when
+the question fails, so it always comes."
+  (let ((buffer (current-buffer)))
+    (approve-query-changes
+     :callback (lambda (remote)
+                 (if (or (equal (alist-get 'headRefOid remote) oid) (<= tries 1))
+                     (funcall callback)
+                   (run-at-time 1 nil
+                                (lambda ()
+                                  (when (buffer-live-p buffer)
+                                    (with-current-buffer buffer
+                                      (approve-query-await-head oid :callback callback
+                                                                :tries (1- tries))))))))
+     :errorback (lambda (_err) (funcall callback)))))
+
 (cl-defun approve-query-markdown (text &key callback errorback)
   "Render TEXT, GitHub-flavoured markdown, as GitHub shows a comment.
 Mentions and references such as #12 are read in the PR's repository.

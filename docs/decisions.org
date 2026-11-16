@@ -659,6 +659,13 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   written on: =expectedHeadOid= makes GitHub refuse rather than overwrite
   a push made since.  Checking first gives GitHub's own messages, which
   the API never sends since it knows nothing of suggestions.
+- Amended (2026-11-16) :: Found by =dev/scratch.el='s =suggestions=
+  group: right after =createCommitOnBranch=, the pull request's
+  =headRefOid= can still be the old head for a moment, so a load at once
+  shows the PR as it was, and change detection then announces Approve's
+  own commit.  Approve asks for the head (the change detection query)
+  once a second, ten times at most, until it is the new commit, and
+  loads the PR then (=approve-query-await-head=).
 
 * Rendering
 ** D13 Full redraw, point restored by section ident

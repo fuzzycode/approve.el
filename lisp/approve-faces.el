@@ -248,6 +248,11 @@ See `approve-label-face'."
 Only the label is coloured; the comment itself has no background."
   :group 'approve-faces)
 
+(defface approve-suggestion-batched
+  '((t :inherit success))
+  "Face of \"✓ in the batch\" on a suggested change waiting to be committed."
+  :group 'approve-faces)
+
 (defface approve-check-success
   '((t :inherit success))
   "Face of passed checks."

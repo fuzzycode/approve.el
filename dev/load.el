@@ -24,7 +24,7 @@
     approve-faces approve-icons approve-html approve-render approve-pr approve-changes approve-thread
     approve-sections approve-conversation approve-diff approve-context approve-nav
     approve-eldoc approve-input approve-mutations approve-actions approve-review approve-commands
-    approve-manage approve-list approve-dashboard approve-menus approve approve-dev)
+    approve-suggestions approve-manage approve-list approve-dashboard approve-menus approve approve-dev)
   "Modules in the order they are reloaded; others follow, by name.")
 
 (let* ((root (file-name-directory

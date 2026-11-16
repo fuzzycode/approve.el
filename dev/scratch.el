@@ -38,6 +38,7 @@
 (require 'approve-mutations)
 (require 'approve-changes)
 (require 'approve-metadata)
+(require 'approve-suggestions)
 
 (defconst approve-scratch-repository '("fuzzycode" . "test-approve")
   "The only repository this script writes to.")
@@ -161,13 +162,14 @@ That is (t . RESULT) or (nil . ERROR)."
 
 ;;; Loading
 
-(defun approve-scratch--load (buffer)
-  "Load the scratch pull request into the store of BUFFER, anew."
+(defun approve-scratch--load (buffer &optional number)
+  "Load the scratch pull request NUMBER into the store of BUFFER, anew.
+NUMBER is `approve-scratch-number' by default."
   (with-current-buffer buffer
     (approve-model-init (list :host "github.com"
                               :owner (car approve-scratch-repository)
                               :repo (cdr approve-scratch-repository)
-                              :number approve-scratch-number))
+                              :number (or number approve-scratch-number)))
     (let ((left 0)
           (failed nil))
       (dolist (key '(core files threads timeline))
@@ -240,12 +242,13 @@ STORE is the buffer the mutations ran in.  GitHub's are those of the
 PR loaded anew; a difference is looked at again twice, a few seconds
 apart, as GitHub may answer a query with what it had a moment ago."
   (let ((fresh (generate-new-buffer " *approve-scratch-fresh*"))
+        (number (with-current-buffer store (approve-model-meta :number)))
         (ours (with-current-buffer store (approve-scratch--facts)))
         (theirs nil)
         (tries 0))
     (unwind-protect
         (while (progn
-                 (approve-scratch--load fresh)
+                 (approve-scratch--load fresh number)
                  (setq theirs (with-current-buffer fresh (approve-scratch--facts)))
                  (cl-incf tries)
                  (and (not (equal ours theirs)) (< tries 3)))
@@ -607,10 +610,112 @@ assignees, milestone or review requests."
                          (approve-scratch--run #'approve-mutation-set-locked nil))
     (approve-scratch--compare "unlocked" store)))
 
+(defconst approve-scratch-suggestions-number 10
+  "The pull request of the suggestions' checks: #10, the SP7 experiments.")
+
+(defconst approve-scratch-suggestions-line
+  '(:path "sp7/plain.txt" :side "RIGHT" :line 20)
+  "The added line of #10 the suggestions' checks suggest a change of.")
+
+(defun approve-scratch--head-text (path)
+  "Return the text of PATH at the head the store holds."
+  (let ((outcome nil))
+    (approve-query-blob (approve-pr-field 'headRefOid) path :exact t
+                        :callback (lambda (text) (setq outcome (cons t text)))
+                        :errorback (lambda (err) (setq outcome (cons nil err))))
+    (approve-scratch--wait (lambda () outcome) path)
+    (if (car outcome)
+        (cdr outcome)
+      (error "Fetching %s failed: %s" path (approve-api-error-message (cdr outcome))))))
+
+(defun approve-scratch--suggestion-steps (_store)
+  "Run the checks of committing a suggestion, on #10 (decision D41).
+A single comment suggests a change of an added line; committing it
+replaces the line and resolves the thread; committing again from the
+head it had is refused; the line is then put back by another commit.
+Each run leaves the comment, resolved, and the two commits."
+  (let ((store (generate-new-buffer " *approve-scratch-suggestions*"))
+        (path (plist-get approve-scratch-suggestions-line :path))
+        (line (plist-get approve-scratch-suggestions-line :line)))
+    (unwind-protect
+        (with-current-buffer store
+          (approve-scratch--load store approve-scratch-suggestions-number)
+          (when (approve-scratch--pending-review)
+            (error "The viewer has a pending review on #%d; submit or discard it first"
+                   approve-scratch-suggestions-number))
+          (let* ((before (approve-scratch--head-text path))
+                 (old (car (approve-suggestions-lines before line line)))
+                 (new (format "%s (%s)" approve-scratch-mark (format-time-string "%F %T"))))
+            ;; F06 then F23: a single comment with a suggestion.
+            (approve-scratch--ok
+             "suggest a change in a single comment"
+             (approve-scratch--run
+              #'approve-mutation-add-review :event "COMMENT"
+              :threads (list (append approve-scratch-suggestions-line
+                                     (list :body (format "%s\n```suggestion\n%s\n```"
+                                                         (approve-scratch--text "suggestion")
+                                                         new))))))
+            (approve-scratch--compare "a suggestion" store)
+            (let* ((thread (alist-get 'id (car (last (approve-pr-list-fields
+                                                      'reviewThreads '(id))))))
+                   (suggestion (approve-suggestions-get
+                                (cons (approve-scratch--comment-of thread) 0) thread))
+                   (head (approve-pr-field 'headRefOid)))
+              (approve-scratch--check "the suggestion can be committed"
+                                      (and suggestion
+                                           (null (approve-suggestions-why-not suggestion)))
+                                      (and suggestion (approve-suggestions-why-not suggestion)))
+              (approve-scratch--check "its lines are the new line"
+                                      (equal (plist-get suggestion :lines) (list new))
+                                      (format "%S" (plist-get suggestion :lines)))
+              (approve-scratch--ok "commit the suggestion"
+                                   (approve-scratch--run
+                                    #'approve-suggestions-commit (list suggestion)
+                                    (approve-suggestions-message (list suggestion))))
+              (approve-scratch--check "its thread is resolved"
+                                      (approve-model-get "PullRequestReviewThread" thread
+                                                         'isResolved))
+              (let ((again (approve-scratch--run #'approve-mutation-commit-files
+                                                 (list (cons path before)) "Not sent")))
+                (approve-scratch--check "a commit from the head the store had is refused"
+                                        (and (not (car again))
+                                             (string-match-p "has commits this buffer"
+                                                             (approve-api-error-message
+                                                              (cdr again))))
+                                        (format "%S" again)))
+              (approve-scratch--load store approve-scratch-suggestions-number)
+              (approve-scratch--check "the head moved"
+                                      (not (equal (approve-pr-field 'headRefOid) head)))
+              (approve-scratch--check "the line is the suggestion"
+                                      (equal (approve-suggestions-lines
+                                              (approve-scratch--head-text path) line line)
+                                             (list new)))
+              (approve-scratch--compare "a committed suggestion" store))
+            ;; Put the line back.
+            (let ((oid (approve-scratch--ok "put the line back"
+                                            (approve-scratch--run
+                                             #'approve-mutation-commit-files
+                                             (list (cons path before))
+                                             (format "%s: put %s back"
+                                                     approve-scratch-mark path))))
+                  (done nil))
+              (when oid
+                (approve-query-await-head oid :callback (lambda () (setq done t)))
+                (approve-scratch--wait (lambda () done) "the new head")))
+            (approve-scratch--load store approve-scratch-suggestions-number)
+            (approve-scratch--check "the line is back"
+                                    (equal (approve-suggestions-lines
+                                            (approve-scratch--head-text path) line line)
+                                           (list old)))
+            (approve-scratch--compare "the line put back" store)))
+      (kill-buffer store))))
+
 (defconst approve-scratch-step-groups
   '((review . approve-scratch--review-steps)
-    (metadata . approve-scratch--metadata-steps))
-  "The groups of checks, in the order they run: (NAME . FUNCTION).")
+    (metadata . approve-scratch--metadata-steps)
+    (suggestions . approve-scratch--suggestion-steps))
+  "The groups of checks, in the order they run: (NAME . FUNCTION).
+The suggestions' run on #10, in a store of their own.")
 
 (defun approve-scratch-run (&optional only)
   "Run the checks on the scratch pull request; return the failures.

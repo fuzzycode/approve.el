@@ -35,7 +35,7 @@
 ;; Magit, in visual state too, so its commands act on the selection
 ;; (/ still searches), and +, a line motion that j and RET do too,
 ;; which reacts.  Keys that would edit text in a file
-;; buffer (c s r R x D C S X i) are free in a read-only buffer, so the
+;; buffer (c s r R x D C S X i a A) are free in a read-only buffer, so the
 ;; commands that change the pull request take them; in visual state,
 ;; c s r C act on the selection, and ? opens the dispatch menu on it.
 ;;
@@ -95,6 +95,8 @@
     ("D" . approve-delete)
     ("C" . approve-comment-on-pr)
     ("+" . approve-react)
+    ("a" . approve-commit-suggestion)
+    ("A" . approve-batch-suggestion)
     ("S" . approve-submit-review)
     ("X" . approve-discard-review)
     ("?" . approve-dispatch)

@@ -41,6 +41,9 @@ show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutation
 | F18 | Switch layout                              |     7 |
 | F19 | Notifications                              |     7 |
 | F20 | Look up details (eldoc)                    |     1 |
+| F23 | Commit a suggestion, or a batch of them     |     5 |
+
+F21 and F22 (review feedback in a clone) come with [[file:roadmap.org::*Phase 8 — Review feedback in your clone][Phase 8]].
 
 * F00 The action pipeline
 Every command that changes something on GitHub runs this pipeline.  Code
@@ -303,8 +306,8 @@ The pending review over its life:
 #+end_example
 
 Rendering: GitHub's =bodyHTML= turns the block into a small diff, which
-=approve-html= draws as "Suggested change" ([[file:ui.org::*Threads: suggestions, file-level, outdated][mockup]]).  Applying suggestions
-comes in Phase 5 ([[file:roadmap.org::*SP7 Applying suggestions][SP7]]).
+=approve-html= draws as "Suggested change" ([[file:ui.org::*Threads: suggestions, file-level, outdated][mockup]]).  Committing a
+suggestion is [[*F23 Commit a suggestion, or a batch of them][F23]].
 
 * F07 Reply to a thread; resolve or unresolve
 #+begin_example
@@ -706,3 +709,89 @@ lives in =approve-eldoc.el= ([[file:architecture.org::*Extended information (eld
 
 Pressing =K= also shows the eldoc buffer (=eldoc-doc-buffer=) in a side
 window; =q= there closes it.  With the buffer open, details follow point.
+
+* F23 Commit a suggestion, or a batch of them
+As GitHub's "Commit suggestion" and "Add suggestion to batch", without a
+clone ([[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]).  Code lives in =approve-suggestions.el=.  A suggestion
+is one suggested change of a comment: point on its box, or on a comment
+or thread with only one.
+
+#+begin_example
+ [user] x on a suggestion  (evil: a)
+        │
+        ▼
+     ◇ batch empty? ◇──no──▶ the batch, wherever point is ──────┐
+        │ yes                                                    │
+        ▼                                                        │
+     the suggestion at point                                     │
+        │                                                        │
+        ◀────────────────────────────────────────────────────────┘
+        ▼
+     ◇ each can be committed? ◇──no──▶ user-error saying why (below)
+        │ yes   (open PR, viewerCanApplySuggestion, published,
+        │        new side, not outdated, not a file's, a change)
+        ▼
+     ◇ C-u? ◇──yes──▶ GitHub's message as it is ───────────────┐
+        │ no                                                     │
+        ▼                                                        │
+ input buffer "Commit the suggestion on a.go:13–14 · to feature/x"
+   Apply suggestion from @carol                                  │
+                                                                 │
+   Co-authored-by: Carol <123+carol@users.noreply.github.com>    │
+        │ C-c C-c                                                │
+        ◀────────────────────────────────────────────────────────┘
+        ▼
+ F00 pipeline: the threads marked in flight
+        │
+        ▼
+ the blob of each file at the store's headRefOid (UTF-8, whole)
+        │
+        ▼
+     ◇ its lines there, not the suggestion already? ◇──no──▶ "This suggestion is invalid
+        │ yes                                                  because no changes were made
+        ▼                                                      to the code"; nothing sent
+ splice each file, from the bottom up (line ends, last newline kept)
+        │
+        ▼
+ createCommitOnBranch(head repository and branch, expectedHeadOid = store's head)
+        │
+     ◇ branch moved? ◇──yes (STALE_DATA)──▶ "feature/x has commits this buffer
+        │ no                                  hasn't loaded; refresh it, then try again"
+        ▼
+ resolveReviewThread for each thread not resolved yet, in turn
+        │
+        ▼
+ wait until GitHub's PR head is the new commit (asked once a second, 10 at most)
+        │
+        ▼
+ empty the batch · load the PR again (F17 "g"): the threads are outdated now
+
+
+ [user] b on a suggestion  (evil: A)
+        │
+        ▼
+     ◇ in the batch? ◇──yes──▶ take it out
+        │ no
+        ▼
+     ◇ can be committed? ◇──no──▶ user-error saying why
+        │ yes
+        ▼
+     ◇ changes a line one in the batch does? ◇──yes──▶ "Unable to commit due to other
+        │ no                                             pending changes affecting this line"
+        ▼
+ add it: "✓ in the batch" on its box; header line "2 suggestions in the batch · x commits them"
+
+ [user] C-u b ──▶ empty the batch
+#+end_example
+
+It refuses, before anything is sent, in GitHub's words where it has them:
+a pull request that is closed or merged (=viewerCanApplySuggestion= stays
+true there), a branch the viewer can't change or that is gone, "This
+suggestion is part of a pending comment and cannot be applied", an
+outdated thread, a whole file's, "Unable to apply suggestions on deleted
+lines", "This suggestion is invalid because no changes were made to the
+code" (when the diff holds the lines; the file is checked again), and,
+for the batch, "Unable to commit due to other pending changes affecting
+this line".  =C-u b= empties the batch.  The batch lives with the buffer
+and survives =g=; a suggestion in it that can no longer be committed
+stops =x= with the reason.

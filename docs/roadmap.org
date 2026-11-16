@@ -200,14 +200,18 @@ Implements F08 (title, description), F11, F12.
 * Phase 5 — Merge and checks
 Implements F13, F16 in full, and applying suggestions (a flow written
 with SP7's answers).
-- [ ] Apply suggestions (SP7 done, [[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]): a command on a suggestion, and a batch
+- [X] Apply suggestions (SP7 done, [[file:decisions.org::*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]): a command on a suggestion, and a batch
       of them in one commit, as GitHub's "Commit suggestion" and "Add
-      suggestion to batch"; its key is chosen then.  With no clone (D36): the files at the head, the
+      suggestion to batch".  With no clone (D36): the files at the head, the
       suggested lines spliced in, =createCommitOnBranch= with
       =expectedHeadOid=, the threads resolved, the PR loaded again.  Dimmed
       without =viewerCanApplySuggestion=, and where D41 refuses.  Moved here from Ideas
       (2026-11-15): it is the author's way to merge, like the rest of
-      this phase.
+      this phase.  Done (2026-11-16): =x= commits the suggestion at point,
+      or the batch, after its message (=C-u x=: GitHub's at once); =b= adds
+      to the batch or takes out, =C-u b= empties it; =a= and =A= in evil
+      ([[file:flows.org::*F23 Commit a suggestion, or a batch of them][F23]], =approve-suggestions.el=).  Checked live by the scratch
+      script's =suggestions= group, on #10.
 - [ ] Merge transient: methods allowed by the repository, commit title/body,
       delete branch, auto-merge, merge queue, update branch, close/reopen.
 - [ ] Checks: lazy contexts, required marks, ordering, details URL.

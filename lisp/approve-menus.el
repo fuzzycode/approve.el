@@ -64,6 +64,7 @@
 (require 'approve-review)
 (require 'approve-commands)
 (require 'approve-manage)
+(require 'approve-suggestions)
 (require 'approve-eldoc)
 (require 'approve-dashboard)
 (require 'approve-faces)
@@ -165,6 +166,19 @@ review, a verdict adds a review and submits it at once."
       "Unlock conversation"
     "Lock conversation"))
 
+(defun approve-menus--commit-suggestion-description ()
+  "Return the description of `approve-commit-suggestion': what it commits."
+  (let ((count (length (and (approve-model-root-ref) (approve-suggestions-batch)))))
+    (if (> count 0)
+        (format "Commit the batch (%d)" count)
+      "Commit suggestion")))
+
+(defun approve-menus--batch-suggestion-description ()
+  "Return the description of `approve-batch-suggestion': what it will do."
+  (if (and (approve-model-root-ref) (approve-suggestions-batched-at-point-p))
+      "Take out of batch"
+    "Add to batch"))
+
 ;;;###autoload (autoload 'approve-dispatch "approve-menus" nil t)
 (transient-define-prefix approve-dispatch ()
   "Show the commands of the pull request buffer (decision D06).
@@ -175,6 +189,12 @@ Those that can't run at point, or that you may not use, are dimmed."
      :inapt-if (lambda () (approve-action-why-not 'approve-comment)))
     ("s" "Suggest change" approve-suggest
      :inapt-if (lambda () (approve-action-why-not 'approve-suggest)))
+    ("x" approve-commit-suggestion
+     :description approve-menus--commit-suggestion-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-commit-suggestion)))
+    ("b" approve-batch-suggestion
+     :description approve-menus--batch-suggestion-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-batch-suggestion)))
     ("v" "Toggle viewed" approve-toggle-viewed
      :inapt-if (lambda () (approve-action-why-not 'approve-toggle-viewed)))
     ("S" "Submit review…" approve-submit-review

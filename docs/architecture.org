@@ -13,7 +13,8 @@ callbacks it was given.
  │   M-x commands, transients, keymaps, evil bindings                       │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Actions                  approve-actions.el · approve-commands.el ·      │
- │                          approve-review.el · approve-manage.el           │
+ │                          approve-review.el · approve-manage.el ·         │
+ │                          approve-suggestions.el                          │
  │   context at point → validate → (input) → mutation → patch → redraw      │
  ├───────────────────────────────┬──────────────────────────────────────────┤
  │ Buffers                       │ Input                                    │
@@ -103,6 +104,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-actions.el=       | The action pipeline (F00) and =approve-action-context=                          |     2 |
 | =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–5 |
 |                            | delete, conversation comment, react, hide; later merge                          |       |
+| =approve-suggestions.el=   | Committing suggestions (D41, F23): the suggestions of a comment, a file's lines |     5 |
+|                            | spliced, GitHub's message, the batch, =x= and =b=                               |       |
 | =approve-manage.el=        | Commands that manage the PR (F08, F12): title, description, labels, assignees,  |     4 |
 |                            | reviewers, milestone (pickers over the repository's metadata), draft or ready,  |       |
 |                            | subscription, lock                                                              |       |
@@ -153,6 +156,7 @@ The store from approve-v2 (D10), with a few additions.
  │   :threads   folded | shown, once T folded or unfolded every thread   │
  │   :changes   what differs on GitHub, from the last check (D23)        │
  │   :checking :checked   a check is out · when the last one was sent    │
+ │   :suggestions  the batch of suggestions, each (COMMENT-ID . INDEX)   │
  └───────────────────────────────────────────────────────────────────────┘
 #+end_example
 
@@ -219,6 +223,7 @@ schema on 2026-11-08.
 | Emoji (lazy)           | REST =GET /emojis= (name → image URL; the glyph is in a Unicode emoji's URL)                                 |
 | Change detection       | =pullRequest { headRefOid commitCount: commits { totalCount } title state isDraft lastEditedAt=              |
 |                        | =comments(last: 20) reviews(last: 20) { id lastEditedAt } }=, compared with the store (D23)                  |
+| New head after commit  | the change detection query, once a second, until its =headRefOid= is the commit (D41)                        |
 | User details (eldoc)   | =user(login) { pronouns email bio company location websiteUrl status { emoji message } }=                    |
 | Team details (eldoc)   | =organization(login).team(slug) { name description members { totalCount } }=                                 |
 | =#123= details (eldoc) | =repository.issueOrPullRequest(number) { title state author labels bodyText }=                               |
