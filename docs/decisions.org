@@ -861,7 +861,8 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
   review is pending, a multi-line range across hunks, comments on context
   lines outside hunks, and comments in a commit-range view.  → answered by
   [[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]] (refused; Approve keeps a range in one hunk; refused, silently),
-  except the commit-range view → Phase 6.
+  except the commit-range view → Phase 10 (moved from Phase 6 on
+  2026-11-16).
 - Q4 :: Do private images in =bodyHTML= (signed
   =private-user-images.githubusercontent.com= URLs that expire after a few
   minutes) load reliably?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]]: public images do; private ones are

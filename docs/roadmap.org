@@ -266,23 +266,26 @@ repository, find out and note in [[file:decisions.org][decisions.org]]:
   and merged pull requests.  Forks with maintainer edits are not checked
   (no second account).
 
-* Phase 6 — Iterative review and the file view
-Implements F14, F15.
-Mockups: commits with range, review range transient, file view.
-- [ ] Review range: since my last review, one commit, a range (REST compare).
-- [ ] Commentability rules for a range view (SP1 results).
+* Phase 6 — The file view and what's new
+Implements F15, and F14's marks of what is new since your review; F14's
+review range is Phase 10's.
+Mockups: file view.
 - [ ] =approve-file.el=: blob fetch and cache, major mode, fringe, threads
       folded under their line's bubble as in the diff (overlays),
       base/head toggle, comment on diff lines.
 - [ ] "New since your last review" marks on comments and commits; =j n=.
-- Done when :: re-reviewing after a push shows only the new changes, and any
-  changed file can be read whole with syntax highlighting.
+- Done when :: any changed file can be read whole with syntax
+  highlighting, and what came after your last review is marked and one
+  key away.
+- Moved (2026-11-16) :: the review range and what can be commented in
+  it went to Phase 10, at the author's request: nice to have, not
+  essential.
 
 * Phase 7 — Notifications, polish, release
 Implements F18, F19.
 - [ ] Split layout and =L= (F18, [[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]]).  Moved from Phase 2 (2026-11-15):
-      nothing before it needs it, and after Phase 6 the diff buffer gets
-      the review range in its heading at once.  Until then, code that
+      nothing before it needs it; once Phase 10 brings the review range,
+      the diff buffer's heading names it too.  Until then, code that
       works on a PR buffer reads and writes through the shared store and
       session (=approve-model-store-buffer=) and updates every buffer of the
       PR (=approve-action--buffers=), so the diff buffer can join later.
@@ -375,6 +378,21 @@ Mockups: search, search filter transient.
 - [ ] =approve-browse-url-handler= (opt-in) for =browse-url-handlers=.
 - Done when :: any search of pull requests can be run and refined from
   Emacs, and any PR link in Emacs opens in Approve with one key.
+
+* Phase 10 — Review ranges
+The rest of F14: the diff of part of a pull request, such as what came
+since your last review.  Moved from Phase 6 (2026-11-16): nice to have, not
+essential; Phase 6's marks show what is new, and the whole diff stays
+there.
+Mockups: commits with range, review range transient.
+- [ ] Review range: since my last review, one commit, a range (REST
+      compare); =V= (evil =gV=) and its transient, the Diff and Commits
+      headings, the header line's "V l to see only them" after a push,
+      all changes again when the reviewed commit is gone (force push).
+- [ ] Commentability rules for a range view (SP1 results; [[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]] left
+      the commit-range view open): try it on the scratch repository first.
+- Done when :: re-reviewing after a push can show only the new changes,
+  and comments from that view land where GitHub puts them.
 
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.

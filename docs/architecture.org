@@ -112,7 +112,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-merge.el=         | The merge menu's commands (F13, D42): what stands in the way of a merge, the    |     5 |
 |                            | title line, merge by a method with GitHub's message, auto-merge, the merge      |       |
 |                            | queue, update the branch, close or reopen, delete the branch                    |       |
-| =approve-menus.el=         | Transients: jump (1), submit and dispatch (2), merge (5); metadata, range       |   1–6 |
+| =approve-menus.el=         | Transients: jump (1), submit and dispatch (2), merge (5); metadata, range       |  1–10 |
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
 |                            | loaded)                                                                         |       |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |

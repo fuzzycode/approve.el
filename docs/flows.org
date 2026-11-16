@@ -34,7 +34,7 @@ show only what differs.  Keys are from [[file:ui.org::*Keys][ui.org]].  Mutation
 | F11 | React                                      |     4 |
 | F12 | Edit PR metadata                           |     4 |
 | F13 | Merge, close, reopen, draft, update branch |     5 |
-| F14 | Re-review after new commits                |     6 |
+| F14 | Re-review after new commits                |  6/10 |
 | F15 | View the whole file                        |     6 |
 | F16 | Inspect checks                             |   1/5 |
 | F17 | Refresh and detect remote changes          |   1/2 |
@@ -583,6 +583,9 @@ it sets new changes on viewed files to =DISMISSED=.
 "Since your last review" works only if the reviewed commit still exists in
 history.  After a force push, compare may fail: say so and fall back to all
 changes.
+
+The marks of what is new since your review are Phase 6's; the review range
+(=V=) moved to Phase 10 on 2026-11-16, as nice to have.
 
 * F15 View the whole file
 #+begin_example

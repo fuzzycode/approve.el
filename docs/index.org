@@ -109,8 +109,11 @@ task only needs the files it touches.
   checks included (the author's choice).  Every task of Phase 5 is done;
   its done-when (a PR from "review requested" to merged without the
   browser) is for the author to call.
-- Next step: [[file:roadmap.org::*Phase 6 — Iterative review and the file view][Phase 6]], the review range (since my last review, one
-  commit, a range).
+- The review range (since my last review, one commit, a range) and what
+  can be commented in it moved from Phase 6 to a new last phase,
+  [[file:roadmap.org::*Phase 10 — Review ranges][Phase 10]] (2026-11-16): nice to have, not essential.
+- Next step: [[file:roadmap.org::*Phase 6 — The file view and what's new][Phase 6]], the whole-file view (=approve-file.el=, [[file:flows.org::*F15 View the whole file][F15]]),
+  then the marks of what is new since your last review.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |
