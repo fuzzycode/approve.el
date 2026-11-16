@@ -645,7 +645,8 @@ AT.  STATE is its check rollup state, or nil for no checks."
 
 (defun approve-fixtures--check-run (name status conclusion at &optional workflow required)
   "Return a CheckRun NAME with STATUS and CONCLUSION, started at minute AT.
-WORKFLOW names its Actions workflow; REQUIRED is its isRequired."
+WORKFLOW names its Actions workflow; REQUIRED is its isRequired.  A
+skipped run ends a second before it starts, as GitHub's do."
   (let ((database-id (+ 52000000000 (approve-fixtures--next)))
         (workflow (or workflow "CI")))
     `((__typename . "CheckRun")
@@ -662,7 +663,10 @@ WORKFLOW names its Actions workflow; REQUIRED is its isRequired."
                       (approve-fixtures--get :owner) (approve-fixtures--get :repo)
                       database-id))
       (startedAt . ,(approve-fixtures--time at))
-      (completedAt . ,(and conclusion (approve-fixtures--time (+ at 4))))
+      (completedAt . ,(and conclusion
+                           (approve-fixtures--time (if (equal conclusion "SKIPPED")
+                                                       (- at (/ 1.0 60))
+                                                     (+ at 4)))))
       (checkSuite (__typename . "CheckSuite")
                   (id . ,(approve-fixtures--node-id "CS" (concat "suite/" workflow)))
                   (app (__typename . "App")
@@ -1168,7 +1172,11 @@ commit's checks.  THREAD-PAGES nil leaves the threads query out."
            (contexts (list (approve-fixtures--check-run "test (3.12)" "COMPLETED" "SUCCESS" 81
                                                         "Tests" t)
                            (approve-fixtures--check-run "lint" "COMPLETED" "SUCCESS" 81
-                                                        "Lint")))
+                                                        "Lint")
+                           (approve-fixtures--check-run "deploy" "COMPLETED" "SKIPPED" 82
+                                                        "Tests")
+                           (approve-fixtures--check-run "docs" "COMPLETED" "NEUTRAL" 82
+                                                        "Docs")))
            (pull-request
             (approve-fixtures--pull-request
              :title "Greet people by name" :state "OPEN" :at 0 :updated 90
@@ -1191,7 +1199,7 @@ commit's checks.  THREAD-PAGES nil leaves the threads query out."
                              'carol 85 "Nice, this closes #3." '(("HEART" 1 nil)))))
              (approve-fixtures--review-items))))
       (approve-fixtures--write
-       "A small pull request: three files, two threads (one with a reply), one conversation comment, no pending review, passing checks."
+       "A small pull request: three files, two threads (one with a reply), one conversation comment, no pending review, passing checks (one skipped, one neutral)."
        (approve-fixtures--scenario-exchanges
         :pull-request pull-request :commits commits :timeline timeline
         :checks-rollup rollup :contexts contexts)))))

@@ -185,7 +185,7 @@ which key helps when one does."
 (defun approve-merge--checks-state ()
   "Return `failing', `running' or `passed' for the PR's checks, or nil."
   (when-let* ((counts (approve-sections-check-counts)))
-    (pcase-let ((`(,_passed ,failed ,running) counts))
+    (pcase-let ((`(,_passed ,failed ,running ,_skipped) counts))
       (cond ((> failed 0) 'failing)
             ((> running 0) 'running)
             (t 'passed)))))
@@ -193,7 +193,7 @@ which key helps when one does."
 (defun approve-merge--checks-item ()
   "Return what the checks say, for the title line, or nil."
   (when-let* ((counts (approve-sections-check-counts)))
-    (pcase-let ((`(,_passed ,failed ,running) counts))
+    (pcase-let ((`(,_passed ,failed ,running ,_skipped) counts))
       (pcase (approve-merge--checks-state)
         ('failing
          (approve-merge--item 'check-failure 'approve-check-failure

@@ -224,7 +224,16 @@ with SP7's answers).
       =c= closes or reopens, =D= is F12's.  Checked live by the scratch
       script's =merge= group, except auto-merge and the merge queue,
       which the scratch repository can't have.
-- [ ] Checks: lazy contexts, required marks, ordering, details URL.
+- [X] Checks: lazy contexts, required marks, ordering, details URL.
+      Phase 1 had them; done in full (2026-11-16, [[file:flows.org::*F16 Inspect checks][F16]], [[file:ui.org::*Checks section expanded][mockup]]): skipped
+      and neutral checks are apart, as on GitHub (a grey ⊘, listed last,
+      counted apart in the heading, left out of the status row and the
+      merge box), a check that runs, was skipped or cancelled says so
+      instead of a time, no time for checks that took none, names that
+      lose their start first, columns as wide as the checks need, the
+      notes up to =approve-page-width=, and =K= gives the duration.  The
+      author chose that =g= keeps loading the whole PR, checks included:
+      F16's "g on Checks" is gone.
 - Done when :: a PR can be taken from "review requested" to merged without
   the browser.
 
@@ -374,6 +383,13 @@ Not planned yet.  Each needs a decision before it enters a phase.
   *pending* review comments, which the user edits or deletes before
   submitting.  Nothing is ever posted without the user's submit.
 - A failing check's log in a buffer (Actions REST API), with timestamps.
+- Required checks that never reported, listed as GitHub's "Expected —
+  Waiting for status to be reported" (F16).  =isRequired= exists only on
+  the checks that ran; the base branch's rules say which are required:
+  rulesets through GraphQL (=ref.rules=), classic branch protection only
+  through REST (=GET /repos/{o}/{r}/branches/{branch}=, readable without
+  admin, where GraphQL's =branchProtectionRule= is null).  Until then
+  the merge box says "blocked by the rules of main".
 - Create a PR from Magit (=createPullRequest=), with a template.
 - Org links to PRs, threads and comments (=approve:owner/repo#123=).
 - A "review queue" mode: walk unviewed files one by one, full-screen, with

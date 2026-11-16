@@ -103,8 +103,14 @@ task only needs the files it touches.
   is checked first: GitHub's API merges a closed pull request.  The
   scratch script's =merge= group checks it live, but auto-merge and the
   merge queue, which the scratch repository can't have.
-- Next step: the checks of [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]] (lazy contexts, required marks,
-  ordering, details URL).
+- The checks are done in full (2026-11-16, [[file:flows.org::*F16 Inspect checks][F16]]): skipped and neutral
+  checks apart as on GitHub, states in words, names that keep their end,
+  columns as wide as the checks need.  =g= keeps loading the whole PR,
+  checks included (the author's choice).  Every task of Phase 5 is done;
+  its done-when (a PR from "review requested" to merged without the
+  browser) is for the author to call.
+- Next step: [[file:roadmap.org::*Phase 6 — Iterative review and the file view][Phase 6]], the review range (since my last review, one
+  commit, a range).
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

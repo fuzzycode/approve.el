@@ -154,25 +154,27 @@ removed. Assignees, reviewers (GitHub's suggestions first) and the milestone wor
 <!-- ================================================================== -->
 <section class="shot" id="checks">
 <h2>Checks expanded <span class="ref">F16</span></h2>
-<p>Failing and running first, then required, then the rest. Contexts load lazily when the section opens.</p>
+<p>Failing, running, passed, then skipped; required first in each. Contexts load lazily when the section opens, and again on each <span class="k">g</span>.</p>
 <div class="emacs">
 <div class="win">
 <div class="buf">
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Checks</span> (9)      <span class="wa"><i data-i="check-pending">◐</i></span> <span class="ok">7 passed</span> <span class="d">·</span> <span class="er">1 failed</span> <span class="d">·</span> <span class="wa">1 running</span>                     <span class="m">required: 3</span></p>
+<p class="hd"><span class="tog"></span> <span class="h">Checks</span> (11)                       <span class="wa"><i data-i="check-pending">◐</i></span> <span class="ok">7 passed</span> <span class="d">·</span> <span class="er">1 failed</span> <span class="d">·</span> <span class="wa">1 running</span> <span class="d">·</span> <span class="d">2 skipped</span></p>
 <div class="sb">
-<p class="cur">    <span class="er"><i data-i="check-failure">✗</i></span> lint                                  32s      <span class="m">required</span>      <span class="k">RET</span> <span class="d">details</span> <i data-i="external">↗</i></p>
-<p>    <span class="wa"><i data-i="check-pending">◐</i></span> test (macos-latest, 30.2)             <span class="wa">running</span>  <span class="m">required</span></p>
-<p>    <span class="ok"><i data-i="check-success">✓</i></span> test (ubuntu-latest, 29.4)            2m 10s   <span class="m">required</span></p>
-<p>    <span class="ok"><i data-i="check-success">✓</i></span> build                                 1m 02s</p>
-<p>    <span class="ok"><i data-i="check-success">✓</i></span> codecov/patch                         85.2% of diff hit (+0.4%)</p>
-<p>    <span class="d">…  4 more passed</span></p>
+<p class="cur">    <span class="er"><i data-i="check-failure">✗</i></span> CI / lint                        32s      <span class="m">required</span>  <span class="d">2 errors in approve-api.el</span></p>
+<p>    <span class="wa"><i data-i="check-pending">◐</i></span> CI / test (macos-latest, 30.2)   <span class="wa">running</span>  <span class="m">required</span></p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> CI / test (ubuntu-latest, 29.4)  2m 10s   <span class="m">required</span></p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> CI / build                       1m 02s</p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> codecov/patch                                       <span class="d">85.2% of diff hit (+0.4%)</span></p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> CI / docs                        12s</p>
+<p>    <span class="ok"><i data-i="check-success">✓</i></span> CI / package-lint                20s</p>
+<p>    <span class="d">… 2 more passed, 2 skipped</span></p>
 </div>
 </div>
 </div>
 <div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   18%  L31      <span class="pi">Approve-PR</span></div>
 </div>
-<div class="echo"><span class="b">lint</span> — <span class="er">failure</span> — “3 files would be reformatted” · required</div>
+<div class="echo"><span class="b">CI / lint</span> — failure — “2 errors in approve-api.el” · required</div>
 </div>
 </section>
 

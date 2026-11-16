@@ -367,11 +367,11 @@ roll   [label="Checks heading shows the rollup\n(statusCheckRollup.state from Q 
 u      [label="[user] TAB on Checks" @user];
 have   [label="contexts loaded?" @dec];
 fetch  [label="statusCheckRollup.contexts\nfor the head commit (lazy)" @api];
-list   [label="failing and running first,\nthen required, then the rest\n\"… 4 more passed\""];
+list   [label="failing, running, passed, then skipped;\nrequired first in each\n\"… 73 more passed, 14 skipped\""];
 ret    [label="[user] RET on a check" @user];
 open   [label="browse-url detailsUrl / targetUrl" @ok];
-g      [label="[user] g on Checks" @user];
-refetch[label="refetch rollup and contexts only" @api];
+g      [label="[user] g" @user];
+refetch[label="F17: the whole PR loads again,\nthe checks with it" @api];
 roll -> u -> have; have -> fetch [@no]; have -> list [@yes]; fetch -> list;
 list -> ret -> open; list -> g -> refetch -> list;
 

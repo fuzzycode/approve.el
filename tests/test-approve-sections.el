@@ -281,4 +281,120 @@
                      (expect (bolp) :to-be t))))))
           (kill-buffer buffer))))))
 
+(defun test-sections--check (name status conclusion &rest more)
+  "Return a check run NAME with STATUS, CONCLUSION and MORE fields.
+MORE alternates field names and values, as in `list'."
+  (append `((__typename . "CheckRun") (id . ,(concat "CR_" name)) (name . ,name)
+            (status . ,status) (conclusion . ,conclusion))
+          (cl-loop for (key value) on more by #'cddr collect (cons key value))))
+
+(describe "The checks (F16)"
+  (describe "each"
+    (it "went one of four ways: skipped and neutral runs are apart, as GitHub has them"
+      (expect (mapcar #'approve-sections-check-kind
+                      (list (test-sections--check "a" "COMPLETED" "SUCCESS")
+                            (test-sections--check "b" "COMPLETED" "SKIPPED")
+                            (test-sections--check "c" "COMPLETED" "NEUTRAL")
+                            (test-sections--check "d" "COMPLETED" "CANCELLED")
+                            (test-sections--check "e" "QUEUED" nil)
+                            '((__typename . "StatusContext") (state . "EXPECTED"))))
+              :to-equal '(success skipped skipped failure running running)))
+
+    (it "says how long it ran, never less than a second"
+      (expect (approve-sections-check-duration
+               (test-sections--check "a" "COMPLETED" "SUCCESS"
+                                     'startedAt "2026-10-01T10:00:00Z"
+                                     'completedAt "2026-10-01T10:02:10Z"))
+              :to-equal "2m 10s")
+      ;; GitHub ends a skipped job before it starts; apps' checks take no time.
+      (expect (approve-sections-check-duration
+               (test-sections--check "b" "COMPLETED" "SKIPPED"
+                                     'startedAt "2026-10-01T10:00:00Z"
+                                     'completedAt "2026-10-01T09:59:59Z"))
+              :to-be nil)
+      (expect (approve-sections-check-duration
+               (test-sections--check "c" "COMPLETED" "SUCCESS"
+                                     'startedAt "2026-10-01T10:00:00Z"
+                                     'completedAt "2026-10-01T10:00:00Z"))
+              :to-be nil))
+
+    (it "says its state in words where a time would say less"
+      (expect (mapcar (lambda (check)
+                        (substring-no-properties (approve-sections--check-when check)))
+                      (list (test-sections--check "a" "IN_PROGRESS" nil)
+                            (test-sections--check "b" "QUEUED" nil)
+                            (test-sections--check "c" "COMPLETED" "SKIPPED")
+                            (test-sections--check "d" "COMPLETED" "TIMED_OUT")
+                            (test-sections--check "e" "COMPLETED" "FAILURE")
+                            '((__typename . "StatusContext") (state . "PENDING"))))
+              :to-equal '("running" "queued" "skipped" "timed out" "" "pending")))
+
+    (it "keeps the end of its name when the name is too long"
+      (let ((name "Test All / prebuild_apple_dependencies / Build Apple Slice (Debug, ios)"))
+        (expect (approve-sections--shorten-check-name name 80) :to-equal name)
+        (expect (approve-sections--shorten-check-name name 66)
+                :to-equal "… / prebuild_apple_dependencies / Build Apple Slice (Debug, ios)")
+        (expect (approve-sections--shorten-check-name name 50)
+                :to-equal "… / Build Apple Slice (Debug, ios)")
+        (expect (approve-sections--shorten-check-name name 20)
+                :to-equal "…Slice (Debug, ios)"))))
+
+  (it "come failing first, then running, passed and skipped; required first in each"
+    (expect (mapcar (lambda (check) (alist-get 'name check))
+                    (approve-sections-sort-checks
+                     (list (test-sections--check "skipped" "COMPLETED" "SKIPPED")
+                           (test-sections--check "passed" "COMPLETED" "SUCCESS")
+                           (test-sections--check "required" "COMPLETED" "SUCCESS"
+                                                 'isRequired t)
+                           (test-sections--check "running" "IN_PROGRESS" nil)
+                           (test-sections--check "failed" "COMPLETED" "FAILURE"))))
+            :to-equal '("failed" "running" "required" "passed" "skipped")))
+
+  (it "fold the passed and skipped ones beyond a few, and say which"
+    (expect (substring-no-properties
+             (approve-sections--more-checks
+              (list (test-sections--check "a" "COMPLETED" "SUCCESS")
+                    (test-sections--check "b" "COMPLETED" "SKIPPED"))))
+            :to-equal "… 1 more passed, 1 skipped")
+    (expect (substring-no-properties
+             (approve-sections--more-checks
+              (list (test-sections--check "b" "COMPLETED" "NEUTRAL"))))
+            :to-equal "… 1 more skipped"))
+
+  (describe "of the small PR"
+    (it "count the skipped and neutral ones apart, and list them last, in grey"
+      (let ((approve-use-nerd-icons nil))
+        (approve-icon-clear-cache)
+        (approve-test-with-fixture "small"
+          (let ((buffer (approve-test-open-pr "small")))
+            (unwind-protect
+                (with-current-buffer buffer
+                  (expect (substring-no-properties (approve-sections--status))
+                          :to-match "✓ 2 of 2 checks passed\\'")
+                  (magit-section-show (approve-test-find-section 'approve-checks-section))
+                  (approve-pr--run-lazy-loaders)
+                  (approve-test-wait-for (lambda () (approve-pr-loaded-p 'checks)))
+                  (approve-pr-redraw)
+                  (let ((lines (split-string (approve-test-section-text
+                                              (approve-test-find-section
+                                               'approve-checks-section))
+                                             "\n" t)))
+                    (expect (car lines)
+                            :to-match "\\`Checks (4) .*✓ 2 passed · 2 skipped\\'")
+                    (expect (cdr lines)
+                            :to-equal
+                            '("  ✓ Tests / test (3.12)  4m 00s   required  test (3.12): success"
+                              "  ✓ Lint / lint          4m 00s             lint: success"
+                              "  ⊘ Tests / deploy       skipped            deploy: skipped"
+                              "  ⊘ Docs / docs          neutral            docs: neutral")))
+                  (goto-char (point-min))
+                  (search-forward "Tests / deploy       skipped")
+                  (expect (get-text-property (1- (point)) 'face) :to-be 'approve-check-skipped)
+                  (expect (get-text-property (+ (line-beginning-position) 2) 'face)
+                          :to-be 'approve-check-skipped)
+                  (expect (plist-get (approve-context-at-point) :url)
+                          :to-match "/actions/runs/.*/job/"))
+              (kill-buffer buffer)
+              (approve-icon-clear-cache))))))))
+
 ;;; test-approve-sections.el ends here

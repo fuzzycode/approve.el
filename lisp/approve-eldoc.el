@@ -63,6 +63,7 @@
 (require 'approve-icons)
 (require 'approve-render)
 (require 'approve-pr)
+(require 'approve-sections)
 
 (defvar eldoc--doc-buffer)
 
@@ -117,8 +118,12 @@ An error older than `approve-eldoc--error-seconds' counts as absent."
   (format "%s (%s)" (approve-render-relative-time iso) (approve-eldoc--time iso)))
 
 (defun approve-eldoc--title (&rest parts)
-  "Return the first line of a doc: PARTS joined by \" — \"."
-  (concat (string-join (delq nil parts) (approve-face " — " 'approve-dim)) "\n"))
+  "Return the first line of a doc: PARTS joined by \" — \".
+Parts that are nil or empty are left out."
+  (concat (string-join (seq-remove (lambda (part) (or (null part) (string-empty-p part)))
+                                   parts)
+                       (approve-face " — " 'approve-dim))
+          "\n"))
 
 ;;; Describers
 
@@ -558,14 +563,8 @@ its commits, whether it merges, and the start of its text."
   "Describe the check of CONTEXT."
   (let* ((check (plist-get (plist-get context :thing) :check)))
     (let-alist check
-      (let* ((name (approve-face (if .context .context
-                                   (if .checkSuite.workflowRun.workflow.name
-                                       (format "%s / %s" .checkSuite.workflowRun.workflow.name .name)
-                                     .name))
-                                 'bold))
-             (result (or (and .conclusion (downcase .conclusion))
-                         (and .state (downcase .state))
-                         (and .status (downcase .status))))
+      (let* ((name (approve-face (approve-sections-check-name check) 'bold))
+             (result (approve-sections-check-state check))
              (summary (or .title .description)))
         (list
          :echo (string-trim-right
@@ -580,6 +579,7 @@ its commits, whether it merges, and the start of its text."
                (approve-eldoc--row "App" .checkSuite.app.name)
                (approve-eldoc--row "Started" (and .startedAt (approve-eldoc--when .startedAt)))
                (approve-eldoc--row "Finished" (and .completedAt (approve-eldoc--when .completedAt)))
+               (approve-eldoc--row "Duration" (approve-sections-check-duration check))
                "\n" (approve-eldoc--link (plist-get context :url)) "\n"))))))
 
 (defun approve-eldoc-describe-file (context _details)

@@ -268,6 +268,11 @@ Only the label is coloured; the comment itself has no background."
   "Face of checks that are queued or running."
   :group 'approve-faces)
 
+(defface approve-check-skipped
+  '((t :inherit shadow))
+  "Face of checks that were skipped or ended neutral."
+  :group 'approve-faces)
+
 (defface approve-viewed
   '((t :inherit shadow))
   "Face of files the viewer marked as viewed."

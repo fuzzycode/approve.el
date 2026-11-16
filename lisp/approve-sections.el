@@ -271,20 +271,23 @@ view (`approve-pr-update-header-line')."
                          :description .description :url .url))))
 
 (defun approve-sections-check-counts ()
-  "Return the PR's check counts as (PASSED FAILED RUNNING), or nil."
+  "Return the PR's check counts as (PASSED FAILED RUNNING SKIPPED), or nil.
+SKIPPED counts the check runs that were skipped or ended neutral:
+they don't fail the pull request, and GitHub counts them apart."
   (let-alist (approve-pr-field 'statusCheckRollup)
     (when .contextCounts
-      (let ((passed 0) (failed 0) (running 0))
+      (let ((passed 0) (failed 0) (running 0) (skipped 0))
         (dolist (entry (append .contextCounts.checkRunCountsByState
                                .contextCounts.statusContextCountsByState))
           (let-alist entry
             (pcase .state
-              ((or "SUCCESS" "NEUTRAL" "SKIPPED") (cl-incf passed .count))
+              ("SUCCESS" (cl-incf passed .count))
+              ((or "NEUTRAL" "SKIPPED") (cl-incf skipped .count))
               ((or "FAILURE" "ERROR" "TIMED_OUT" "CANCELLED" "STARTUP_FAILURE"
                    "ACTION_REQUIRED" "STALE")
                (cl-incf failed .count))
               (_ (cl-incf running .count)))))
-        (list passed failed running)))))
+        (list passed failed running skipped)))))
 
 (defun approve-sections--rollup-icon (state)
   "Return the icon of the check rollup STATE."
@@ -298,7 +301,7 @@ view (`approve-pr-update-header-line')."
   "Return the checks summary, such as \"◐ 7 passed · 1 failed\", or nil."
   (when-let* ((rollup (approve-pr-field 'statusCheckRollup))
               (counts (approve-sections-check-counts)))
-    (pcase-let ((`(,passed ,failed ,running) counts))
+    (pcase-let ((`(,passed ,failed ,running ,skipped) counts))
       (concat (approve-sections--rollup-icon (alist-get 'state rollup)) " "
               (approve-render-join
                (list (and (> passed 0) (approve-face (format "%d passed" passed)
@@ -306,7 +309,9 @@ view (`approve-pr-update-header-line')."
                      (and (> failed 0) (approve-face (format "%d failed" failed)
                                                      'approve-check-failure))
                      (and (> running 0) (approve-face (format "%d running" running)
-                                                      'approve-check-pending))))))))
+                                                      'approve-check-pending))
+                     (and (> skipped 0) (approve-face (format "%d skipped" skipped)
+                                                      'approve-check-skipped))))))))
 
 (defun approve-sections--status ()
   "Return the status row's value: review decision, conflicts, checks."
@@ -327,13 +332,17 @@ view (`approve-pr-update-header-line')."
                                     (approve-face "No conflicts" 'approve-check-success)))
                ("CONFLICTING" (concat (approve-icon 'check-failure 'approve-check-failure) " "
                                       (approve-face "Conflicts" 'approve-check-failure)))))
+           ;; Skipped checks are left out, as they neither pass nor fail.
            (when-let* ((counts (approve-sections-check-counts)))
-             (pcase-let ((`(,passed ,failed ,running) counts))
+             (pcase-let ((`(,passed ,failed ,running ,skipped) counts))
                (let ((total (+ passed failed running)))
                  (concat (approve-sections--rollup-icon
                           (let-alist (approve-pr-field 'statusCheckRollup) .state))
                          " "
-                         (format "%d of %d checks passed" passed total)))))))))
+                         (if (and (= total 0) (> skipped 0))
+                             (format "%d %s skipped" skipped
+                                     (if (= skipped 1) "check" "checks"))
+                           (format "%d of %d checks passed" passed total))))))))))
 
 (defun approve-sections--meta-value (row)
   "Return the value of the metadata ROW as text, or nil when empty."
@@ -440,8 +449,10 @@ An edited description says so right after its heading."
 
 ;;; Checks
 
-(defun approve-sections--check-kind (check)
-  "Return how CHECK went: `failure', `running' or `success'."
+(defun approve-sections-check-kind (check)
+  "Return how CHECK went: `failure', `running', `success' or `skipped'.
+A check run that was skipped or ended neutral is `skipped': it
+doesn't fail the pull request, and GitHub lists it apart."
   (let-alist check
     (if (equal .__typename "StatusContext")
         (pcase .state
@@ -451,10 +462,11 @@ An edited description says so right after its heading."
       (if (not (equal .status "COMPLETED"))
           'running
         (pcase .conclusion
-          ((or "SUCCESS" "NEUTRAL" "SKIPPED") 'success)
+          ("SUCCESS" 'success)
+          ((or "NEUTRAL" "SKIPPED") 'skipped)
           (_ 'failure))))))
 
-(defun approve-sections--check-name (check)
+(defun approve-sections-check-name (check)
   "Return the name of CHECK, with its workflow when it has one."
   (let-alist check
     (if (equal .__typename "StatusContext")
@@ -463,69 +475,163 @@ An edited description says so right after its heading."
           (format "%s / %s" workflow .name)
         .name))))
 
-(defun approve-sections--duration (start end)
-  "Return the time from START to END, ISO 8601 times, as \"2m 10s\"."
-  (when-let* ((from (approve-render-parse-time start))
-              (to (approve-render-parse-time end)))
-    (let ((seconds (round (float-time (time-subtract to from)))))
+(defun approve-sections-check-state (check)
+  "Return the state of CHECK in words, such as \"running\" or \"timed out\"."
+  (let-alist check
+    (let ((state (cond ((equal .__typename "StatusContext") .state)
+                       ((equal .status "IN_PROGRESS") "running")
+                       ((equal .status "COMPLETED") (or .conclusion "completed"))
+                       (t .status))))
+      (string-replace "_" " " (downcase (or state "unknown"))))))
+
+(defun approve-sections-check-duration (check)
+  "Return how long CHECK ran, such as \"2m 10s\", or nil.
+Nil when it is still running or took no time: apps' checks start and
+end at once, and GitHub ends skipped jobs before they start."
+  (let-alist check
+    (when-let* ((from (approve-render-parse-time .startedAt))
+                (to (approve-render-parse-time .completedAt))
+                (seconds (round (float-time (time-subtract to from))))
+                ((> seconds 0)))
       (cond ((>= seconds 3600) (format "%dh %02dm" (/ seconds 3600) (/ (% seconds 3600) 60)))
             ((>= seconds 60) (format "%dm %02ds" (/ seconds 60) (% seconds 60)))
             (t (format "%ds" seconds))))))
 
-(defun approve-sections--check-line (check)
-  "Return the line of CHECK in the expanded checks."
-  (let-alist check
-    (let* ((kind (approve-sections--check-kind check))
-           (icon (pcase kind
-                   ('success (approve-icon 'check-success 'approve-check-success))
-                   ('failure (approve-icon 'check-failure 'approve-check-failure))
-                   (_ (approve-icon 'check-pending 'approve-check-pending))))
-           (when (if (eq kind 'running)
-                     (approve-face (if (member .status '("QUEUED" "WAITING" "PENDING"))
-                                       "queued" "running")
-                                   'approve-check-pending)
-                   (or (approve-sections--duration .startedAt .completedAt) "")))
-           (note (or .description .title)))
-      (approve-thing
-       (concat icon " "
-               (approve-render-pad (approve-render-truncate (approve-sections--check-name check) 38)
-                           40)
-               (approve-render-pad when 9)
-               (if .isRequired (approve-face "required" 'approve-secondary-heading)
-                 (make-string 8 ?\s))
-               (if note (concat "  " (approve-face (approve-render-truncate note 40)
-                                                   'approve-dim))
-                 ""))
-       (list :kind 'check :check check :url (or .detailsUrl .targetUrl .url))))))
+(defun approve-sections-check-icon (check)
+  "Return the icon of CHECK, by how it went."
+  (pcase (approve-sections-check-kind check)
+    ('success (approve-icon 'check-success 'approve-check-success))
+    ('failure (approve-icon 'check-failure 'approve-check-failure))
+    ('skipped (approve-icon 'check-skipped 'approve-check-skipped))
+    (_ (approve-icon 'check-pending 'approve-check-pending))))
 
-(defun approve-sections--sort-checks (checks)
-  "Return CHECKS failing first, then running, then passed; required first."
+(defun approve-sections--check-when (check)
+  "Return the second column of CHECK's line: its time, or its state.
+A check that runs, was skipped or ended other than by passing or
+failing, such as cancelled, says so; the others say how long they
+took, or nothing."
+  (let ((kind (approve-sections-check-kind check)))
+    (if (or (memq kind '(running skipped))
+            (and (eq kind 'failure)
+                 (not (member (alist-get 'conclusion check) '(nil "FAILURE")))))
+        (approve-face (approve-sections-check-state check)
+                      (pcase kind
+                        ('running 'approve-check-pending)
+                        ('skipped 'approve-check-skipped)
+                        (_ 'approve-check-failure)))
+      (or (approve-sections-check-duration check) ""))))
+
+(defun approve-sections--shorten-check-name (name width)
+  "Return NAME cut to WIDTH columns, keeping its end.
+A check's name joins its workflow's and its job's with \" / \"; the
+end tells it from its siblings, so whole parts go from the start
+first, then characters.
+
+Example:
+  (approve-sections--shorten-check-name \"Test All / build / Slice (ios)\" 24)
+  => \"… / build / Slice (ios)\""
+  (let ((parts (split-string name " / ")))
+    (or (seq-find (lambda (candidate) (<= (string-width candidate) width))
+                  (cons name (cl-loop for rest on (cdr parts)
+                                      collect (concat "… / " (string-join rest " / ")))))
+        (let ((start (length name)))
+          (while (and (> start 0) (< (string-width name (1- start)) width))
+            (cl-decf start))
+          (concat "…" (string-trim-left (substring name start)))))))
+
+(defun approve-sections--check-columns (checks)
+  "Return the widths of the columns of CHECKS: (NAME WHEN REQUIRED).
+NAME fits the longest name, up to `approve-page-width' less 60, which
+leaves the notes room.  REQUIRED is 0 when no check is required."
+  (list (min (apply #'max 1 (mapcar (lambda (check)
+                                      (string-width (approve-sections-check-name check)))
+                                    checks))
+             (max 30 (- approve-page-width 60)))
+        (apply #'max 0 (mapcar (lambda (check)
+                                 (string-width (approve-sections--check-when check)))
+                               checks))
+        (if (seq-some (lambda (check) (alist-get 'isRequired check)) checks)
+            (string-width "required")
+          0)))
+
+(defun approve-sections--check-line (check columns)
+  "Return the line of CHECK in the expanded checks.
+COLUMNS are the widths of its columns, from
+`approve-sections--check-columns'.  Its note (the check's title or
+the status's description) fills the line up to `approve-page-width'."
+  (pcase-let ((`(,name-width ,when-width ,required-width) columns))
+    (let-alist check
+      (let* ((left (concat
+                    (approve-sections-check-icon check) " "
+                    (approve-render-pad (approve-sections--shorten-check-name
+                                         (approve-sections-check-name check) name-width)
+                                        name-width)
+                    (if (> when-width 0)
+                        (concat "  " (approve-render-pad (approve-sections--check-when check)
+                                                         when-width))
+                      "")
+                    (if (> required-width 0)
+                        (concat "  " (if .isRequired
+                                         (approve-face "required" 'approve-secondary-heading)
+                                       (make-string required-width ?\s)))
+                      "")))
+             (note (car (split-string (or .description .title "") "\n")))
+             ;; Two columns of indentation, and two between left and note.
+             (room (- approve-page-width (string-width left) 4)))
+        (approve-thing
+         (string-trim-right
+          (concat left
+                  (if (string-empty-p note)
+                      ""
+                    (concat "  " (approve-face (approve-render-truncate note (max 20 room))
+                                               'approve-dim)))))
+         (list :kind 'check :check check :url (or .detailsUrl .targetUrl .url)))))))
+
+(defun approve-sections-sort-checks (checks)
+  "Return CHECKS as GitHub lists them: failing, running, passed, skipped.
+Required checks come first in each; the others keep GitHub's order."
   (let ((rank (lambda (check)
-                (+ (pcase (approve-sections--check-kind check)
-                     ('failure 0) ('running 2) (_ 4))
+                (+ (pcase (approve-sections-check-kind check)
+                     ('failure 0) ('running 2) ('success 4) (_ 6))
                    (if (alist-get 'isRequired check) 0 1)))))
     (seq-sort-by rank #'< checks)))
 
+(defun approve-sections--more-checks (more)
+  "Return the heading of the folded checks MORE, such as \"… 4 more passed\"."
+  (let ((passed (seq-count (lambda (check) (eq (approve-sections-check-kind check) 'success))
+                           more)))
+    (approve-face
+     (concat "… " (approve-render-join
+                   (list (and (> passed 0) (format "%d more passed" passed))
+                         (and (< passed (length more))
+                              (format (if (> passed 0) "%d skipped" "%d more skipped")
+                                      (- (length more) passed))))
+                   ", "))
+     'approve-dim)))
+
 (defun approve-sections--insert-checks (checks)
-  "Insert the lines of CHECKS, folding passed ones beyond a few."
-  (let* ((sorted (approve-sections--sort-checks checks))
+  "Insert the lines of CHECKS, folding passed and skipped ones beyond a few.
+The first `approve-checks-passed-shown' of them show, passed ones
+first; the rest go under \"… N more passed\"."
+  (let* ((sorted (approve-sections-sort-checks checks))
+         (columns (approve-sections--check-columns checks))
          (shown 0)
          (more nil))
     (dolist (check sorted)
-      (if (and (eq (approve-sections--check-kind check) 'success)
-               (>= shown approve-checks-passed-shown))
-          (push check more)
-        (when (eq (approve-sections--check-kind check) 'success)
-          (cl-incf shown))
-        (magit-insert-section (approve-check-section (alist-get 'id check))
-          (insert (approve-sections--check-line check) "\n"))))
-    (when more
-      (magit-insert-section (approve-checks-more-section nil t)
-        (magit-insert-heading
-          (approve-face (format "… %d more passed" (length more)) 'approve-dim))
-        (dolist (check (nreverse more))
+      (let ((done (memq (approve-sections-check-kind check) '(success skipped))))
+        (if (and done (>= shown approve-checks-passed-shown))
+            (push check more)
+          (when done
+            (cl-incf shown))
           (magit-insert-section (approve-check-section (alist-get 'id check))
-            (insert (approve-sections--check-line check) "\n")))))))
+            (insert (approve-sections--check-line check columns) "\n")))))
+    (when more
+      (setq more (nreverse more))
+      (magit-insert-section (approve-checks-more-section nil t)
+        (magit-insert-heading (approve-sections--more-checks more))
+        (dolist (check more)
+          (magit-insert-section (approve-check-section (alist-get 'id check))
+            (insert (approve-sections--check-line check columns) "\n")))))))
 
 (defun approve-insert-checks-section ()
   "Insert the checks: the summary in the heading, each check when expanded.

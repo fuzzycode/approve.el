@@ -1,7 +1,7 @@
 {
   "approveFixture": 1,
   "name": "small",
-  "description": "A small pull request: three files, two threads (one with a reply), one conversation comment, no pending review, passing checks.",
+  "description": "A small pull request: three files, two threads (one with a reply), one conversation comment, no pending review, passing checks (one skipped, one neutral).",
   "pullRequest": {
     "host": "github.com",
     "owner": "acme-example",
@@ -178,7 +178,7 @@
                   "id": "SCR_kwDOlcxtdg60qxZ63r",
                   "state": "SUCCESS",
                   "contextCounts": {
-                    "checkRunCount": 2,
+                    "checkRunCount": 4,
                     "checkRunCountsByState": [
                       {
                         "state": "ACTION_REQUIRED",
@@ -202,7 +202,7 @@
                       },
                       {
                         "state": "NEUTRAL",
-                        "count": 0
+                        "count": 1
                       },
                       {
                         "state": "PENDING",
@@ -214,7 +214,7 @@
                       },
                       {
                         "state": "SKIPPED",
-                        "count": 0
+                        "count": 1
                       },
                       {
                         "state": "STALE",
@@ -1108,8 +1108,8 @@
                     },
                     {
                       "__typename": "IssueComment",
-                      "id": "IC_kwDOThp3BakGidAy2w",
-                      "url": "https://github.com/acme-example/greeter/pull/7#issuecomment-2700000011",
+                      "id": "IC_kwDO7j1Ks67AXbVYc_",
+                      "url": "https://github.com/acme-example/greeter/pull/7#issuecomment-2700000013",
                       "author": {
                         "__typename": "User",
                         "id": "U_kgDOKLkrVu5kuS67ct",
@@ -1341,10 +1341,10 @@
                   "id": "SCR_kwDOlcxtdg60qxZ63r",
                   "state": "SUCCESS",
                   "contexts": {
-                    "totalCount": 2,
+                    "totalCount": 4,
                     "pageInfo": {
                       "hasNextPage": false,
-                      "endCursor": "Mg=="
+                      "endCursor": "NA=="
                     },
                     "nodes": [
                       {
@@ -1405,6 +1405,68 @@
                               "__typename": "Workflow",
                               "id": "W_kwDOb3twjYhvEOC2aI",
                               "name": "Lint"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "id": "CR_kwDOmpuY5BP3QffV15",
+                        "name": "deploy",
+                        "status": "COMPLETED",
+                        "conclusion": "SKIPPED",
+                        "title": "deploy: skipped",
+                        "isRequired": false,
+                        "detailsUrl": "https://github.com/acme-example/greeter/actions/runs/17000000007/job/52000000011",
+                        "url": "https://github.com/acme-example/greeter/runs/52000000011",
+                        "startedAt": "2026-10-01T10:22:00Z",
+                        "completedAt": "2026-10-01T10:21:59Z",
+                        "checkSuite": {
+                          "__typename": "CheckSuite",
+                          "id": "CS_kwDOg-v0Gs_1b7tjaq",
+                          "app": {
+                            "__typename": "App",
+                            "id": "A_kwDOViR1XfCSZJcsaA",
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "__typename": "WorkflowRun",
+                            "id": "WFR_kwDOygrJM02ZGKq1NI",
+                            "workflow": {
+                              "__typename": "Workflow",
+                              "id": "W_kwDOAQ0uC2cylcLbas",
+                              "name": "Tests"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "id": "CR_kwDOB0j-cIGflVFufV",
+                        "name": "docs",
+                        "status": "COMPLETED",
+                        "conclusion": "NEUTRAL",
+                        "title": "docs: neutral",
+                        "isRequired": false,
+                        "detailsUrl": "https://github.com/acme-example/greeter/actions/runs/17000000007/job/52000000012",
+                        "url": "https://github.com/acme-example/greeter/runs/52000000012",
+                        "startedAt": "2026-10-01T10:22:00Z",
+                        "completedAt": "2026-10-01T10:26:00Z",
+                        "checkSuite": {
+                          "__typename": "CheckSuite",
+                          "id": "CS_kwDOGqmoaJug1nsrR9",
+                          "app": {
+                            "__typename": "App",
+                            "id": "A_kwDOViR1XfCSZJcsaA",
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "__typename": "WorkflowRun",
+                            "id": "WFR_kwDOlwUGtTUTbQfj4B",
+                            "workflow": {
+                              "__typename": "Workflow",
+                              "id": "W_kwDOf7J4sj1VifNwV7",
+                              "name": "Docs"
                             }
                           }
                         }

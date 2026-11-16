@@ -617,13 +617,20 @@ changes.
    │ yes                       │
    ◀───────────────────────────┘
    ▼
- failing and running first, then required, then the rest ("… 4 more passed")
+ failing, running, passed, then skipped; required first in each
+ five passed or skipped, then "… 73 more passed, 14 skipped"
    │
  [user] RET on a check ──▶ browse-url detailsUrl/targetUrl
- [user] g on Checks    ──▶ refetch only the rollup and contexts
+ [user] g              ──▶ F17: the whole PR loads again, the checks with it
 #+end_example
 
-Later idea: show a failing job's log in a buffer (REST Actions API).
+The checks alone are never loaded again: =g= anywhere loads the whole pull
+request, checks included once they were loaded (the author's choice,
+2026-11-16).
+
+Later ideas: show a failing job's log in a buffer (REST Actions API); list
+the required checks that never reported, as GitHub's "Expected" (roadmap,
+Ideas).
 
 * F17 Refresh and detect remote changes
 #+begin_example

@@ -73,6 +73,16 @@ FETCH as for `approve-eldoc-describe'."
       (expect (test-eldoc--echo "parser-rewrite")
               :to-equal "acme-example:parser-rewrite — in this repository"))
 
+    (it "describe a check with no title in its state's words, with its duration"
+      (let* ((check '((__typename . "CheckRun") (name . "deploy") (status . "COMPLETED")
+                      (conclusion . "TIMED_OUT") (startedAt . "2026-10-01T10:00:00Z")
+                      (completedAt . "2026-10-01T10:06:00Z")
+                      (checkSuite (workflowRun (workflow (name . "CI"))))))
+             (description (approve-eldoc-describe-check (list :thing (list :check check)) nil)))
+        (expect (substring-no-properties (plist-get description :echo))
+                :to-equal "CI / deploy — timed out")
+        (expect (plist-get description :doc) :to-match "^Duration +6m 00s$")))
+
     (it "describe a thread, saying when K shows its original code"
       (with-current-buffer test-eldoc--buffer
         (goto-char (point-min))
