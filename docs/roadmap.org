@@ -212,8 +212,18 @@ with SP7's answers).
       to the batch or takes out, =C-u b= empties it; =a= and =A= in evil
       ([[file:flows.org::*F23 Commit a suggestion, or a batch of them][F23]], =approve-suggestions.el=).  Checked live by the scratch
       script's =suggestions= group, on #10.
-- [ ] Merge transient: methods allowed by the repository, commit title/body,
+- [X] Merge transient: methods allowed by the repository, commit title/body,
       delete branch, auto-merge, merge queue, update branch, close/reopen.
+      Done (2026-11-16, [[file:decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]], =approve-merge.el=): =m= (evil =gm=) opens it,
+      its title line the merge box in one line.  =m= and =s= write the
+      commit message from GitHub's (=C-u=: GitHub's at once), =r=
+      rebases; each is checked first and dimmed where GitHub's merge box
+      would refuse.  =-d= deletes the branch after, =k= the branch of a
+      merged or closed one; =a= / =x= auto-merge (the method asked), =Q=
+      the merge queue, =u= / =U= update the branch by a merge or a rebase,
+      =c= closes or reopens, =D= is F12's.  Checked live by the scratch
+      script's =merge= group, except auto-merge and the merge queue,
+      which the scratch repository can't have.
 - [ ] Checks: lazy contexts, required marks, ordering, details URL.
 - Done when :: a PR can be taken from "review requested" to merged without
   the browser.

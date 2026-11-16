@@ -65,6 +65,7 @@
 (require 'approve-commands)
 (require 'approve-suggestions)
 (require 'approve-manage)
+(require 'approve-merge)
 (require 'approve-dashboard)
 (require 'approve-clone)
 

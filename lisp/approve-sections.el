@@ -270,7 +270,7 @@ view (`approve-pr-update-header-line')."
                    (list :kind 'label :name .name :color .color
                          :description .description :url .url))))
 
-(defun approve-sections--check-counts ()
+(defun approve-sections-check-counts ()
   "Return the PR's check counts as (PASSED FAILED RUNNING), or nil."
   (let-alist (approve-pr-field 'statusCheckRollup)
     (when .contextCounts
@@ -297,7 +297,7 @@ view (`approve-pr-update-header-line')."
 (defun approve-sections-checks-summary ()
   "Return the checks summary, such as \"◐ 7 passed · 1 failed\", or nil."
   (when-let* ((rollup (approve-pr-field 'statusCheckRollup))
-              (counts (approve-sections--check-counts)))
+              (counts (approve-sections-check-counts)))
     (pcase-let ((`(,passed ,failed ,running) counts))
       (concat (approve-sections--rollup-icon (alist-get 'state rollup)) " "
               (approve-render-join
@@ -327,7 +327,7 @@ view (`approve-pr-update-header-line')."
                                     (approve-face "No conflicts" 'approve-check-success)))
                ("CONFLICTING" (concat (approve-icon 'check-failure 'approve-check-failure) " "
                                       (approve-face "Conflicts" 'approve-check-failure)))))
-           (when-let* ((counts (approve-sections--check-counts)))
+           (when-let* ((counts (approve-sections-check-counts)))
              (pcase-let ((`(,passed ,failed ,running) counts))
                (let ((total (+ passed failed running)))
                  (concat (approve-sections--rollup-icon
@@ -534,7 +534,7 @@ The checks themselves load when the section is first expanded."
     (magit-insert-section (approve-checks-section nil t)
       (magit-insert-heading
         (approve-sections-heading "Checks"
-                                  (when-let* ((counts (approve-sections--check-counts)))
+                                  (when-let* ((counts (approve-sections-check-counts)))
                                     (apply #'+ counts))
                                   (approve-sections-checks-summary)))
       (let ((start (point))

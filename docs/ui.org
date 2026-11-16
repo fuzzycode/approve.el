@@ -494,9 +494,8 @@ suggestion in it.  =#= has
 no key in the buffer: it is seldom used.
 
 The mockup is the whole menu; the menu lists only the commands that exist.
-Today that is Review without =V=, the Pull request column without =m=,
-and Buffer without =L= and =!=; the rest join with the
-phases that add their commands ([[file:roadmap.org][roadmap]]).
+Today that is Review without =V=, and Buffer without =L= and =!=; the
+rest join with the phases that add their commands ([[file:roadmap.org][roadmap]]).
 
 ** Submit review (=S=)
 #+begin_example
@@ -518,17 +517,38 @@ as GitHub refuses them ([[file:decisions.org::*D32 Reviews are written the way G
 
 ** Merge / state (=m=)
 #+begin_example
- Merge #1234 into main               ✓ mergeable · ✓ checks · ✓ 1 approval · 0 behind
- Method                     Options                         State
-  m Create merge commit      -d Delete branch after merge    D Convert to draft
-  s Squash and merge         -t Commit title…                c Close pull request
-  r Rebase and merge         -b Commit body…                 u Update branch
+ Merge #1234 into main     ✓ no conflicts · ✓ checks · ✓ 1 approval
+ Method                     Options                          State
+  m Create merge commit      -d Delete branch after merge     D Convert to draft
+  s Squash and merge                                          c Close pull request
+  r Rebase and merge                                          u Update branch
+                                                              U Rebase branch
+                                                              k Delete branch
  When blocked
-  a Enable auto-merge        x Disable auto-merge            Q Add to merge queue
+  a Enable auto-merge        x Disable auto-merge             Q Add to merge queue
 #+end_example
 
-The title line shows why merging is blocked when it is ("✗ 1 change
-requested · ◐ 2 checks running").  Only methods the repository allows are apt.
+The title line is GitHub's merge box in one line ([[file:decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]]): conflicts,
+checks, reviews, "behind main" when the base's rules want it up to date,
+auto-merge and the merge queue; blocked, it reads "✗ conflicts · ✗ 1
+check failing · ✗ 1 change requested".  Merged, it says who merged it
+(and that the branch is deleted); closed, that it is closed.  Only the
+methods the repository allows are apt, and each command is dimmed where
+it would refuse, saying why when run: a draft, conflicts, GitHub still
+working it out, the base's rules (unless the viewer may bypass them), a
+merge queue.
+
+=m= and =s= open the commit message in an input buffer, starting from
+GitHub's (its first line is the title, the rest the body); =C-c C-c=
+merges.  =C-u m=, =C-u s= and =r= ask =y-or-n-p= and use GitHub's message.
+=-d= is off until set (=C-x s= saves it), and dimmed with "(the
+repository does)" where the repository deletes merged branches itself.
+=a= asks for the method when the repository allows more than one, then
+the message.  =u= merges the base into the branch, =U= rebases it; the
+pull request loads again once GitHub has the new commits.  =k= deletes
+the branch of a merged or closed pull request.  =D=, =c= and =Q= say
+what they will do ("Mark ready for review", "Reopen pull request",
+"Remove from merge queue").
 
 ** Jump (=j=)
 #+begin_example

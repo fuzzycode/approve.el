@@ -496,35 +496,55 @@ Labels shown; assignees, reviewers and milestone work the same way.
 | Subscription       | subscribed / ignored / unsubscribed                | =updateSubscription=                                                        |
 
 * F13 Merge, close, reopen, draft, update branch
+As GitHub's merge box, checked first ([[file:decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]]).  Code lives in
+=approve-merge.el=; the menu is =approve-merge= in =approve-menus.el=.
+
 #+begin_example
- [user] m
+ [user] m  (evil: gm)
    │
    ▼
- transient; title line from mergeable, mergeStateStatus, reviewDecision,
- statusCheckRollup; methods limited to what the repository allows
+ transient; title line: the merge box in one line (conflicts, checks, reviews,
+ behind, auto-merge, queue) · only methods the repository allows · a command
+ is dimmed where it would refuse
    │
-   ├── m / s / r (merge method) ──▶ ◇ mergeStateStatus CLEAN or UNSTABLE? ◇
-   │                                   │ no (BLOCKED, BEHIND, DIRTY, DRAFT…)
-   │                                   ├──▶ user-error with the reason,
-   │                                   │    suggest a / Q / u
-   │                                   │ yes
-   │                                   ▼
-   │                         ◇ yes-or-no-p "Squash and merge #1234 into main?" ◇──no──▶ stop
-   │                                   │ yes
-   │                                   ▼
-   │                         mergePullRequest(method, title, body)
-   │                                   ▼
-   │                         ◇ -d delete branch? ◇──yes──▶ REST DELETE git/refs/heads/…
-   │                                   │                   (only if viewerCanDeleteHeadRef)
-   │                                   ▼
-   │                         full refresh (F17 "g")
+   ├── m / s / r (method) ──▶ ◇ can it merge now? ◇──no──▶ user-error with the reason and the key
+   │                            │ yes                       that helps: closed (c), draft (D),
+   │                            │ (BLOCKED or BEHIND only   conflicts, UNKNOWN (g), BLOCKED (a),
+   │                            │  for one who may bypass)  BEHIND (u), a merge queue (Q)
+   │                            ▼
+   │                ◇ m or s, and no C-u? ◇──yes──▶ GitHub's message for the method
+   │                            │ no                (viewerMergeHeadlineText / BodyText)
+   │                            ▼                              │
+   │   ◇ y-or-n-p "Squash and merge #1234 into main?" ◇        ▼
+   │          │ no ──▶ stop     │ yes        input "Squash and merge #1234 into main"
+   │                            │            [user] C-c C-c (C-c C-k: draft kept, stop)
+   │                            ◀──────────────────────────────┘
+   │                            ▼
+   │                mergePullRequest(method, title, body, expectedHeadOid)
+   │                            ▼
+   │                ◇ -d and viewerCanDeleteHeadRef? ◇──yes──▶ deleteRef(headRef)
+   │                            │ no                                │
+   │                            ◀───────────────────────────────────┘
+   │                            ▼
+   │                load the PR again (F17 "g")
    │
-   ├── a auto-merge ──────────▶ enablePullRequestAutoMerge(method) → patch → redraw
-   ├── Q merge queue ─────────▶ enqueuePullRequest → patch → redraw
-   ├── u update branch ───────▶ updatePullRequestBranch → refresh
-   ├── D draft ───────────────▶ convertPullRequestToDraft → patch
-   └── c close / reopen ──────▶ yes-or-no-p → closePullRequest / reopenPullRequest → patch
+   ├── a auto-merge ──▶ the method (completing-read, your default first)
+   │                    → the message as for m / s → enablePullRequestAutoMerge → patch
+   ├── x ─────────────▶ disablePullRequestAutoMerge → patch
+   ├── Q merge queue ─▶ y-or-n-p → enqueuePullRequest / dequeuePullRequest → patch
+   ├── u / U ─────────▶ y-or-n-p → updatePullRequestBranch(MERGE / REBASE, expectedHeadOid)
+   │                    → wait for GitHub's head to move → load the PR again
+   ├── D draft ───────▶ F12: convertPullRequestToDraft / markPullRequestReadyForReview → patch
+   ├── c close/reopen ▶ y-or-n-p → closePullRequest / reopenPullRequest → patch
+   └── k delete branch ▶ (merged or closed) y-or-n-p → deleteRef → patch
+         patch: the PR's merge state from GitHub's answer · redraw
 #+end_example
+
+GitHub's API merges a closed pull request, so Approve refuses it first.
+The merge is of the head the store holds: when the branch moved, GitHub
+refuses ("Head branch was modified. Review and try the merge again."), and
+=g= shows what changed.  Updating a branch that is up to date gets
+GitHub's "There are no new commits on the base branch."
 
 * F14 Re-review after new commits
 GitHub knows which commit the viewer last reviewed (=viewerLatestReview=), and

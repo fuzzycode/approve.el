@@ -95,7 +95,16 @@ task only needs the files it touches.
   or the batch =b= fills, after its commit message; the PR is loaded
   again once GitHub's head is the new commit.  The scratch script's
   =suggestions= group checks it live on #10.
-- Next step: the merge transient of [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]].
+- The merge menu is done (2026-11-16, =approve-merge.el=, [[file:decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]]): =m=
+  shows the merge box in one line, and merges by the methods the
+  repository allows, after the commit message, starting as GitHub's;
+  auto-merge, the merge queue, updating the branch (merge or rebase),
+  closing and reopening, and deleting the branch are there too.  Each
+  is checked first: GitHub's API merges a closed pull request.  The
+  scratch script's =merge= group checks it live, but auto-merge and the
+  merge queue, which the scratch repository can't have.
+- Next step: the checks of [[file:roadmap.org::*Phase 5 — Merge and checks][Phase 5]] (lazy contexts, required marks,
+  ordering, details URL).
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

@@ -14,7 +14,7 @@ callbacks it was given.
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Actions                  approve-actions.el · approve-commands.el ·      │
  │                          approve-review.el · approve-manage.el ·         │
- │                          approve-suggestions.el                          │
+ │                          approve-suggestions.el · approve-merge.el       │
  │   context at point → validate → (input) → mutation → patch → redraw      │
  ├───────────────────────────────┬──────────────────────────────────────────┤
  │ Buffers                       │ Input                                    │
@@ -102,14 +102,17 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-review.el=        | The pending review's rules (D22, D32): where a comment goes, submit or add a    |     2 |
 |                            | review, what GitHub refuses; =S='s verdicts and body, =X= (discard)             |       |
 | =approve-actions.el=       | The action pipeline (F00) and =approve-action-context=                          |     2 |
-| =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–5 |
-|                            | delete, conversation comment, react, hide; later merge                          |       |
+| =approve-commands.el=      | Commands that change the PR: viewed, comment, suggest, reply, resolve, edit,    |   2–4 |
+|                            | delete, conversation comment, react, hide                                       |       |
 | =approve-suggestions.el=   | Committing suggestions (D41, F23): the suggestions of a comment, a file's lines |     5 |
 |                            | spliced, GitHub's message, the batch, =x= and =b=                               |       |
 | =approve-manage.el=        | Commands that manage the PR (F08, F12): title, description, labels, assignees,  |     4 |
 |                            | reviewers, milestone (pickers over the repository's metadata), draft or ready,  |       |
 |                            | subscription, lock                                                              |       |
-| =approve-menus.el=         | Transients: jump (1), submit and dispatch (2); merge, metadata, range           |   1–5 |
+| =approve-merge.el=         | The merge menu's commands (F13, D42): what stands in the way of a merge, the    |     5 |
+|                            | title line, merge by a method with GitHub's message, auto-merge, the merge      |       |
+|                            | queue, update the branch, close or reopen, delete the branch                    |       |
+| =approve-menus.el=         | Transients: jump (1), submit and dispatch (2), merge (5); metadata, range       |   1–6 |
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
 |                            | loaded)                                                                         |       |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |

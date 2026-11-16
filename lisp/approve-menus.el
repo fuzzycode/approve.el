@@ -38,6 +38,8 @@
 ;;                               and any changed file by name
 ;;   S  `approve-submit-review'  a verdict for the pending review, its
 ;;                               body, or discarding it (flow F09)
+;;   m  `approve-merge'          merge, auto-merge, the merge queue, the
+;;                               branch, close or reopen (flow F13)
 ;;
 ;; The dispatch lists the commands that exist, no more: a new command
 ;; joins it, and any other menu it fits, in the change that adds it.
@@ -64,6 +66,7 @@
 (require 'approve-review)
 (require 'approve-commands)
 (require 'approve-manage)
+(require 'approve-merge)
 (require 'approve-suggestions)
 (require 'approve-eldoc)
 (require 'approve-dashboard)
@@ -141,6 +144,82 @@ review, a verdict adds a review and submits it at once."
 
 (keymap-set approve-pr-mode-map "S" #'approve-submit-review)
 (put 'approve-submit-review 'approve-preflight #'approve-action-context)
+
+;;; Merge (m)
+
+(defun approve-menus--merge-heading ()
+  "Return the heading of the merge menu: the PR's merge box in one line."
+  (if (approve-model-root-ref)
+      (approve-merge-summary)
+    (propertize "Merge" 'face 'transient-heading)))
+
+(defun approve-menus--delete-branch-description ()
+  "Return the description of -d, saying when the repository deletes itself."
+  (if (approve-merge-deletes-branches-p)
+      (concat "Delete branch after merge "
+              (propertize "(the repository does)" 'face 'approve-dim))
+    "Delete branch after merge"))
+
+(defun approve-menus--draft-description ()
+  "Return the description of `approve-toggle-draft': what it will do."
+  (if (and (approve-model-root-ref) (approve-pr-field 'isDraft))
+      "Mark ready for review"
+    "Convert to draft"))
+
+(defun approve-menus--close-description ()
+  "Return the description of `approve-toggle-closed': what it will do."
+  (if (and (approve-model-root-ref) (equal (approve-pr-field 'state) "CLOSED"))
+      "Reopen pull request"
+    "Close pull request"))
+
+(defun approve-menus--queue-description ()
+  "Return the description of `approve-toggle-merge-queue': what it will do."
+  (if (and (approve-model-root-ref) (approve-pr-field 'isInMergeQueue))
+      "Remove from merge queue"
+    "Add to merge queue"))
+
+;;;###autoload (autoload 'approve-merge "approve-menus" nil t)
+(transient-define-prefix approve-merge ()
+  "Merge the pull request, close it, or bring its branch up to date (flow F13).
+The title line says what stands in the way, as GitHub's merge box
+does; what can't run now is dimmed.  Merging with a merge commit or a
+squash asks for the commit message first, starting as GitHub's; with
+\\[universal-argument] before the key, GitHub's is used after a question (decision D42)."
+  [:description approve-menus--merge-heading
+   ["Method"
+    ("m" "Create a merge commit" approve-merge-commit
+     :inapt-if (lambda () (approve-action-why-not 'approve-merge-commit)))
+    ("s" "Squash and merge" approve-merge-squash
+     :inapt-if (lambda () (approve-action-why-not 'approve-merge-squash)))
+    ("r" "Rebase and merge" approve-merge-rebase
+     :inapt-if (lambda () (approve-action-why-not 'approve-merge-rebase)))]
+   ["Options"
+    ("-d" "Delete branch after merge" "--delete-branch"
+     :description approve-menus--delete-branch-description
+     :inapt-if approve-merge-deletes-branches-p)]
+   ["State"
+    ("D" approve-toggle-draft :description approve-menus--draft-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-draft)))
+    ("c" approve-toggle-closed :description approve-menus--close-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-closed)))
+    ("u" "Update branch" approve-update-branch
+     :inapt-if (lambda () (approve-action-why-not 'approve-update-branch)))
+    ("U" "Rebase branch" approve-rebase-branch
+     :inapt-if (lambda () (approve-action-why-not 'approve-rebase-branch)))
+    ("k" "Delete branch" approve-delete-branch
+     :inapt-if (lambda () (approve-action-why-not 'approve-delete-branch)))]]
+  [["When blocked"
+    ("a" "Enable auto-merge" approve-enable-auto-merge
+     :inapt-if (lambda () (approve-action-why-not 'approve-enable-auto-merge)))]
+   [""
+    ("x" "Disable auto-merge" approve-disable-auto-merge
+     :inapt-if (lambda () (approve-action-why-not 'approve-disable-auto-merge)))]
+   [""
+    ("Q" approve-toggle-merge-queue :description approve-menus--queue-description
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-merge-queue)))]])
+
+(keymap-set approve-pr-mode-map "m" #'approve-merge)
+(put 'approve-merge 'approve-preflight #'approve-action-context)
 
 ;;; Dispatch (?)
 
@@ -234,7 +313,9 @@ Those that can't run at point, or that you may not use, are dimmed."
     ("w" "Subscription" approve-set-subscription
      :inapt-if (lambda () (approve-action-why-not 'approve-set-subscription)))
     ("#" approve-toggle-lock :description approve-menus--lock-description
-     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-lock)))]
+     :inapt-if (lambda () (approve-action-why-not 'approve-toggle-lock)))
+    ("m" "Merge / close…" approve-merge
+     :inapt-if (lambda () (approve-action-why-not 'approve-merge)))]
    ["Buffer"
     ("g" "Refresh" approve-pr-refresh)
     ("RET" "Visit at point" approve-visit)

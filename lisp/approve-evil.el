@@ -99,6 +99,7 @@
     ("A" . approve-batch-suggestion)
     ("S" . approve-submit-review)
     ("X" . approve-discard-review)
+    ("gm" . approve-merge)
     ("?" . approve-dispatch)
     ("q" . quit-window))
   "Keys of `approve-pr-mode' in evil's normal state: (KEY . COMMAND).")

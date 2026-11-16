@@ -104,8 +104,8 @@ removed. Assignees, reviewers (GitHub's suggestions first) and the milestone wor
 
 <!-- ================================================================== -->
 <section class="shot" id="merge">
-<h2>Merge / state menu <span class="ref">m · F13</span></h2>
-<p>The title line says whether merging is possible and, when blocked, why. Only methods the repository allows are apt.</p>
+<h2>Merge / state menu <span class="ref">m · F13 · D42</span></h2>
+<p>The title line is GitHub's merge box in one line: what stands in the way, and when nothing does. Only methods the repository allows are apt; each command is dimmed where it would refuse. <span class="k">m</span> and <span class="k">s</span> open the commit message, starting as GitHub's; <span class="k">C-u</span> takes GitHub's at once.</p>
 <div class="emacs">
 <div class="win stack">
 <div class="win">
@@ -115,23 +115,38 @@ removed. Assignees, reviewers (GitHub's suggestions first) and the milestone wor
 <div class="ml off"> <span class="b">*approve: fuzzycode/approve#1234*</span>   Top  L10      Approve-PR</div>
 </div>
 <div class="tr">
-<p><span class="kh">Merge #1234 into main</span>          <span class="ok"><i data-i="check-success">✓</i> mergeable · <i data-i="check-success">✓</i> checks · <i data-i="approved">✓</i> 1 approval · 0 behind</span></p>
-<p><span class="kh">Method</span>                     <span class="kh">Options</span>                              <span class="kh">State</span></p>
-<p> <span class="k">m</span> Create merge commit      <span class="k">-d</span> Delete branch after merge <span class="vr">(on)</span>     <span class="k">D</span> Convert to draft</p>
-<p> <span class="k">s</span> Squash and merge         <span class="k">-t</span> Commit title… <span class="ina">(PR title)</span>        <span class="k">c</span> Close pull request</p>
-<p> <span class="ina">r Rebase and merge</span>        <span class="k">-b</span> Commit body…  <span class="ina">(commits)</span>         <span class="ina">u Update branch</span></p>
+<p><span class="kh">Merge #1234 into main</span>     <span class="ok"><i data-i="check-success">✓</i> no conflicts</span> <span class="d">·</span> <span class="ok"><i data-i="check-success">✓</i> checks</span> <span class="d">·</span> <span class="ok"><i data-i="approved">✓</i> 1 approval</span></p>
+<p><span class="kh">Method</span>                     <span class="kh">Options</span>                          <span class="kh">State</span></p>
+<p> <span class="k">m</span> Create merge commit      <span class="k">-d</span> Delete branch after merge     <span class="k">D</span> Convert to draft</p>
+<p> <span class="k">s</span> Squash and merge                                          <span class="k">c</span> Close pull request</p>
+<p> <span class="ina">r Rebase and merge</span>                                          <span class="k">u</span> Update branch</p>
+<p>                                                              <span class="k">U</span> Rebase branch</p>
+<p>                                                              <span class="ina">k Delete branch</span></p>
 <p><span class="kh">When blocked</span></p>
-<p> <span class="ina">a Enable auto-merge</span>       <span class="ina">x Disable auto-merge</span>                  <span class="ina">Q Add to merge queue</span></p>
+<p> <span class="ina">a Enable auto-merge</span>        <span class="ina">x Disable auto-merge</span>             <span class="ina">Q Add to merge queue</span></p>
 </div>
 </div>
 <div class="echo"></div>
 </div>
-<p>Blocked, the title line reads instead:</p>
+<p>Blocked, the title line says why, and the methods are dimmed (unless you may bypass the rules); auto-merge is apt:</p>
 <div class="emacs">
 <div class="tr">
-<p><span class="kh">Merge #1234 into main</span>          <span class="er"><i data-i="changes-requested">✗</i> 1 change requested</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> 2 checks running</span> <span class="d">·</span> <span class="wa">3 behind</span></p>
-<p> <span class="ina">m Create merge commit</span>     … <span class="d">(methods inapt)</span>                    <span class="k">u</span> Update branch</p>
-<p> <span class="k">a</span> Enable auto-merge       <span class="ina">x Disable auto-merge</span>                  <span class="k">Q</span> Add to merge queue</p>
+<p><span class="kh">Merge #1234 into main</span>     <span class="ok"><i data-i="check-success">✓</i> no conflicts</span> <span class="d">·</span> <span class="wa"><i data-i="check-pending">◐</i> 2 checks running</span> <span class="d">·</span> <span class="er"><i data-i="changes-requested">✗</i> 1 change requested</span></p>
+<p> <span class="ina">m Create merge commit</span>     … <span class="d">(methods inapt)</span>                      <span class="k">u</span> Update branch</p>
+<p> <span class="k">a</span> Enable auto-merge        <span class="ina">x Disable auto-merge</span>             <span class="ina">Q Add to merge queue</span></p>
+</div>
+</div>
+<p><span class="k">s</span> on a mergeable pull request: the commit message, GitHub's to start with.</p>
+<div class="emacs">
+<div class="win">
+<div class="hl"><span class="b">Squash and merge #1234 into main</span> <span class="d">· from feature/retry</span>                    <span class="k">C-c C-c</span> <span class="d">merge ·</span> <span class="k">C-c C-k</span> <span class="d">abort</span></div>
+<div class="buf short">
+<p>Add retry logic to the GraphQL client (#1234)</p>
+<p></p>
+<p>* Retry on 5xx responses</p>
+<p></p>
+<p>* Back off on secondary rate limits</p>
+</div>
 </div>
 </div>
 </section>
