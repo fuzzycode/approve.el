@@ -20,6 +20,9 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   All take =$owner=, =$name=, =$number=; the paged ones also =$after=.
   =pull-request-changes.graphql= is change detection ([[file:../docs/decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]): it
   never goes into the store, Approve compares it with the store.
+  =pull-request-merge-message.graphql= is GitHub's commit message for a
+  merge by =$method= ([[file:../docs/decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]]), asked when a merge needs it; it never goes
+  into the store either.
   =search-pull-requests.graphql= is the lists' (dashboard, search): the
   pull requests a search finds (=$search=, =$first=, =$after=), each
   through =PullRequestSummaryFields=, the row a list draws.  The lists
@@ -47,7 +50,9 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   fragment, and the ones that change the PR's review state (a thread, a
   reply, a review added or submitted) also select
   =pullRequest { ...PullRequestReviewStateFields }=, the fragment the core
-  spreads for the same fields ([[file:../docs/decisions.org::*D35 Mutations keep the store true: GitHub's answer, then list edits][D35]]).  Deletions select nothing: GitHub
+  spreads for the same fields ([[file:../docs/decisions.org::*D35 Mutations keep the store true: GitHub's answer, then list edits][D35]]).  So do the ones that change its
+  merge state (merge, auto-merge, the merge queue, update, close, reopen)
+  with =PullRequestMergeStateFields=.  Deletions select nothing: GitHub
   may still list what was deleted right after ([[file:../docs/decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).
 
 * Includes

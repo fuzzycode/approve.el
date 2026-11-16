@@ -5,11 +5,15 @@ ${include:fragments/milestone.graphql}
 ${include:fragments/ref.graphql}
 ${include:fragments/reaction-group.graphql}
 ${include:fragments/pull-request-review-state.graphql}
+${include:fragments/pull-request-merge-state.graphql}
 
 # The PR core: what the header, metadata rows, status line, description,
 # header line and "Your pending review" show, and the reviewers GitHub
 # suggests, whom the reviewers picker offers first (F12).  The review state
-# has a fragment of its own, which the review mutations select too.  The long
+# and the merge state have fragments of their own, which the mutations that
+# change them select too.  The base repository says how it may be merged
+# (F13): the methods it allows, auto-merge, whether it deletes a merged
+# branch itself, the viewer's default method and permission.  The long
 # lists (files, threads, timeline, commits, check contexts) come from their
 # own queries; here they are only counted, under aliases, so loading this
 # never replaces a list another query loaded (store contract point 3).
@@ -19,19 +23,10 @@ fragment PullRequestFields on PullRequest {
   number
   url
   title
-  state
-  isDraft
   locked
   activeLockReason
   createdAt
   updatedAt
-  closed
-  closedAt
-  merged
-  mergedAt
-  mergedBy {
-    ...ActorFields
-  }
   author {
     ...ActorFields
   }
@@ -43,13 +38,21 @@ fragment PullRequestFields on PullRequest {
   baseRefName
   baseRefOid
   headRefName
-  headRefOid
   isCrossRepository
   baseRef {
     ...RefFields
   }
-  headRef {
-    ...RefFields
+  baseRepository {
+    __typename
+    id
+    nameWithOwner
+    viewerPermission
+    mergeCommitAllowed
+    squashMergeAllowed
+    rebaseMergeAllowed
+    autoMergeAllowed
+    deleteBranchOnMerge
+    viewerDefaultMergeMethod
   }
   headRepositoryOwner {
     ...ActorFields
@@ -83,6 +86,7 @@ fragment PullRequestFields on PullRequest {
     ...MilestoneFields
   }
   ...PullRequestReviewStateFields
+  ...PullRequestMergeStateFields
   suggestedReviewers {
     isAuthor
     isCommenter
@@ -90,8 +94,6 @@ fragment PullRequestFields on PullRequest {
       ...UserFields
     }
   }
-  mergeable
-  mergeStateStatus
   statusCheckRollup {
     __typename
     id
@@ -129,13 +131,6 @@ fragment PullRequestFields on PullRequest {
   viewerCanSubscribe
   viewerCanLabel
   viewerCanAssign
-  viewerCanClose
-  viewerCanReopen
   viewerCanApplySuggestion
   viewerCanEditFiles
-  viewerCanUpdateBranch
-  viewerCanDeleteHeadRef
-  viewerCanEnableAutoMerge
-  viewerCanDisableAutoMerge
-  viewerCanMergeAsAdmin
 }

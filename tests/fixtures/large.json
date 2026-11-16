@@ -105,6 +105,18 @@
                     }
                   }
                 },
+                "baseRepository": {
+                  "__typename": "Repository",
+                  "id": "R_kwDOPXCZ93Wtx5txfF",
+                  "nameWithOwner": "acme-example/monorepo",
+                  "viewerPermission": "WRITE",
+                  "mergeCommitAllowed": true,
+                  "squashMergeAllowed": true,
+                  "rebaseMergeAllowed": false,
+                  "autoMergeAllowed": true,
+                  "deleteBranchOnMerge": false,
+                  "viewerDefaultMergeMethod": "SQUASH"
+                },
                 "headRepositoryOwner": {
                   "__typename": "Organization",
                   "id": "O_kgDOAd61x1o1n1tKFz",
@@ -166,6 +178,11 @@
                 "reviewDecision": "APPROVED",
                 "mergeable": "MERGEABLE",
                 "mergeStateStatus": "CLEAN",
+                "canBeRebased": true,
+                "autoMergeRequest": null,
+                "isMergeQueueEnabled": false,
+                "isInMergeQueue": false,
+                "mergeQueueEntry": null,
                 "statusCheckRollup": {
                   "__typename": "StatusCheckRollup",
                   "id": "SCR_kwDOxeixV-9OGUzfel",

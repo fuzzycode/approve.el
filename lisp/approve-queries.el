@@ -37,6 +37,8 @@
 ;;
 ;; Change detection (`approve-query-changes') asks GitHub without
 ;; loading the store: its caller compares the answer with the store.
+;; So does `approve-query-merge-message', GitHub's commit message for
+;; a merge, asked when one needs it.
 ;; The lists of pull requests (`approve-query-search',
 ;; `approve-query-summary') keep what GitHub sends as it is, without a
 ;; store, as does `approve-query-viewer'.
@@ -319,25 +321,56 @@ the error."
                  (funcall (or errorback #'approve-api-default-errorback)
                           (list 'approve-api-not-found "Pull request not found"))))))
 
-(cl-defun approve-query-await-head (oid &key callback (tries 10))
+(cl-defun approve-query-await-head (oid &key callback (tries 10) away)
   "Call CALLBACK once GitHub's head of the PR is OID, the commit just made.
 GitHub moves a pull request's head a moment after a commit to its
 branch, so the PR loaded at once could still show the old one.  The
 head is asked for (the change detection query) up to TRIES times, a
 second apart; CALLBACK is called after the last try too, and when
-the question fails, so it always comes."
+the question fails, so it always comes.  With AWAY, wait until the
+head is any commit but OID instead: the head before a change whose
+commit GitHub makes on its own (an update of the branch)."
   (let ((buffer (current-buffer)))
     (approve-query-changes
      :callback (lambda (remote)
-                 (if (or (equal (alist-get 'headRefOid remote) oid) (<= tries 1))
+                 (if (or (<= tries 1)
+                         (if away
+                             (not (equal (alist-get 'headRefOid remote) oid))
+                           (equal (alist-get 'headRefOid remote) oid)))
                      (funcall callback)
                    (run-at-time 1 nil
                                 (lambda ()
                                   (when (buffer-live-p buffer)
                                     (with-current-buffer buffer
                                       (approve-query-await-head oid :callback callback
-                                                                :tries (1- tries))))))))
+                                                                :tries (1- tries)
+                                                                :away away)))))))
      :errorback (lambda (_err) (funcall callback)))))
+
+(cl-defun approve-query-merge-message (method &key callback errorback)
+  "Ask GitHub for its commit message for merging the PR by METHOD.
+METHOD is \"MERGE\", \"SQUASH\" or \"REBASE\".  The message is the one the
+browser fills in, from the repository's settings and the PR as it is
+now.  CALLBACK is called with (HEADLINE . BODY), strings, empty for a
+rebase; ERRORBACK with the error.  It does not go into the store.
+
+Example:
+  (approve-query-merge-message \"SQUASH\" :callback (lambda (message)
+                                                     (car message)))
+  => \"Rewrite the parser (#202)\""
+  (approve-api-graphql
+   "queries/pull-request-merge-message.graphql"
+   `(,@(approve-query-variables) (method . ,method))
+   :host (approve-query-host)
+   :progress "Asking GitHub for the commit message"
+   :errorback errorback
+   :callback (lambda (data)
+               (if-let* ((pull-request (approve-query--pull-request data)))
+                   (let-alist pull-request
+                     (funcall callback (cons (or .viewerMergeHeadlineText "")
+                                             (or .viewerMergeBodyText ""))))
+                 (funcall (or errorback #'approve-api-default-errorback)
+                          (list 'approve-api-not-found "Pull request not found"))))))
 
 (cl-defun approve-query-markdown (text &key callback errorback)
   "Render TEXT, GitHub-flavoured markdown, as GitHub shows a comment.

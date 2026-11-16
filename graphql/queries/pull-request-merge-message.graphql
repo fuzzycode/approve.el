@@ -1,0 +1,22 @@
+# F13: GitHub's commit message for merging the pull request by $method
+# (MERGE, SQUASH or REBASE), as the browser fills it in from the repository's
+# settings: a headline and a body.  A rebase has none.  Asked when a merge or
+# auto-merge needs it, as it changes with every push; never stored.
+query PullRequestMergeMessage(
+  $owner: String!
+  $name: String!
+  $number: Int!
+  $method: PullRequestMergeMethod!
+) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      viewerMergeHeadlineText(mergeType: $method)
+      viewerMergeBodyText(mergeType: $method)
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

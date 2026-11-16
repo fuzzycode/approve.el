@@ -947,6 +947,16 @@ key and the commit it was made on)."
       (isCrossRepository . :false)
       (baseRef . ,(funcall ref base-ref))
       (headRef . ,(funcall ref head-ref))
+      (baseRepository (__typename . "Repository")
+                      (id . ,repo-id)
+                      (nameWithOwner . ,repo-name)
+                      (viewerPermission . ,(if maintainer "WRITE" "READ"))
+                      (mergeCommitAllowed . t)
+                      (squashMergeAllowed . t)
+                      (rebaseMergeAllowed . :false)
+                      (autoMergeAllowed . t)
+                      (deleteBranchOnMerge . :false)
+                      (viewerDefaultMergeMethod . "SQUASH"))
       (headRepositoryOwner . ,(approve-fixtures--organization))
       (headRepository (__typename . "Repository")
                       (id . ,repo-id)
@@ -990,6 +1000,11 @@ key and the commit it was made on)."
       (reviewDecision . ,decision)
       (mergeable . ,mergeable)
       (mergeStateStatus . ,merge-state)
+      (canBeRebased . t)
+      (autoMergeRequest)
+      (isMergeQueueEnabled . :false)
+      (isInMergeQueue . :false)
+      (mergeQueueEntry)
       (statusCheckRollup . ,(and rollup
                                  (append rollup
                                          `((contextCounts

@@ -203,7 +203,9 @@ schema on 2026-11-08.
 | Viewer                 | =viewer { login name }=                                                                                      |
 | PR core                | =repository.pullRequest(number)=: title, state, isDraft, author, refs, oids, body/bodyHTML, labels,          |
 |                        | assignees, milestone, reviewRequests, latestOpinionatedReviews, reviewDecision, mergeable, mergeStateStatus, |
-|                        | statusCheckRollup.state, closingIssuesReferences, viewerCan*, viewerLatestReview, reactionGroups, counts     |
+|                        | statusCheckRollup.state, closingIssuesReferences, viewerCan*, viewerLatestReview, reactionGroups, counts,    |
+|                        | merge state (auto-merge, merge queue), =baseRepository=: the merge methods it allows, auto-merge, deleting   |
+|                        | merged branches, the viewer's default method and permission                                                  |
 | Pending review         | =pullRequest.reviews(states: PENDING, first: 1)= (only the viewer's own is visible)                          |
 | Files and viewed state | =pullRequest.files(first: 100, after:)= → path, additions, deletions, changeType, viewerViewedState          |
 | Review threads         | =pullRequest.reviewThreads(first: 100)= → path, line, startLine, diffSide, originalLine, isResolved,         |
@@ -224,6 +226,8 @@ schema on 2026-11-08.
 | Change detection       | =pullRequest { headRefOid commitCount: commits { totalCount } title state isDraft lastEditedAt=              |
 |                        | =comments(last: 20) reviews(last: 20) { id lastEditedAt } }=, compared with the store (D23)                  |
 | New head after commit  | the change detection query, once a second, until its =headRefOid= is the commit (D41)                        |
+|                        | (after an update of the branch: until it is another, D42)                                                    |
+| Merge message (lazy)   | =pullRequest { viewerMergeHeadlineText(mergeType) viewerMergeBodyText(mergeType) }=, when a merge needs it   |
 | User details (eldoc)   | =user(login) { pronouns email bio company location websiteUrl status { emoji message } }=                    |
 | Team details (eldoc)   | =organization(login).team(slug) { name description members { totalCount } }=                                 |
 | =#123= details (eldoc) | =repository.issueOrPullRequest(number) { title state author labels bodyText }=                               |

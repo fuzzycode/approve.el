@@ -1,0 +1,52 @@
+${include:fragments/actor.graphql}
+${include:fragments/ref.graphql}
+
+# The PR's merge state (F13): whether it is open, merged or closed, whether
+# and how it can be merged, auto-merge and the merge queue, and what the
+# viewer may do about them.  The core selects it with the rest of the PR.
+# The mutations of the merge menu (merge, auto-merge, the queue, update
+# branch, close and reopen) select it on their pull request too, so the store
+# takes GitHub's word for what they changed (D35).  GitHub works mergeable
+# and mergeStateStatus out a few seconds after a push or a merge: until then
+# they are UNKNOWN.  viewerCanDeleteHeadRef is true only once the pull
+# request is merged or closed (D42).
+fragment PullRequestMergeStateFields on PullRequest {
+  state
+  closed
+  closedAt
+  merged
+  mergedAt
+  mergedBy {
+    ...ActorFields
+  }
+  isDraft
+  mergeable
+  mergeStateStatus
+  canBeRebased
+  headRefOid
+  headRef {
+    ...RefFields
+  }
+  autoMergeRequest {
+    enabledAt
+    mergeMethod
+    enabledBy {
+      ...ActorFields
+    }
+  }
+  isMergeQueueEnabled
+  isInMergeQueue
+  mergeQueueEntry {
+    __typename
+    id
+    position
+    state
+  }
+  viewerCanClose
+  viewerCanReopen
+  viewerCanUpdateBranch
+  viewerCanDeleteHeadRef
+  viewerCanEnableAutoMerge
+  viewerCanDisableAutoMerge
+  viewerCanMergeAsAdmin
+}

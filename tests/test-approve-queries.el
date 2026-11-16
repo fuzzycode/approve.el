@@ -232,6 +232,53 @@ The requests are pushed to `test-queries--requests'."
                                                (headRefOid . "old"))))))))
         (approve-query-await-head "new" :tries 2 :callback (lambda () (setq done t)))
         (approve-test-wait-for (lambda () done) 5)
-        (expect (length test-queries--requests) :to-equal 2)))))
+        (expect (length test-queries--requests) :to-equal 2))))
+
+  (it "with :away, asks until the head is any other commit"
+    (let ((approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t)
+          (done nil)
+          (approve-api-transport
+           (test-queries--answering
+            '((data (repository (pullRequest (__typename . "PullRequest") (id . "PR")
+                                             (headRefOid . "merged"))))))))
+      (approve-query-await-head "old" :away t :callback (lambda () (setq done t)))
+      (approve-test-wait-for (lambda () done))
+      (expect (length test-queries--requests) :to-equal 1))))
+
+(describe "approve-query-merge-message"
+  (before-each
+    (setq test-queries--requests nil)
+    (approve-model-init '(:host "github.com" :owner "acme" :repo "rocket" :number 7)))
+
+  (it "asks for GitHub's message of a method and gives its headline and body"
+    (let ((approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t)
+          (result nil)
+          (approve-api-transport
+           (test-queries--answering
+            '((data (repository
+                     (pullRequest (viewerMergeHeadlineText . "Rewrite the parser (#7)")
+                                  (viewerMergeBodyText . "* One\n\n* Two"))))))))
+      (approve-query-merge-message "SQUASH" :callback (lambda (message) (setq result message)))
+      (approve-test-wait-for (lambda () result))
+      (expect result :to-equal '("Rewrite the parser (#7)" . "* One\n\n* Two"))
+      (let ((request (car test-queries--requests)))
+        (expect (plist-get request :name)
+                :to-equal "queries/pull-request-merge-message.graphql")
+        (expect (alist-get 'method (plist-get request :variables)) :to-equal "SQUASH")
+        (expect (alist-get 'number (plist-get request :variables)) :to-equal 7))))
+
+  (it "fails as not found when GitHub has no such pull request"
+    (let ((approve-graphql-directory approve-test-graphql-directory)
+          (inhibit-message t)
+          (failure nil)
+          (approve-api-transport (test-queries--answering
+                                  '((data (repository (__typename . "Repository")
+                                                      (id . "R_1") (pullRequest)))))))
+      (approve-query-merge-message "MERGE" :callback #'ignore
+                                   :errorback (lambda (err) (setq failure err)))
+      (approve-test-wait-for (lambda () failure))
+      (expect (car failure) :to-be 'approve-api-not-found))))
 
 ;;; test-approve-queries.el ends here
