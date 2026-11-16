@@ -331,7 +331,7 @@ quickly and each section fills in when its data arrives.
 * Rendering
 ** Section tree of the PR buffer
 Single layout (D05).  In the split layout, =approve-diff= moves to the diff
-buffer and the file list's =RET= opens it.
+buffer, which the file list opens at a file (its key is chosen with F18).
 
 #+begin_example
  approve-root-section

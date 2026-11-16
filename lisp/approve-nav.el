@@ -29,9 +29,10 @@
 
 ;; The read-only commands of a PR buffer (docs/flows.org, F03):
 ;;
-;;   RET   `approve-visit'      follow the thing at point: a diff line
-;;                              opens the whole file (approve-file.el),
-;;                              a line of a file view goes to the diff
+;;   RET   `approve-visit'      follow the thing at point: a file or a
+;;                              diff line opens the whole file
+;;                              (approve-file.el), a line of a file
+;;                              view goes to the diff
 ;;   o     `approve-browse'     open it (or the PR) on GitHub
 ;;   y     `approve-copy'       copy its URL, sha, path:line or name
 ;;   ] u   `approve-next-unviewed-file'      [ u  previous
@@ -492,8 +493,9 @@ The PR buffer is shown where it is already, else in this window."
 
 (defun approve-visit ()
   "Follow the thing at point (flow F03).
-A file goes to its diff, a line of the diff to the whole file
-\(`approve-visit-file'), a pending comment or a review to its thread,
+A file, its heading in the diff or its entry in the file list, opens
+whole (`approve-visit-file'; TAB folds it), as does a line of the
+diff, at that line; a pending comment or a review goes to its thread,
 a link to its target (a pull request in Approve, anything else in the
 browser), a check to its details.  A commit shows in Magit from a
 local clone that has it (`approve-clone-directories'), else on
@@ -513,10 +515,10 @@ or person at point.  Elsewhere, toggle the section."
   "Follow CONTEXT, the thing at point; see `approve-visit'."
   (pcase (plist-get context :kind)
     ('file
-     (let ((section (magit-current-section)))
-       (if (eq (oref section type) 'approve-file-section)
-           (magit-section-toggle section)
-         (approve-nav-goto-file (plist-get context :path)))))
+     (if (memq (when-let* ((section (magit-current-section))) (oref section type))
+               '(approve-file-section approve-file-entry-section))
+         (approve-visit-file)
+       (approve-nav-goto-file (plist-get context :path))))
     ('review-comment
      (if (eq (oref (magit-current-section) type) 'approve-pending-comment-section)
          (approve-nav-goto-thread (or (approve-nav--thread-of-comment

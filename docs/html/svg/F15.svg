@@ -11,9 +11,9 @@
 <!-- u -->
 <g id="F15-node1" class="node user">
 <title>u</title>
-<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M445.78,-901.69C445.78,-901.69 274.12,-901.69 274.12,-901.69 268.12,-901.69 262.12,-895.69 262.12,-889.69 262.12,-889.69 262.12,-875.05 262.12,-875.05 262.12,-869.05 268.12,-863.05 274.12,-863.05 274.12,-863.05 445.78,-863.05 445.78,-863.05 451.78,-863.05 457.78,-869.05 457.78,-875.05 457.78,-875.05 457.78,-889.69 457.78,-889.69 457.78,-895.69 451.78,-901.69 445.78,-901.69"/>
-<text xml:space="preserve" text-anchor="middle" x="359.95" y="-886.92" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">[user] RET on a diff line</text>
-<text xml:space="preserve" text-anchor="middle" x="359.95" y="-871.92" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">(or F on a file, a thread)</text>
+<path fill="#2a283e" stroke="#f6c177" stroke-width="1.4" d="M476.16,-901.69C476.16,-901.69 243.75,-901.69 243.75,-901.69 237.75,-901.69 231.75,-895.69 231.75,-889.69 231.75,-889.69 231.75,-875.05 231.75,-875.05 231.75,-869.05 237.75,-863.05 243.75,-863.05 243.75,-863.05 476.16,-863.05 476.16,-863.05 482.16,-863.05 488.16,-869.05 488.16,-875.05 488.16,-875.05 488.16,-889.69 488.16,-889.69 488.16,-895.69 482.16,-901.69 476.16,-901.69"/>
+<text xml:space="preserve" text-anchor="middle" x="359.95" y="-886.92" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">[user] RET on a diff line or a file</text>
+<text xml:space="preserve" text-anchor="middle" x="359.95" y="-871.92" font-family="JetBrains Mono" font-size="11.00" fill="#f6c177">(or F there, or on a thread)</text>
 </g>
 <!-- side -->
 <g id="F15-node2" class="node dec">

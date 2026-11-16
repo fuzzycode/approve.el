@@ -165,8 +165,8 @@ Notes:
 - The file list gives each file's size: its counts and a diffstat bar
   scaled to the largest file (=approve-diffstat-width=), and its threads on
   the whole file (the diff's "On this file"); its heading sums the
-  unresolved ones.  =RET= jumps to the file's diff (single layout) or opens
-  the diff buffer there (split layout).
+  unresolved ones.  =RET= on a file opens it whole ([[*File view][File view]]), as on its
+  heading in the diff; =j /= and =]u= jump to a file's diff.
 - Diff file headings say which files are viewed, the file list doesn't:
   ✓ viewed (dim), · not viewed, ↻ viewed but changed since (GitHub's
   =DISMISSED=, highlighted); =v= toggles it, and the Diff heading counts
@@ -249,7 +249,9 @@ redraw.
 
 * PR buffer — split layout
 =approve-layout= = =split=.  The overview keeps everything except the =Diff=
-section.  =RET= on a file (or =d=) opens the linked diff buffer at that file.
+section.  A file in the overview opens the linked diff buffer at that file;
+the key is chosen with F18 ([[file:roadmap.org][Phase 7]]), as =RET= opens the file whole
+and =d= edits the description.
 Both buffers share one store; a change in one redraws both.
 
 #+begin_example
@@ -257,7 +259,7 @@ Both buffers share one store; a change in one redraws both.
  ┌──────────────────────────────────────┐     ┌─────────────────────────────────────────┐
  │ #1234 Add retry logic …    ● Open    │     │ #1234 · all changes (main…e5f6a7b)      │
  │ …metadata…                           │     │ 4/12 viewed                             │
- │ ▸ Checks (9)  ◐ 7/9                  │ RET │                                         │
+ │ ▸ Checks (9)  ◐ 7/9                  │  ?  │                                         │
  │ ▸ Commits (4)                        │────▶│ ▾ ✓ ~ lisp/approve-api.el               │
  │ ▸ Conversation (6)                   │     │   ▾ @@ -40,7 +40,12 @@ …              │
  │ ▾ Files changed (12)  +340 −56       │     │      40  40   (let* ((request-id …      │
@@ -657,10 +659,12 @@ status's =targetUrl=); =K= adds its app, times and duration.
 
 * File view
 =RET= on a diff line opens the whole file at that line: at the PR head, or
-at its base for a removed line.  =F= (evil =gf=) on a file opens its head
-(its base when it was deleted) at the first change, and on a thread its
-line.  =b= (evil =gb=) shows the other version, at the same place.  The
-file is fetched through the API and kept for the session ([[file:flows.org::*F15 View the whole file][F15]]).
+at its base for a removed line.  =RET= on a file, its heading in the diff
+or its entry in the file list, opens its head (its base when it was
+deleted) at the first change, as =F= (evil =gf=) does there; =F= on a
+thread opens its line, and =TAB= still folds a file's diff.  =b= (evil
+=gb=) shows the other version, at the same place.  The file is fetched
+through the API and kept for the session ([[file:flows.org::*F15 View the whole file][F15]]).
 
 #+begin_example
  *approve-file: fuzzycode/approve lisp/approve-api.el @ e5f6a7b*

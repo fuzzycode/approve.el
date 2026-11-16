@@ -179,8 +179,9 @@ No network.  This is mostly magit-section plus jumps.
    ├─ find the next work ────▶ ]u next unviewed file · ]t next unresolved thread
    │                            j n next comment new since my last review
    ├─ learn about a thing ───▶ eldoc in the echo area (user, label, sha, check)
-   ├─ follow a thing ────────▶ RET: file → its diff · commit → Magit, from a
-   │                            clone that has it (D37), else GitHub
+   ├─ follow a thing ────────▶ RET: file or diff line → the whole file (F15) ·
+   │                            commit → Magit, from a clone that has it (D37),
+   │                            else GitHub
    │                            issue/PR link → open (PR in Approve) · check → URL
    ├─ see it on GitHub ──────▶ o (thing at point, else the PR)
    └─ copy it ───────────────▶ y (URL, sha, path:line)
@@ -589,7 +590,7 @@ The marks of what is new since your review are Phase 6's; the review range
 
 * F15 View the whole file
 #+begin_example
- [user] RET on a diff line (or F on a file, a thread)
+ [user] RET on a diff line or a file (or F there, or on a thread)
    │
    ▼
  side = LEFT? → base oid (baseRefOid) and old path : head oid (headRefOid) and path

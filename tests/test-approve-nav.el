@@ -133,13 +133,18 @@
         (expect (keymap-lookup approve-pr-mode-map "O") :to-be 'approve-fold-others)))))
 
 (describe "approve-visit"
-  (it "goes from a file in the list to its diff"
+  (it "opens a file whole, from the file list and from its heading in the diff"
     (test-nav--with-medium
+      (spy-on 'approve-file-show)
       (test-nav--goto "internal/parser/lexer.go")
       (approve-visit)
-      (expect (test-nav--section-at-point)
-              :to-equal '(approve-file-section . "internal/parser/lexer.go"))
-      (expect (oref (magit-current-section) hidden) :to-be nil)))
+      (expect 'approve-file-show :to-have-been-called-with
+              "internal/parser/lexer.go" "RIGHT" nil)
+      (approve-nav-goto-file "internal/engine/legacy.go")
+      (approve-visit)
+      ;; A deleted file has only its base.
+      (expect 'approve-file-show :to-have-been-called-with
+              "internal/engine/legacy.go" "LEFT" nil)))
 
   (it "goes from a pending comment to its thread"
     (test-nav--with-medium
