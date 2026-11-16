@@ -119,6 +119,20 @@
       (expect (test-html--face-at text "-\t}") :to-contain 'approve-diff-removed)
       (expect (test-html--face-at text "+\tresult") :to-contain 'approve-diff-added)))
 
+  (it "marks each suggested change with its place among the comment's"
+    (let* ((box (concat "<div class=\"js-suggested-changes-blob\"><table><tr>"
+                        "<td class=\"blob-code blob-code-addition\">%s</td></tr></table></div>"))
+           (text (test-html--render
+                  (concat "<p>One</p>" (format box "first")
+                          "<details><summary>More</summary>" (format box "second")
+                          "</details>"))))
+      (expect (get-text-property (string-search "+first" text) 'approve-thing text)
+              :to-equal '(:kind suggestion :index 0))
+      (expect (get-text-property (string-search "+second" text) 'approve-thing text)
+              :to-equal '(:kind suggestion :index 1))
+      (expect (get-text-property (string-search "One" text) 'approve-thing text)
+              :to-be nil)))
+
   (it "gives links their URL, and mentions, issues and commits what they point to"
     (let ((text (test-html--render
                  (concat "<p><a class=\"user-mention notranslate\" data-hovercard-type=\"user\" href=\"https://github.com/bob\">@bob</a> "

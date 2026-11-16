@@ -33,7 +33,10 @@
 ;; tag handlers of its own:
 ;;
 ;; - code blocks, coloured from GitHub's syntax classes (pl-*);
-;; - suggestions, drawn as a small diff in a box;
+;; - suggestions, drawn as a small diff in a box, each marked with
+;;   its place among the comment's suggestions (`approve-thing'
+;;   (:kind suggestion :index N), from 0), so a command can tell which
+;;   one point is on;
 ;; - tables with box borders, lists, task lists, quotes and alerts;
 ;; - <details>, which become collapsible sections;
 ;; - images, from a cache that the buffer fills (see below);
@@ -180,6 +183,9 @@ made."
 (defvar approve-html--details-count 0
   "Number of <details> rendered so far in the current string.")
 
+(defvar approve-html--suggestion-count 0
+  "Number of suggestions rendered so far in the current string.")
+
 (defconst approve-html--handlers
   '((a . approve-html--tag-a)
     (blockquote . approve-html--tag-blockquote)
@@ -294,7 +300,8 @@ Example: (approve-html-render \"<p>Hello <b>you</b></p>\")"
      ((gethash key approve-html--cache))
      (t
       (let ((text (with-temp-buffer
-                    (let ((approve-html--details-count 0))
+                    (let ((approve-html--details-count 0)
+                          (approve-html--suggestion-count 0))
                       (approve-html--render-dom (approve-html--parse html) width))
                     (approve-html--clean-up)
                     (goto-char (point-max))
@@ -540,9 +547,15 @@ code with its syntax classes (pl-*)."
       text))))
 
 (defun approve-html--tag-suggestion (dom)
-  "Render the suggested change DOM as a small diff in a box."
+  "Render the suggested change DOM as a small diff in a box.
+The box's lines carry `approve-thing' (:kind suggestion :index N):
+it is the Nth suggestion of the HTML, from 0, as the markdown's Nth
+suggestion block is."
   (shr-ensure-paragraph)
   (let* ((border (lambda (text) (approve-face text 'approve-thread-border)))
+         (start (point))
+         (index (prog1 approve-html--suggestion-count
+                  (cl-incf approve-html--suggestion-count)))
          (width (max 20 (- approve-html--width shr-indentation)))
          (title " Suggested change ")
          (rows (dom-by-tag dom 'tr))
@@ -578,7 +591,9 @@ code with its syntax classes (pl-*)."
     (dolist (line lines)
       (approve-html--insert-block line ""))
     (approve-html--insert-block
-     (funcall border (concat "└" (make-string (max 1 (1- width)) ?─))) ""))
+     (funcall border (concat "└" (make-string (max 1 (1- width)) ?─))) "")
+    (put-text-property start (point) 'approve-thing
+                       (list :kind 'suggestion :index index)))
   (shr-ensure-paragraph))
 
 (defun approve-html--tag-div (dom)

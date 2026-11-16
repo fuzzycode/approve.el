@@ -370,7 +370,9 @@ buffer and the file list's =RET= opens it.
 HTML and width, so a redraw only inserts them.  Links carry =approve-url=,
 and mentions, team mentions, issue links and commit links also carry
 =approve-thing= (=(:kind user :login …)=, =(:kind ref :owner :repo :number)=,
-…) for the context and eldoc.  =approve-html-insert= turns each top-level
+…) for the context and eldoc.  A suggested change's box carries
+=(:kind suggestion :index N)=: it is the Nth suggestion of the HTML, from
+0, as the markdown's Nth suggestion block is.  =approve-html-insert= turns each top-level
 =<details>= into an =approve-html-details= section (value: index and
 summary, so it is stable).
 
@@ -403,6 +405,8 @@ then walks up the sections from point to the first one that means something.
 | File heading / file entry  | =file=                          | =:path :viewed=                                  |
 | Thread heading             | =thread=                        | =:thread-id :resolved :can-reply :can-resolve=   |
 | Comment in a thread        | =review-comment=                | =:comment-id :thread-id :can-update :can-delete= |
+| Suggested change in one    | =suggestion=                    | =:index= (its place in the comment, from 0)      |
+|                            |                                 | =:comment-id :thread-id=                         |
 | Conversation comment       | =issue-comment=                 | =:comment-id :can-update :can-delete=            |
 | Review body                | =review=                        | =:review-id :state=                              |
 | Description                | =description=                   | =:can-update=                                    |

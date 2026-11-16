@@ -98,6 +98,15 @@
       (expect (plist-get context :thread-id) :to-equal "PRRT_kwDO85-qIzFQYiTYBM")
       (expect (plist-get context :comment-id) :to-match "\\`PRRC_")))
 
+  (it "is a suggestion in a suggested change, knowing its comment and thread"
+    (let ((context (test-context--at "│ +\tresult = append" 2)))
+      (expect (plist-get context :kind) :to-be 'suggestion)
+      (expect (plist-get context :index) :to-equal 0)
+      (expect (plist-get context :comment-id) :to-match "\\`PRRC_")
+      (expect (plist-get context :thread-id) :to-match "\\`PRRT_"))
+    (expect (plist-get (test-context--at "These three lines can be one call") :kind)
+            :to-be 'review-comment))
+
   (it "is a conversation comment or a review in the conversation"
     (expect (plist-get (test-context--at "Thanks! I'll take a look today.") :kind)
             :to-be 'issue-comment)
