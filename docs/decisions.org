@@ -98,6 +98,175 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   before the browser when none of 37 has it.  Matching remotes would ask
   fewer clones but miss commits of other repositories.
 
+** D45 A branch has the PR; its threads are placed by a diff of the text (SP8)
+- Status :: accepted (2026-11-16, by the author; answers [[file:roadmap.org::*SP8 The clone and its lines][SP8]] and what
+  [[*D36 No clone needed; a local clone adds to it][D36]] left open)
+- Found :: On a clone of the scratch repository with four worktrees, on
+  #15 (=spike/sp8= into =spike/sp8-base=, threads T1 to T7 on
+  =sp8/lines.txt=, T6 made outdated by a later commit) and #16 (the same
+  branch into =main=).  Forks were read on magit/magit, without writing.
+  Times are from the author's machine (Apple M-series, Emacs 31.1, git
+  2.56), with the 37 clones of =~/workspace=:
+  - Clones: =magit-list-repos= lists the 37 in 0.7 ms.  That includes
+    worktrees inside the listed directories, whose =.git= is a file.
+    Their remotes' URLs take 2 ms for all 37, read from each clone's
+    =config= file (a worktree's through its =commondir=).  With a git
+    call for each clone it takes 200 ms (a git process costs about
+    6 ms).  One
+    =git for-each-ref --format='%(upstream) %(push) %(worktreepath)'
+    refs/heads= (7 to 12 ms) gives every branch of a clone, what it
+    tracks and where it pushes, and the worktree that has it checked
+    out, wherever that is.  Magit needs git 2.25, and =worktreepath=
+    came in 2.23.
+  - Remote URLs: 27 of the author's 29 are scp-like
+    (=git@github.com:OWNER/NAME.git=) and 2 are https.  =ssh://=, a user,
+    a port, and no =.git= occur too.  An SSH host alias
+    (=git@github-work:…=) names no GitHub host.  =ssh -G ALIAS= gives
+    its =hostname= in 6 ms.  The author's Emacs has
+    =magit-repository-directories= nil for now (its new configuration
+    hasn't taken Doom's yet), so D37's default finds no clone there.
+  - A branch's pull requests: the head repository's
+    =ref(qualifiedName: "refs/heads/BRANCH")= has
+    =associatedPullRequests=.  It finds every pull request from the
+    branch, in any state, into the repository or into its parent: a
+    branch of Gleek/magit gives magit/magit#5659.  Once the branch is
+    deleted it finds nothing.  =pullRequests(headRefName:)= lists only
+    the pull requests into its repository, from any repository:
+    magit/magit's =patch-1= gives ten from as many forks.  Asked of the
+    head repository and of its parent, it still finds a merged pull
+    request whose branch is gone (#14).  All of it fits in one query:
+    cost 1, about half a second.  =Commit.associatedPullRequests=
+    lists every pull request that contains a commit, not only the ones
+    it heads.
+  - A branch's head on GitHub: =sp8-ahead= tracks =origin/spike/sp8=,
+    and its =@{push}= is empty (=push.default= simple, names that
+    differ).  In a triangular setup =@{upstream}= is the base and
+    =@{push}= the head.
+  - Lines: the file at the pull request's head was diffed against the
+    buffer's text, and every thread landed on its own text, in each
+    state of the clone.  At GitHub's head, every thread is on its own
+    line.  Ahead: a commit not pushed (two lines inserted, T7's line
+    changed) and edits not saved (a line deleted, T4's line edited).
+    T1 and T2 moved, and T4 and T7 were marked as changed.  Behind (at
+    the first head, without the three lines GitHub has at the top):
+    every thread moved up three lines.  Diverged (the second commit
+    made again, differently): every thread placed.  The state of the
+    clone changes only what can be said about it, not the method.
+  - The diff's cost, with three lines edited (the prototype was not
+    compiled; the process is most of it):
+    | File            |   Lines | =call-process-region= | Async, temp files: Emacs busy, hunks |
+    |-----------------+---------+-----------------------+--------------------------------------|
+    | approve-diff.el |     798 | 2.6 ms                | 3.3 ms, 5.8 ms                       |
+    | org.el          |  22 385 | 10.8 ms               | 7.2 ms, 13.3 ms                      |
+    | pydevd_cython.c |  52 134 | 24.6 ms               | 2.3 ms, 14.2 ms                      |
+    | typescript.js   | 200 276 | 75.1 ms               | 6.9 ms, 40.4 ms                      |
+    A change every 50 lines doubles it (183 ms synchronous at 200 000
+    lines).  Sending the buffer to the process through a pipe
+    (=process-send-region=) blocks Emacs for 0.3 s at 22 000 lines and
+    for 3.3 s at 200 000.  =git show OID:PATH=, =git cat-file -e= and
+    =git rev-list --left-right --count= take about 7 ms each.
+  - Outdated threads: GitHub makes a thread outdated only when its
+    lines changed ([[*D41 Suggestions are committed the way GitHub's button does (SP7)][D41]]).  So T6 (=originalLine= 50 at the first head),
+    mapped from that commit's file, lands on the line that replaced it,
+    marked as changed.  In the worktree still at that commit, it lands
+    on its own line.
+  - Opening a file: VC already spends 25 ms on =find-file= in a git
+    repository (0.6 ms without it).  Finding no =.git= above a file
+    takes 0.02 ms.
+- Decision ::
+  - Clones: [[*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]'s =approve-clone-directories= alone, with no new option;
+    a clone elsewhere is an entry =(DIRECTORY . 0)=.  A clone belongs to
+    a pull request when one of its remotes names the base or the head
+    repository by host, owner and name (case ignored, =.git= and
+    slashes dropped), read from its =config= file.  GitHub's hosts are
+    =github.com= and the web host of =approve-api-host=.  Another SSH
+    host is resolved by =ssh -G= once a session, so aliases work.
+  - A pull request's worktree, among those clones: one whose branch
+    pushes to the pull request's head branch in the head repository,
+    else one that tracks it (=for-each-ref=, above).  When several do,
+    the one that pushes there wins; then Approve asks once and
+    remembers for the session.  When none does, Approve says "No clone
+    has BRANCH checked out" and offers the file view ([[file:flows.org::*F15 View the whole file][F15]]).  Checking
+    a branch out stays a Magit command the user runs.
+  - A buffer's clone is its own (its Magit toplevel).  Its branch's head
+    on GitHub is the push branch (=@{push}=), else the upstream, else
+    the same name on the push remote (=%(push:remotename)=).  That
+    remote's URL names the head repository.  A branch on no GitHub
+    remote has no pull request, and costs nothing more.
+  - A branch's pull requests: one query, as found: the head repository's
+    ref's =associatedPullRequests=, and =pullRequests(headRefName:)= on
+    the head repository and its parent, kept when their head repository
+    is the branch's.  It runs once a session for each repository and
+    branch, and again on the user's command.  With several open, the
+    one updated last is shown.  A command picks another, remembered for
+    the session, and the mode line says "1 of 2".
+  - GitHub's lines are those of the file at the pull request's head
+    (=headRefOid=).  The file comes from the clone when it has the
+    commit (=git cat-file=), else from the API (the file view's cache).
+    Approve never fetches into the clone.  The file is diffed against
+    the buffer's text, unsaved edits included, with carriage returns
+    dropped on both sides.  Both are written to temporary files, and
+    =diff-command= runs on them in an asynchronous process.  That
+    happens when the buffer's pull request loads or changes head, and
+    after edits once Emacs is idle (coalesced; an answer for older text
+    is dropped).  Between diffs, the overlays move with the text.
+  - A thread on an unchanged line goes under it.  A thread on a changed
+    line goes under the line now in its place, marked "edited locally".
+    One whose lines were deleted locally goes where they were.
+    Comments go only on lines that map unchanged to a line of the pull
+    request's diff ([[*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).  On other lines, Approve says why: edited
+    locally, or not in the diff.
+  - The clone's state is said, never acted on.  Compared with GitHub's
+    head, the branch can be the same (nothing is said), ahead ("N
+    commits not pushed"), behind ("GitHub has N commits the clone
+    hasn't"), diverged ("the branch and GitHub's differ"), or GitHub's
+    head can be missing from the clone ("fetch to compare").  This
+    takes one =git rev-list --left-right --count HEAD...OID=, when the
+    pull request loads and when =HEAD= moves.
+  - Outdated threads are shown where they were: =originalLine= at their
+    original commit, mapped the same way (that commit's file from the
+    clone or the API).  They go under the line now in their place,
+    folded, in the outdated look, saying so.
+  - Threads on removed lines go between the lines where the pull
+    request removed them.  Its patch maps them onto the head, and the
+    diff maps that onto the buffer.  They sit under the line before,
+    with the file view's mark for removed lines, folded.  Threads on
+    the whole file go at the top of the buffer.
+  - Turning it on: the command =approve-feedback-mode= in a buffer, and
+    =approve-feedback-global-mode=, off by default.  When it is on, a
+    file opened on a branch with an open pull request turns the mode on.
+    The command also takes a closed or merged pull request, after
+    asking ("#14 is merged: show its threads anyway?").  A pull
+    request's store loads in the background, once, shared by its PR
+    buffer and the clone's buffers.
+- Why ::
+  - The remotes tie a clone to GitHub, and reading them from files keeps
+    the search instant over many clones.  Git is asked only in the
+    clones of the repository.  D37's option is one list, already set
+    for Magit; a second list would be a second thing to keep up to
+    date.
+  - A branch has the pull request, not a clone: two worktrees of one
+    clone hold different pull requests.  The ref's
+    =associatedPullRequests= knows a fork's pull requests into its
+    parent without guessing which remote is the parent.  The query by
+    name finds those whose branch is gone.
+  - One method for every state: the diff compares text, so commits not
+    pushed, edits not saved, a rebase and a branch behind GitHub all
+    map the same way, and a thread stays with its code.  The state only
+    changes what is said, and the user decides whether to pull or push.
+    Never fetching keeps D36's promise: the clone changes only by the
+    user's commands.
+  - With temporary files and an asynchronous process, Emacs is busy
+    under 10 ms even on a 200 000-line file, so the marks keep up with
+    typing.  A pipe would block Emacs for seconds.
+  - Outdated threads are what a pull request's author fixes; where they
+    were, they show what was asked next to the fix.  The same goes for
+    removed lines ("why did this go?").
+  - Opt-in, because the global mode queries GitHub and loads pull
+    requests as files open, and that is the user's choice.  Opening a
+    file then costs less than VC already spends: about 14 ms of git for
+    the first file of a clone and branch, nothing after.
+
 * UI
 ** D04 Buffers are magit-section trees built from section hooks
 - Status :: accepted (project.org)

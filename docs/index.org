@@ -124,11 +124,18 @@ task only needs the files it touches.
   comments and reviews others published after it say "new", the
   headings count them, and =j n= / =j N= go from one to the next.  Every
   task of Phase 6 is done; its done-when is for the author to call.
-- Next step: [[file:roadmap.org::*SP8 The clone and its lines][SP8]] (the clone and its lines), then F21 and F22
-  with their mockups: the first task of [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback
-  in your clone).  It came ahead of notifications and the release, now
-  [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], on 2026-11-16 at the author's request: the feature before
-  the documentation and the nice to haves.
+- SP8 is done (2026-11-16, [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]), tried on the scratch repository's #15
+  and #16 from a clone with four worktrees.  A clone is found by its
+  remotes among D37's list, and a branch, not a clone, has the PR (the
+  head repository's ref, forks included).  A =diff= of the file at the
+  PR's head against the buffer's text places the threads, whatever the
+  clone's state, in an asynchronous process.  Outdated threads and those
+  on removed lines show where they were.  The global mode is opt-in.
+- Next step: F21 and F22 with their mockups, the rest of the first task
+  of [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).  It came ahead of
+  notifications and the release, now [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], on 2026-11-16 at the
+  author's request: the feature before the documentation and the nice
+  to haves.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
   phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]], at the author's request: nice to
   have, done once Approve has been used in the wild and there is

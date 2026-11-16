@@ -171,6 +171,17 @@ repository: commands under development, spikes, recording fixtures.
 - #11 and #12 were the D42 experiments ([[file:decisions.org::*D42 Merging as GitHub's merge box does, checked first (F13)][D42]]): pull requests between
   scratch branches, merged.  The scratch script's =merge= group opens
   and merges one more on each run.
+- #15 and #16 hold the SP8 experiments ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]), for Phase 7's work in a
+  clone.  #15 is =spike/sp8= into =spike/sp8-base=, with threads on
+  =sp8/lines.txt=: T1 on a changed line, T2 on two added lines, T3 on a
+  removed line, T4 and T7 on context lines, T5 on the whole file, and
+  T6, outdated by the second commit (three lines inserted at the top,
+  line 50 changed again).  #16 is the same branch into =main=, so the
+  branch has two open pull requests.  To try a clone in each state,
+  give a clone of the repository worktrees: =spike/sp8= itself (at
+  GitHub's head), a branch that tracks =origin/spike/sp8= with a commit
+  not pushed (ahead), one at the first head =8e2ab1e= (behind), and one
+  with the second commit made again differently (diverged).
 - Operations can be tried there by hand with =gh api graphql=
   ([[file:../graphql/README.org][graphql/README.org]]).
 - =dev/scratch.el= is the live check of the writes: it runs every function

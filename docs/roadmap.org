@@ -307,21 +307,28 @@ Mockups: a file's buffer with its threads (written with F21).
       ([[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]).  =approve-clone.el= begins with the clones
       (=approve-clone-directories=, Magit's by default) and the one with
       a commit; =approve.el= puts it on =approve-visit-commit-functions=.
-- [ ] SP8 first.  Then F21 (review feedback in a file you edit) and F22
-      (find a buffer's PR, and a PR's clone) in [[file:flows.org][flows.org]], the mockup of a
-      file's buffer with its threads in [[file:ui.org][ui.org]], and their HTML views.
-- [ ] =approve-clone.el=, grown: a buffer's clone, repository and branch (git
-      through Magit), the PR of a branch (a query by =headRefName=), and a
-      PR's clone among those of =approve-clone-directories=, as SP8
-      decides.  Tests without the network, on a throwaway repository.
+- [ ] SP8 first: done (2026-11-16, [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]).  Then F21 (review feedback in a
+      file you edit) and F22 (find a buffer's PR, and a PR's clone) in
+      [[file:flows.org][flows.org]], the mockup of a file's buffer with its threads in
+      [[file:ui.org][ui.org]], and their HTML views.
+- [ ] =approve-clone.el=, grown, as [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]] decides: a buffer's clone,
+      repository and branch (git through Magit, remotes from the =config=
+      file), the PRs of a branch (the head repository's ref, and by
+      =headRefName=), the one shown and a command to pick another, the
+      clone's state against the PR's head, and a PR's worktree among
+      the clones of =approve-clone-directories=.  Tests without the
+      network, on a throwaway repository.
 - [ ] Line mapping: GitHub's lines at the PR head to the buffer's and
-      back, from a =diff= of the head blob and the buffer's text, redone
-      when the buffer changes (on idle, coalesced).  It knows the lines
-      edited locally and the lines GitHub doesn't have.
+      back, from a =diff= of the head blob and the buffer's text (D45:
+      temporary files, an asynchronous process), redone when the buffer
+      changes (on idle, coalesced).  It knows the lines edited locally
+      and the lines GitHub doesn't have.
 - [ ] =approve-feedback.el=, =approve-feedback-mode= (a minor mode):
       threads under their lines as overlays, with the file view's bubbles
-      and folding, [[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]'s red, and an "edited locally" mark; the PR in
-      the mode line.  One store per PR, shared by its PR buffer and every
+      and folding, [[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]'s red, and an "edited locally" mark; outdated
+      threads where they were and threads on removed lines between
+      lines, folded, and threads on the whole file at the top (D45); the
+      PR in the mode line.  One store per PR, shared by its PR buffer and every
       buffer of the clone, loaded once; [[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]'s notices there too.
 - [ ] Actions in a file's buffer: reply, resolve, edit, delete, and
       comment and suggest on the lines GitHub has ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).  Context at
@@ -334,8 +341,10 @@ Mockups: a file's buffer with its threads (written with F21).
       the local file; from a file's buffer, the PR buffer at that file;
       next and previous unresolved thread across the PR's files, visiting
       them in the clone.
-- [ ] Turning it on: a command, and the option SP8 decides on (the mode
-      on by itself in the buffers of a branch with a PR).
+- [ ] Turning it on: the command =approve-feedback-mode=, which also takes
+      a closed or merged PR after asking, and =approve-feedback-global-mode=
+      (off by default), which turns it on by itself in the buffers of a
+      branch with an open PR (D45).
 - Done when :: on a branch with a PR, with commits not pushed and edits
   not saved, the user reads the threads in the buffers they edit,
   replies, resolves and comments from there, and the browser shows the
@@ -362,6 +371,24 @@ On a clone of the scratch repository, find out and note in
   =originalCommit=), or only listed.
 - Whether the mode turns itself on (a global mode, =find-file-hook=), and
   what that costs in a clone with no PR.
+- Found (2026-11-16) :: on a clone of the scratch repository with four
+  worktrees, #15 and #16, written up as [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]].  A clone is found by its
+  remotes, read from its =config= file (2 ms for 37 clones); one
+  =for-each-ref= gives each branch's upstream, push branch and worktree.
+  A branch, not a clone, has the PR: the head repository's ref's
+  =associatedPullRequests= finds it, a fork's into its parent too, and
+  =headRefName= finds one whose branch is gone, in one query of cost 1.
+  A =diff= of the file at the PR's head against the buffer's text places
+  every thread whether the clone is at GitHub's head, ahead, behind or
+  diverged; the state is only said.  The diff in an asynchronous process,
+  on temporary files, keeps Emacs busy under 10 ms at 200 000 lines
+  (40 ms until the hunks).  Outdated threads, mapped from their
+  original commit, land on the line that replaced them.  A global mode
+  costs about 14 ms of git for the first file of a clone and branch, and
+  one query a branch.  The author chose: D37's list alone, the file view
+  when no clone has the branch, outdated threads and threads on removed
+  lines shown where they were, an opt-in global mode for open PRs, and
+  the newest open PR of a branch, switchable.
 
 * Phase 8 — Notifications, polish, release
 Implements F19.
