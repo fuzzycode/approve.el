@@ -92,6 +92,11 @@ names it in \"REPOSITORY doesn't allow WHAT\".")
   "Return FIELD of the PR's base repository."
   (alist-get field (approve-pr-field 'baseRepository)))
 
+(defun approve-merge--repository-name ()
+  "Return the PR's base repository as OWNER/NAME."
+  (or (approve-merge--repository 'nameWithOwner)
+      (format "%s/%s" (approve-model-meta :owner) (approve-model-meta :repo))))
+
 (defun approve-merge-allowed-p (method)
   "Return non-nil if the PR's repository allows merging by METHOD."
   (approve-merge--repository (nth 1 (assoc method approve-merge-methods))))
@@ -136,10 +141,10 @@ which key helps when one does."
         (base (approve-merge--base)))
     (or (approve-merge--state-why-not)
         (and (not (approve-merge-allowed-p method))
-             (format "%s doesn't allow %s" (approve-merge--repository 'nameWithOwner)
+             (format "%s doesn't allow %s" (approve-merge--repository-name)
                      (nth 3 (assoc method approve-merge-methods))))
         (and (not (approve-merge--can-write-p))
-             (format "You can't merge into %s" (approve-merge--repository 'nameWithOwner)))
+             (format "You can't merge into %s" (approve-merge--repository-name)))
         (and (approve-pr-field 'isDraft)
              (format "%s is a draft; D marks it ready for review" number))
         (and (approve-pr-field 'isMergeQueueEnabled)
@@ -423,7 +428,7 @@ With -d in the merge menu, the branch is deleted after."
                          (format "%s can be merged now, or you may not enable auto-merge"
                                  (approve-merge--number))
                        (format "%s doesn't allow auto-merge"
-                               (approve-merge--repository 'nameWithOwner)))))
+                               (approve-merge--repository-name)))))
   (or (seq-filter #'approve-merge-allowed-p (mapcar #'car approve-merge-methods))
       (user-error "%s" "The repository allows no way to merge")))
 
@@ -509,7 +514,7 @@ menu disables it."
       (user-error "%s has no merge queue" (approve-merge--base)))
     (unless (approve-merge--can-write-p)
       (user-error "%s" (format "You can't merge into %s"
-                               (approve-merge--repository 'nameWithOwner))))
+                               (approve-merge--repository-name))))
     (when (and (approve-pr-field 'isDraft) (not (approve-pr-field 'isInMergeQueue)))
       (user-error "%s is a draft; D marks it ready for review" (approve-merge--number)))))
 
