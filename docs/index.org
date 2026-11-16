@@ -134,8 +134,9 @@ task only needs the files it touches.
 - F21 and F22 and the mockup of a file's buffer in a clone are written
   (2026-11-16; =html/clone.html=), with [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]] proposed: the feedback mode
   binds no keys of its own (a keymap to bind, and evil's =]t= =[t=), its
-  threads start folded, and it speaks in the mode line.  The author
-  chose those three; the rest waits for the review of the mockups.
+  threads start folded with their bubbles in the right margin, and it
+  speaks in the mode line.  The author chose those; the rest waits for
+  the review of the mockups.
 - Next step: the author's review of them, which finishes the first task
   of [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).  It came ahead of
   notifications and the release, now [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], on 2026-11-16 at the

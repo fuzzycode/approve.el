@@ -802,18 +802,18 @@ in =approve-clone.el=.
         │
         ▼
  ┌──────────────────────────────────────────────────────────────┐
- │ threads as overlays, each line's folded to its bubble:           │
- │   a line as on GitHub        under it                            │
- │   a line changed here        under the line in its place, "edited"│
- │   lines deleted here         where they were, "edited"           │
- │   outdated                   where it was (its original commit)  │
- │   on removed lines           between lines, "removed lines"      │
- │   on the whole file          above the first line                │
- │ the lighter: " #15", unresolved threads, the clone's state       │
- └────────────────────────────────────────────────────────────────┘
+ │ threads as overlays, folded; a bubble in the right margin:   │
+ │   a line as on GitHub      under it                          │
+ │   a line changed here      under the line in its place, gold │
+ │   lines deleted here       where they were, gold             │
+ │   outdated                 where it was (its commit), dim    │
+ │   on removed lines         between lines, ◂ for a bubble     │
+ │   on the whole file        above the first line              │
+ │ the lighter: " #15", unresolved threads, the clone's state   │
+ └──────────────────────────────────────────────────────────────┘
    │
    ├─ [user] edits ──▶ overlays move with the text ──▶ Emacs idle (coalesced)
-   │                  ──▶ diff again ──▶ "edited" marks and places updated
+   │                  ──▶ diff again ──▶ edited marks and places updated
    │                  (an answer for older text is dropped)
    │
    ├─ HEAD moves (a commit, a checkout, a pull) ──▶ the branch's PR again (F22)
@@ -847,9 +847,10 @@ in =approve-clone.el=.
   until the user binds it ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]); =M-x approve-feedback-dispatch= and
   mouse-1 on the lighter open the dispatch either way.  Evil's =]t= and
   =[t= go to the next and previous thread, as in Approve's buffers.
-- Every thread starts folded to the bubble at the end of its line ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]),
-  so code keeps its shape while it is edited.  Point never enters a thread:
-  the commands act on the threads of the line at point.
+- Every thread starts folded, its line's bubble in the right margin
+  ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]), so code keeps its shape while it is edited and nothing
+  sits in its way.  Point never enters a thread: the commands act on the
+  threads of the line at point.
 - One store per PR, shared by its PR buffer, its file views and the clone's
   buffers ([[file:decisions.org::*D10 Normalized, buffer-local store][D10]]).  A write anywhere redraws them all; killing the last
   of them drops it.

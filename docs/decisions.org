@@ -585,8 +585,9 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 
 ** D46 The feedback mode: no keys of its own, threads folded, the mode line speaks
 - Status :: proposed (2026-11-16).  The author chose: no default prefix,
-  every thread folded, the mode line only.  The rest is in the mockups
-  (ui.org, html/clone.html) and waits for their review.
+  every thread folded, the mode line only, and the threads' marks in the
+  right margin.  The rest is in the mockups (ui.org, html/clone.html) and
+  waits for their review.
 - Decision ::
   - The feedback mode ([[file:flows.org::*F21 Review feedback in a file you edit][F21]]) binds no key in the user's buffers, except
     evil's =]t= and =[t= (next and previous thread, as in Approve's
@@ -596,18 +597,22 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     =M-x= or mouse-1 on the lighter opens it.  The map uses Approve's
     letters: =TAB T n p c s r R e k + RET P g o S X ?=.  Thread boxes in
     a file's buffer name no keys; the dispatch does.
-  - Every thread starts folded to the bubble at the end of its line.  The
-    bubble counts the line's threads and says what is special about
-    them: "edited" (the line changed here), "outdated", "removed lines".
-    It is red while a thread asks for changes ([[*D34 A thread mark is red only while it asks for changes][D34]]) and dim when all
-    are resolved.  =TAB= in the map, or mouse-1 on the bubble, unfolds a
-    line, and =T= unfolds all; =n=, =p=, =]t= and =[t= unfold the thread
-    they reach.  Unfolded, an edited line's threads start with GitHub's
-    text of the line, an outdated thread with its line at its own
-    commit, and a thread on removed lines with those lines.
-  - The mark for removed lines is in the right fringe (the left one is
-    diff-hl's, Flymake's and the like), and the bubble says it too.  In a
-    terminal only the bubble does.
+  - Every thread starts folded.  A line with threads has its bubble in
+    the right margin, out of the text: the speech bubble and the count,
+    or a triangle =◂= for threads on lines the PR removed after it.  The
+    margin is three columns (=right-margin-width=, buffer-local), there
+    only while the mode is on and the file has threads; it works the
+    same in a terminal.  Its colour says what matters most: red while a
+    thread asks for changes ([[*D34 A thread mark is red only while it asks for changes][D34]]), then gold when the line was edited
+    here, the default colour, and dim when all are resolved or outdated.
+    Its tooltip says it in words ("2 threads · edited here: GitHub has
+    …").  =TAB= in the map, or mouse-1 on the bubble, unfolds a line,
+    and =T= unfolds all; =n=, =p=, =]t= and =[t= unfold the thread they
+    reach.  Unfolded, an edited line's threads start with GitHub's text
+    of the line, an outdated thread with its line at its own commit, and
+    a thread on removed lines with those lines.
+  - Nothing goes in the fringes, which are diff-hl's, Flymake's and the
+    like, nor in the text of the lines.
   - Approve speaks in the mode line: a lighter with the PR's icon and
     number.  It adds the file's unresolved threads, =1/2= when the branch
     has more open PRs, and =↑N= / =↓N= for commits not pushed and not
@@ -626,8 +631,12 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     Projectile and others do it, and the dispatch makes every command
     reachable without a binding.  Going to the next thread is the first
     thing wanted, and evil's =]= keys already mean "the next thing".
-  - Folded threads keep the code's shape while it is edited.  The bubbles
-    say where feedback is, and the lighter how much.
+  - Folded threads keep the code's shape while it is edited, and bubbles
+    in the margin stay out of the way of the code: a long line never
+    meets them, and they need no words.  The margin, unlike a fringe,
+    has room for a count, takes a tooltip and a click, and is there in
+    a terminal.  The bubbles say where feedback is, and the lighter how
+    much.
   - The header line belongs to the buffer's other modes (breadcrumbs,
     LSP), and the mode line has room for a lighter.
   - Vim's =gF= opens a file at a line, and =f= next to =F= reads as "your

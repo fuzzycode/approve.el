@@ -43,8 +43,8 @@ mode-line lighter, and never changes the text.
 <section class="shot" id="buffer">
 <h2>A file's buffer, as it opens <span class="ref">approve-feedback-mode · F21 · D45 · D46</span></h2>
 <p>Pull request #1234 of fuzzycode/approve, from <code>feature/retry</code>, with one commit not pushed and line 41
-edited since. Every thread starts folded to the bubble at the end of its line, so code keeps its shape while it is
-edited. The bubble counts the line's threads and says what is special about them.</p>
+edited since. Every thread starts folded, so code keeps its shape while it is edited. A line with threads has its
+bubble in the right margin, out of the text: hover over one for its tooltip.</p>
 <div class="emacs">
 <div class="tb">approve-api.el — ~/workspace/approve</div>
 <div class="win">
@@ -54,7 +54,7 @@ edited. The bubble counts the line's threads and says what is special about them
 <p>  <span class="ln">38</span>   <span class="st">"Send QUERY with VARIABLES; call CALLBACK with the data."</span></p>
 <p>  <span class="ln">39</span>   (<span class="kw">let*</span> ((request-id (approve-api--generate-request-id))</p>
 <div class="s closed">
-<p class="hd">  <span class="ln">40</span>          (timeout approve-api-timeout)                                        <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<p class="hd"><span class="mg bubble" title="1 thread · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">40</span>          (timeout approve-api-timeout)</p>
 <div class="sb">
 <p>          <span class="d">╭─</span> <span class="u">@dave</span> <span class="d">· 1 day ago ─────────────────────────────────────────────</span></p>
 <p>          <span class="d">│</span> Should the timeout be per request too?</p>
@@ -62,7 +62,7 @@ edited. The bubble counts the line's threads and says what is special about them
 </div>
 </div>
 <div class="s closed">
-<p class="hd cur">  <span class="ln">41</span>          (retries (approve-api--retries)))                             <span class="wa">edited</span> <span class="er"><i data-i="comment">💬</i> 2</span></p>
+<p class="hd cur"><span class="mg wa" title="1 thread · edited here: GitHub has  (retries approve-api-retries)) · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">41</span>          (retries (approve-api--retries)))</p>
 <div class="sb">
 <p>          <span class="d">┊ on GitHub:</span>   <span class="er">(retries approve-api-retries))</span></p>
 <p>          <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────────</span></p>
@@ -71,13 +71,10 @@ edited. The bubble counts the line's threads and says what is special about them
 <p>          <span class="d">│</span> <span class="u">@fuzzycode</span> <span class="d">· yesterday</span></p>
 <p>          <span class="d">│</span> Yes: <span class="code">approve-api--retries</span> reads the option now.</p>
 <p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
-<p>          <span class="d">╭─</span> <span class="u">@carol</span> <span class="d">· 5 hours ago ──────────────────────────────────────────</span></p>
-<p>          <span class="d">│</span> Cap it: three retries at most.</p>
-<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
 </div>
 </div>
 <div class="s closed">
-<p class="hd">  <span class="ln">42</span>     (<span class="kw">when</span> progress-message                                           <span class="d">outdated</span> <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<p class="hd"><span class="mg d" title="1 outdated thread, shown where it was at 3f2a1b9 · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">42</span>     (<span class="kw">when</span> progress-message</p>
 <div class="sb">
 <p>          <span class="d">┊ at 3f2a1b9:</span>  <span class="d">(when (and progress-message (not quiet))</span></p>
 <p>          <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 4 days ago · outdated ──────────────────────────────────</span></p>
@@ -87,7 +84,7 @@ edited. The bubble counts the line's threads and says what is special about them
 </div>
 <p>  <span class="ln">43</span>       (make-progress-reporter progress-message))</p>
 <div class="s closed">
-<p class="hd">  <span class="ln">44</span>     <span class="cm">;; Remember the request so it can be cancelled.</span>             <span class="d">removed lines</span> <span class="bubble"><i data-i="comment">💬</i> 1</span><span class="fr-del" style="float: right">◂</span></p>
+<p class="hd"><span class="mg bubble" title="1 thread on lines the pull request removed after this one · mouse-1: unfold">◂1</span>  <span class="ln">44</span>     <span class="cm">;; Remember the request so it can be cancelled.</span></p>
 <div class="sb">
 <p>          <span class="d">┊ removed:</span>     <span class="er">(setq request (approve-api--make-request query))</span></p>
 <p>          <span class="d">╭─</span> <span class="u">@alice</span> <span class="d">· 2 days ago ───────────────────────────────────────────</span></p>
@@ -95,10 +92,17 @@ edited. The bubble counts the line's threads and says what is special about them
 <p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
 </div>
 </div>
-<p>  <span class="ln">45</span>     (puthash request-id (list <span class="vr">:timer</span> timer <span class="vr">:buffer</span> buffer)</p>
+<div class="s closed">
+<p class="hd"><span class="mg er" title="1 thread · @carol requested changes · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">45</span>     (puthash request-id (list <span class="vr">:timer</span> timer <span class="vr">:buffer</span> buffer)</p>
+<div class="sb">
+<p>          <span class="d">╭─</span> <span class="u">@carol</span> <span class="d">· 5 hours ago ──────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> Cap the table: it grows with every request.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+</div>
+</div>
 <p>  <span class="ln">46</span>              approve-api--pending-requests)</p>
 <div class="s closed">
-<p class="hd">  <span class="ln">47</span>     (<span class="fn">apply</span> #'ghub-graphql query variables <span class="st">"…"</span>)))                              <span class="d"><i data-i="comment">💬</i> 1</span></p>
+<p class="hd"><span class="mg d" title="1 resolved thread · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">47</span>     (<span class="fn">apply</span> #'ghub-graphql query variables <span class="st">"…"</span>)))</p>
 <div class="sb">
 <p>          <span class="d">╭─ @dave · 3 days ago · resolved by @fuzzycode ───────────────────</span></p>
 <p>          <span class="d">│ Pass the host too.</span></p>
@@ -106,18 +110,20 @@ edited. The bubble counts the line's threads and says what is special about them
 </div>
 </div>
 </div>
-<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>4 <span class="wa">↑1</span></div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>5 <span class="wa">↑1</span></div>
 </div>
 <div class="echo"></div>
 </div>
 <ul>
-  <li>The bubble is red while a thread asks for changes (D34: @carol's came with a review that requested changes),
-  and dim when all are resolved (line 47). <span class="wa">edited</span>: the line changed here since GitHub's head;
-  <span class="d">outdated</span>: shown where it was, at its own commit; <span class="d">removed lines</span>: on lines the
-  PR removed, which were after this one.</li>
-  <li>Removed lines have the file view's triangle <span class="fr-del">◂</span> in the <em>right</em> fringe: the left
-  one is diff-hl's, Flymake's and the like. In a terminal only the bubble says it. Nothing else marks the PR's changes:
-  the buffer is for editing, and diff-hl or Magit show what changed.</li>
+  <li>The margin is three columns (<code>right-margin-width</code>, buffer-local), there only while the mode is on and
+  the file has threads, the same in a terminal. A bubble counts its line's threads; <code>◂</code> stands for threads on
+  lines the PR removed after this one (line 44).</li>
+  <li>Its colour says what matters most there: <span class="er">red</span> while a thread asks for changes (D34; line 45,
+  @carol's), then <span class="wa">gold</span> when the line was edited here since GitHub's head (line 41), the default
+  colour, and <span class="d">dim</span> when all are resolved (47) or outdated (42). The tooltip says it in words, and
+  mouse-1 unfolds the line.</li>
+  <li>Nothing goes in the fringes, which are diff-hl's, Flymake's and the like, nor in the lines' text. Nothing marks
+  the PR's changes either: the buffer is for editing, and diff-hl or Magit show what changed.</li>
   <li>The boxes are the file view's, and name no keys: the dispatch does. Point never enters them; the commands act on
   the threads of the line at point, and ask which one when there are several.</li>
 </ul>
@@ -131,8 +137,8 @@ commit; one on removed lines with those lines.</p>
 <div class="emacs">
 <div class="win">
 <div class="buf">
-<p>  <span class="ln">40</span>          (timeout approve-api-timeout)                                        <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
-<p class="cur">  <span class="ln">41</span>          (retries (approve-api--retries)))                             <span class="wa">edited</span> <span class="er"><i data-i="comment">💬</i> 2</span></p>
+<p><span class="mg bubble" title="1 thread · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">40</span>          (timeout approve-api-timeout)</p>
+<p class="cur"><span class="mg wa" title="1 thread · edited here: GitHub has  (retries approve-api-retries)) · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">41</span>          (retries (approve-api--retries)))</p>
 <p>          <span class="d">┊ on GitHub:</span>   <span class="er">(retries approve-api-retries))</span></p>
 <p>          <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ─────────────────────────────────────────────</span></p>
 <p>          <span class="d">│</span> Should this be configurable per call?</p>
@@ -140,12 +146,9 @@ commit; one on removed lines with those lines.</p>
 <p>          <span class="d">│</span> <span class="u">@fuzzycode</span> <span class="d">· yesterday</span></p>
 <p>          <span class="d">│</span> Yes: <span class="code">approve-api--retries</span> reads the option now.</p>
 <p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
-<p>          <span class="d">╭─</span> <span class="u">@carol</span> <span class="d">· 5 hours ago ──────────────────────────────────────────</span></p>
-<p>          <span class="d">│</span> Cap it: three retries at most.</p>
-<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
-<p>  <span class="ln">42</span>     (<span class="kw">when</span> progress-message                                           <span class="d">outdated</span> <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<p><span class="mg d" title="1 outdated thread, shown where it was at 3f2a1b9 · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">42</span>     (<span class="kw">when</span> progress-message</p>
 </div>
-<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>4 <span class="wa">↑1</span></div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>5 <span class="wa">↑1</span></div>
 </div>
 <div class="echo"></div>
 </div>
@@ -164,7 +167,7 @@ commit; one on removed lines with those lines.</p>
 <div class="win">
 <div class="buf">
 <div class="s closed">
-<p class="hd">     <span class="d">On this file</span>                                                                  <span class="bubble"><i data-i="comment">💬</i> 1</span></p>
+<p class="hd"><span class="mg bubble" title="1 thread on the whole file · mouse-1: unfold"><i data-i="comment">💬</i>1</span>     <span class="d">On this file</span></p>
 <div class="sb">
 <p>          <span class="d">╭─</span> <span class="u">@carol</span> <span class="d">· 3 days ago ───────────────────────────────────────────</span></p>
 <p>          <span class="d">│</span> Please add tests for the retry path.</p>
@@ -220,9 +223,9 @@ echo area.</p>
 <div class="win stack">
 <div class="win">
 <div class="buf short">
-<p class="cur">  <span class="ln">41</span>          (retries (approve-api--retries)))                             <span class="wa">edited</span> <span class="er"><i data-i="comment">💬</i> 2</span></p>
+<p class="cur"><span class="mg wa" title="1 thread · edited here: GitHub has  (retries approve-api-retries)) · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">41</span>          (retries (approve-api--retries)))</p>
 </div>
-<div class="ml off"> <span class="b">approve-api.el</span>   42%  L41  ELisp/l  #1234 <i data-i="comment">💬</i>4 ↑1</div>
+<div class="ml off"> <span class="b">approve-api.el</span>   42%  L41  ELisp/l  #1234 <i data-i="comment">💬</i>5 ↑1</div>
 </div>
 <div class="tr">
 <p><span class="kh">#1234 Add retry logic to the GraphQL client</span> <span class="d">· 1/2 ·</span> <span class="wa">↑1</span></p>

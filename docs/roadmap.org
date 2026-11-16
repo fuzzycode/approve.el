@@ -312,8 +312,8 @@ Mockups: a file's buffer with its threads (written with F21).
       [[file:flows.org][flows.org]], the mockup of a file's buffer with its threads in
       [[file:ui.org][ui.org]], and their HTML views.  Written (2026-11-16): [[file:flows.org::*F21 Review feedback in a file you edit][F21]], [[file:flows.org::*F22 Find a buffer's PR, and a PR's clone][F22]],
       [[file:ui.org::*A file's buffer in your clone (feedback mode)][the mockup]] and =html/clone.html=, with [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]] (proposed: no keys of its
-      own, threads folded, the mode line); ticked once the author has
-      reviewed them.
+      own, threads folded with their bubbles in the right margin, the
+      mode line); ticked once the author has reviewed them.
 - [ ] =approve-clone.el=, grown, as [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]] decides: a buffer's clone,
       repository and branch (git through Magit, remotes from the =config=
       file), the PRs of a branch (the head repository's ref, and by

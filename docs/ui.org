@@ -747,42 +747,49 @@ lighter and never changes its text.  Here the PR is #1234 of
 fuzzycode/approve, from =feature/retry=, with one commit not pushed and
 line 41 edited since.
 
-As it opens, every thread folded to its line's bubble:
+As it opens, every thread folded; a line with threads has its bubble in
+the right margin, out of the text:
 #+begin_example
    36 (cl-defun approve-api-graphql (query variables
-   37                                &key callback error-callback)
+   37                               &key callback error-callback)
    38   "Send QUERY with VARIABLES; call CALLBACK with the data."
    39   (let* ((request-id (approve-api--generate-request-id))
-   40          (timeout approve-api-timeout)                                       💬 1
-   41          (retries (approve-api--retries)))                            edited 💬 2
-   42     (when progress-message                                          outdated 💬 1
+   40          (timeout approve-api-timeout)                                                💬1
+   41          (retries (approve-api--retries)))                                            💬1
+   42     (when progress-message                                                            💬1
    43       (make-progress-reporter progress-message))
-   44     ;; Remember the request so it can be cancelled.            removed lines 💬 1  ◂
-   45     (puthash request-id (list :timer timer :buffer buffer)
+   44     ;; Remember the request so it can be cancelled.                                   ◂1
+   45     (puthash request-id (list :timer timer :buffer buffer)                            💬1
    46              approve-api--pending-requests)
-   47     (apply #'ghub-graphql query variables "…")))                             💬 1
- <N>  approve-api.el   42%  L41  (ELisp/l  #1234 💬4 ↑1)
+   47     (apply #'ghub-graphql query variables "…")))                                      💬1
+ <N>  approve-api.el   42%  L41  (ELisp/l  #1234 💬5 ↑1)
 #+end_example
 
-- The bubble at the end of a line counts its threads, as in the diff and
-  the file view.  It says what is special about them: =edited= (the line
-  changed here since GitHub's head), =outdated= (shown where it was),
-  =removed lines= (on lines the PR removed, which were after this one).
-  It is red while a thread asks for changes ([[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]) and dim when all
-  are resolved (line 47).
-- Lines the PR removed have the file view's triangle =◂= in the right
-  fringe; the left one is left to diff-hl, Flymake and the like.  In a
-  terminal only the bubble says it.
-- Nothing else marks the PR's changes: the buffer is for editing, and
-  diff-hl or Magit show what changed.
+- The margin is three columns (=right-margin-width=, buffer-local), there
+  only while the mode is on and the file has threads, the same in a
+  terminal.  A bubble counts its line's threads, as in the diff and the
+  file view; =◂= stands for threads on lines the PR removed after this
+  one (line 44).
+- Its colour says what matters most there: red while a thread asks for
+  changes ([[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]; line 45, @carol's), then gold when the line was
+  edited here since GitHub's head (line 41), the default colour, and dim
+  when all are resolved (47) or outdated (42).
+- Its tooltip says it in words, and mouse-1 on it unfolds the line:
+  #+begin_example
+   1 thread · edited here: GitHub has  (retries approve-api-retries))
+   mouse-1: unfold
+  #+end_example
+- Nothing goes in the fringes, which are diff-hl's, Flymake's and the
+  like, nor in the lines' text.  Nothing marks the PR's changes either:
+  the buffer is for editing, and diff-hl or Magit show what changed.
 
 =TAB= in the map, or mouse-1 on a bubble, unfolds a line's threads.  An
 edited line's start with GitHub's text of the line, an outdated thread
 with its line at its own commit (=┊ at 3f2a1b9:=), and a thread on removed
 lines with those lines (=┊ removed:=):
 #+begin_example
-   40          (timeout approve-api-timeout)                                       💬 1
-   41          (retries (approve-api--retries)))                            edited 💬 2
+   40          (timeout approve-api-timeout)                                                💬1
+   41          (retries (approve-api--retries)))                                            💬1
           ┊ on GitHub:   (retries approve-api-retries))
           ╭─ @bob · 2 days ago ─────────────────────────────────────────────
           │ Should this be configurable per call?
@@ -790,24 +797,20 @@ lines with those lines (=┊ removed:=):
           │ @fuzzycode · yesterday
           │ Yes: approve-api--retries reads the option now.
           ╰─────────────────────────────────────────────────────────────────
-          ╭─ @carol · 5 hours ago ──────────────────────────────────────────
-          │ Cap it: three retries at most.
-          ╰─────────────────────────────────────────────────────────────────
-   42     (when progress-message                                          outdated 💬 1
+   42     (when progress-message                                                            💬1
 #+end_example
 
 - The boxes are the file view's, drawn the same way, and name no keys:
-  the dispatch does.  The bubble of line 41 is red: @carol's thread came
-  with a review that requested changes.  Point never enters the boxes;
-  the commands act on the threads of the line at point, and ask which
-  one when there are several.
+  the dispatch does.  Point never enters the boxes; the commands act on
+  the threads of the line at point, and ask which one when there are
+  several.
 - =T= in the map unfolds or folds every thread.  =n= / =p= in the map (evil
   =]t= / =[t=) go to the next or previous unresolved thread and unfold
   it; past the last one of the file, the next of the PR's files opens in
   the clone.
 - Threads on the whole file sit above the first line:
   #+begin_example
-      On this file                                                               💬 1
+        On this file                                                                          💬1
     1 ;;; approve-api.el --- Talk to GitHub's API  -*- lexical-binding: t; -*-
   #+end_example
 
@@ -1095,7 +1098,7 @@ dispatch without a binding.  The map's keys are Approve's letters:
 |--------------------------------------------+-------------+-------------------------------|
 | Dispatch                                   | =?=         | any                           |
 | Fold / unfold the line's threads           | =TAB=       | a line with threads           |
-| (also mouse-1 on its bubble)               |             |                               |
+| (also mouse-1 on its bubble in the margin) |             |                               |
 | Fold / unfold every thread                 | =T=         | any                           |
 | Next / previous unresolved thread          | =n= =p=     | any (on to the PR's files)    |
 | (evil normal state: also =]t= =[t=)        |             |                               |

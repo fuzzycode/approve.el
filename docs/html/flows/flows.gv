@@ -469,7 +469,7 @@ has    [label="the clone has\nGitHub's head commit?" @dec];
 git    [label="git cat-file OID:PATH"];
 blob   [label="the file through the API\n(the file view's cache)" @api];
 run    [label="diff it against the buffer's text\nasynchronous, temporary files (D45)"];
-show   [label="threads as overlays, folded to their bubble (D46):\nunchanged line: under it · changed here: under the line\nin its place, \"edited\" · deleted here: where it was\noutdated: where it was · removed lines: between lines\nwhole file: above the first line\nlighter: \" #15\", unresolved threads, the clone's state" @ok];
+show   [label="threads as overlays, folded; a bubble in the right margin (D46):\nunchanged line: under it · changed here: under the line\nin its place, gold · deleted here: where it was, gold\noutdated: where it was, dim · removed lines: between lines, ◂\nwhole file: above the first line\nlighter: \" #15\", unresolved threads, the clone's state" @ok];
 open -> loaded [@yes]; ask -> loaded [@yes];
 changes [label="the PR changes this\nfile, or threads on it?" @dec];
 alone  [label="the lighter alone" @note];

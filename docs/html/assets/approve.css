@@ -180,6 +180,7 @@ section.shot code, .lead code, .card code {
 .fh { color: var(--fg); font-weight: 700; }           /* magit-diff-file-heading */
 .d { color: var(--shadow); }                          /* shadow / approve-dim */
 .bubble { color: var(--fg); }                         /* a bubble: the line's background only */
+.mg { float: right; width: 3ch; cursor: default; }    /* the right margin (right-margin-width 3) */
 .m { color: var(--muted); }                           /* comments, hashes, dates */
 .u { color: var(--gold); }                            /* magit-log-author */
 .ok { color: var(--foam); }                           /* success */
