@@ -296,7 +296,6 @@ Mockups: file view.
 Implements F19.
 - [ ] =approve-notifications.el= and the filter transient.
 - [ ] Dashboard unread marks ([[file:decisions.org::*Open questions][Q6]]).
-- [ ] =approve-doctor=.
 - [ ] Performance pass on the large fixture and on real huge PRs.
 - [ ] User manual ([[file:decisions.org::*Open questions][Q5]]), README with screenshots, customization docs.
 - [ ] MELPA recipe and release.
@@ -305,6 +304,9 @@ Implements F19.
 - Moved (2026-11-16) :: the split layout and =L= (F18) went to
   [[*Phase 11 — The split layout][Phase 11]], at the author's request: nice to have, done once
   Approve has been used in the wild and there is feedback.
+- Moved (2026-11-16) :: =approve-doctor= went to
+  [[*Phase 12 — The doctor][Phase 12]], at the author's request: once Approve is feature
+  complete and there is feedback, it is clear whether a doctor is needed.
 
 * Phase 8 — Review feedback in your clone
 Extras for a local clone ([[file:decisions.org::*D36 No clone needed; a local clone adds to it][D36]]): the PR's threads in the buffers of the
@@ -427,6 +429,24 @@ Mockups: PR buffer — split layout.
       With Phase 10's review range, the diff buffer's heading names it.
 - Done when :: =L= moves any PR's diff to its own buffer and back, point
   on the same line, and every command and jump works from either buffer.
+
+* Phase 12 — The doctor
+=approve-doctor=: one command that checks the setup and says what to fix
+([[file:architecture.org::*Errors][architecture.org]]): the token ghub finds and the user GitHub sees, its
+kind and scopes and the features they allow, the host, the rate limits,
+Emacs (libxml2, images) and the versions of the packages.  Moved from
+Phase 7 (2026-11-16), at the author's request: it waits until Approve is
+feature complete and has been used in the wild, so the feedback says
+whether a doctor is needed at all, and what it should check.  Until then,
+each error says what went wrong where it shows ([[file:architecture.org::*Errors][architecture.org]]), and
+the README says how to set a token.
+- [ ] Decide from the feedback whether it is needed.  If it is: what it
+      checks, how it reports (a buffer of results, each failure with what to
+      do; a copy for bug reports, the token left out), and which requests
+      it makes; a decision, and a mockup in ui.org and its HTML view.
+- [ ] =approve-doctor= and its entry in the dispatch (=!=).
+- Done when :: a user whose setup fails finds out why, and what to do,
+  with one command.
 
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.

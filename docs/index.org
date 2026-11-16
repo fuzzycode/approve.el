@@ -130,7 +130,9 @@ task only needs the files it touches.
   phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]] (2026-11-16), at the author's request: nice to
   have, done once Approve has been used in the wild and there is
   feedback.  Its exploration, mockups and open questions are in
-  [[file:html/split.html][html/split.html]], a draft.
+  [[file:html/split.html][html/split.html]], a draft.  =approve-doctor= moved after it, to
+  [[file:roadmap.org::*Phase 12 — The doctor][Phase 12]] (2026-11-16): once Approve is feature complete and
+  there is feedback, it is clear whether a doctor is needed.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

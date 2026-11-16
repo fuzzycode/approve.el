@@ -627,7 +627,8 @@ supplies its own parts (the ✱ of F00) and nothing else:
   query finds no usable token, the PR buffer shows that one error instead
   of each section repeating it (=approve-pr--note-fatal=).  A token error
   replaces another, as it is the cause.
-- =approve-doctor= checks token, scopes, host, rate limit, and versions.
+- =approve-doctor= would check token, scopes, host, rate limit, and
+  versions, if the feedback says one is needed ([[file:roadmap.org::*Phase 12 — The doctor][Phase 12]]).
 - The log redacts =Authorization= headers and tokens.
 
 * Speed
