@@ -171,8 +171,9 @@ The store from approve-v2 (D10), with a few additions.
   list when no paging info was asked for.
 - Selectors are the only way renderers read data, e.g.
   =(approve-pr-threads-for-file PATH)=, =(approve-pr-pending-review)=,
-  =(approve-pr-files)=, =(approve-pr-viewer-can 'update)=.  Selectors hide the
-  store layout so it can change.
+  =(approve-pr-files)=, =(approve-pr-viewer-can 'update)=,
+  =(approve-pr-new-p NODE)= (new since the viewer's last review, D44).
+  Selectors hide the store layout so it can change.
 - List edits for creations and deletions:
   =(approve-model-append-ref OWNER-REF FIELD REF)=,
   =(approve-model-remove-ref OWNER-REF FIELD REF)=, and

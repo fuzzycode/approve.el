@@ -37,7 +37,10 @@
 ;; node id of its (first) timeline item.  Runs of small things are
 ;; folded into one item: consecutive commits into "pushed N commits",
 ;; consecutive replies of one person into one "reviewed".  The event
-;; types shown are `approve-timeline-event-types'.
+;; types shown are `approve-timeline-event-types'.  A comment or review
+;; that someone else published after the viewer's last review is new:
+;; its heading says "new", the line beside it is heavy, ┃, in
+;; `approve-new', and the section's heading counts them (decision D44).
 ;;
 ;; Layer rules: this is the renderer layer.  It reads the store
 ;; through selectors and inserts text; it never changes the store or
@@ -263,15 +266,41 @@ which only the viewer sees, are left out."
                                                        :url .url :title .title))
                       " " (or .title ""))))))))))
 
-(defun approve-conversation--gutter-body (start)
-  "Draw the timeline's line left of the text inserted since START."
-  (approve-render-prefix start (point) (approve-face "│   " 'approve-thread-border)))
+(defun approve-conversation--gutter-body (start &optional new)
+  "Draw the timeline's line left of the text inserted since START.
+NEW if the entry is new since the viewer's last review: the line is
+heavy there, ┃, in `approve-new'."
+  (approve-render-prefix start (point)
+                         (if new
+                             (approve-face "┃   " 'approve-new)
+                           (approve-face "│   " 'approve-thread-border))))
 
-(defun approve-conversation--insert-run (run)
-  "Insert RUN, a list of timeline items folded into one entry."
+(defun approve-conversation--new-mark (item new)
+  "Return \" · new\" for the entry of ITEM when NEW, else \"\"."
+  (if new
+      (concat (approve-face " · " 'approve-dim) (approve-render-new (alist-get 'id item)))
+    ""))
+
+(defun approve-conversation-new-p (run &optional since)
+  "Return non-nil if RUN, an entry of the timeline, is new.
+It is when one of its comments or reviews was published after the
+viewer's last review, or after SINCE (`approve-pr-new-p')."
+  (let ((since (or since (approve-pr-last-review-time))))
+    (and since
+         (seq-some (lambda (item)
+                     (and (member (alist-get '__typename item)
+                                  '("IssueComment" "PullRequestReview"))
+                          (approve-pr-new-p item since)))
+                   run))))
+
+(defun approve-conversation--insert-run (run &optional since)
+  "Insert RUN, a list of timeline items folded into one entry.
+A comment or review published after SINCE, the viewer's last review,
+is marked new (decision D44)."
   (let* ((item (car run))
          (type (alist-get '__typename item))
          (id (alist-get 'id item))
+         (new (and since (approve-conversation-new-p run since)))
          (branch (approve-face "├ " 'approve-thread-border)))
     (cond
      ((equal type "IssueComment")
@@ -284,11 +313,12 @@ which only the viewer sees, are left out."
                     (approve-face "commented" 'approve-dim)
                     (if (alist-get 'lastEditedAt item)
                         (concat (approve-face " · " 'approve-dim) (approve-render-edited item))
-                      "")))
+                      ""))
+                   (approve-conversation--new-mark item new))
            (approve-render-hints '(approve-reply "quote") '(approve-react "react"))))
         (let ((start (point)))
           (approve-thread-insert-comment-body item)
-          (approve-conversation--gutter-body start))))
+          (approve-conversation--gutter-body start new))))
      ((equal type "PullRequestReview")
       (let* ((verb (approve-conversation--review-verb (alist-get 'state item)))
              (comments (apply #'+ (mapcar (lambda (review)
@@ -302,11 +332,12 @@ which only the viewer sees, are left out."
                         (approve-face (format " · %d comment%s on code" comments
                                               (if (= comments 1) "" "s"))
                                       'approve-dim)
-                      "")))
+                      "")
+                    (approve-conversation--new-mark item new)))
           (unless (approve-conversation--reply-review-p item)
             (let ((start (point)))
               (approve-thread-insert-comment-body item)
-              (approve-conversation--gutter-body start))))))
+              (approve-conversation--gutter-body start new))))))
      ((equal type "PullRequestCommit")
       (let ((commits (mapcar (lambda (node) (alist-get 'commit node)) run)))
         (magit-insert-section (approve-event-section id)
@@ -344,10 +375,16 @@ which only the viewer sees, are left out."
   "Insert the conversation: comments, reviews, pushes and events."
   (let* ((connection (approve-pr-field 'timelineItems))
          (runs (approve-conversation-items))
+         (since (approve-pr-last-review-time))
+         (new (and since (seq-count (lambda (run) (approve-conversation-new-p run since))
+                                    runs)))
          (bar (approve-face "│" 'approve-thread-border)))
     (magit-insert-section (approve-conversation-section)
       (magit-insert-heading
-        (approve-sections-heading "Conversation" (and connection (length runs))))
+        (approve-sections-heading
+         "Conversation" (and connection (length runs))
+         (and new (> new 0)
+              (approve-face (format "%d new since your review" new) 'approve-new))))
       (let ((start (point)))
         (if (not connection)
             (insert (or (approve-sections-state 'timeline "the conversation") ""))
@@ -357,7 +394,7 @@ which only the viewer sees, are left out."
                     (approve-render-date .createdAt) "\n"))
           (dolist (run runs)
             (insert bar "\n")
-            (approve-conversation--insert-run run))
+            (approve-conversation--insert-run run since))
           (when (approve-model-truncated-p connection)
             (insert bar "\n" (approve-face "┆ more is loading…" 'approve-loading) "\n"))
           (insert bar "\n"

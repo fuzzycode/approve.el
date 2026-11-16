@@ -434,6 +434,12 @@ GROUPS are reactionGroups; reactions the viewer gave use
                    (list :kind 'date :value (alist-get 'lastEditedAt node)
                          :label "edited"))))
 
+(defun approve-render-new (id)
+  "Return \"new\", the mark of the comment ID new since the last review.
+The mark's `approve-new' property is ID: the next and previous new
+comment are found by it (`approve-next-new-comment', decision D44)."
+  (propertize (approve-face "new" 'approve-new) 'approve-new id))
+
 (defun approve-render-first-line (html)
   "Return the text of the first paragraph of HTML, on one line."
   (if (or (null html) (string-blank-p html))

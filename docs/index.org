@@ -120,8 +120,13 @@ task only needs the files it touches.
   version and =c= on the lines of the diff.  It shares the PR buffer's
   store and follows it.  Threads are read there and acted on in the
   diff, one =RET= away.
-- Next step: the marks of what is new since your last review, the last
-  task of [[file:roadmap.org::*Phase 6 — The file view and what's new][Phase 6]].
+- What is new since your last review is marked (2026-11-16, [[file:decisions.org::*D44 What is new since your last review: other people's comments, after it][D44]]): the
+  comments and reviews others published after it say "new", the
+  headings count them, and =j n= / =j N= go from one to the next.  Every
+  task of Phase 6 is done; its done-when is for the author to call.
+- Next step: the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]), the first task of
+  [[file:roadmap.org::*Phase 7 — Notifications, polish, release][Phase 7]]; its key from the file list to the diff buffer is to be
+  chosen, as =RET= now opens a file whole.
 
 * Reading order
 | File             | What it holds                                                  | Read it when                     |

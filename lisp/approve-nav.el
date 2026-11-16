@@ -44,8 +44,10 @@
 ;;   O     `approve-fold-others'             fold every section but the one at point
 ;;
 ;; and the jumps the `approve-jump' transient (j) offers, defined in
-;; approve-menus.el.  Moving into a file's diff or a thread expands
-;; what hides it.  This file binds its keys in `approve-pr-mode-map',
+;; approve-menus.el, among them `approve-next-new-comment' and
+;; `approve-previous-new-comment' (j n, j N), to the comments new since
+;; the viewer's last review (decision D44).  Moving into a file's diff,
+;; a thread or a comment expands what hides it.  This file binds its keys in `approve-pr-mode-map',
 ;; and RET, o and y in `approve-file-mode-map' too.
 ;; The dashboard binds RET, o, y, TAB and O to the same commands: on a
 ;; row of a list, RET opens its pull request and TAB folds the list.
@@ -71,6 +73,7 @@
 (require 'approve-context)
 (require 'approve-pr)
 (require 'approve-sections)
+(require 'approve-conversation)
 (require 'approve-diff)
 (require 'approve-input)
 (require 'approve-file)
@@ -242,6 +245,88 @@ is collapsed again."
   (interactive)
   (approve-nav--goto (or (approve-nav--thread nil)
                          (user-error "No unresolved thread before this"))))
+
+;;; What is new since the last review
+
+(defun approve-nav--new-marks (from to)
+  "Return the positions of the new marks between FROM and TO, in order.
+A mark is the \"new\" of a comment new since the viewer's last
+review, whose `approve-new' property is the comment's id
+\(`approve-render-new')."
+  (let ((pos from)
+        (marks nil))
+    (while (< pos to)
+      (when-let* ((id (get-text-property pos 'approve-new)))
+        (unless (and (> pos (point-min))
+                     (equal (get-text-property (1- pos) 'approve-new) id))
+          (push pos marks)))
+      (setq pos (next-single-property-change pos 'approve-new nil to)))
+    (nreverse marks)))
+
+(defun approve-nav--new-comment (forward)
+  "Return the position of the next new mark, after point if FORWARD.
+The conversation is searched as drawn, the diff file by file: a
+file with new comments is expanded to search it, and collapsed
+again when the mark isn't there."
+  (let* ((here (if forward (line-end-position) (line-beginning-position)))
+         (diff (approve-nav--top-section 'approve-diff-section))
+         (diff-start (if diff (oref diff start) (point-max)))
+         (paths (mapcar (lambda (comment) (alist-get 'path comment))
+                        (approve-pr-new-comments)))
+         (files (seq-filter (lambda (section) (member (oref section value) paths))
+                            (approve-nav--file-sections)))
+         (in-file
+          (lambda (file)
+            (let ((hidden (oref file hidden)))
+              (when hidden
+                (magit-section-show file))
+              (let ((marks (if forward
+                               (approve-nav--new-marks (max here (oref file start))
+                                                       (oref file end))
+                             (approve-nav--new-marks (oref file start)
+                                                     (min here (oref file end))))))
+                (when (and hidden (null marks))
+                  (magit-section-hide file))
+                (if forward (car marks) (car (last marks))))))))
+    (if forward
+        (or (and (< here diff-start) (car (approve-nav--new-marks here diff-start)))
+            (seq-some in-file (seq-filter (lambda (file) (> (oref file end) here)) files)))
+      (or (seq-some in-file (reverse (seq-filter (lambda (file) (< (oref file start) here))
+                                                 files)))
+          (car (last (approve-nav--new-marks (point-min) (min here diff-start))))))))
+
+(defun approve-nav-new-count ()
+  "Return how many comments are new since the viewer's last review.
+They are the entries of the conversation and the comments in threads
+that `approve-next-new-comment' stops at."
+  (if-let* ((since (approve-pr-last-review-time)))
+      (+ (seq-count (lambda (run) (approve-conversation-new-p run since))
+                    (approve-conversation-items))
+         (length (approve-pr-new-comments)))
+    0))
+
+(defun approve-nav--goto-new (forward)
+  "Move to the next comment new since the last review; back unless FORWARD."
+  (unless (approve-pr-last-review-time)
+    (user-error "You haven't reviewed this pull request: nothing is new since"))
+  (let ((pos (or (approve-nav--new-comment forward)
+                 (user-error (if forward "No new comment after this"
+                               "No new comment before this")))))
+    (approve-nav--goto (magit-section-at pos))))
+
+(defun approve-next-new-comment ()
+  "Move to the next comment new since your last review (decision D44).
+It is an entry of the conversation, or a comment in a thread of the
+diff, that someone else published after your last review.  What
+hides it opens: the conversation, a file, a line's threads."
+  (interactive)
+  (approve-nav--goto-new t))
+
+(defun approve-previous-new-comment ()
+  "Move to the previous comment new since your last review.
+See `approve-next-new-comment'."
+  (interactive)
+  (approve-nav--goto-new nil))
 
 ;;; Jumps
 

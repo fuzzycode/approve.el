@@ -756,6 +756,49 @@ once; the viewer is left out."
                              people)))
         (if first (cons first (delq first people)) people)))))
 
+(defun approve-pr-last-review-time ()
+  "Return when the viewer last submitted a review of the PR, or nil.
+It is the `submittedAt' of `viewerLatestReview', an ISO 8601 time;
+what others published after it is new (decision D44)."
+  (let-alist (approve-pr-field 'viewerLatestReview) .submittedAt))
+
+(defun approve-pr-new-p (node &optional since)
+  "Return non-nil if NODE is new since the viewer's last review.
+NODE is a conversation comment, a review or a comment in a thread,
+as the store holds it.  It is new when someone else published it
+after SINCE, an ISO 8601 time that defaults to
+`approve-pr-last-review-time': a comment in a thread by its
+`publishedAt' (when its review was submitted), a review by its
+`submittedAt', a conversation comment by its `createdAt'.  The
+viewer's own and pending ones never are, nor anything when the
+viewer never reviewed (decision D44).  GitHub writes times in UTC
+to the second, so they compare as strings."
+  (let ((since (or since (approve-pr-last-review-time))))
+    (let-alist node
+      (and since
+           (not .viewerDidAuthor)
+           (not (equal .state "PENDING"))
+           (when-let* ((time (if (equal .__typename "PullRequestReview")
+                                 .submittedAt
+                               (or .publishedAt .createdAt))))
+             (string< since time))))))
+
+(defun approve-pr-new-comments ()
+  "Return the comments in review threads new since the viewer's last review.
+Each is an alist of the comment's `id' and its thread's `path', in
+store order; see `approve-pr-new-p'.  It reads the store without
+resolving it, so it is cheap enough for every redraw."
+  (approve-model--with-store
+    (when-let* ((since (approve-pr-last-review-time)))
+      (let ((found nil))
+        (dolist (node (approve-model-nodes (approve-model--root-field 'reviewThreads)))
+          (let ((thread (approve-model--raw node)))
+            (dolist (comment (approve-model-nodes (alist-get 'comments thread)))
+              (let ((comment (approve-model--raw comment)))
+                (when (approve-pr-new-p comment since)
+                  (push (list (assq 'id comment) (assq 'path thread)) found))))))
+        (nreverse found)))))
+
 (defun approve-pr-change-requests ()
   "Return the ids of the reviews whose request for changes still stands.
 They are the reviews in the PR's `latestOpinionatedReviews' (each

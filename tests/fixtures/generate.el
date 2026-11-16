@@ -538,6 +538,9 @@ review is pending is pending."
                      (body . ,(car body))
                      (bodyHTML . ,(cdr body))
                      (createdAt . ,(approve-fixtures--time at))
+                     (publishedAt . ,(and (not pending)
+                                          (approve-fixtures--time
+                                           (approve-fixtures--review-at review))))
                      (lastEditedAt)
                      (includesCreatedEdit . :false)
                      (isMinimized . :false)

@@ -341,10 +341,12 @@ okl    [label="new side, and inside\nthe PR's own diff?" @dec];
 err    [label="user-error\n\"Comment from the full diff:\nthis line isn't in the PR's diff\"" @err];
 f05    [label="F05  with the PR-diff line\n(same file at head ⇒ same number)" @goto, href="#F05"];
 force  [label="after a force push compare may fail:\nsay so, fall back to all changes" @note];
+newm   [label="comments others published after the review:\n\"new\", ┃, counted in the headings (D44)\nj n / j N next and previous" @note];
 load -> newc; newc -> same [@no]; newc -> mark [@yes];
 mark -> u -> cmp -> draw -> c -> okl;
 okl -> err [@no]; okl -> f05 [@yes];
 cmp -> force [style=dotted, arrowhead=none];
+load -> newm [style=dotted, arrowhead=none];
 
 %% F15
 u      [label="[user] RET on a diff line or a file\n(or F there, or on a thread)" @user];

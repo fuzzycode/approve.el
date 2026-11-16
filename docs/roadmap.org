@@ -278,7 +278,13 @@ Mockups: file view.
       (evil =gb=), =c s v=, =RET= back to the line in the diff, =?=.
       Threads are read there and acted on in the diff, until Phase 8's
       actions from overlays reach it.
-- [ ] "New since your last review" marks on comments and commits; =j n=.
+- [X] "New since your last review" marks on comments and commits; =j n=.
+      Done (2026-11-16, [[file:decisions.org::*D44 What is new since your last review: other people's comments, after it][D44]]): comments and reviews others published
+      after the viewer's last review say "new", with a heavy bar beside
+      them, and the Conversation, Diff and file headings count them; =j n=
+      and =j N= go to the next and previous one, unfolding what hides it.
+      Comments in threads are timed by =publishedAt=, when their review was
+      submitted.
 - Done when :: any changed file can be read whole with syntax
   highlighting, and what came after your last review is marked and one
   key away.

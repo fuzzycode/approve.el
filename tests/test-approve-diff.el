@@ -142,9 +142,9 @@
   (it "heads each file with its viewed mark, its change and its path"
     (with-current-buffer test-diff--buffer
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/scheduler.go"))
-              :to-match "\\`  · → internal/engine/{queue\\.go → scheduler\\.go} +💬 1\n")
+              :to-match "\\`  · → internal/engine/{queue\\.go → scheduler\\.go} +2 new  💬 1\n")
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/engine.go"))
-              :to-match "\\`  · ~ internal/engine/engine\\.go +💬 2\n")
+              :to-match "\\`  · ~ internal/engine/engine\\.go +6 new  💬 2\n")
       (expect (approve-test-section-text (test-diff--file-section "internal/engine/legacy.go"))
               :to-match "\\`  ✓ − internal/engine/legacy\\.go +💬 1\n")
       (expect (approve-test-section-text (test-diff--file-section "CHANGELOG.md"))
@@ -153,9 +153,10 @@
   (it "counts the threads on lines at the right edge, lined up"
     (with-current-buffer test-diff--buffer
       ;; parser.go has four threads on lines and one on the file, which
-      ;; the file list counts.
+      ;; the file list counts; six comments in them came after the
+      ;; viewer's last review.
       (expect (approve-test-section-text (test-diff--file-section "internal/parser/parser.go"))
-              :to-match "\\`  · ~ internal/parser/parser\\.go +💬 4\n")
+              :to-match "\\`  · ~ internal/parser/parser\\.go +6 new  💬 4\n")
       (let ((ends nil) (columns nil))
         (dolist (section (oref (approve-test-find-section 'approve-diff-section) children))
           (save-excursion
@@ -166,19 +167,26 @@
                                 t))
                         ((< (prop-match-beginning match) eol))
                         (column (plist-get (cdr (prop-match-value match)) :align-to)))
-              (push column columns)
+              ;; The counts are padded to one width, so they line up;
+              ;; "N new" goes before them.
+              (unless (string-match-p "new" (buffer-substring (prop-match-end match) eol))
+                (push column columns))
               (push (+ column (string-width (buffer-substring (prop-match-end match) eol)))
                     ends))))
-        (expect (length columns) :to-equal 8)
+        ;; Eight files have threads on lines; one more has new comments
+        ;; only on the file.
+        (expect (length ends) :to-equal 9)
+        (expect (length columns) :to-equal 2)
         (expect (seq-uniq columns) :to-have-same-items-as (list (car columns)))
         (expect (seq-uniq ends) :to-equal (list approve-page-width)))))
 
-  (it "says in its heading how many files are viewed and threads unresolved"
+  (it "says in its heading how many files are viewed, threads unresolved and comments new"
     (with-current-buffer test-diff--buffer
       (expect (car (split-string (approve-test-section-text
                                   (approve-test-find-section 'approve-diff-section))
                                  "\n"))
-              :to-match "\\`Diff (30) +8/30 viewed · 13 unresolved threads\\'")))
+              :to-match (concat "\\`Diff (30) +8/30 viewed · 13 unresolved threads"
+                                " · 20 new comments\\'"))))
 
   (it "draws the change as an icon in its face"
     (dolist (case '(("ADDED" "+" approve-file-added)

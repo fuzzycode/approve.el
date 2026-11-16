@@ -204,7 +204,7 @@
   (describe "conversation"
     (it "starts with who opened the PR and ends the line"
       (let ((lines (split-string (test-sections--text 'approve-conversation-section) "\n" t)))
-        (expect (car lines) :to-equal "Conversation (30)")
+        (expect (car lines) :to-match "\\`Conversation (30) +14 new since your review\\'")
         (expect (nth 1 lines) :to-equal "  @alice-example opened this 3 days ago")
         (expect (car (last lines)) :to-equal "  ╰ C comment on this pull request")))
 
@@ -220,8 +220,9 @@
     (it "shows comments and reviews with their verdict, body and code comments"
       (let ((text (test-sections--text 'approve-conversation-section)))
         (expect text :to-match "  ├ 💬 @bob-example commented · 3 days ago +r quote · \\+ react\n  │   Thanks! I'll take a look today.\n  │   👍 1\n")
-        (expect text :to-match "  ├ ✓ @bob-example approved · 1 day ago · 2 comments on code\n  │   Looks good to me.")
-        (expect text :to-match "  ├ ✗ @carol-example requested changes · 1 day ago · 1 comment on code")))
+        ;; Both came after the viewer's last review.
+        (expect text :to-match "  ├ ✓ @bob-example approved · 1 day ago · 2 comments on code · new\n  ┃   Looks good to me.")
+        (expect text :to-match "  ├ ✗ @carol-example requested changes · 1 day ago · 1 comment on code · new")))
 
     (it "shows events in words"
       (let ((text (test-sections--text 'approve-conversation-section)))

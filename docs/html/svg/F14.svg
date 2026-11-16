@@ -12,8 +12,8 @@
 <g id="F14-node1" class="node goto">
 <title>load</title>
 <g id="F14-a_node1"><a xlink:href="#F02" xlink:title="F02 &#160;Load a PR" target="_top">
-<path fill="none" stroke="#c4a7e7" stroke-width="1.4" stroke-dasharray="5,2" d="M239.91,-623.68C239.91,-623.68 141.01,-623.68 141.01,-623.68 137.07,-623.68 133.13,-619.74 133.13,-615.8 133.13,-615.8 133.13,-607.92 133.13,-607.92 133.13,-603.98 137.07,-600.04 141.01,-600.04 141.01,-600.04 239.91,-600.04 239.91,-600.04 243.84,-600.04 247.79,-603.98 247.79,-607.92 247.79,-607.92 247.79,-615.8 247.79,-615.8 247.79,-619.74 243.84,-623.68 239.91,-623.68"/>
-<text xml:space="preserve" text-anchor="middle" x="190.46" y="-608.91" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">F02 &#160;Load a PR</text>
+<path fill="none" stroke="#c4a7e7" stroke-width="1.4" stroke-dasharray="5,2" d="M404.9,-623.68C404.9,-623.68 306.01,-623.68 306.01,-623.68 302.07,-623.68 298.13,-619.74 298.13,-615.8 298.13,-615.8 298.13,-607.92 298.13,-607.92 298.13,-603.98 302.07,-600.04 306.01,-600.04 306.01,-600.04 404.9,-600.04 404.9,-600.04 408.85,-600.04 412.79,-603.98 412.79,-607.92 412.79,-607.92 412.79,-615.8 412.79,-615.8 412.79,-619.74 408.85,-623.68 404.9,-623.68"/>
+<text xml:space="preserve" text-anchor="middle" x="355.46" y="-608.91" font-family="JetBrains Mono" font-size="11.00" fill="#c4a7e7">F02 &#160;Load a PR</text>
 </a>
 </g>
 </g>
@@ -27,8 +27,23 @@
 <!-- load&#45;&gt;newc -->
 <g id="F14-edge1" class="edge">
 <title>load&#45;&gt;newc</title>
-<path fill="none" stroke="#908caa" stroke-width="1.2" d="M190.46,-599.55C190.46,-594.08 190.46,-587.15 190.46,-579.97"/>
-<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="192.91,-580.33 190.46,-573.33 188.01,-580.33 192.91,-580.33"/>
+<path fill="none" stroke="#908caa" stroke-width="1.2" d="M328.58,-599.4C312.87,-592.7 292.12,-583.85 271.5,-575.05"/>
+<polygon fill="#908caa" stroke="#908caa" stroke-width="1.2" points="272.68,-572.89 265.28,-572.4 270.76,-577.4 272.68,-572.89"/>
+</g>
+<!-- newm -->
+<g id="F14-node13" class="node note">
+<title>newm</title>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="670.66,-566.31 366.25,-566.31 366.25,-512.67 676.66,-512.67 676.66,-560.31 670.66,-566.31"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="670.66,-566.31 670.66,-560.31"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="676.66,-560.31 670.66,-560.31"/>
+<text xml:space="preserve" text-anchor="middle" x="521.46" y="-551.54" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">comments others published after the review:</text>
+<text xml:space="preserve" text-anchor="middle" x="521.46" y="-536.54" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">&quot;new&quot;, ┃, counted in the headings (D44)</text>
+<text xml:space="preserve" text-anchor="middle" x="521.46" y="-521.54" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">j n / j N next and previous</text>
+</g>
+<!-- load&#45;&gt;newm -->
+<g id="F14-edge12" class="edge">
+<title>load&#45;&gt;newm</title>
+<path fill="none" stroke="#908caa" stroke-width="1.2" stroke-dasharray="1,5" d="M382.5,-599.4C403.17,-590.63 432.51,-578.2 458.9,-567.01"/>
 </g>
 <!-- same -->
 <g id="F14-node3" class="node note">

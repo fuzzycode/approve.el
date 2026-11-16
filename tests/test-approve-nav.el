@@ -78,6 +78,63 @@
         (dolist (id seen)
           (expect (approve-model-get "PullRequestReviewThread" id 'isResolved) :to-be nil))))))
 
+(describe "What is new since the last review"
+  (it "goes to every new comment once: the conversation's, then the diff's"
+    (test-nav--with-medium
+      ;; vera reviewed at 15:40 on the first day: 14 entries of the
+      ;; conversation and 20 comments in threads came after.
+      (expect (approve-nav-new-count) :to-equal 34)
+      (expect (substring-no-properties (approve-menus--new-description))
+              :to-equal "Next new comment (34 since your review)")
+      (expect (approve-menus--nothing-new-p) :to-be nil)
+      (let ((stops nil))
+        (condition-case nil
+            (while t
+              (approve-next-new-comment)
+              (push (cons (point) (oref (magit-current-section) type)) stops))
+          (user-error nil))
+        (setq stops (nreverse stops))
+        (expect (length stops) :to-equal 34)
+        (expect (sort (mapcar #'car stops) #'<) :to-equal (mapcar #'car stops))
+        (expect (seq-uniq (mapcar #'cdr (seq-take stops 14)))
+                :to-have-same-items-as '(approve-review-section approve-issue-comment-section))
+        (expect (seq-uniq (mapcar #'cdr (nthcdr 14 stops)))
+                :to-have-same-items-as '(approve-thread-section approve-comment-section))
+        ;; Each stop's line says new, and is shown.
+        (dolist (stop stops)
+          (goto-char (car stop))
+          (expect (text-property-not-all (point) (line-end-position) 'approve-new nil)
+                  :to-be-truthy)
+          (expect (invisible-p (point)) :to-be nil))
+        ;; And back again.
+        (goto-char (point-max))
+        (let ((back nil))
+          (condition-case nil
+              (while t
+                (approve-previous-new-comment)
+                (push (point) back))
+            (user-error nil))
+          (expect back :to-equal (mapcar #'car stops))))))
+
+  (it "expands a file only to show a new comment in it"
+    (test-nav--with-medium
+      (approve-jump-files)
+      (approve-next-new-comment)
+      (let ((file (approve-nav--current-file)))
+        (expect (oref file hidden) :to-be nil)
+        ;; The files before it with no new comment stay collapsed.
+        (dolist (section (approve-nav--file-sections))
+          (when (< (oref section start) (oref file start))
+            (expect (oref section hidden) :to-be t))))))
+
+  (it "says that nothing is new before the viewer's first review"
+    (test-nav--with-medium
+      (approve-model-patch `((__typename . "PullRequest") (id . ,(approve-pr-field 'id))
+                             (viewerLatestReview)))
+      (expect (approve-nav-new-count) :to-equal 0)
+      (expect (approve-menus--nothing-new-p) :to-be t)
+      (expect (approve-next-new-comment) :to-throw 'user-error))))
+
 (describe "Jumping"
   (it "goes to the sections, expanding collapsed ones"
     (test-nav--with-medium

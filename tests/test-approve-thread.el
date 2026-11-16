@@ -112,6 +112,34 @@
 
   (it "names the thread's first author and words in its summary"
     (expect (substring-no-properties (approve-thread-summary (car test-thread--threads)))
-            :to-match "\\`@carol-example: This allocates on every call; .*…\\'")))
+            :to-match "\\`@carol-example: This allocates on every call; .*…\\'"))
+
+  (it "marks the comments others published after the viewer's last review"
+    ;; vera reviewed at 15:40; carol's comment came before, alice's after.
+    (spy-on 'approve-pr-last-review-time :and-return-value "2026-10-01T15:40:00Z")
+    (let* ((thread (car test-thread--threads))
+           (reply (cadr (approve-model-nodes (alist-get 'comments thread)))))
+      (test-thread--with-inserted thread
+        (let ((lines (test-thread--lines)))
+          (expect (car lines) :not :to-match "new")
+          (expect (nth 1 lines) :to-match "\\`│ This allocates")
+          (expect (nth 2 lines) :to-equal "│")
+          (expect (nth 3 lines) :to-match "\\`┃ @alice-example · 2 days ago · new\\'")
+          (expect (nth 4 lines) :to-match "\\`┃ ")
+          (expect (car (last lines)) :to-match "\\`╰─"))
+        ;; The mark carries the comment's id, the bar the face.
+        (let ((mark (text-property-any (point-min) (point-max)
+                                       'approve-new (alist-get 'id reply))))
+          (expect mark :to-be-truthy)
+          (expect (buffer-substring-no-properties mark (+ mark 3)) :to-equal "new"))
+        (search-forward "┃")
+        (expect (ensure-list (get-text-property (1- (point)) 'face)) :to-contain 'approve-new))))
+
+  (it "marks a thread's first comment in its heading"
+    (spy-on 'approve-pr-last-review-time :and-return-value "2026-10-01T12:00:00Z")
+    (test-thread--with-inserted (car test-thread--threads)
+      (let ((lines (test-thread--lines)))
+        (expect (car lines) :to-match "\\`╭─ @carol-example · 2 days ago · new ─")
+        (expect (nth 1 lines) :to-match "\\`┃ This allocates")))))
 
 ;;; test-approve-thread.el ends here

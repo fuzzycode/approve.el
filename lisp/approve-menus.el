@@ -35,7 +35,8 @@
 ;;   ?  `approve-dashboard-dispatch'  every command of the dashboard
 ;;   ?  `approve-file-dispatch'  every command of a file view
 ;;   j  `approve-jump'           the sections of the PR, the next work
-;;                               (unviewed files, unresolved threads)
+;;                               (unviewed files, unresolved threads,
+;;                               comments new since your review)
 ;;                               and any changed file by name
 ;;   S  `approve-submit-review'  a verdict for the pending review, its
 ;;                               body, or discarding it (flow F09)
@@ -78,6 +79,18 @@
   "Return non-nil if the viewer has no pending review."
   (not (approve-pr-pending-review)))
 
+(defun approve-menus--nothing-new-p ()
+  "Return non-nil if nothing is new since the viewer's last review."
+  (zerop (approve-nav-new-count)))
+
+(defun approve-menus--new-description ()
+  "Return the description of the jump to the next new comment."
+  (let ((count (approve-nav-new-count)))
+    (concat "Next new comment"
+            (if (> count 0)
+                (approve-face (format " (%d since your review)" count) 'approve-new)
+              ""))))
+
 ;;;###autoload (autoload 'approve-jump "approve-menus" nil t)
 (transient-define-prefix approve-jump ()
   "Jump to a part of the pull request, or to the next thing to review."
@@ -93,7 +106,12 @@
     ("u" "Next unviewed file" approve-next-unviewed-file)
     ("U" "Previous unviewed file" approve-previous-unviewed-file)
     ("t" "Next unresolved thread" approve-next-thread)
-    ("T" "Previous unresolved thread" approve-previous-thread)]
+    ("T" "Previous unresolved thread" approve-previous-thread)
+    ("n" approve-next-new-comment
+     :description approve-menus--new-description
+     :inapt-if approve-menus--nothing-new-p)
+    ("N" "Previous new comment" approve-previous-new-comment
+     :inapt-if approve-menus--nothing-new-p)]
    ["Find"
     ("/" "File…" approve-jump-file)]])
 

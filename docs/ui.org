@@ -91,7 +91,7 @@ Notes:
 #+begin_example
  ▸ Checks (9)      ◐ 7 passed · 1 failed · 1 running
  ▸ Commits (4)     2 new since your review
- ▾ Conversation (6)
+ ▾ Conversation (6)                                                    1 new since your review
    @alice opened this 3 days ago
    │
    ├ 💬 @bob commented · 2 days ago                                      r quote · + react
@@ -104,8 +104,8 @@ Notes:
    │     d4e5f6a  Handle 502 responses
    │     e5f6a7b  Add tests
    │
-   ├ ✗ @carol requested changes · 5 hours ago
-   │   Please add a test for the retry limit.
+   ├ ✗ @carol requested changes · 5 hours ago · new
+   ┃   Please add a test for the retry limit.
    │
    ├ 🏷 @alice added api · 5 hours ago
    │
@@ -124,6 +124,13 @@ Notes:
 - =RET= on a commit, in the commits or a push, shows it in Magit's revision
   buffer from a local clone that has it (=approve-clone-directories=,
   [[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]), else on GitHub.
+- What came after your last review (=viewerLatestReview=) is new
+  ([[file:decisions.org::*D44 What is new since your last review: other people's comments, after it][D44]]): the commits after its commit, marked =┃= and "new", and
+  the comments and reviews others published after it, which say "new"
+  after their byline, the timeline's line heavy (=┃=) beside them, all in
+  =approve-new=.  The headings count them.  Your own and pending ones never
+  are; before your first review nothing is.  =j n= and =j N= go to the
+  next and previous new comment, here or in the diff's threads.
 
 ** Bottom: files and diff
 #+begin_example
@@ -134,8 +141,8 @@ Notes:
      tests/test-approve-api.el      +160   −0  █████████████
      …
 
- ▾ Diff (12)                                          4/12 viewed · 4 unresolved threads
-   ▾ ✓ ~ lisp/approve-api.el                                                        💬 2
+ ▾ Diff (12)                         4/12 viewed · 4 unresolved threads · 1 new comment
+   ▾ ✓ ~ lisp/approve-api.el                                                 1 new  💬 2
      ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables
         40  40      (let* ((request-id (approve-api--generate-request-id))
         41      -          (timeout approve-api-timeout))
@@ -144,9 +151,9 @@ Notes:
                   ╭─ @bob · 2 days ago ────────────────────────────────────────
                   │ Should this be configurable per call?
                   │
-                  │ @alice · 1 day ago
-                  │ Good idea, done in d4e5f6a.
-                  │ 👍 1
+                  ┃ @alice · 1 day ago · new
+                  ┃ Good idea, done in d4e5f6a.
+                  ┃ 👍 1
                   ╰─ r reply · R resolve ───────────────────────────────────────
                   ╭─ ✎ Pending · you ──────────────────────────────────────────
                   │ Should `retries` be part of the defgroup?
@@ -216,6 +223,11 @@ Notes:
 - A pending comment says "✎ Pending" (=approve-pending=) where a published
   one says when it was written, so the two can't be mistaken.  Only that
   label is coloured: the comment has no background.
+- A comment someone else published after your last review says "new"
+  after its byline, and its bar is heavy, =┃=, both in =approve-new= ([[file:decisions.org::*D44 What is new since your last review: other people's comments, after it][D44]]).
+  A file's heading counts its new comments before its threads, and the
+  Diff heading sums them.  =j n= and =j N= go to the next and previous one,
+  expanding the file and unfolding the line they are under.
 
 ** Threads: suggestions, file-level, outdated
 #+begin_example
@@ -573,9 +585,12 @@ what they will do ("Mark ready for review", "Reopen pull request",
   d Description   c Conversation   k Checks   m Commits   f Files   p Pending review
   u Next unviewed file             U Previous unviewed file
   t Next unresolved thread         T Previous unresolved thread
-  n Next new comment (since your last review)
+  n Next new comment (3 since your review)   N Previous new comment
   /  File…  (completing-read over changed files)
 #+end_example
+
+=n= and =N= are dimmed when nothing is new since your last review, or you
+haven't reviewed the pull request yet.
 
 ** Review range (=V=)
 #+begin_example
@@ -880,6 +895,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Jump…                         | =j=           | =J=                   | any                       |
 | Next / previous unviewed file | =]u= =[u=     | =]u= =[u=             | any                       |
 | Next / previous thread        | =]t= =[t=     | =]t= =[t=             | any                       |
+| Next / previous new comment   | =j n= =j N=   | =J n= =J N=           | any                       |
 | Review range…                 | =V=           | =gV=                  | any                       |
 | Merge / state…                | =m=           | =gm=                  | any                       |
 | Metadata (title… milestone)   | =t d l a A M= | via =?=               | any                       |

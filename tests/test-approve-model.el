@@ -547,6 +547,53 @@ The check list carries HAS-NEXT and CURSOR."
         (expect (funcall grown) :to-equal 3))))
 
   (describe "selectors"
+    (it "approve-pr-new-p: what others published after the last review"
+      (let ((since "2026-10-01T15:40:00Z"))
+        ;; A comment in a thread counts from when its review was
+        ;; submitted, not from when it was written.
+        (expect (approve-pr-new-p '((__typename . "PullRequestReviewComment")
+                                    (createdAt . "2026-10-01T15:00:00Z")
+                                    (publishedAt . "2026-10-01T16:00:00Z")
+                                    (state . "SUBMITTED"))
+                                  since)
+                :to-be-truthy)
+        (expect (approve-pr-new-p '((__typename . "PullRequestReviewComment")
+                                    (createdAt . "2026-10-01T16:00:00Z")
+                                    (publishedAt . "2026-10-01T15:00:00Z")
+                                    (state . "SUBMITTED"))
+                                  since)
+                :to-be nil)
+        ;; A review from when it was submitted; GitHub's publishedAt of
+        ;; a review is when it was started.
+        (expect (approve-pr-new-p '((__typename . "PullRequestReview")
+                                    (createdAt . "2026-10-01T15:00:00Z")
+                                    (publishedAt . "2026-10-01T15:00:00Z")
+                                    (submittedAt . "2026-10-01T16:00:00Z")
+                                    (state . "COMMENTED"))
+                                  since)
+                :to-be-truthy)
+        ;; A conversation comment from when it was written; the same
+        ;; second as the review is not after it.
+        (expect (approve-pr-new-p '((__typename . "IssueComment")
+                                    (createdAt . "2026-10-01T16:00:00Z"))
+                                  since)
+                :to-be-truthy)
+        (expect (approve-pr-new-p '((__typename . "IssueComment")
+                                    (createdAt . "2026-10-01T15:40:00Z"))
+                                  since)
+                :to-be nil)
+        ;; Never the viewer's own, nor a pending one.
+        (expect (approve-pr-new-p '((__typename . "IssueComment")
+                                    (createdAt . "2026-10-01T16:00:00Z")
+                                    (viewerDidAuthor . t))
+                                  since)
+                :to-be nil)
+        (expect (approve-pr-new-p '((__typename . "PullRequestReviewComment")
+                                    (createdAt . "2026-10-01T16:00:00Z")
+                                    (state . "PENDING"))
+                                  since)
+                :to-be nil)))
+
     (it "return nil before the PR is loaded"
       (expect (approve-pr) :to-be nil)
       (expect (approve-pr-field 'title) :to-be nil)
@@ -660,6 +707,26 @@ The check list carries HAS-NEXT and CURSOR."
                   :to-equal "Bot")
           (approve-model-set-meta :viewer "bob")
           (expect (funcall logins) :to-equal '("alice" "carol" "ci-bot"))))
+
+      (it "approve-pr-new-p finds nothing new without a review of the viewer's"
+        (expect (approve-pr-last-review-time) :to-be nil)
+        (expect (approve-pr-new-p '((__typename . "IssueComment")
+                                    (createdAt . "2030-01-01T00:00:00Z")))
+                :to-be nil)
+        (expect (approve-pr-new-comments) :to-be nil))
+
+      (it "approve-pr-new-comments lists the comments in threads after the last review"
+        (approve-model-patch '((__typename . "PullRequest") (id . "PR_1")
+                               (viewerLatestReview
+                                (__typename . "PullRequestReview") (id . "PRR_mine")
+                                (submittedAt . "2026-10-01T12:00:00Z"))))
+        (dolist (comment '(("PRRC_1" "2026-10-01T11:00:00Z") ("PRRC_2" "2026-10-01T13:00:00Z")))
+          (approve-model-patch `((__typename . "PullRequestReviewComment")
+                                 (id . ,(car comment)) (state . "SUBMITTED")
+                                 (publishedAt . ,(cadr comment)))))
+        (expect (approve-pr-last-review-time) :to-equal "2026-10-01T12:00:00Z")
+        (expect (approve-pr-new-comments)
+                :to-equal '(((id . "PRRC_2") (path . "lisp/a.el")))))
 
       (it "approve-pr-threads-asking-for-changes follows a standing request"
         (expect (approve-pr-change-requests) :to-be nil)

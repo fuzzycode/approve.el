@@ -104,7 +104,7 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 </div>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Conversation (6)</span></p>
+<p class="hd"><span class="tog"></span> <span class="h">Conversation (6)</span>                                                   <span class="wa">1 new since your review</span></p>
 <div class="sb">
 <p>  <span class="u">@alice</span> <span class="d">opened this 3 days ago</span></p>
 <p>  <span class="d">│</span></p>
@@ -118,8 +118,8 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p>  <span class="d">│</span>     <span class="m">d4e5f6a</span>  Handle 502 responses</p>
 <p>  <span class="d">│</span>     <span class="m">e5f6a7b</span>  Add tests</p>
 <p>  <span class="d">│</span></p>
-<p>  <span class="d">├</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span> <span class="er">requested changes</span> <span class="d">· 5 hours ago</span></p>
-<p>  <span class="d">│</span>   Please add a test for the retry limit.</p>
+<p>  <span class="d">├</span> <span class="er"><i data-i="changes-requested">✗</i></span> <span class="u">@carol</span> <span class="er">requested changes</span> <span class="d">· 5 hours ago ·</span> <span class="wa">new</span></p>
+<p>  <span class="wa">┃</span>   Please add a test for the retry limit.</p>
 <p>  <span class="d">│</span></p>
 <p>  <span class="d">├</span> <i data-i="label">🏷</i> <span class="u">@alice</span> added <span class="lbl" style="background:#5319e7;color:#fff">api</span> <span class="d">· 5 hours ago</span></p>
 <p>  <span class="d">│</span></p>
@@ -141,11 +141,11 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p></p>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Diff</span> (12)                                              4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span></p>
+<p class="hd"><span class="tog"></span> <span class="h">Diff</span> (12)                               4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span> <span class="d">·</span> <span class="wa">1 new comment</span></p>
 <div class="sb">
 
 <div class="s">
-<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                            <i data-i="comment">💬</i> 2</p>
+<p class="hd">  <span class="tog"></span> <span class="d"><i data-i="viewed">✓</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/approve-api.el</span>                                                     <span class="wa">1 new</span>  <i data-i="comment">💬</i> 2</p>
 <div class="sb">
 <div class="s">
 <p class="hd hunk">    <span class="tog"></span> @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables</p>
@@ -159,9 +159,9 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p>                 <span class="d">╭─</span> <span class="u">@bob</span> <span class="d">· 2 days ago ────────────────────────────────────────</span></p>
 <p>                 <span class="d">│</span> Should this be configurable per call?</p>
 <p>                 <span class="d">│</span></p>
-<p>                 <span class="d">│</span> <span class="u">@alice</span> <span class="d">· 1 day ago</span></p>
-<p>                 <span class="d">│</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
-<p>                 <span class="d">│</span> <i data-i="reaction-thumbs-up">👍</i> 1</p>
+<p>                 <span class="wa">┃</span> <span class="u">@alice</span> <span class="d">· 1 day ago ·</span> <span class="wa">new</span></p>
+<p>                 <span class="wa">┃</span> Good idea, done in <span class="m">d4e5f6a</span>.</p>
+<p>                 <span class="wa">┃</span> <i data-i="reaction-thumbs-up">👍</i> 1</p>
 <p>                 <span class="d">╰─</span> <span class="k">r</span> <span class="d">reply ·</span> <span class="k">R</span> <span class="d">resolve ─────────────────────────────────────</span></p>
 <p>                 <span class="d">╭─</span> <span class="wa"><i data-i="pending-comment">✎</i> Pending</span> <span class="d">· you ─────────────────────────────────────────</span></p>
 <p>                 <span class="d">│</span> Should <span class="code">retries</span> be part of the defgroup?</p>
@@ -262,6 +262,11 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
     except one counting a thread that asks for changes: unresolved, started in a review that requested changes, while
     that review is its author's latest verdict. That mark is <span class="er">red</span>, until the thread is resolved, the review
     dismissed, or its author approves (D34).</li>
+  <li>What came after your last review is <span class="wa">new</span> (D44): the commits after it, and the comments and reviews
+    others published after it, which say <span class="wa">new</span> after their byline with a heavy bar
+    (<span class="wa">┃</span>) beside them. The Commits, Conversation and Diff headings count them, a file's heading its own.
+    Your own and pending ones never are; before your first review nothing is. <code>j n</code> / <code>j N</code> go to the
+    next and previous new comment, opening what hides it.</li>
 </ul>
 </section>
 

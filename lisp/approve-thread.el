@@ -45,6 +45,9 @@
 ;; to their heading.  Pending comments, which only the viewer sees
 ;; until the review is submitted, say "✎ Pending" in the `approve-pending'
 ;; face instead of their author and date; they have no background.
+;; Comments that others published after the viewer's last review say
+;; "new" after their byline, and their bar is heavy, ┃, in the
+;; `approve-new' face (decision D44).
 ;;
 ;; `approve-thread-insert-comment-body' draws a comment's body,
 ;; reactions and hidden state; the conversation uses it too.
@@ -90,9 +93,11 @@
   "Return non-nil if COMMENT is in the viewer's pending review."
   (equal (alist-get 'state comment) "PENDING"))
 
-(defun approve-thread-comment-byline (comment)
+(defun approve-thread-comment-byline (comment &optional new)
   "Return who wrote COMMENT and when: \"bob · 2 days ago\".
-A pending comment says \"✎ Pending · you\" instead."
+A pending comment says \"✎ Pending · you\" instead.  With NEW, the
+comment is new since the viewer's last review, and the byline ends
+in \"new\" (`approve-render-new')."
   (let-alist comment
     (approve-render-join
      (if (approve-thread-pending-p comment)
@@ -101,7 +106,8 @@ A pending comment says \"✎ Pending · you\" instead."
                (approve-render-user .author))
        (list (approve-render-user .author)
              (approve-render-date .createdAt)
-             (approve-render-edited comment))))))
+             (approve-render-edited comment)
+             (and new (approve-render-new .id)))))))
 
 (defun approve-thread-insert-comment-body (comment)
   "Insert the body of COMMENT at column 0: its text and reactions.
@@ -131,12 +137,13 @@ A hidden (minimized) comment is one dim line saying why."
                                "resolved")
                              'approve-resolved)))))
 
-(defun approve-thread--heading (thread first)
-  "Return the box heading of THREAD whose FIRST comment opens it."
+(defun approve-thread--heading (thread first new)
+  "Return the box heading of THREAD whose FIRST comment opens it.
+NEW if FIRST is new since the viewer's last review."
   (approve-thread--rule
    "╭─ "
    (approve-render-join
-    (cons (approve-thread-comment-byline first) (approve-thread--state thread)))))
+    (cons (approve-thread-comment-byline first new) (approve-thread--state thread)))))
 
 (defun approve-thread--footer (thread)
   "Return the closing rule of THREAD, with its key hints."
@@ -151,40 +158,54 @@ A hidden (minimized) comment is one dim line saying why."
          (concat " " hints)
        ""))))
 
-(defun approve-thread--insert-comment (comment first)
-  "Insert COMMENT of a thread; FIRST if the thread's heading names it."
-  (magit-insert-section (approve-comment-section (alist-get 'id comment))
-    (unless first
-      (magit-insert-heading (approve-thread-comment-byline comment)))
-    (approve-thread-insert-comment-body comment)))
+(defun approve-thread--insert-comment (comment first new)
+  "Insert COMMENT of a thread; FIRST if the thread's heading names it.
+NEW if it is new since the viewer's last review: its byline says so,
+and its bar is `approve-new' and heavy."
+  (let ((start (point)))
+    (magit-insert-section (approve-comment-section (alist-get 'id comment))
+      (unless first
+        (magit-insert-heading (approve-thread-comment-byline comment new)))
+      (approve-thread-insert-comment-body comment))
+    (approve-render-prefix start (point)
+                           (if new
+                               (approve-face "┃ " 'approve-new)
+                             (approve-face "│ " 'approve-thread-border)))))
 
 (defun approve-thread-insert (thread)
   "Insert THREAD, a resolved PullRequestReviewThread, as a box.
 It starts at column 0; the caller indents it.  A thread does not
 fold by itself, so no line of it stays behind when it is folded:
-the diff line it is on, or the group it is in, folds it."
+the diff line it is on, or the group it is in, folds it.  Comments
+new since the viewer's last review are marked (decision D44)."
   (let* ((connection (alist-get 'comments thread))
          (comments (approve-model-nodes connection))
          (first (car comments))
+         (since (approve-pr-last-review-time))
+         (new (mapcar (lambda (comment) (and since (approve-pr-new-p comment since)))
+                      comments))
          (more (- (or (approve-model-total-count connection) (length comments))
                   (length comments)))
+         (bar (approve-face "│ " 'approve-thread-border))
          (start (point))
          (section
           (magit-insert-section (approve-thread-section (alist-get 'id thread))
-            (magit-insert-heading (approve-thread--heading thread first))
-            (let ((body (point)))
-              (cl-loop for comment in comments
-                       for index from 0
-                       do (unless (= index 0)
-                            (insert "\n"))
-                       (approve-thread--insert-comment comment (= index 0)))
-              (when (> more 0)
+            (magit-insert-heading (approve-thread--heading thread first (car new)))
+            (cl-loop for comment in comments
+                     for index from 0
+                     for comment-new in new
+                     do (unless (= index 0)
+                          (let ((blank (point)))
+                            (insert "\n")
+                            (approve-render-prefix blank (point) bar)))
+                     (approve-thread--insert-comment comment (= index 0) comment-new))
+            (when (> more 0)
+              (let ((line (point)))
                 (insert (approve-face (format "… %d more comment%s on GitHub" more
                                               (if (= more 1) "" "s"))
                                       'approve-dim)
-                        "\n"))
-              (approve-render-prefix body (point)
-                                     (approve-face "│ " 'approve-thread-border)))
+                        "\n")
+                (approve-render-prefix line (point) bar)))
             (insert (approve-thread--footer thread) "\n"))))
     ;; No body to fold, whatever the visibility cache or a level
     ;; command says.

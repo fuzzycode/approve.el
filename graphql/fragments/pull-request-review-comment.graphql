@@ -4,6 +4,8 @@ ${include:fragments/reaction-group.graphql}
 # A comment in a review thread (also a pending one: state PENDING).  Its
 # review and the comment it replies to are refs; they load elsewhere.
 # diffHunk is not selected: outdated code is fetched lazily (eldoc).
+# publishedAt is when its review was submitted (createdAt, when it was
+# written): it says what is new since the viewer's last review (D44).
 fragment PullRequestReviewCommentFields on PullRequestReviewComment {
   __typename
   id
@@ -15,6 +17,7 @@ fragment PullRequestReviewCommentFields on PullRequestReviewComment {
   body
   bodyHTML
   createdAt
+  publishedAt
   lastEditedAt
   includesCreatedEdit
   isMinimized

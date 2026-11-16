@@ -554,6 +554,9 @@ it sets new changes on viewed files to =DISMISSED=.
 #+begin_example
  load (F02)
    │
+   ├─ comments others published after viewerLatestReview.submittedAt (D44):
+   │    "new" after the byline, ┃ beside them; the headings count them
+   │    [user] j n / j N ──▶ the next / previous one, what hides it unfolded
    ▼
  ◇ viewerLatestReview.commit ≠ headRefOid? ◇──no──▶ nothing extra
    │ yes
@@ -585,8 +588,12 @@ it sets new changes on viewed files to =DISMISSED=.
 history.  After a force push, compare may fail: say so and fall back to all
 changes.
 
-The marks of what is new since your review are Phase 6's; the review range
-(=V=) moved to Phase 10 on 2026-11-16, as nice to have.
+The marks of what is new since your review are Phase 6's ([[file:decisions.org::*D44 What is new since your last review: other people's comments, after it][D44]]): the
+commits after the review's commit, and the comments and reviews others
+published after it was submitted (a comment in a thread by =publishedAt=,
+when its review was submitted).  Before the viewer's first review nothing is
+new.  The review range (=V=) moved to Phase 10 on 2026-11-16, as nice to
+have.
 
 * F15 View the whole file
 #+begin_example
