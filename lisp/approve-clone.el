@@ -56,6 +56,8 @@
 ;;   too); `approve-clone-shown-pull-request' is the one Approve shows,
 ;;   the open one updated last unless `approve-clone-pick-pull-request'
 ;;   picked another.
+;; - `approve-clone-state' says how a clone's HEAD stands to GitHub's
+;;   head: the same, ahead, behind, diverged, or missing it.
 ;;
 ;; Layer rules: this is the operations layer, and only the clone
 ;; modules touch a clone.  It reads clones through Magit and never
@@ -567,6 +569,31 @@ branch (decision D45), and `approve-clone-picked-functions' are run."
     (run-hook-with-args 'approve-clone-picked-functions head pr)
     (message "Showing #%s for %s" (alist-get 'number pr) (plist-get head :branch))
     pr))
+
+;;; The clone's state
+
+(defun approve-clone-state (clone oid)
+  "Return how the HEAD of CLONE stands to the commit OID, GitHub's head.
+The value is a plist: :state, one of `same', `ahead' (commits not
+pushed), `behind' (GitHub has commits the clone hasn't), `diverged'
+\(both, as after a rebase) or `missing' (the clone hasn't OID: a
+fetch would tell); :ahead and :behind, how many commits.  It is said,
+never acted on (decision D45).  Two git calls at most."
+  (let ((default-directory clone))
+    (cond
+     ((equal (magit-rev-parse "HEAD") oid)
+      (list :state 'same :ahead 0 :behind 0))
+     ((not (and (approve-clone--oid-p oid)
+                (magit-git-success "cat-file" "-e" (concat oid "^{commit}"))))
+      (list :state 'missing))
+     (t
+      (pcase-let* ((counts (magit-git-string "rev-list" "--left-right" "--count"
+                                             (concat "HEAD..." oid)))
+                   (`(,ahead ,behind) (mapcar #'string-to-number (split-string counts))))
+        (list :state (cond ((zerop behind) 'ahead)
+                           ((zerop ahead) 'behind)
+                           (t 'diverged))
+              :ahead ahead :behind behind))))))
 
 (provide 'approve-clone)
 

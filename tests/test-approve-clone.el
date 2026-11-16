@@ -509,4 +509,31 @@ PROPS may give :number, :head (the head repository), :branch and :draft."
       (setq test-clone--reply (lambda (_) (test-clone--answer)))
       (expect (approve-clone-pick-pull-request) :to-throw 'user-error))))
 
+;;; The clone's state
+
+(describe "approve-clone-state"
+  (it "says whether HEAD is GitHub's head, ahead, behind or diverged from it"
+    (test-clone--with-clones
+      (let* ((one (test-clone--dir "one"))
+             (first (alist-get "one" test-clone--shas nil nil #'equal))
+             (second (progn (test-clone--git one "commit" "-q" "--allow-empty" "-m" "2")
+                            (test-clone--git one "rev-parse" "HEAD")))
+             (third (progn (test-clone--git one "commit" "-q" "--allow-empty" "-m" "3")
+                           (test-clone--git one "rev-parse" "HEAD"))))
+        (expect (approve-clone-state one third) :to-equal '(:state same :ahead 0 :behind 0))
+        (expect (approve-clone-state one first) :to-equal '(:state ahead :ahead 2 :behind 0))
+        (test-clone--git one "checkout" "-q" "--detach" first)
+        (expect (approve-clone-state one third) :to-equal '(:state behind :ahead 0 :behind 2))
+        (test-clone--git one "commit" "-q" "--allow-empty" "-m" "rewritten")
+        (expect (approve-clone-state one second)
+                :to-equal '(:state diverged :ahead 1 :behind 1)))))
+
+  (it "says the clone lacks a commit it hasn't"
+    (test-clone--with-clones
+      (expect (approve-clone-state (test-clone--dir "one") (make-string 40 ?a))
+              :to-equal '(:state missing))
+      (expect (approve-clone-state (test-clone--dir "one")
+                                   (alist-get "two" test-clone--shas nil nil #'equal))
+              :to-equal '(:state missing)))))
+
 ;;; test-approve-clone.el ends here
