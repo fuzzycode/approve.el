@@ -44,8 +44,10 @@
 ;; (`pr'), in a PR's buffer.  Every context carries :url when there is
 ;; one, for opening and copying.
 ;;
-;; A buffer that draws threads as overlays under its lines, where
-;; point never goes (the file view), says which threads a line has
+;; A buffer whose text isn't Approve's, a file's buffer in a clone,
+;; says what is at point itself (`approve-context-function').  One that
+;; draws threads as overlays under its lines, where point never goes
+;; (the file view, a clone's buffer), says which threads a line has
 ;; (`approve-context-threads-function'): the context of the line
 ;; carries them as :threads, and `approve-context-of-threads' gives
 ;; the contexts of those threads and their comments, for the commands
@@ -76,14 +78,23 @@ as the file view (approve-file.el), sets it to a plist:
 Its lines that are in the diff carry `approve-line', as in the diff;
 the others are the context `code'.")
 
+(defvar-local approve-context-function nil
+  "A function that says what is at a position of a buffer that isn't Approve's.
+The text of a file's buffer in a clone (approve-feedback.el) is the
+user's, and carries no property of Approve's.  Such a buffer sets
+this to a function of POS that returns the context there, as
+`approve-context-at-point' does (with the region when POS is point),
+or nil to look further.  It is asked first.  Its `code' contexts may
+say in :why why GitHub takes no comment on the line.")
+
 (defvar-local approve-context-threads-function nil
   "A function that says which threads are drawn under the line at a position.
 A buffer that draws threads as overlays under its lines, which point
-never enters (the file view), sets this to a function of POS that
-returns the ids of the threads of the line at POS, in order.  The
-context of a line there (`line', `lines' or `code') carries them as
-:threads, nil for none, and the commands of threads and comments act
-on them (`approve-action-target').")
+never enters (the file view, a clone's buffer), sets this to a
+function of POS that returns the ids of the threads of the line at
+POS, in order.  The context of a line there (`line', `lines' or
+`code') carries them as :threads, nil for none, and the commands of
+threads and comments act on them (`approve-action-target').")
 
 (defun approve-context--entity (typename id fields)
   "Return FIELDS of the entity TYPENAME ID as an alist, or nil if absent."
@@ -360,16 +371,18 @@ author of a comment, applies to the section around it, the comment."
 at point\") lists the kinds and their keys.  An active region over
 diff lines gives `lines'.  When nothing more specific is at POS, the
 context is the pull request, kind `pr', in a buffer of one; in a
-buffer of lists, such as the dashboard, it is nil.  Where threads
-are drawn under the lines, a line's context says which in :threads
-\(`approve-context-threads-function').
+buffer of lists, such as the dashboard, it is nil.  A buffer whose
+text isn't Approve's says it itself (`approve-context-function'),
+and where threads are drawn under the lines, a line's context says
+which in :threads (`approve-context-threads-function').
 
 Example, on an added line:
   (:kind line :path \"a.el\" :side \"RIGHT\" :line 42 :old nil :new 42
    :line-kind add :url \"…/files#diff-…R42\")"
   (let* ((pos (or pos (point)))
          (context
-          (or (and (= pos (point)) (approve-context--region))
+          (or (and approve-context-function (funcall approve-context-function pos))
+              (and (= pos (point)) (approve-context--region))
               (approve-context--thing pos)
               (when-let* ((line (get-text-property pos 'approve-line)))
                 (approve-context-of-line line))

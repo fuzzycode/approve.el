@@ -10,6 +10,7 @@ callbacks it was given.
 #+begin_example
  ┌──────────────────────────────────────────────────────────────────────────┐
  │ Entry points & menus     approve.el · approve-menus.el                   │
+ │                          approve-feedback.el (clone)                     │
  │   M-x commands, transients, keymaps, evil bindings                       │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Actions                  approve-actions.el · approve-commands.el ·      │
@@ -24,7 +25,6 @@ callbacks it was given.
  │  approve-search.el            │                                          │
  │  approve-file.el              │                                          │
  │  approve-notifications.el     │                                          │
- │  approve-feedback.el (clone)  │                                          │
  │  approve-lines.el (clone)     │                                          │
  ├───────────────────────────────┴──────────────────────────────────────────┤
  │ Renderers (section inserters; pure: read the store, insert text)         │
@@ -60,7 +60,11 @@ Rules:
 - Only the modules for a local clone touch one (its files, branch, git), and
   the core never requires them: every other module works without a clone
   (D36).  =approve.el= requires them and puts their functions on the hooks
-  the core offers, such as =approve-visit-commit-functions= (D37).
+  the core offers, such as =approve-visit-commit-functions= (D37), and the
+  core's buffer-local functions say what a clone's buffer holds
+  (=approve-context-function=, =approve-diff-range-positions-function=).
+  =approve-feedback.el= sits at the top, as it arranges the core's commands
+  in its map and dispatch; its own buffers' code is the Buffers layer's.
 
 * Modules
 Planned files.  Split a file when it holds two concerns, never for its
@@ -130,8 +134,9 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | the one with a commit, shown in Magit; remotes read from the config; a buffer's |       |
 |                            | branch and its place on GitHub; a branch's PRs, the one shown and picking       |       |
 |                            | another; the clone's state; a file's text at a commit; a PR's worktree          |       |
-| =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads and actions in the buffers of its       |     7 |
-|                            | clone; ways to and from the PR buffer                                           |       |
+| =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads in the buffers of its clone, what is at |     7 |
+|                            | point there, the actions on them (the core's commands in its map), its          |       |
+|                            | dispatch; ways to and from the PR buffer                                        |       |
 | =approve-lines.el=         | GitHub's lines in a clone's buffer (D45): a map from a diff of GitHub's text    |     7 |
 |                            | and the buffer's, in an asynchronous process, made again after edits on idle    |       |
 | =approve-dev.el=           | Development tools, fixture recording and replay (not packaged)                  |     0 |
@@ -432,7 +437,8 @@ then walks up the sections from point to the first one that means something.
 | Diff line(s), region       | =lines=                         | =:path :side :line :start-line :start-side=      |
 | Diff line                  | =line=                          | =:path :side :line :old :new :line-kind=         |
 | Line of a file view not in | =code=                          | =:path :name :side :line= (=:name=: the path in  |
-| the diff                   |                                 | that version; =:url=: the file on GitHub)        |
+| the diff; a clone's line   |                                 | that version; =:url=: the file on GitHub; =:why= |
+| GitHub takes no comment on |                                 | in a clone: why GitHub takes none)               |
 | File heading / file entry  | =file=                          | =:path :viewed=                                  |
 | Thread heading             | =thread=                        | =:thread-id :resolved :can-reply :can-resolve=   |
 | Comment in a thread        | =review-comment=                | =:comment-id :thread-id :can-update :can-delete= |
@@ -456,11 +462,22 @@ then walks up the sections from point to the first one that means something.
 Every context also carries =:url= when one exists (for =o= and copying).
 
 A buffer that draws threads as overlays under its lines, where point never
-goes (the file view), says which threads a line has
+goes (the file view, a clone's buffer), says which threads a line has
 (=approve-context-threads-function=).  Its =line=, =lines= and =code=
 contexts carry them as =:threads=, and =approve-context-of-threads= gives the
 contexts of those threads and of their comments, each with a =:label=
 (=@bob: Should this be…=), for the commands that act on one ([[*Actions][Actions]]).
+
+A buffer whose text isn't Approve's, a file's buffer in a clone
+(=approve-feedback.el=), says itself what is at point
+(=approve-context-function=): the =line= the diff has, or the region's
+=lines=, where the buffer's lines are GitHub's at the pull request's head,
+unchanged and in its diff ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]); else =code= with =:why=, such as "Line
+41 was edited here; GitHub takes comments only on its own lines".  The
+lines are compared as they are when the command runs
+(=approve-lines-current-map=).  =approve-diff-range-positions-function=
+says where a range's lines are there, for the highlight of the lines a
+comment is about and the marks in flight.
 
 * Input buffers
 - =approve-input-read= (from approve-v2) opens a buffer in

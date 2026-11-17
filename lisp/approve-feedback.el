@@ -66,24 +66,42 @@
 ;;   the clone's files: when it moved, the clone is compared with
 ;;   GitHub's head again, or another branch's pull request shown.
 ;; - `approve-feedback-command-map' holds the mode's commands, for the
-;;   user to bind: the mode binds no key of its own (D46).  TAB folds
-;;   the threads of a line, T all of them, n and p go to the next and
-;;   previous unresolved thread; mouse-1 on a bubble folds its line.
+;;   user to bind: the mode binds no key of its own (D46), but evil's
+;;   ]t and [t.  TAB folds the threads of a line, T all of them, n and
+;;   p go to the next and previous unresolved thread; mouse-1 on a
+;;   bubble folds its line.  `approve-feedback-dispatch' lists them
+;;   all; mouse-1 on the lighter opens it.
+;; - The actions of a PR buffer work here, on the threads of the line
+;;   at point (point never enters them; asking which when there are
+;;   several) and on GitHub's lines: r R e k + reply, resolve, edit,
+;;   delete and react; c and s comment and suggest on a line, or the
+;;   region's lines, that map unchanged to a line of the pull request's
+;;   diff (decisions D32, D45), and say why not on others ("Line 41 was
+;;   edited here…").  The buffer says what is at point
+;;   (`approve-context-function'), which threads a line has
+;;   (`approve-context-threads-function') and where a range's lines are
+;;   (`approve-diff-range-positions-function'); the actions run in the
+;;   PR buffer's store, which redraws them all.
 ;;
-;; Layer rules: this is the buffers layer, and a module for a local
-;; clone (D36), which the core never requires; approve.el does.  It
-;; reads the store through selectors and changes only its own overlays
-;; and the mode line of the buffers it is on.
+;; Layer rules: a module for a local clone (D36), which the core never
+;; requires; approve.el does.  It spans the layers above the clone's
+;; own (approve-clone.el, approve-lines.el): its buffers, and the
+;; actions and menu of the feedback mode, which arrange the core's
+;; commands.  It reads the store through selectors and changes only
+;; its own overlays and the mode line of the buffers it is on; the
+;; actions change GitHub through the core's pipeline.
 
 ;;; Code:
 
 (require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
+(require 'transient)
 (require 'approve-log)
 (require 'approve-api)
 (require 'approve-model)
 (require 'approve-session)
+(require 'approve-context)
 (require 'approve-faces)
 (require 'approve-icons)
 (require 'approve-render)
@@ -92,8 +110,16 @@
 (require 'approve-thread)
 (require 'approve-diff)
 (require 'approve-file)
+(require 'approve-nav)
+(require 'approve-actions)
+(require 'approve-review)
+(require 'approve-commands)
+(require 'approve-menus)
 (require 'approve-clone)
 (require 'approve-lines)
+
+(declare-function approve-evil-setup-feedback "approve-evil" (map))
+(declare-function evil-normalize-keymaps "evil-core" (&optional state))
 
 ;;; State of a buffer
 
@@ -149,18 +175,34 @@ LOCAL is non-nil when `right-margin-width' had a local value.")
 The mode binds no key in your buffers (decision D46); bind this map
 to one, under a leader key for example:
 
-  (keymap-set approve-feedback-mode-map \"C-c a\" approve-feedback-command-map)"
+  (keymap-set approve-feedback-mode-map \"C-c a\" approve-feedback-command-map)
+
+\\[approve-feedback-dispatch] in it lists them all."
   "g" #'approve-feedback-refresh
   "P" #'approve-clone-pick-pull-request
   "TAB" #'approve-feedback-toggle-threads
   "<tab>" #'approve-feedback-toggle-threads
   "T" #'approve-feedback-toggle-all-threads
   "n" #'approve-feedback-next-thread
-  "p" #'approve-feedback-previous-thread)
+  "p" #'approve-feedback-previous-thread
+  "c" #'approve-comment
+  "s" #'approve-suggest
+  "C" #'approve-comment-on-pr
+  "r" #'approve-reply
+  "R" #'approve-resolve
+  "e" #'approve-edit
+  "k" #'approve-delete
+  "+" #'approve-react
+  "o" #'approve-browse
+  "S" #'approve-submit-review
+  "X" #'approve-discard-review
+  "?" #'approve-feedback-dispatch)
 
 (defvar-keymap approve-feedback-mode-map
   :doc "Keymap of `approve-feedback-mode', empty: the mode binds no key.
-Bind `approve-feedback-command-map' here to reach its commands.")
+Bind `approve-feedback-command-map' here to reach its commands.  Evil's
+]t and [t go to the next and previous unresolved thread, in normal
+state (approve-evil.el).")
 
 ;;;###autoload
 (define-minor-mode approve-feedback-mode
@@ -176,7 +218,8 @@ the pull request's number and state, and how the clone stands to it."
   :group 'approve
   (if approve-feedback-mode
       (condition-case err
-          (unless (approve-feedback--start)
+          (if (approve-feedback--start)
+              (approve-feedback--setup-evil)
             (approve-feedback--stop)
             (setq approve-feedback-mode nil))
         ((error quit)
@@ -184,6 +227,16 @@ the pull request's number and state, and how the clone stands to it."
          (setq approve-feedback-mode nil)
          (signal (car err) (cdr err))))
     (approve-feedback--stop)))
+
+(defun approve-feedback--setup-evil ()
+  "Bind evil's ]t and [t in the mode's keymap, when evil is loaded.
+They are the mode's only keys (decision D46), bound in
+approve-evil.el, which the mode requires then (decision D17)."
+  (when (featurep 'evil)
+    (require 'approve-evil)
+    (approve-evil-setup-feedback approve-feedback-mode-map)
+    (when (and (bound-and-true-p evil-local-mode) (fboundp 'evil-normalize-keymaps))
+      (evil-normalize-keymaps))))
 
 ;;; Turning it on and off
 
@@ -243,7 +296,10 @@ BRANCH is as `approve-clone-branch-head' gives it."
         approve-feedback--error nil
         approve-feedback--shown nil
         approve-feedback--head-ref (approve-clone-head (plist-get branch :clone))
-        approve-model-store-buffer (approve-feedback--store-buffer pr))
+        approve-model-store-buffer (approve-feedback--store-buffer pr)
+        approve-context-function #'approve-feedback--context-at
+        approve-context-threads-function #'approve-feedback--threads-at
+        approve-diff-range-positions-function #'approve-feedback--range-positions)
   (approve-lines-unwatch)
   (approve-feedback--draw nil)
   (approve-changes-follow-selection)
@@ -265,7 +321,9 @@ BRANCH is as `approve-clone-branch-head' gives it."
                       approve-feedback--clone-state approve-feedback--lighter
                       approve-feedback--head approve-feedback--texts approve-feedback--fetching
                       approve-feedback--error approve-feedback--shown
-                      approve-feedback--head-ref approve-model-store-buffer))
+                      approve-feedback--head-ref approve-model-store-buffer
+                      approve-context-function approve-context-threads-function
+                      approve-diff-range-positions-function))
     (kill-local-variable variable)))
 
 ;;; The pull request's store
@@ -895,8 +953,13 @@ loads, and whether GitHub has changes."
                                 approve-feedback--error))
                    (and changes
                         (substitute-command-keys
-                         "Updated on GitHub: \\[approve-feedback-refresh] to see it"))))
+                         "Updated on GitHub: \\[approve-feedback-refresh] to see it"))
+                   "mouse-1: Approve's menu"))
        "\n"))))
+
+(defvar approve-feedback--lighter-map
+  (make-mode-line-mouse-map 'mouse-1 #'approve-feedback-mouse-dispatch)
+  "Keymap of the lighter: a click opens the dispatch (decision D46).")
 
 (defun approve-feedback--lighter-text ()
   "Return the lighter of the current buffer (decision D46).
@@ -934,7 +997,8 @@ words."
                               ("CLOSED" (approve-face "closed" 'approve-state-closed)))))
                 " "))
        'help-echo (approve-feedback--tooltip fields unresolved loading changes)
-       'mouse-face 'mode-line-highlight))))
+       'mouse-face 'mode-line-highlight
+       'local-map approve-feedback--lighter-map))))
 
 (defun approve-feedback--update-lighter ()
   "Compute the lighter of the current buffer again."
@@ -997,9 +1061,7 @@ With SHOW `show', unfold them either way; with `hide', fold them."
 A folded line keeps its bubble in the right margin.  On the first
 line, the threads above it when the line has none of its own."
   (interactive)
-  (approve-feedback--check)
-  (approve-feedback--toggle (or (approve-feedback--overlay-at (point))
-                                (user-error "No threads on this line"))))
+  (approve-feedback--toggle (approve-feedback--toggle-preflight)))
 
 (defun approve-feedback-mouse-toggle-threads (event)
   "Fold the threads of the line whose bubble was clicked, EVENT, or unfold them."
@@ -1012,9 +1074,7 @@ line, the threads above it when the line has none of its own."
 (defun approve-feedback-toggle-all-threads ()
   "Unfold every thread of the file, or fold them all when none is folded."
   (interactive)
-  (approve-feedback--check)
-  (let* ((overlays (or (approve-feedback--overlays)
-                       (user-error "No threads in this file")))
+  (let* ((overlays (approve-feedback--toggle-all-preflight))
          (show (if (seq-some (lambda (overlay)
                                (not (approve-feedback--unfolded-p
                                      (overlay-get overlay 'approve-feedback-entries))))
@@ -1066,6 +1126,218 @@ From the first line, that can be the threads above it."
          (user-error "No unresolved thread before this")))))
 
 (add-hook 'approve-clone-picked-functions #'approve-feedback--picked)
+
+;;; What is at point
+
+(defun approve-feedback--threads-at (pos)
+  "Return the ids of the threads drawn under the line at POS.
+It is the buffer's `approve-context-threads-function'.  On the first
+line, those above it when the line has none of its own, as
+\\[approve-feedback-toggle-threads] folds them."
+  (when-let* ((overlay (approve-feedback--overlay-at pos)))
+    (mapcar (lambda (entry) (alist-get 'id (car entry)))
+            (overlay-get overlay 'approve-feedback-entries))))
+
+(defun approve-feedback--lines-at (pos)
+  "Return the buffer's lines at POS, as (FIRST . LAST).
+That is the region's lines when POS is point and the region is
+active (a region ending at the start of a line leaves it out), else
+POS's line."
+  (save-restriction
+    (widen)
+    (if (and (= pos (point)) (use-region-p))
+        (let ((start (region-beginning))
+              (end (region-end)))
+          (when (and (> end start) (save-excursion (goto-char end) (bolp)))
+            (setq end (1- end)))
+          (cons (line-number-at-pos start) (line-number-at-pos end)))
+      (let ((line (line-number-at-pos pos)))
+        (cons line line)))))
+
+(defun approve-feedback--github-lines (first last)
+  "Return GitHub's lines in the diff where the buffer's lines FIRST to LAST are.
+The value is their `approve-line' plists, in order, when each is
+GitHub's own line at the pull request's head, unchanged, with none
+deleted between them, and in the pull request's diff: the only lines
+GitHub takes a comment on (decisions D32 and D45).  Otherwise it is
+why not, a string about the first line that isn't, such as \"Line 41
+was edited here; GitHub takes comments only on its own lines\".  The
+lines are compared as they are now (`approve-lines-current-map')."
+  (let ((map (and approve-feedback--head (approve-lines-current-map approve-feedback--head))))
+    (cond
+     ((null approve-feedback--head)
+      (format "Line %d isn't in the pull request's diff; GitHub takes no comment there" first))
+     ((null map)
+      (if approve-feedback--error
+          (format "Could not compare the file with GitHub's: %s" approve-feedback--error)
+        "Approve is still comparing the file with GitHub's: try again in a moment"))
+     (t
+      (let ((diff (make-hash-table))
+            (lines nil)
+            (previous nil))
+        (pcase-dolist (`(,line . ,property)
+                       (approve-file-diff-lines approve-feedback--path
+                                                (approve-feedback--hunks) nil))
+          (puthash line property diff))
+        (catch 'why
+          (dolist (line (number-sequence first last))
+            (pcase-let ((`(,github . ,state) (approve-lines-to-github map line)))
+              (when-let* ((why (cond
+                                ((memq state '(edited added))
+                                 (format "Line %d was %s here; GitHub takes comments only on its own lines"
+                                         line state))
+                                ((and previous (/= github (1+ previous)))
+                                 (format "Lines were deleted here above line %d; GitHub takes comments only on its own lines"
+                                         line))
+                                ((not (gethash github diff))
+                                 (format "Line %d isn't in the pull request's diff; GitHub takes no comment there"
+                                         line)))))
+                (throw 'why why))
+              (push (gethash github diff) lines)
+              (setq previous github)))
+          (nreverse lines)))))))
+
+(defun approve-feedback--code (line why)
+  "Return the context of the buffer's LINE, which GitHub takes no comment on.
+It is a `code' context, as on a line of the file view outside the
+diff, with WHY, the reason, as :why.  Its :line is GitHub's line it
+is, or replaced, when the head's map says."
+  (let* ((map (and approve-feedback--head (approve-lines-watched-map approve-feedback--head)))
+         (github (and (approve-lines-current-p map) (car (approve-lines-to-github map line))))
+         (github (and github (> github 0) github)))
+    (list :kind 'code :path approve-feedback--path :name approve-feedback--path
+          :side "RIGHT" :line github :why why
+          :url (approve-context-blob-url (approve-pr-field 'headRefOid)
+                                         approve-feedback--path github))))
+
+(defun approve-feedback--context-at (pos)
+  "Return the context at POS: GitHub's line there, or why GitHub takes none.
+It is the buffer's `approve-context-function'.  Where the buffer's
+line is GitHub's, unchanged and in the pull request's diff, it is the
+context the diff gives there (`line'), or with the region, from its
+first line to its last (`lines'); else it is `code', whose :why says
+why GitHub takes no comment there.  Nil until the pull request has
+loaded."
+  (when (approve-feedback--loaded-p)
+    (pcase-let* ((`(,first . ,last) (approve-feedback--lines-at pos))
+                 (lines (approve-feedback--github-lines first last)))
+      (cond ((stringp lines) (approve-feedback--code first lines))
+            ((and (= pos (point)) (use-region-p))
+             (approve-context-of-lines (car lines) (car (last lines))))
+            (t (approve-context-of-line (car lines)))))))
+
+(defun approve-feedback--range-positions (range)
+  "Return where the lines of RANGE start here, in order.
+It is the buffer's `approve-diff-range-positions-function'.  RANGE's
+lines of the head that the buffer has as GitHub has them are found
+by the head's map; the base's lines, and those edited here, are not."
+  (when-let* (((equal (plist-get range :path) approve-feedback--path))
+              (map (and approve-feedback--head
+                        (approve-lines-watched-map approve-feedback--head)))
+              ((approve-lines-current-p map)))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (let ((positions nil))
+          (dolist (line (approve-diff-range-lines range))
+            (when-let* ((new (nth 2 line))
+                        (here (approve-lines-to-buffer map new))
+                        ((eq (cdr here) 'same)))
+              (goto-char (point-min))
+              (when (zerop (forward-line (1- (car here))))
+                (push (point) positions))))
+          (nreverse positions))))))
+
+;;; The dispatch
+
+(defun approve-feedback--dispatch-heading ()
+  "Return the heading of the dispatch: the pull request and where the clone stands.
+Such as \"#1234 Add retry logic to the GraphQL client · 1/2 · ↑1\"."
+  (let* ((fields (if (approve-feedback--loaded-p)
+                     (approve-pr-fields '(number title))
+                   approve-feedback--pull-request))
+         (open approve-feedback--open)
+         (index (seq-position open approve-feedback--pull-request
+                              (lambda (a b) (equal (alist-get 'id a) (alist-get 'id b))))))
+    (let-alist fields
+      (concat (propertize (format "#%s" .number) 'face 'transient-heading) " "
+              (propertize (truncate-string-to-width (or .title "") 60 nil nil "…")
+                          'face 'approve-title)
+              (propertize (concat
+                           (and index (cdr open) (format " · %d/%d" (1+ index) (length open)))
+                           (when-let* ((arrows (approve-feedback--clone-arrows
+                                                approve-feedback--clone-state)))
+                             (concat " · " arrows)))
+                          'face 'approve-dim)))))
+
+(defun approve-feedback--toggle-preflight ()
+  "Return the overlay of the threads `approve-feedback-toggle-threads' folds.
+Signal a `user-error' when the line has none."
+  (approve-feedback--check)
+  (or (approve-feedback--overlay-at (point))
+      (user-error "No threads on this line")))
+
+(put 'approve-feedback-toggle-threads 'approve-preflight #'approve-feedback--toggle-preflight)
+
+(defun approve-feedback--toggle-all-preflight ()
+  "Return the overlays `approve-feedback-toggle-all-threads' folds.
+Signal a `user-error' when the file has no threads."
+  (approve-feedback--check)
+  (or (approve-feedback--overlays)
+      (user-error "No threads in this file")))
+
+(put 'approve-feedback-toggle-all-threads 'approve-preflight
+     #'approve-feedback--toggle-all-preflight)
+
+;;;###autoload (autoload 'approve-feedback-dispatch "approve-feedback" nil t)
+(transient-define-prefix approve-feedback-dispatch ()
+  "Show the commands of the feedback mode (decisions D06 and D46).
+Those that can't run at point are dimmed.  The commands of threads
+act on those of the line at point, and ask which when there are
+several.  Every one is in `approve-feedback-command-map', with the
+same key."
+  [:description approve-feedback--dispatch-heading
+   ["Threads on this line"
+    ("TAB" "Fold or unfold" approve-feedback-toggle-threads
+     :inapt-if (lambda () (approve-action-why-not 'approve-feedback-toggle-threads)))
+    ("T" "Fold or unfold all" approve-feedback-toggle-all-threads
+     :inapt-if (lambda () (approve-action-why-not 'approve-feedback-toggle-all-threads)))
+    ("n" "Next unresolved" approve-feedback-next-thread)
+    ("p" "Previous unresolved" approve-feedback-previous-thread)
+    ("r" "Reply" approve-reply
+     :inapt-if (lambda () (approve-action-why-not 'approve-reply)))
+    ("R" "Resolve / unresolve" approve-resolve
+     :inapt-if (lambda () (approve-action-why-not 'approve-resolve)))
+    ("e" "Edit" approve-edit
+     :inapt-if (lambda () (approve-action-why-not 'approve-edit)))
+    ("k" "Delete" approve-delete
+     :inapt-if (lambda () (approve-action-why-not 'approve-delete)))
+    ("+" "React" approve-react
+     :inapt-if (lambda () (approve-action-why-not 'approve-react)))]
+   ["Comment"
+    ("c" "Comment" approve-comment
+     :inapt-if (lambda () (approve-action-why-not 'approve-comment)))
+    ("s" "Suggest a change" approve-suggest
+     :inapt-if (lambda () (approve-action-why-not 'approve-suggest)))
+    ("C" "On the pull request" approve-comment-on-pr
+     :inapt-if (lambda () (approve-action-why-not 'approve-comment-on-pr)))]
+   ["Pull request"
+    ("P" "Pick another pull request" approve-clone-pick-pull-request)
+    ("g" "Refresh" approve-feedback-refresh)
+    ("o" "Open in browser" approve-browse)
+    ("S" "Submit review…" approve-submit-review
+     :inapt-if (lambda () (approve-action-why-not 'approve-submit-review)))
+    ("X" "Discard pending review" approve-discard-review
+     :inapt-if (lambda () (approve-action-why-not 'approve-discard-review)))]]
+  (interactive)
+  (approve-feedback--check)
+  (transient-setup 'approve-feedback-dispatch))
+
+(defun approve-feedback-mouse-dispatch (event)
+  "Open the dispatch of the buffer whose lighter was clicked, EVENT."
+  (interactive "e")
+  (select-window (posn-window (event-start event)))
+  (call-interactively #'approve-feedback-dispatch))
 
 (defun approve-feedback-unload-function ()
   "Stop following the focus, as `unload-feature' unloads this file."

@@ -1030,11 +1030,14 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Commit suggestion (or batch)  | =x=           | =a=                   | suggestion; any (batch)   |
 | Add to batch / take out       | =b= (=C-u=:   | =A=                   | suggestion                |
 |                               | empty it)     |                       |                           |
-| Reply / quote                 | =r=           | =r=                   | thread, comment           |
-| Resolve / unresolve           | =R=           | =R=                   | thread                    |
-| Edit at point                 | =e=           | =i=                   | own comment, description  |
-| Delete at point               | =k=           | =D=                   | own comment               |
-| React                         | =+=           | =+=                   | comment, description      |
+| Reply / quote                 | =r=           | =r=                   | thread, comment; a line   |
+|                               |               |                       | with threads (file view)  |
+| Resolve / unresolve           | =R=           | =R=                   | thread; ditto             |
+| Edit at point                 | =e=           | =i=                   | own comment, description; |
+|                               |               |                       | ditto                     |
+| Delete at point               | =k=           | =D=                   | own comment; ditto        |
+| React                         | =+=           | =+=                   | comment, description;     |
+|                               |               |                       | ditto                     |
 | Hide / unhide a comment       | =H=           | via =?=               | comment, review           |
 | Toggle viewed                 | =v=           | =x=                   | file                      |
 | Submit review…                | =S=           | =S=                   | any                       |

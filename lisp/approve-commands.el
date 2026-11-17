@@ -50,7 +50,8 @@
 ;; approve-evil.el.  In a file view (approve-file.el), c, s and v
 ;; work on its lines that are in the diff, as in the diff, and r, R,
 ;; e, k and + on the threads of the line at point, asking which when
-;; there are several (`approve-action-target').
+;; there are several (`approve-action-target').  A clone's buffer
+;; (approve-feedback.el) has them all in its map.
 ;;
 ;; Each command starts with its preflight, `approve-commands--NAME-preflight':
 ;; what it acts on, or a `user-error' saying why it can't run here.
@@ -267,7 +268,8 @@ in one file; it must stay in one hunk too (decision D32)."
 (defun approve-commands--check-code (context)
   "Signal a `user-error' when CONTEXT is a line GitHub takes no comment on.
 That is a line of a file's text that is not in the diff (kind
-`code'); its :why, when it has one, says why."
+`code'); its :why says why when it is a clone's line (edited here,
+or not in the pull request's diff)."
   (when (eq (plist-get context :kind) 'code)
     (user-error "%s" (or (plist-get context :why)
                          (format "Line %s is not in the diff: GitHub takes comments only on lines of the diff"

@@ -52,6 +52,20 @@
   "GitHub's text of the file at commits other than the head, or nil.
 Nil means the head's, `test-feedback--text'.")
 
+(defvar test-feedback--requests nil
+  "The mutations sent to the fake GitHub, the last first.")
+
+(defvar test-feedback--answer nil
+  "A function of a mutation request that returns GitHub's data.")
+
+(defun test-feedback--mutation-answer (request)
+  "Answer the mutation REQUEST by `test-feedback--answer', as GitHub would."
+  (push request test-feedback--requests)
+  (let ((timer (run-at-time 0 nil (plist-get request :on-success)
+                            `((data . ,(funcall test-feedback--answer request)))
+                            nil)))
+    (lambda () (cancel-timer timer))))
+
 (defun test-feedback--blob-answer (request)
   "Return GitHub's answer to the blob query REQUEST.
 The file's text is `test-feedback--text' at the head, else
@@ -92,10 +106,14 @@ and the clone are gone after."
             (replay approve-api-transport)
             (approve-api-transport
              (lambda (request)
-               (if (equal (plist-get request :name) "queries/blob.graphql")
-                   (test-feedback--blob-answer request)
-                 (funcall replay request))))
-            (test-feedback--blobs nil))
+               (cond ((equal (plist-get request :name) "queries/blob.graphql")
+                      (test-feedback--blob-answer request))
+                     ((string-prefix-p "mutations/" (or (plist-get request :name) ""))
+                      (test-feedback--mutation-answer request))
+                     (t (funcall replay request)))))
+            (test-feedback--blobs nil)
+            (test-feedback--requests nil)
+            (test-feedback--answer nil))
        (make-directory (file-name-directory file) t)
        (with-temp-file file
          (insert test-feedback--text))
@@ -113,6 +131,11 @@ and the clone are gone after."
                ,@body)
            (with-current-buffer buffer
              (set-buffer-modified-p nil))
+           (dolist (input (buffer-list))
+             (when (string-prefix-p "*approve-input" (buffer-name input))
+               (with-current-buffer input
+                 (setq approve-input--done t))
+               (kill-buffer input)))
            (kill-buffer buffer)
            (mapc #'kill-buffer (test-feedback--pr-buffers))
            (approve-file-clear-cache)
@@ -183,7 +206,10 @@ LINE 0 is above the first line."
           (expect tooltip :to-match "acme-example/rocket#202")
           (expect tooltip :to-match "parser-rewrite into main · 1 of 2 open pull requests")
           (expect tooltip :to-match "1 commit not pushed")
-          (expect tooltip :to-match "5 unresolved threads in this file")))))
+          (expect tooltip :to-match "5 unresolved threads in this file")
+          (expect tooltip :to-match "mouse-1: Approve's menu\\'")
+          (expect (get-text-property 1 'local-map approve-feedback--lighter)
+                  :to-be approve-feedback--lighter-map)))))
 
   (it "shares the store of the PR buffer that is open"
     (let ((test-feedback--prs (list (test-feedback--row 202))))
@@ -482,5 +508,245 @@ LINE 0 is above the first line."
           (expect approve-feedback-mode :to-be nil)
           (expect (memq #'approve-feedback--on-window window-selection-change-functions)
                   :to-be nil))))))
+
+(defun test-feedback--goto (line)
+  "Move point to the start of the buffer's LINE, the region off."
+  (deactivate-mark)
+  (goto-char (point-min))
+  (forward-line (1- line)))
+
+(defun test-feedback--select (first last)
+  "Select the buffer's lines FIRST to LAST, as a region over them.
+The mark is active from then on in the buffer, as `transient-mark-mode' says."
+  (setq-local transient-mark-mode t)
+  (test-feedback--goto first)
+  (push-mark (point) t t)
+  (forward-line (- last first))
+  (end-of-line))
+
+(defun test-feedback--input ()
+  "Return the open input buffer, or nil."
+  (seq-find (lambda (buffer) (string-prefix-p "*approve-input" (buffer-name buffer)))
+            (buffer-list)))
+
+(defun test-feedback--send (text)
+  "Write TEXT in the open input and send it; wait for GitHub.
+The buffer the input was for is current after."
+  (let ((source nil))
+    (with-current-buffer (or (test-feedback--input) (error "No input buffer is open"))
+      (setq source approve-input--source)
+      (goto-char (point-max))
+      (insert text)
+      (approve-input-commit))
+    (set-buffer source))
+  (approve-test-wait-for (lambda () (null (approve-session-get :inflight)))))
+
+(defun test-feedback--sent ()
+  "Return the query file and the variables of the last mutation, sorted."
+  (let ((request (car test-feedback--requests)))
+    (list (plist-get request :name)
+          (sort (copy-sequence (plist-get request :variables))
+                (lambda (a b) (string< (car a) (car b)))))))
+
+(defun test-feedback--dimmed ()
+  "Return the keys of the dispatch dimmed at point, in order."
+  (let ((suffixes nil))
+    (cl-labels ((walk (x)
+                  (cond ((and (consp x) (keywordp (car x)) (plist-member x :command))
+                         (push x suffixes))
+                        ((consp x) (walk (car x)) (walk (cdr x)))
+                        ((vectorp x) (mapc #'walk x)))))
+      (walk (get 'approve-feedback-dispatch 'transient--layout)))
+    (delq nil (mapcar (lambda (suffix)
+                        (when-let* ((inapt (plist-get suffix :inapt-if)))
+                          (and (funcall inapt) (plist-get suffix :key))))
+                      (nreverse suffixes)))))
+
+(describe "What is at point in a clone's buffer"
+  (it "is GitHub's line in the diff, or why GitHub takes no comment"
+    (test-feedback--with-one
+      (goto-char (point-min))
+      (forward-line 130)
+      (end-of-line)
+      (insert " edited")
+      (test-feedback--start)
+      (test-feedback--goto 15)
+      (expect (approve-context-at-point)
+              :to-equal (list :kind 'line :path test-feedback--path :side "RIGHT" :line 15
+                              :old nil :new 15 :line-kind 'add
+                              :url (approve-context-file-url test-feedback--path "RIGHT" 15)
+                              :threads '("PRRT_kwDO85-qIzFQYiTYBM")))
+      (test-feedback--goto 5)
+      (expect (approve-context-at-point)
+              :to-equal
+              (list :kind 'code :path test-feedback--path :name test-feedback--path
+                    :side "RIGHT" :line 5
+                    :why "Line 5 isn't in the pull request's diff; GitHub takes no comment there"
+                    :url (concat "https://github.com/acme-example/rocket/blob/"
+                                 test-feedback--head-oid "/internal/parser/parser.go#L5")
+                    :threads nil))
+      (expect (approve-action-why-not 'approve-comment)
+              :to-equal "Line 5 isn't in the pull request's diff; GitHub takes no comment there")
+      (test-feedback--goto 131)
+      (expect (approve-action-why-not 'approve-suggest)
+              :to-equal "Line 131 was edited here; GitHub takes comments only on its own lines")
+      ;; A region over lines of one hunk, and one that takes in the edited line.
+      (test-feedback--select 13 14)
+      (let ((context (approve-context-at-point)))
+        (expect (list (plist-get context :kind) (plist-get context :start-line)
+                      (plist-get context :line))
+                :to-equal '(lines 13 14)))
+      (test-feedback--select 129 131)
+      (expect (plist-get (approve-context-at-point) :why)
+              :to-equal "Line 131 was edited here; GitHub takes comments only on its own lines")
+      ;; A line added just now: the lines are compared again at once.
+      (test-feedback--goto 1)
+      (insert "new first line\n")
+      (test-feedback--goto 1)
+      (expect (plist-get (approve-context-at-point) :why)
+              :to-equal "Line 1 was added here; GitHub takes comments only on its own lines")
+      (test-feedback--goto 16)
+      (expect (plist-get (approve-context-at-point) :line) :to-equal 15)))
+
+  (it "names the threads of the line, those above the file on the first line"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--goto 1)
+      (expect (plist-get (approve-context-at-point) :threads)
+              :to-equal '("PRRT_kwDOmVrZbzhFWoiCSv"))
+      (test-feedback--goto 134)
+      (expect (plist-get (approve-context-at-point) :threads)
+              :to-equal '("PRRT_kwDOVCEPcVKg5CpjSd")))))
+
+(describe "The feedback mode's actions"
+  (it "comment on GitHub's line, highlighted while the comment is written"
+    (test-feedback--with-one
+      (setq test-feedback--answer
+            (lambda (_)
+              `((addPullRequestReviewThread
+                 (thread (__typename . "PullRequestReviewThread") (id . "PRRT_new")
+                         (isResolved) (viewerCanReply . t) (path . ,test-feedback--path)
+                         (line . 14) (diffSide . "RIGHT") (subjectType . "LINE")
+                         (comments (totalCount . 1) (pageInfo (hasNextPage) (endCursor . "x"))
+                                   (nodes ((__typename . "PullRequestReviewComment")
+                                           (id . "PRRC_new") (state . "PENDING")
+                                           (body . "New") (bodyHTML . "<p>New</p>")
+                                           (author (__typename . "User") (id . "U_vera")
+                                                   (login . "vera-example"))))))))))
+      (test-feedback--start)
+      (test-feedback--goto 14)
+      (let ((clone (current-buffer)))
+        (call-interactively #'approve-comment)
+        (expect (with-current-buffer (test-feedback--input)
+                  (substring-no-properties (eval (cadr header-line-format) t)))
+                :to-match "Comment on internal/parser/parser.go:14 · pending review")
+        (with-current-buffer clone
+          (expect (seq-find (lambda (overlay) (eq (overlay-get overlay 'face) 'approve-target))
+                            (overlays-at (point)))
+                  :to-be-truthy)))
+      (test-feedback--send "Can this fail?")
+      (expect (test-feedback--sent)
+              :to-equal `("mutations/add-pull-request-review-thread.graphql"
+                          ((body . "Can this fail?") (line . 14) (path . ,test-feedback--path)
+                           (pullRequestId . "PR_kwDOPCDj7SnvM_RcFp") (side . "RIGHT")
+                           (subjectType . "LINE"))))
+      ;; The PR buffer redrew, and this buffer with it: the new thread
+      ;; is under its line, and the line is no longer highlighted.
+      (expect (assq 14 (test-feedback--drawn)) :to-equal '(14 (14 . same)))
+      (expect (seq-find (lambda (overlay) (eq (overlay-get overlay 'face) 'approve-target))
+                        (overlays-at (point)))
+              :to-be nil)))
+
+  (it "reply to, resolve and edit the threads of the line at point"
+    (test-feedback--with-one
+      (setq test-feedback--answer
+            (lambda (request)
+              (pcase (plist-get request :name)
+                ("mutations/add-pull-request-review-thread-reply.graphql"
+                 '((addPullRequestReviewThreadReply
+                    (comment (__typename . "PullRequestReviewComment") (id . "PRRC_reply")
+                             (state . "PENDING") (body . "Done") (bodyHTML . "<p>Done</p>")))))
+                ("mutations/resolve-review-thread.graphql"
+                 '((resolveReviewThread
+                    (thread (__typename . "PullRequestReviewThread")
+                            (id . "PRRT_kwDOmVrZbzhFWoiCSv")
+                            (isResolved . t) (viewerCanResolve) (viewerCanUnresolve . t))))))))
+      (test-feedback--start)
+      (test-feedback--goto 5)
+      (expect (approve-action-why-not 'approve-reply) :to-equal "No threads on this line")
+      (test-feedback--goto 15)
+      (call-interactively #'approve-reply)
+      (expect (with-current-buffer (test-feedback--input)
+                (substring-no-properties (eval (cadr header-line-format) t)))
+              :to-match "Reply to @carol-example on internal/parser/parser.go:15")
+      (test-feedback--send "Done")
+      (expect (test-feedback--sent)
+              :to-equal '("mutations/add-pull-request-review-thread-reply.graphql"
+                          ((body . "Done") (threadId . "PRRT_kwDO85-qIzFQYiTYBM"))))
+      ;; The file's thread, from the first line.
+      (test-feedback--goto 1)
+      (call-interactively #'approve-resolve)
+      (approve-test-wait-for (lambda () (null (approve-session-get :inflight))))
+      (expect (test-feedback--sent)
+              :to-equal '("mutations/resolve-review-thread.graphql"
+                          ((threadId . "PRRT_kwDOmVrZbzhFWoiCSv"))))
+      (expect (test-feedback--lighter) :to-match "#202 .*4 ↑1\\'")
+      ;; The viewer's pending comment, the only one to edit there.
+      (test-feedback--goto 134)
+      (let ((clone (current-buffer)))
+        (call-interactively #'approve-edit)
+        (set-buffer clone))
+      (expect (with-current-buffer (test-feedback--input) (buffer-string))
+              :to-match "\\`Is this branch reachable after the lexer change\\?"))))
+
+(describe "The feedback mode's keys"
+  (it "reach every command of its map from its dispatch, with the same keys"
+    (let ((suffixes nil)
+          (bound nil))
+      (cl-labels ((walk (x)
+                    (cond ((and (consp x) (keywordp (car x)) (plist-member x :command))
+                           (push x suffixes))
+                          ((consp x) (walk (car x)) (walk (cdr x)))
+                          ((vectorp x) (mapc #'walk x)))))
+        (walk (get 'approve-feedback-dispatch 'transient--layout)))
+      (map-keymap (lambda (_event binding) (push binding bound))
+                  approve-feedback-command-map)
+      (dolist (suffix suffixes)
+        (expect (keymap-lookup approve-feedback-command-map (plist-get suffix :key))
+                :to-be (plist-get suffix :command)))
+      (expect (seq-difference (delete-dups bound)
+                              (cons 'approve-feedback-dispatch
+                                    (mapcar (lambda (suffix) (plist-get suffix :command))
+                                            suffixes)))
+              :to-equal nil)
+      (expect (keymap-lookup approve-feedback-command-map "?")
+              :to-be 'approve-feedback-dispatch)))
+
+  (it "bind evil's ]t and [t alone in the user's buffers"
+    (let ((bound nil))
+      (cl-letf (((symbol-function 'evil-define-key*)
+                 (lambda (state map key def)
+                   (when (eq map approve-feedback-mode-map)
+                     (push (list state (key-description key) def) bound))))
+                ((symbol-function 'evil-set-initial-state) #'ignore))
+        (require 'approve-evil)
+        (approve-evil-setup-feedback approve-feedback-mode-map))
+      (expect (reverse bound)
+              :to-equal '((normal "] t" approve-feedback-next-thread)
+                          (normal "[ t" approve-feedback-previous-thread)))))
+
+  (it "dim in the dispatch what can't run on the line at point"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (expect (substring-no-properties (approve-feedback--dispatch-heading))
+              :to-equal "#202 Rewrite the parser and engine scheduler · ↑1")
+      (test-feedback--goto 5)
+      (expect (test-feedback--dimmed) :to-equal '("TAB" "r" "R" "e" "k" "+" "c" "s"))
+      (test-feedback--goto 15)
+      (expect (test-feedback--dimmed) :to-equal '("e"))))
+
+  (it "open the dispatch only where the mode is on"
+    (with-temp-buffer
+      (expect (approve-feedback-dispatch) :to-throw 'user-error))))
 
 ;;; test-approve-feedback.el ends here

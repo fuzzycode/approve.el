@@ -46,6 +46,9 @@
 ;;
 ;; Input buffers start in insert state, to write at once.
 ;;
+;; In a file's buffer in a clone, the feedback mode binds only ]t and
+;; [t (`approve-evil-setup-feedback', decision D46).
+;;
 ;; The modes require this file once evil is loaded; nothing here
 ;; requires evil.
 
@@ -179,6 +182,22 @@ list at point in Emacs, is evil's motion, so gR does it.  The z keys
 fold as in vim: za, zo and zc the list at point (zO and zC too, as
 lists hold no folds), zM and zm every list; zR and zr unfold them.
 zp folds every list but the one at point, as in a PR buffer.")
+
+(defconst approve-evil-feedback-bindings
+  '(("]t" . approve-feedback-next-thread)
+    ("[t" . approve-feedback-previous-thread))
+  "Keys of `approve-feedback-mode' in evil's normal state: (KEY . COMMAND).
+The mode's only keys in the user's buffers (decision D46): the next
+and previous unresolved thread, as in Approve's buffers.  The others
+are in `approve-feedback-command-map', for the user to bind.")
+
+(defun approve-evil-setup-feedback (map)
+  "Bind `approve-evil-feedback-bindings' in MAP in evil's normal state.
+MAP is the feedback mode's keymap; approve-feedback.el, a module for
+a local clone that the core never requires (decision D36), calls
+this as the mode turns on."
+  (dolist (binding approve-evil-feedback-bindings)
+    (evil-define-key* 'normal map (kbd (car binding)) (cdr binding))))
 
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.

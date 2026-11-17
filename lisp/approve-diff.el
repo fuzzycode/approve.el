@@ -767,13 +767,29 @@ Example:
     (seq-find (lambda (section) (equal (oref section value) path))
               (oref diff children))))
 
+(defvar-local approve-diff-range-positions-function nil
+  "A function that finds a range's lines in a buffer that isn't Approve's.
+The text of a file's buffer in a clone (approve-feedback.el) is the
+user's: its lines carry no `approve-line'.  Such a buffer sets this to
+a function of RANGE that returns what `approve-diff-range-positions'
+does, so the lines a comment is about are highlighted there, and
+marked while GitHub has not answered.")
+
 (defun approve-diff-range-positions (range)
   "Return where each line of RANGE starts in the current buffer, in order.
 Only diff lines count, not the threads under them.  Nil when the
 range is not drawn: its file's body was never expanded, or the
 buffer has no such lines.  A buffer without sections, such as the
 file view (approve-file.el), holds the lines of one file: all of it
-is looked at."
+is looked at.  A buffer that isn't Approve's says where they are
+\(`approve-diff-range-positions-function')."
+  (if approve-diff-range-positions-function
+      (funcall approve-diff-range-positions-function range)
+    (approve-diff--range-positions range)))
+
+(defun approve-diff--range-positions (range)
+  "Return where each line of RANGE starts in an Approve buffer, in order.
+See `approve-diff-range-positions'."
   (when-let* ((path (plist-get range :path))
               (bounds (if magit-root-section
                           (when-let* ((file (approve-diff--file-section path)))

@@ -666,6 +666,13 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     LSP), and the mode line has room for a lighter.
   - Vim's =gF= opens a file at a line, and =f= next to =F= reads as "your
     file" next to Approve's.
+- Amended (2026-11-17) :: Found writing the actions: the map has =C= too
+  (a comment on the pull request), as the dispatch's mockup has.  Its
+  commands are the PR buffer's, which act on the threads of the line at
+  point through =approve-action-target= (as the file view's do, [[*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]],
+  amended), and the dispatch dims them as the PR buffer's does.  Evil's
+  =]t= =[t= are bound by =approve-evil-setup-feedback=, which the mode
+  calls when evil is loaded: the core never requires the clone's modules.
 
 * Data and network
 ** D07 ghub, wrapped by approve-api

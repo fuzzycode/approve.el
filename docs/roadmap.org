@@ -365,13 +365,31 @@ Mockups: a file's buffer with its threads (written with F21).
       and focus.  Checked on the SP8 worktrees: all seven threads of #15
       where SP8 found them.  The keys beyond folding, the dispatch and
       evil's =]t= =[t= come with the actions.
-- [ ] Actions in a file's buffer: reply, resolve, edit, delete, and
+- [X] Actions in a file's buffer: reply, resolve, edit, delete, and
       comment and suggest on the lines GitHub has ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).  Context at
       point and preflights from the overlays of a buffer that isn't
       Approve's; the file view takes them too, its threads being read
       only until then ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]).  The keys in =approve-feedback-command-map=, which
       no key reaches until the user binds it, evil's =]t= and =[t=, and
       the dispatch transient ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]).
+      Done (2026-11-17): a buffer that draws threads as overlays says
+      which threads a line has (=approve-context-threads-function=), and
+      =approve-action-target= runs a command's preflight on the line,
+      then on each of its threads and their comments, asking which one
+      ("@bob: Should this be…") when it takes several; the menus ask the
+      same quietly.  The file view took =r R e k += (evil =r R i D +=;
+      D43, amended).  A clone's buffer says what is at point
+      (=approve-context-function=): the diff's =line=, or the region's
+      =lines=, where the buffer's lines are GitHub's, unchanged and in
+      the diff, compared as they are now (=approve-lines-current-map=);
+      else why not ("Line 41 was edited here; …").  The lines a comment
+      is about are highlighted there
+      (=approve-diff-range-positions-function=).  The map has =c s C r R
+      e k + o S X ?= besides folding and moving, evil binds =]t= =[t=,
+      and =approve-feedback-dispatch= (also mouse-1 on the lighter) lists
+      them all, dimmed where they can't run.  =approve-feedback.el= went
+      to the top layer: it arranges the core's commands.  =RET= comes
+      with the next task.
 - [ ] Between the buffers, added by the clone modules (the core never
       requires them): from the PR buffer, a diff line or thread opens in
       the local file (=f=, evil =gF=); from a file's buffer, the PR buffer

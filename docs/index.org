@@ -159,10 +159,18 @@ task only needs the files it touches.
   amended at the author's choice); outdated threads are placed by the
   text at their comment's =originalCommit=, now selected; D23's check
   covers the buffers that share a store (D23, amended).
-- Next step: actions in a file's buffer, the next task of
-  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]]: reply, resolve, edit, delete, comment and suggest from the
-  clone's buffers, the rest of =approve-feedback-command-map=, the
-  dispatch and evil's =]t= =[t=.
+- The actions in a file's buffer are done (2026-11-17): in a clone's
+  buffer and in the file view, =r R e k += act on the threads of the line
+  at point and ask which one when there are several
+  (=approve-action-target=; D43, amended), and in a clone's buffer =c= and
+  =s= comment on the lines that are GitHub's and in the diff, saying why
+  not on others ("Line 41 was edited here; …").  The rest of
+  =approve-feedback-command-map=, evil's =]t= =[t= and
+  =approve-feedback-dispatch= (mouse-1 on the lighter) came with them.
+- Next step: between the buffers, the next task of
+  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]]: =f= (evil =gF=) in the PR buffer opens the line in the
+  clone, =RET= in the map the PR buffer at this line, and =n= / =p= go on
+  to the next of the PR's files.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
   phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]], at the author's request: nice to
   have, done once Approve has been used in the wild and there is
