@@ -253,6 +253,29 @@
         (expect (car failure) :to-be 'approve-lines-error)
         (expect (cadr failure) :to-match "approve-no-such-diff")))))
 
+(describe "approve-lines-current-map"
+  (it "waits for the map of the text as it is now, after an edit"
+    (test-lines--with-buffer (test-lines--text "one" "two")
+      (let ((first (test-lines--watch "head" (test-lines--text "one" "two"))))
+        (expect (approve-lines-current-map "head") :to-be first)
+        (goto-char (point-min))
+        (insert "zero\n")
+        (let ((map (approve-lines-current-map "head")))
+          (expect (approve-lines-current-p map) :to-be t)
+          (expect (approve-lines-to-github map 1) :to-equal '(0 . added))
+          (expect (approve-lines-to-github map 3) :to-equal '(2 . same))
+          ;; The watcher heard of it too, and the idle timer is gone.
+          (expect (car test-lines--maps) :to-be map)
+          (expect approve-lines--timer :to-be nil)))))
+
+  (it "is nil for a text not watched, or when diff fails"
+    (test-lines--with-buffer (test-lines--text "one")
+      (expect (approve-lines-current-map "head") :to-be nil)
+      (test-lines--watch "head" (test-lines--text "one"))
+      (delete-file (approve-lines--watch-file (approve-lines--find "head")))
+      (insert "two\n")
+      (expect (approve-lines-current-map "head") :to-be nil))))
+
 (describe "approve-lines-unwatch"
   (it "stops the diffs, deletes the temporary files and leaves the buffer as it was"
     (test-lines--with-buffer (test-lines--text "one")

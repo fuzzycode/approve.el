@@ -49,6 +49,8 @@
 ;; - `approve-lines-to-github' says which of GitHub's lines a line of
 ;;   the buffer is: GitHub's own, the only kind GitHub takes comments
 ;;   on, one edited here, or one added here, which GitHub hasn't.
+;;   `approve-lines-current-map' waits for the map of the text as it
+;;   is, for a command on the line at point.
 ;; - `approve-lines-unwatch' stops, and deletes the temporary files;
 ;;   killing the buffer or changing its major mode does too, and the
 ;;   files left are deleted when Emacs exits.
@@ -496,6 +498,29 @@ It is nil before the first answer, and may be for older text than the
 buffer's (`approve-lines-current-p')."
   (when-let* ((watch (approve-lines--find key)))
     (approve-lines--watch-map watch)))
+
+(defun approve-lines-current-map (key &optional timeout)
+  "Return the map of GitHub's text KEY for the current buffer's text as it is.
+When the text changed since the last answer, compare it now and wait
+for the answer, TIMEOUT seconds at most (default 1): the diff takes
+milliseconds (decision D45).  Return nil when there is none by then,
+when KEY is not watched, or when `diff-command' failed.  A command
+that needs the lines as they are now asks this, such as a comment
+on the line at point; drawing waits for the answers instead.
+
+Example:
+  (approve-lines-to-github (approve-lines-current-map oid) 42)
+  => (41 . same)"
+  (when-let* ((watch (approve-lines--find key)))
+    (unless (approve-lines-current-p (approve-lines--watch-map watch))
+      (approve-lines-update)
+      (let ((deadline (+ (float-time) (or timeout 1))))
+        (while (and (not (approve-lines-current-p (approve-lines--watch-map watch)))
+                    (approve-lines--watch-process watch)
+                    (< (float-time) deadline))
+          (accept-process-output (approve-lines--watch-process watch) 0.01))))
+    (let ((map (approve-lines--watch-map watch)))
+      (and (approve-lines-current-p map) map))))
 
 (provide 'approve-lines)
 
