@@ -274,6 +274,14 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   goes to the same name on origin, as =git push= does.  A buffer's clone
   is the directory above it that holds =.git=, found without git, so a
   file outside GitHub clones costs no git call at all.
+- Amended (2026-11-17) :: The author's choice: the PR buffer holds the
+  store the clone's buffers share, as it holds its file views'.  When
+  the PR is not open, the feedback mode opens its buffer without showing
+  it, and loads it there; =M-x approve= on that PR then shows that
+  buffer.  When the PR buffer is killed, the clone's buffers open and
+  load it again.  Redrawing, change detection and the actions work as
+  they do for the file views, at the cost of a PR buffer in the buffer
+  list that the user didn't open.
 
 * UI
 ** D04 Buffers are magit-section trees built from section hooks

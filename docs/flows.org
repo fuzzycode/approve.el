@@ -851,9 +851,11 @@ in =approve-clone.el=.
   ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]), so code keeps its shape while it is edited and nothing
   sits in its way.  Point never enters a thread: the commands act on the
   threads of the line at point.
-- One store per PR, shared by its PR buffer, its file views and the clone's
-  buffers ([[file:decisions.org::*D10 Normalized, buffer-local store][D10]]).  A write anywhere redraws them all; killing the last
-  of them drops it.
+- One store per PR, held by its PR buffer and shared by its file views
+  and the clone's buffers ([[file:decisions.org::*D10 Normalized, buffer-local store][D10]]).  When the PR is not open, the mode opens
+  its buffer without showing it ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]], amended).  A write anywhere redraws
+  them all; when the PR buffer is killed, the clone's buffers open and
+  load it again.
 - The global mode is off by default.  With it on, a file of a branch with
   an open PR turns the mode on; outside GitHub clones it costs nothing
   ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]).
