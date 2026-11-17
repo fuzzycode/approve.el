@@ -590,7 +590,13 @@
                                   "totalCount": 1
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDOcPYdE7dZJeJn6X",
+                              "oid": "70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                              "abbreviatedOid": "70f61d1"
+                            }
                           },
                           {
                             "__typename": "PullRequestReviewComment",
@@ -692,7 +698,13 @@
                                   "totalCount": 0
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDOcPYdE7dZJeJn6X",
+                              "oid": "70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                              "abbreviatedOid": "70f61d1"
+                            }
                           }
                         ]
                       }
@@ -818,7 +830,13 @@
                                   "totalCount": 0
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDOcPYdE7dZJeJn6X",
+                              "oid": "70f61d13b75925e267e976a8c023ae14a18f3c1a",
+                              "abbreviatedOid": "70f61d1"
+                            }
                           }
                         ]
                       }

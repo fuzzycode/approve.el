@@ -2762,7 +2762,13 @@
                                   "totalCount": 0
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDO6Cu1_M7PuTGen7",
+                              "oid": "e82bb5fccecfb9319e9fb04cf01b23028d04eb65",
+                              "abbreviatedOid": "e82bb5f"
+                            }
                           },
                           {
                             "__typename": "PullRequestReviewComment",
@@ -2864,7 +2870,13 @@
                                   "totalCount": 0
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDO6Cu1_M7PuTGen7",
+                              "oid": "e82bb5fccecfb9319e9fb04cf01b23028d04eb65",
+                              "abbreviatedOid": "e82bb5f"
+                            }
                           }
                         ]
                       }
@@ -2990,7 +3002,13 @@
                                   "totalCount": 1
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDO6Cu1_M7PuTGen7",
+                              "oid": "e82bb5fccecfb9319e9fb04cf01b23028d04eb65",
+                              "abbreviatedOid": "e82bb5f"
+                            }
                           }
                         ]
                       }
@@ -3123,7 +3141,13 @@
                                   "totalCount": 1
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDO6Cu1_M7PuTGen7",
+                              "oid": "e82bb5fccecfb9319e9fb04cf01b23028d04eb65",
+                              "abbreviatedOid": "e82bb5f"
+                            }
                           },
                           {
                             "__typename": "PullRequestReviewComment",
@@ -3225,7 +3249,13 @@
                                   "totalCount": 0
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDO6Cu1_M7PuTGen7",
+                              "oid": "e82bb5fccecfb9319e9fb04cf01b23028d04eb65",
+                              "abbreviatedOid": "e82bb5f"
+                            }
                           }
                         ]
                       }
@@ -3351,7 +3381,13 @@
                                   "totalCount": 0
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDOTa-TBzY5VyLXs8",
+                              "oid": "4daf930736395722d7b3cf523bf154d492964a9a",
+                              "abbreviatedOid": "4daf930"
+                            }
                           }
                         ]
                       }
@@ -3477,7 +3513,13 @@
                                   "totalCount": 0
                                 }
                               }
-                            ]
+                            ],
+                            "originalCommit": {
+                              "__typename": "Commit",
+                              "id": "C_kwDO6Cu1_M7PuTGen7",
+                              "oid": "e82bb5fccecfb9319e9fb04cf01b23028d04eb65",
+                              "abbreviatedOid": "e82bb5f"
+                            }
                           }
                         ]
                       }

@@ -6,6 +6,9 @@ ${include:fragments/reaction-group.graphql}
 # diffHunk is not selected: outdated code is fetched lazily (eldoc).
 # publishedAt is when its review was submitted (createdAt, when it was
 # written): it says what is new since the viewer's last review (D44).
+# originalCommit is the head the comment was written on: originalLine is
+# a line of the file there, which places an outdated thread in a clone's
+# buffer (D45).
 fragment PullRequestReviewCommentFields on PullRequestReviewComment {
   __typename
   id
@@ -28,6 +31,12 @@ fragment PullRequestReviewCommentFields on PullRequestReviewComment {
   startLine
   originalLine
   originalStartLine
+  originalCommit {
+    __typename
+    id
+    oid
+    abbreviatedOid
+  }
   outdated
   subjectType
   replyTo {

@@ -1057,6 +1057,19 @@ key and the commit it was made on)."
                                                             (length comments))))
                                    (nodes . ,(approve-fixtures--array comments))))))))))))))
 
+(defun approve-fixtures--set-original-commits (first head)
+  "Give each comment of the scenario's threads the commit it was written on.
+That is FIRST, the first commit, for an outdated thread, whose lines
+changed since, and HEAD for the others, where their lines are the
+same.  The comments are changed in place, so every list that holds
+one (a thread, a review) holds it with its commit."
+  (dolist (thread approve-fixtures--threads)
+    (let ((commit (approve-fixtures--commit-ref
+                   (if (eq (alist-get 'isOutdated thread) t) first head))))
+      (dolist (comment (let-alist thread .comments.nodes))
+        (unless (assq 'originalCommit comment)
+          (nconc comment (list (cons 'originalCommit commit))))))))
+
 (cl-defun approve-fixtures--scenario-exchanges (&key pull-request commits timeline
                                                      checks-rollup contexts
                                                      (thread-pages t))
@@ -1066,6 +1079,7 @@ TIMELINE the (MINUTE . NODE) items, CHECKS-ROLLUP and CONTEXTS the head
 commit's checks.  THREAD-PAGES nil leaves the threads query out."
   (let* ((head (car (last commits)))
          (head-commit (alist-get 'commit head)))
+    (approve-fixtures--set-original-commits (alist-get 'commit (car commits)) head-commit)
     (append
      (list (approve-fixtures--graphql
             "pull-request.graphql"
