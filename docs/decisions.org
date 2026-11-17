@@ -742,6 +742,11 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   It misses label, assignee and reviewer edits (Phase 4 can add them),
   resolves and reactions, and replies in a thread beyond its first 50
   comments look like new reviews.
+- Amended (2026-11-17) :: For the clone's buffers (F21): a buffer that
+  shares a PR buffer's store counts as showing it, so a window showing a
+  buffer of the clone keeps the PR polled, and selecting such a buffer
+  checks it as selecting the PR buffer does.  Each answer runs
+  =approve-changes-hook=, and the feedback mode's lighter says =↻=.
 - Why :: Content must not move under the reader's cursor.
 
 ** D24 Repository metadata is fetched lazily and cached per session

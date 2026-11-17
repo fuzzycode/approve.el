@@ -95,7 +95,8 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 | =approve-pr.el=            | =approve-pr-mode=, URL parsing, open/refresh, layouts, redraw, point restore,   |     1 |
 |                            | header line, the PRs opened in the session                                      |       |
 | =approve-changes.el=       | Change detection (D23): the check, comparing it with the store, the header      |     2 |
-|                            | line's notice, checks on selection and focus, polling                           |       |
+|                            | line's notice, checks on selection and focus, polling, also for buffers that    |       |
+|                            | share a PR buffer's store, and a hook for them                                  |       |
 | =approve-nav.el=           | Read-only commands: visit (=RET=), browse (=o=), copy (=y=), jumps, next        |     1 |
 |                            | unviewed file and unresolved thread                                             |       |
 | =approve-eldoc.el=         | Eldoc: one-line =:echo= from the store, full details for the eldoc buffer,      |     1 |

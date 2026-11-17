@@ -339,4 +339,50 @@ Return what the check found."
           (when (timerp approve-changes--timer)
             (cancel-timer approve-changes--timer)))))))
 
+(describe "A buffer that shares a PR buffer's store"
+  (it "checks the PR when it is selected, once it follows the selection"
+    (test-changes--with-medium
+      (let ((pr (current-buffer)))
+        (approve-session-put :checked nil)
+        (spy-on 'approve-changes-check)
+        (with-temp-buffer
+          (setq approve-model-store-buffer pr)
+          (approve-changes-follow-selection)
+          (expect (memq #'approve-changes--on-window window-selection-change-functions)
+                  :to-be-truthy)
+          (set-window-buffer (selected-window) (current-buffer))
+          (approve-changes--selected (current-buffer))
+          (expect (spy-context-current-buffer (spy-calls-most-recent 'approve-changes-check))
+                  :to-be pr)
+          (approve-changes-follow-selection 'stop)
+          (expect (memq #'approve-changes--on-window window-selection-change-functions)
+                  :to-be nil)))))
+
+  (it "keeps its PR polled while a window shows it"
+    (test-changes--with-medium
+      (let ((pr (current-buffer))
+            (approve-changes--timer nil)
+            (approve-poll-interval 1000)
+            (checked nil))
+        (spy-on 'approve-changes-check :and-call-fake
+                (lambda () (push (current-buffer) checked)))
+        (unwind-protect
+            (with-temp-buffer
+              (setq approve-model-store-buffer pr)
+              (set-window-buffer (selected-window) (current-buffer))
+              (approve-changes--poll)
+              (expect checked :to-equal (list pr)))
+          (when (timerp approve-changes--timer)
+            (cancel-timer approve-changes--timer))))))
+
+  (it "hears of each check's answer through approve-changes-hook"
+    (test-changes--with-medium
+      (let* ((heard nil)
+             (approve-changes-hook
+              (list (lambda () (push (approve-session-get :changes) heard)))))
+        (test-changes--check (test-changes--with (test-changes--remote-from-store)
+                                                 'title "Renamed"))
+        (expect (length heard) :to-equal 1)
+        (expect (plist-get (car heard) :edited) :to-be t)))))
+
 ;;; test-approve-changes.el ends here

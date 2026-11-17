@@ -49,6 +49,11 @@
 ;; - A PR buffer is checked when its window is selected or its frame
 ;;   gets the focus, at most once per `approve-focus-check-interval',
 ;;   and every `approve-poll-interval' seconds while a window shows it.
+;;   A buffer that shares its store (a file view, a buffer of the clone)
+;;   counts as showing it, and selecting such a buffer checks it too
+;;   once the buffer called `approve-changes-follow-selection'.
+;; - `approve-changes-hook' runs when a check answered, for the buffers
+;;   that share the store to say it as the header line does.
 ;;
 ;; Layer rules: this is the buffers layer, beside approve-pr.el.  It
 ;; asks GitHub through approve-queries, reads the store through
@@ -203,18 +208,26 @@ loading, no write is in flight and no check is out."
                            (not (approve-pr-error (car entry)))))
                     approve-query-plan)))
 
+(defvar approve-changes-hook nil
+  "Hook run in a PR buffer when a check for changes on GitHub answered.
+The session's :changes is then what differs from the store, or nil.
+The header line says it already; buffers that share the store, such
+as the clone's (approve-feedback.el), say it too from here.")
+
 (defun approve-changes--take (remote version)
   "Say in the header line how REMOTE differs from the store.
 VERSION is the store's version when the check was sent.  When the
 store changed since, or a load or a write is under way, REMOTE may
-predate it: then it is dropped, and a later check tells."
+predate it: then it is dropped, and a later check tells.  Then
+`approve-changes-hook' runs."
   (if (and (= version (approve-model-version))
            (not (approve-pr-loading-p))
            (not (approve-session-get :inflight)))
       (let ((changes (approve-changes-compare remote)))
         (approve-log 'debug "Changes on GitHub of %s: %S" (buffer-name) changes)
         (approve-session-put :changes changes)
-        (approve-pr-update-header-line))
+        (approve-pr-update-header-line)
+        (run-hooks 'approve-changes-hook))
     (approve-log 'debug "Change check of %s dropped: the store changed meanwhile"
                  (buffer-name))))
 
@@ -250,6 +263,23 @@ nothing.  The buffer is not redrawn: \\<approve-pr-mode-map>\\[approve-pr-refres
        (provided-mode-derived-p (buffer-local-value 'major-mode buffer)
                                 'approve-pr-mode)))
 
+(defun approve-changes--pr-buffer-of (buffer)
+  "Return the PR buffer BUFFER shows, or nil.
+That is BUFFER itself, or the PR buffer whose store it shares (a file
+view, a buffer of the clone: `approve-model-store-buffer')."
+  (cond ((approve-changes--pr-buffer-p buffer) buffer)
+        ((buffer-live-p buffer)
+         (let ((owner (buffer-local-value 'approve-model-store-buffer buffer)))
+           (and (approve-changes--pr-buffer-p owner) owner)))))
+
+(defun approve-changes--shown-p (buffer)
+  "Return non-nil if a window shows the PR buffer BUFFER, or one sharing its store."
+  (or (get-buffer-window buffer 'visible)
+      (seq-some (lambda (other)
+                  (and (eq (buffer-local-value 'approve-model-store-buffer other) buffer)
+                       (get-buffer-window other 'visible)))
+                (buffer-list))))
+
 (defun approve-changes--due-p ()
   "Return non-nil if selecting the current PR buffer should check it."
   (and approve-focus-check-interval
@@ -258,15 +288,16 @@ nothing.  The buffer is not redrawn: \\<approve-pr-mode-map>\\[approve-pr-refres
              (>= (- (float-time) checked) approve-focus-check-interval)))))
 
 (defun approve-changes--selected (buffer)
-  "Check BUFFER if the selected window shows it and a check is due."
-  (when (and (approve-changes--pr-buffer-p buffer)
-             (eq (window-buffer (selected-window)) buffer))
-    (with-current-buffer buffer
+  "Check the PR BUFFER shows if the selected window shows it and a check is due.
+BUFFER is a PR buffer or one that shares its store."
+  (when-let* ((pr (approve-changes--pr-buffer-of buffer))
+              ((eq (window-buffer (selected-window)) buffer)))
+    (with-current-buffer pr
       (when (approve-changes--due-p)
         (approve-changes-check)))))
 
 (defun approve-changes--on-window (window)
-  "Check the current PR buffer soon if WINDOW, which shows it, is selected.
+  "Check the current buffer's PR soon if WINDOW, which shows it, is selected.
 It is on the buffer's `window-selection-change-functions' and
 `window-buffer-change-functions'.  Those run during redisplay, so
 the check waits for a timer."
@@ -275,10 +306,23 @@ the check waits for a timer."
     (run-at-time 0 nil #'approve-changes--selected (current-buffer))))
 
 (defun approve-changes--on-focus ()
-  "Check the selected window's PR buffer soon, when Emacs has the focus.
+  "Check the selected window's PR soon, when Emacs has the focus.
 It is on `after-focus-change-function'."
   (when (frame-focus-state)
     (run-at-time 0 nil #'approve-changes--selected (window-buffer (selected-window)))))
+
+(defun approve-changes-follow-selection (&optional stop)
+  "Check the current buffer's PR for changes when its window is selected.
+The buffer shares a PR buffer's store, such as a buffer of the clone
+\(approve-feedback.el): selecting it checks the PR as selecting the
+PR buffer does, and a window showing it keeps the PR polled.  With
+STOP, it no longer does."
+  (if stop
+      (progn
+        (remove-hook 'window-selection-change-functions #'approve-changes--on-window t)
+        (remove-hook 'window-buffer-change-functions #'approve-changes--on-window t))
+    (add-hook 'window-selection-change-functions #'approve-changes--on-window nil t)
+    (add-hook 'window-buffer-change-functions #'approve-changes--on-window nil t)))
 
 (defvar approve-changes--timer nil
   "The timer of the next poll, or nil.")
@@ -291,11 +335,13 @@ It is on `after-focus-change-function'."
 
 (defun approve-changes--poll ()
   "Check the PR buffers a window shows, then wait for the next poll.
-Polling stops when no PR buffer is left; the next one starts it."
+A PR buffer is shown too when a window shows a buffer sharing its
+store.  Polling stops when no PR buffer is left; the next one starts
+it."
   (setq approve-changes--timer nil)
   (let ((buffers (seq-filter #'approve-changes--pr-buffer-p (buffer-list))))
     (dolist (buffer buffers)
-      (when (get-buffer-window buffer 'visible)
+      (when (approve-changes--shown-p buffer)
         (with-current-buffer buffer
           (approve-changes-check))))
     (when buffers
