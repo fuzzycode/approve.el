@@ -43,12 +43,26 @@
 ;;   opens its buffer without showing it and loads it there, once for
 ;;   every buffer of the clone.  A redraw of the PR buffer redraws them,
 ;;   and when it is killed they open and load it again.
+;; - GitHub's text of the file at the pull request's head comes from the
+;;   clone when it has the commit, else from GitHub (the file view's
+;;   cache).  approve-lines.el compares it with the buffer's, at once
+;;   and after edits once Emacs is idle, and the threads go under the
+;;   lines it says: their own, the line now in place of one edited here,
+;;   or where deleted lines were.  Threads on the whole file go above
+;;   the first line.
+;; - The threads are overlays: a bubble in the right margin, red while
+;;   one asks for changes (D34), gold when the line was edited here,
+;;   dim when all are resolved; the threads after the line's text, the
+;;   file view's boxes, folded at first (D46).  Between comparisons they
+;;   move with the text.
 ;; - The lighter says the pull request's number, the file's unresolved
 ;;   threads, which of the branch's open pull requests it is, how the
 ;;   clone stands to GitHub's head, and what is loading or changed; its
 ;;   tooltip says it in words (D46).
 ;; - `approve-feedback-command-map' holds the mode's commands, for the
-;;   user to bind: the mode binds no key of its own (D46).
+;;   user to bind: the mode binds no key of its own (D46).  TAB folds
+;;   the threads of a line, T all of them, n and p go to the next and
+;;   previous unresolved thread; mouse-1 on a bubble folds its line.
 ;;
 ;; Layer rules: this is the buffers layer, and a module for a local
 ;; clone (D36), which the core never requires; approve.el does.  It
@@ -61,13 +75,17 @@
 (require 'seq)
 (require 'subr-x)
 (require 'approve-log)
+(require 'approve-api)
 (require 'approve-model)
 (require 'approve-session)
 (require 'approve-faces)
 (require 'approve-icons)
 (require 'approve-render)
 (require 'approve-pr)
+(require 'approve-thread)
+(require 'approve-file)
 (require 'approve-clone)
+(require 'approve-lines)
 
 ;;; State of a buffer
 
@@ -92,6 +110,23 @@ Its :oid is the head it was compared with.")
 ;; Without this, the mode line would drop the lighter's faces and tooltip.
 (put 'approve-feedback--lighter 'risky-local-variable t)
 
+(defvar-local approve-feedback--text nil
+  "GitHub's text of the file, compared with the buffer: (OID . TEXT).
+OID is the head it is at; TEXT is nil when GitHub has no such file.")
+
+(defvar-local approve-feedback--fetching nil
+  "The head whose text is being fetched from GitHub, or nil.")
+
+(defvar-local approve-feedback--error nil
+  "Why GitHub's text of the file could not be had, or nil.")
+
+(defvar-local approve-feedback--shown nil
+  "The ids of the threads unfolded here; the others are folded (D46).")
+
+(defvar-local approve-feedback--margin nil
+  "The buffer's own right margin before the mode widened it: (LOCAL . WIDTH).
+LOCAL is non-nil when `right-margin-width' had a local value.")
+
 ;;; Mode
 
 (defvar-keymap approve-feedback-command-map
@@ -101,7 +136,12 @@ to one, under a leader key for example:
 
   (keymap-set approve-feedback-mode-map \"C-c a\" approve-feedback-command-map)"
   "g" #'approve-feedback-refresh
-  "P" #'approve-clone-pick-pull-request)
+  "P" #'approve-clone-pick-pull-request
+  "TAB" #'approve-feedback-toggle-threads
+  "<tab>" #'approve-feedback-toggle-threads
+  "T" #'approve-feedback-toggle-all-threads
+  "n" #'approve-feedback-next-thread
+  "p" #'approve-feedback-previous-thread)
 
 (defvar-keymap approve-feedback-mode-map
   :doc "Keymap of `approve-feedback-mode', empty: the mode binds no key.
@@ -182,14 +222,24 @@ BRANCH is as `approve-clone-branch-head' gives it."
         approve-feedback--path (file-relative-name (file-truename buffer-file-name)
                                                    (file-truename (plist-get branch :clone)))
         approve-feedback--clone-state nil
+        approve-feedback--text nil
+        approve-feedback--fetching nil
+        approve-feedback--error nil
+        approve-feedback--shown nil
         approve-model-store-buffer (approve-feedback--store-buffer pr))
+  (approve-lines-unwatch)
+  (approve-feedback--draw nil)
   (approve-feedback-redraw))
 
 (defun approve-feedback--stop ()
   "Take what the mode added away from the current buffer."
+  (approve-lines-unwatch)
+  (approve-feedback--draw nil)
   (dolist (variable '(approve-feedback--branch approve-feedback--pull-request
                       approve-feedback--open approve-feedback--path
                       approve-feedback--clone-state approve-feedback--lighter
+                      approve-feedback--text approve-feedback--fetching
+                      approve-feedback--error approve-feedback--shown
                       approve-model-store-buffer))
     (kill-local-variable variable)))
 
@@ -258,23 +308,289 @@ It is on `approve-clone-picked-functions'."
         (approve-feedback--show approve-feedback--branch pr
                                 (or (approve-clone-wait-pull-requests head) (list pr)))))))
 
-;;; Drawing
+;;; GitHub's text of the file
+
+(defun approve-feedback--relevant-p ()
+  "Return non-nil if the pull request changes the file, or has threads on it.
+Otherwise the lighter is all the mode shows, and no text is compared."
+  (cl-flet ((here-p (entry) (equal (alist-get 'path entry) approve-feedback--path)))
+    (or (seq-some #'here-p (approve-pr-list-fields 'files '(path)))
+        (seq-some #'here-p (approve-pr-list-fields 'reviewThreads '(path))))))
+
+(defun approve-feedback--compare (oid text)
+  "Compare TEXT, GitHub's file at OID, with the buffer, now and after edits.
+TEXT is \"\" when GitHub has no such file.  Each answer draws the
+threads again (`approve-feedback--decorate')."
+  (setq approve-feedback--text (cons oid text)
+        approve-feedback--fetching nil
+        approve-feedback--error nil)
+  (approve-lines-watch 'head text
+                       :callback (lambda (_map) (approve-feedback--decorate))
+                       :errorback (lambda (err)
+                                    (setq approve-feedback--error (cadr err))
+                                    (approve-feedback--update-lighter))))
+
+(defun approve-feedback--fetched (buffer oid text &optional err)
+  "Compare TEXT, GitHub's file at OID, with BUFFER, or note ERR."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (and approve-feedback-mode (equal approve-feedback--fetching oid))
+        (if err
+            (setq approve-feedback--fetching nil
+                  approve-feedback--error (approve-api-error-message err))
+          (approve-feedback--compare oid text))
+        (approve-feedback--update-lighter)))))
+
+(defun approve-feedback--fetch (oid)
+  "Get GitHub's text of the buffer's file at OID, and compare it with the buffer.
+It comes from the clone when it has the commit, else from GitHub,
+kept for the session as the file view keeps it (decision D45)."
+  (if-let* ((text (approve-clone-file-text (plist-get approve-feedback--branch :clone)
+                                           oid approve-feedback--path)))
+      (approve-feedback--compare oid text)
+    (unless (equal approve-feedback--fetching oid)
+      (setq approve-feedback--fetching oid)
+      (let ((buffer (current-buffer)))
+        (approve-file-fetch oid approve-feedback--path
+                            :callback (lambda (text)
+                                        (approve-feedback--fetched buffer oid text))
+                            :errorback (lambda (err)
+                                         (approve-feedback--fetched buffer oid nil err)))))))
 
 (defun approve-feedback--follow-head ()
-  "Compare the clone with GitHub's head again when the head moved."
+  "Follow GitHub's head: compare the clone and the file with it when it moved."
   (let ((oid (approve-pr-field 'headRefOid)))
     (unless (equal oid (plist-get approve-feedback--clone-state :oid))
       (setq approve-feedback--clone-state
             (append (list :oid oid)
-                    (approve-clone-state (plist-get approve-feedback--branch :clone) oid))))))
+                    (approve-clone-state (plist-get approve-feedback--branch :clone) oid))))
+    (cond
+     ((not (approve-feedback--relevant-p))
+      (when approve-feedback--text
+        (approve-lines-unwatch)
+        (setq approve-feedback--text nil)))
+     ((not (equal oid (car approve-feedback--text)))
+      (approve-feedback--fetch oid)))))
+
+(defun approve-feedback--github-line (line)
+  "Return GitHub's text of LINE of the file, or nil."
+  (when-let* ((text (cdr approve-feedback--text))
+              ((> line 0)))
+    (let ((start 0))
+      (while (and start (> line 1))
+        (setq start (string-search "\n" text start)
+              start (and start (1+ start))
+              line (1- line)))
+      (when (and start (< start (length text)))
+        (string-remove-suffix
+         "\r" (substring text start (or (string-search "\n" text start) (length text))))))))
+
+;;; Where the threads go
+
+(defun approve-feedback--where (map thread)
+  "Return where THREAD goes in the buffer by MAP: (LINE . WHERE), or nil.
+A thread on the whole file goes above the first line (LINE 0, WHERE
+`file'); one on a line of the head where `approve-lines-to-buffer'
+says, WHERE being `same', `edited' or `deleted'."
+  (let-alist thread
+    (cond
+     ((equal .subjectType "FILE") (cons 0 'file))
+     ((and .line (equal .diffSide "RIGHT")) (approve-lines-to-buffer map .line)))))
+
+(defun approve-feedback--place (map)
+  "Return the threads of the buffer's file by the lines they go under, by MAP.
+The value is ((LINE . ENTRIES) ...), in order of LINE, 0 above the
+first line.  Each of ENTRIES is (THREAD . WHERE), as
+`approve-feedback--where' says, in the store's order."
+  (let ((lines nil))
+    (dolist (thread (approve-pr-threads-for-file approve-feedback--path))
+      (when-let* ((where (approve-feedback--where map thread)))
+        (if-let* ((line (assq (car where) lines)))
+            (setcdr line (append (cdr line) (list (cons thread (cdr where)))))
+          (push (list (car where) (cons thread (cdr where))) lines))))
+    (sort lines (lambda (a b) (< (car a) (car b))))))
+
+;;; Drawing the threads
+
+(defvar-keymap approve-feedback-bubble-map
+  :doc "Keymap of a thread's bubble in the right margin."
+  "<right-margin> <mouse-1>" #'approve-feedback-mouse-toggle-threads
+  "<mouse-1>" #'approve-feedback-mouse-toggle-threads)
+
+(defun approve-feedback--edited-p (entry)
+  "Return non-nil if the line of ENTRY's thread was edited or deleted here."
+  (memq (cdr entry) '(edited deleted)))
+
+(defun approve-feedback--unfolded-p (entries)
+  "Return non-nil if the threads of ENTRIES are unfolded here."
+  (seq-some (lambda (entry) (member (alist-get 'id (car entry)) approve-feedback--shown))
+            entries))
+
+(defun approve-feedback--bubble (entries asking)
+  "Return the bubble of a line with the threads of ENTRIES.
+It is the speech bubble and the count of unresolved threads, or of
+all when none is.  Its colour says what matters most (decision D46):
+red when one asks for changes, its id in ASKING (D34); gold when the
+line was edited here; dim when all are resolved."
+  (let* ((threads (mapcar #'car entries))
+         (unresolved (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
+                                threads)))
+    (approve-face-add
+     (concat (approve-icon 'comment)
+             (number-to-string (if (> unresolved 0) unresolved (length threads))))
+     (cond ((seq-some (lambda (thread) (member (alist-get 'id thread) asking)) threads)
+            'approve-thread-mark-changes-requested)
+           ((seq-some #'approve-feedback--edited-p entries) 'approve-edited-here)
+           ((> unresolved 0) 'approve-diff-bubble)
+           (t 'approve-dim)))))
+
+(defun approve-feedback--bubble-help (entries unfolded)
+  "Return the tooltip of the bubble of ENTRIES, UNFOLDED or not.
+Such as \"1 thread · edited here: GitHub has  (retries 3))\"."
+  (let ((edited (seq-find #'approve-feedback--edited-p entries)))
+    (concat (approve-feedback--count (length entries) "thread")
+            (and edited
+                 (format " · %s here: GitHub has %s" (cdr edited)
+                         (or (approve-feedback--github-line (alist-get 'line (car edited)))
+                             "")))
+            (if unfolded "\nmouse-1: fold" "\nmouse-1: unfold"))))
+
+(defun approve-feedback--threads-text (entries)
+  "Return the threads of ENTRIES drawn as the file view draws them.
+The thread of a line edited here starts with GitHub's text of it.
+Their boxes name no keys: the dispatch does (decision D46)."
+  (let ((owner approve-model-store-buffer)
+        (github (mapcar (lambda (entry)
+                          (and (approve-feedback--edited-p entry)
+                               (approve-feedback--github-line (alist-get 'line (car entry)))))
+                        entries)))
+    (with-temp-buffer
+      ;; New comments are marked as in the PR buffer (D44).
+      (setq approve-model-store-buffer owner)
+      (cl-loop for entry in entries
+               for text in github
+               do (let ((start (point)))
+                    (when text
+                      (insert (approve-face (if (eq (cdr entry) 'deleted)
+                                                "┊ deleted here: "
+                                              "┊ on GitHub: ")
+                                            'approve-dim)
+                              (approve-face text 'approve-edited-here) "\n"))
+                    (approve-thread-insert (car entry))
+                    (approve-render-prefix start (point) "  ")))
+      (buffer-string))))
+
+(defun approve-feedback--paint (overlay &optional asking)
+  "Give OVERLAY, the threads of a line, its bubble, and its threads unless folded.
+ASKING are the ids of the threads that ask for changes, asked of
+the store when nil.  The bubble is in the right margin; a line's
+threads follow it, a string after its text, so the line numbers of
+the lines after them stay theirs.  The threads above the first line
+have a heading of their own, with their bubble."
+  (let* ((entries (overlay-get overlay 'approve-feedback-entries))
+         (asking (or asking (mapcar (lambda (thread) (alist-get 'id thread))
+                                    (approve-pr-threads-asking-for-changes))))
+         (unfolded (approve-feedback--unfolded-p entries))
+         (bubble (approve-feedback--bubble entries asking))
+         (margin (propertize " " 'display
+                             `((margin right-margin)
+                               ,(propertize bubble
+                                            'help-echo (approve-feedback--bubble-help
+                                                        entries unfolded)
+                                            'mouse-face 'highlight
+                                            'keymap approve-feedback-bubble-map)))))
+    (overlay-put overlay 'approve-feedback-width (string-width bubble))
+    (if (overlay-get overlay 'approve-feedback-top)
+        (overlay-put overlay 'before-string
+                     (concat margin
+                             (approve-face (if (seq-some (lambda (entry) (eq (cdr entry) 'file))
+                                                         entries)
+                                               "  On this file"
+                                             "  Above the first line")
+                                           'approve-heading)
+                             "\n"
+                             (and unfolded (approve-feedback--threads-text entries))))
+      (overlay-put overlay 'before-string margin)
+      (overlay-put overlay 'after-string
+                   (and unfolded
+                        ;; Point at the end of the line stays there, not
+                        ;; after the threads.
+                        (concat (propertize " " 'cursor t) "\n"
+                                (string-remove-suffix
+                                 "\n" (approve-feedback--threads-text entries))))))))
+
+(defun approve-feedback--set-margin (width)
+  "Make the right margin WIDTH columns wide, or give it its own width back if nil.
+The margin is there only while the mode is on and the file has
+threads (decision D46)."
+  (cond
+   (width
+    (unless approve-feedback--margin
+      (setq approve-feedback--margin (cons (local-variable-p 'right-margin-width)
+                                           right-margin-width)))
+    (setq-local right-margin-width (max width (or (cdr approve-feedback--margin) 0))))
+   (approve-feedback--margin
+    (if (car approve-feedback--margin)
+        (setq right-margin-width (cdr approve-feedback--margin))
+      (kill-local-variable 'right-margin-width))
+    (setq approve-feedback--margin nil)))
+  (dolist (window (get-buffer-window-list nil nil t))
+    (unless (eql (cdr (window-margins window)) right-margin-width)
+      (set-window-margins window (car (window-margins window)) right-margin-width))))
+
+(defun approve-feedback--overlays ()
+  "Return the overlays of the threads here, in order."
+  (save-restriction
+    (widen)
+    (sort (seq-filter (lambda (overlay) (overlay-get overlay 'approve-feedback-entries))
+                      (overlays-in (point-min) (point-max)))
+          (lambda (a b) (< (overlay-start a) (overlay-start b))))))
+
+(defun approve-feedback--draw (lines)
+  "Show LINES, as `approve-feedback--place' gives them, under their lines.
+Nil takes the threads and the margin away."
+  (save-excursion
+    (save-restriction
+      (widen)
+      (remove-overlays (point-min) (point-max) 'approve-feedback t)
+      (let ((asking (and lines (mapcar (lambda (thread) (alist-get 'id thread))
+                                       (approve-pr-threads-asking-for-changes))))
+            (width nil))
+        (pcase-dolist (`(,line . ,entries) lines)
+          (goto-char (point-min))
+          (when (or (zerop line) (zerop (forward-line (1- line))))
+            (let ((overlay (if (zerop line)
+                               (make-overlay (point-min) (point-min))
+                             (make-overlay (line-beginning-position) (line-end-position)
+                                           nil t t))))
+              (overlay-put overlay 'approve-feedback t)
+              (overlay-put overlay 'approve-feedback-entries entries)
+              (overlay-put overlay 'approve-feedback-top (zerop line))
+              (approve-feedback--paint overlay asking)
+              (setq width (max (or width 3) (overlay-get overlay 'approve-feedback-width))))))
+        (approve-feedback--set-margin width)))))
+
+(defun approve-feedback--decorate ()
+  "Draw the threads under their lines again, by the latest map.
+A map older than the buffer's text asks for another comparison,
+and the threads stay where the text took them until it answers."
+  (let ((map (and approve-feedback--text (approve-lines-watched-map 'head))))
+    (cond
+     ((null approve-feedback--text) (approve-feedback--draw nil))
+     ((null map))
+     ((not (approve-lines-current-p map)) (approve-lines-update))
+     (t (approve-feedback--draw (approve-feedback--place map))))
+    (approve-feedback--update-lighter)))
 
 (defun approve-feedback-redraw ()
   "Draw what the current buffer shows of its pull request again, from the store.
 Every redraw of the PR buffer calls it in the buffers of its clone."
   (when approve-feedback-mode
-    (when (approve-feedback--loaded-p)
-      (approve-feedback--follow-head))
-    (approve-feedback--update-lighter)))
+    (if (approve-feedback--loaded-p)
+        (progn
+          (approve-feedback--follow-head)
+          (approve-feedback--decorate))
+      (approve-feedback--update-lighter))))
 
 ;;; The lighter
 
@@ -353,6 +669,9 @@ loads, and whether GitHub has changes."
                                   (approve-feedback--count (car unresolved) "unresolved thread")
                                   (cdr unresolved))))
                    (and loading "Loading the pull request…")
+                   (and approve-feedback--error
+                        (format "Could not compare the file with GitHub's: %s"
+                                approve-feedback--error))
                    (and changes "Updated on GitHub: refresh to see it")))
        "\n"))))
 
@@ -367,7 +686,7 @@ words."
          (fields (if loaded
                      (approve-pr-fields '(number title state isDraft baseRefName))
                    approve-feedback--pull-request))
-         (loading (or (not loaded) (approve-pr-loading-p)))
+         (loading (or (not loaded) (approve-pr-loading-p) approve-feedback--fetching))
          (unresolved (and loaded (approve-feedback--unresolved)))
          (changes (and loaded (approve-session-get :changes)))
          (open approve-feedback--open)
@@ -416,6 +735,112 @@ argument CLEAR-CACHES, the session's caches are forgotten too."
     (user-error "The pull request is loading again"))
   (with-current-buffer approve-model-store-buffer
     (approve-pr-refresh clear-caches)))
+
+(defun approve-feedback--line-of (overlay)
+  "Return the line OVERLAY's threads are under, 0 above the first line."
+  (if (overlay-get overlay 'approve-feedback-top)
+      0
+    (save-restriction
+      (widen)
+      (line-number-at-pos (overlay-start overlay)))))
+
+(defun approve-feedback--overlay-at (position)
+  "Return the overlay of the threads of the line at POSITION, or nil.
+On the first line without threads of its own, that is the overlay of
+the threads above it."
+  (save-excursion
+    (goto-char position)
+    (let ((overlays (seq-filter (lambda (overlay) (overlay-get overlay 'approve-feedback-entries))
+                                (overlays-in (line-beginning-position) (line-end-position)))))
+      (or (seq-find (lambda (overlay) (not (overlay-get overlay 'approve-feedback-top))) overlays)
+          (car overlays)))))
+
+(defun approve-feedback--toggle (overlay &optional show)
+  "Unfold the threads of OVERLAY if folded, else fold them.
+With SHOW `show', unfold them either way; with `hide', fold them."
+  (let* ((entries (overlay-get overlay 'approve-feedback-entries))
+         (ids (mapcar (lambda (entry) (alist-get 'id (car entry))) entries))
+         (show (pcase show
+                 ('show t)
+                 ('hide nil)
+                 (_ (not (approve-feedback--unfolded-p entries))))))
+    (setq approve-feedback--shown (if show
+                                      (seq-union ids approve-feedback--shown)
+                                    (seq-difference approve-feedback--shown ids)))
+    (approve-feedback--paint overlay)))
+
+(defun approve-feedback-toggle-threads ()
+  "Fold the threads of the line at point, or unfold them.
+A folded line keeps its bubble in the right margin.  On the first
+line, the threads above it when the line has none of its own."
+  (interactive)
+  (approve-feedback--check)
+  (approve-feedback--toggle (or (approve-feedback--overlay-at (point))
+                                (user-error "No threads on this line"))))
+
+(defun approve-feedback-mouse-toggle-threads (event)
+  "Fold the threads of the line whose bubble was clicked, EVENT, or unfold them."
+  (interactive "e")
+  (let ((position (event-start event)))
+    (with-current-buffer (window-buffer (posn-window position))
+      (when-let* ((overlay (approve-feedback--overlay-at (posn-point position))))
+        (approve-feedback--toggle overlay)))))
+
+(defun approve-feedback-toggle-all-threads ()
+  "Unfold every thread of the file, or fold them all when none is folded."
+  (interactive)
+  (approve-feedback--check)
+  (let* ((overlays (or (approve-feedback--overlays)
+                       (user-error "No threads in this file")))
+         (show (if (seq-some (lambda (overlay)
+                               (not (approve-feedback--unfolded-p
+                                     (overlay-get overlay 'approve-feedback-entries))))
+                             overlays)
+                   'show
+                 'hide)))
+    (dolist (overlay overlays)
+      (approve-feedback--toggle overlay show))))
+
+(defun approve-feedback--unresolved-overlays ()
+  "Return the overlays of the lines with an unresolved thread, in order."
+  (seq-filter (lambda (overlay)
+                (seq-some (lambda (entry) (not (alist-get 'isResolved (car entry))))
+                          (overlay-get overlay 'approve-feedback-entries)))
+              (approve-feedback--overlays)))
+
+(defun approve-feedback--here ()
+  "Return the line of point, as `approve-feedback--line-of' counts lines.
+At the very start of the buffer, point is on the threads above the
+first line: line 0."
+  (if (= (point) (save-restriction (widen) (point-min)))
+      0
+    (line-number-at-pos nil t)))
+
+(defun approve-feedback--goto (overlay)
+  "Move to the line of OVERLAY's threads, and unfold them."
+  (approve-feedback--toggle overlay 'show)
+  (goto-char (overlay-start overlay)))
+
+(defun approve-feedback-next-thread ()
+  "Move to the next line with an unresolved thread, and unfold its threads."
+  (interactive)
+  (approve-feedback--check)
+  (let ((here (approve-feedback--here)))
+    (approve-feedback--goto
+     (or (seq-find (lambda (overlay) (> (approve-feedback--line-of overlay) here))
+                   (approve-feedback--unresolved-overlays))
+         (user-error "No unresolved thread after this")))))
+
+(defun approve-feedback-previous-thread ()
+  "Move to the previous line with an unresolved thread, and unfold its threads.
+From the first line, that can be the threads above it."
+  (interactive)
+  (approve-feedback--check)
+  (let ((here (approve-feedback--here)))
+    (approve-feedback--goto
+     (or (seq-find (lambda (overlay) (< (approve-feedback--line-of overlay) here))
+                   (reverse (approve-feedback--unresolved-overlays)))
+         (user-error "No unresolved thread before this")))))
 
 (add-hook 'approve-clone-picked-functions #'approve-feedback--picked)
 

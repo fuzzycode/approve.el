@@ -1137,6 +1137,7 @@ inherit:
 | =approve-diff-hunk-heading=                      | =magit-diff-hunk-heading=                    | =@@= lines                |
 | =approve-diff-bubble=                            | =default=                                    | Thread bubbles on lines   |
 | =approve-thread-mark-changes-requested=          | =error=                                      | Marks asking for changes  |
+| =approve-edited-here=                            | =warning=                                    | Clone: lines edited there |
 | =approve-diff-file-heading=                      | =magit-diff-file-heading=                    | File headings             |
 | =approve-line-number=                            | =line-number=                                | Diff line numbers         |
 | =approve-target=                                 | =region=                                     | Lines being commented on  |

@@ -387,6 +387,14 @@ D34).  The marks are the bubbles of diff lines and the counts of
 file headings and of the file list."
   :group 'approve-faces)
 
+(defface approve-edited-here
+  '((t :inherit warning))
+  "Face of what was edited in a clone since GitHub's head.
+In a buffer of the clone, it colours the bubble of a line with
+threads that was edited there, unless one of them asks for changes
+\(decision D46), and the line's text as GitHub has it."
+  :group 'approve-faces)
+
 (defface approve-diff-refine-added
   '((t :inherit diff-refine-added))
   "Face of the words that changed in an added line."

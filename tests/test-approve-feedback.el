@@ -38,6 +38,26 @@
 (defvar test-feedback--root nil
   "The temporary directory that stands for the clone.")
 
+(defvar test-feedback--blobs nil
+  "The blob queries sent to the fake GitHub, the last first.")
+
+(defconst test-feedback--text
+  (mapconcat (lambda (n) (format "line %d\n" n)) (number-sequence 1 600) "")
+  "GitHub's text of the file at the head, and the clone's at first.")
+
+(defun test-feedback--blob-answer (request)
+  "Return GitHub's answer to the blob query REQUEST: `test-feedback--text'."
+  (push request test-feedback--blobs)
+  (let ((timer (run-at-time
+                0 nil (plist-get request :on-success)
+                `((data (repository
+                         (__typename . "Repository") (id . "R_1")
+                         (object (__typename . "Blob") (id . "B_1")
+                                 (text . ,test-feedback--text) (isBinary) (isTruncated)
+                                 (byteSize . ,(string-bytes test-feedback--text))))))
+                nil)))
+    (lambda () (cancel-timer timer))))
+
 (defun test-feedback--pr-buffers ()
   "Return the live PR buffers."
   (seq-filter (lambda (buffer) (eq (buffer-local-value 'major-mode buffer) 'approve-pr-mode))
@@ -47,22 +67,32 @@
   "Run BODY in a buffer of the medium PR's file in a fake clone.
 The branch heads `test-feedback--prs' (the medium PR #202 and #203,
 open, unless BODY binds it otherwise), and is a commit ahead of
-GitHub.  The buffer, the PR buffers and the clone are gone after."
+GitHub.  The clone hasn't GitHub's head: the file's text comes from
+the fake GitHub (`test-feedback--text').  The buffer, the PR buffers
+and the clone are gone after."
   (declare (indent 0) (debug t))
   `(approve-test-with-fixture "medium"
      (let* ((test-feedback--root (file-name-as-directory
                                   (make-temp-file "approve-feedback-" t)))
-            (file (expand-file-name test-feedback--path test-feedback--root)))
+            (file (expand-file-name test-feedback--path test-feedback--root))
+            (replay approve-api-transport)
+            (approve-api-transport
+             (lambda (request)
+               (if (equal (plist-get request :name) "queries/blob.graphql")
+                   (test-feedback--blob-answer request)
+                 (funcall replay request))))
+            (test-feedback--blobs nil))
        (make-directory (file-name-directory file) t)
        (with-temp-file file
-         (dotimes (n 600)
-           (insert (format "line %d\n" (1+ n)))))
+         (insert test-feedback--text))
+       (approve-file-clear-cache)
        (spy-on 'approve-clone-branch-head
                :and-return-value (list :clone test-feedback--root :branch "parser-rewrite"
                                        :remote "origin" :head test-feedback--head))
        (spy-on 'approve-clone-wait-pull-requests
                :and-call-fake (lambda (_head) test-feedback--prs))
        (spy-on 'approve-clone-state :and-return-value '(:state ahead :ahead 1 :behind 0))
+       (spy-on 'approve-clone-file-text :and-return-value nil)
        (let ((buffer (find-file-noselect file)))
          (unwind-protect
              (with-current-buffer buffer
@@ -71,18 +101,53 @@ GitHub.  The buffer, the PR buffers and the clone are gone after."
              (set-buffer-modified-p nil))
            (kill-buffer buffer)
            (mapc #'kill-buffer (test-feedback--pr-buffers))
+           (approve-file-clear-cache)
            (delete-directory test-feedback--root t))))))
 
 (defun test-feedback--wait ()
-  "Wait until the pull request of the current buffer has loaded."
+  "Wait until the pull request of the current buffer and GitHub's text are in."
   (approve-test-wait-for (lambda () (and (approve-feedback--loaded-p)
                                          (not (approve-pr-loading-p)))))
   (with-current-buffer approve-model-store-buffer
-    (approve-pr-redraw)))
+    (approve-pr-redraw))
+  (approve-test-wait-for (lambda () (not approve-feedback--fetching))))
 
 (defun test-feedback--lighter ()
   "Return the lighter of the current buffer, without its properties."
   (substring-no-properties approve-feedback--lighter))
+
+(defun test-feedback--drawn ()
+  "Return the threads drawn here: ((LINE (GITHUB-LINE . WHERE) ...) ...).
+LINE 0 is above the first line."
+  (mapcar (lambda (overlay)
+            (cons (approve-feedback--line-of overlay)
+                  (mapcar (lambda (entry) (cons (alist-get 'line (car entry)) (cdr entry)))
+                          (overlay-get overlay 'approve-feedback-entries))))
+          (approve-feedback--overlays)))
+
+(defun test-feedback--bubble (line)
+  "Return the bubble in the margin of LINE, 0 above the first line."
+  (let ((overlay (seq-find (lambda (overlay) (= (approve-feedback--line-of overlay) line))
+                           (approve-feedback--overlays))))
+    (cadr (get-text-property 0 'display (overlay-get overlay 'before-string)))))
+
+(defun test-feedback--threads-shown (line)
+  "Return the text of the threads unfolded under LINE, or nil when folded."
+  (let* ((overlay (seq-find (lambda (overlay) (= (approve-feedback--line-of overlay) line))
+                            (approve-feedback--overlays)))
+         (text (overlay-get overlay (if (zerop line) 'before-string 'after-string))))
+    (and text (string-match-p "╭" text) (substring-no-properties text))))
+
+(defun test-feedback--start ()
+  "Turn the mode on, and wait until the threads are drawn."
+  (approve-feedback-mode 1)
+  (test-feedback--wait)
+  (approve-test-wait-for #'approve-feedback--overlays))
+
+(defun test-feedback--idle ()
+  "Compare the lines again, as Emacs would once idle after an edit."
+  (cancel-timer approve-lines--timer)
+  (approve-lines--idle (current-buffer)))
 
 (describe "approve-feedback-mode"
   (it "shows the branch's pull request, loaded in a PR buffer it doesn't show"
@@ -201,5 +266,114 @@ GitHub.  The buffer, the PR buffers and the clone are gone after."
   (it "says the mode is off"
     (with-temp-buffer
       (expect (approve-feedback-refresh) :to-throw 'user-error))))
+
+(defmacro test-feedback--with-one (&rest body)
+  "Run BODY as `test-feedback--with-clone' does, the branch heading #202 alone."
+  (declare (indent 0) (debug t))
+  `(let ((test-feedback--prs (list (test-feedback--row 202))))
+     (test-feedback--with-clone
+       ,@body)))
+
+(describe "The feedback mode's threads"
+  (it "go under their lines, by a diff of GitHub's file and the buffer"
+    (test-feedback--with-one
+      ;; A line added at the top, and line 131 edited.
+      (goto-char (point-min))
+      (insert "new first line\n")
+      (forward-line 130)
+      (end-of-line)
+      (insert " edited")
+      (test-feedback--start)
+      (expect (test-feedback--drawn)
+              :to-equal '((0 (nil . file)) (16 (15 . same)) (132 (131 . edited))
+                          (135 (134 . same))))
+      ;; GitHub's text came from GitHub: the clone hasn't its head.
+      (expect (length test-feedback--blobs) :to-equal 1)
+      (expect right-margin-width :to-be-greater-than 2)
+      (let ((bubble (test-feedback--bubble 132)))
+        (expect (substring-no-properties bubble) :to-match "1\\'")
+        (expect (get-text-property 0 'help-echo bubble)
+                :to-equal "1 thread · edited here: GitHub has line 131\nmouse-1: unfold")
+        (expect (get-text-property (1- (length bubble)) 'face bubble)
+                :to-equal 'approve-edited-here))
+      (expect (get-text-property (1- (length (test-feedback--bubble 16))) 'face
+                                 (test-feedback--bubble 16))
+              :to-equal 'approve-diff-bubble)))
+
+  (it "take GitHub's file from the clone when it has the commit"
+    (test-feedback--with-one
+      (spy-on 'approve-clone-file-text :and-return-value test-feedback--text)
+      (test-feedback--start)
+      (expect test-feedback--blobs :to-equal nil)
+      (expect (spy-calls-args-for 'approve-clone-file-text 0)
+              :to-equal (list test-feedback--root "6ffac5752e1be53bad90e2beeb6d4b0e1f998cc7"
+                              test-feedback--path))
+      (expect (mapcar #'car (test-feedback--drawn)) :to-equal '(0 15 131 134))))
+
+  (it "start folded, and TAB, T, n and p unfold them"
+    (test-feedback--with-one
+      (goto-char (point-min))
+      (forward-line 130)
+      (end-of-line)
+      (insert " edited")
+      (test-feedback--start)
+      (expect (seq-filter #'test-feedback--threads-shown '(0 15 131 134)) :to-equal nil)
+      (goto-char (point-min))
+      (forward-line 14)
+      (approve-feedback-toggle-threads)
+      (expect (test-feedback--threads-shown 15) :to-be-truthy)
+      (approve-feedback-toggle-threads)
+      (expect (test-feedback--threads-shown 15) :to-be nil)
+      ;; The edited line's threads start with GitHub's text of it.
+      (approve-feedback-next-thread)
+      (expect (line-number-at-pos) :to-equal 131)
+      (expect (test-feedback--threads-shown 131) :to-match "┊ on GitHub: line 131\n")
+      (approve-feedback-previous-thread)
+      (expect (line-number-at-pos) :to-equal 15)
+      (approve-feedback-previous-thread)
+      (expect (point) :to-equal (point-min))
+      (expect (test-feedback--threads-shown 0) :to-match "On this file")
+      (expect (approve-feedback-previous-thread) :to-throw 'user-error)
+      (forward-line 1)
+      (approve-feedback-toggle-all-threads)
+      (expect (length (seq-filter #'test-feedback--threads-shown '(0 15 131 134)))
+              :to-equal 4)
+      (approve-feedback-toggle-all-threads)
+      (expect (seq-filter #'test-feedback--threads-shown '(0 15 131 134)) :to-equal nil)
+      (forward-line 2)
+      (expect (approve-feedback-toggle-threads) :to-throw 'user-error)))
+
+  (it "move with the text, and go to their lines anew once Emacs is idle"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (goto-char (point-min))
+      (insert "one\ntwo\n")
+      (expect (mapcar #'car (test-feedback--drawn)) :to-equal '(0 17 133 136))
+      (test-feedback--idle)
+      (approve-test-wait-for (lambda () (approve-lines-current-p
+                                         (approve-lines-watched-map 'head))))
+      (expect (test-feedback--drawn)
+              :to-equal '((0 (nil . file)) (17 (15 . same)) (133 (131 . same))
+                          (136 (134 . same))))))
+
+  (it "leave nothing behind when the mode is turned off"
+    (test-feedback--with-one
+      (let ((margin right-margin-width))
+        (test-feedback--start)
+        (approve-feedback-mode -1)
+        (expect (approve-feedback--overlays) :to-equal nil)
+        (expect right-margin-width :to-equal margin)
+        (expect (local-variable-p 'right-margin-width) :to-be nil)
+        (expect approve-lines--watches :to-equal nil))))
+
+  (it "are not looked for in a file the pull request doesn't touch"
+    (test-feedback--with-one
+      (spy-on 'file-relative-name :and-return-value "docs/untouched.txt")
+      (approve-feedback-mode 1)
+      (test-feedback--wait)
+      (expect test-feedback--blobs :to-equal nil)
+      (expect approve-lines--watches :to-equal nil)
+      (expect (approve-feedback--overlays) :to-equal nil)
+      (expect (local-variable-p 'right-margin-width) :to-be nil))))
 
 ;;; test-approve-feedback.el ends here
