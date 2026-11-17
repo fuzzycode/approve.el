@@ -65,6 +65,7 @@
 (require 'approve-api-paging)
 (require 'approve-model)
 (require 'approve-session)
+(require 'approve-lines)
 
 (defgroup approve-dev nil
   "Development tools for Approve."
@@ -750,7 +751,8 @@ Example:
 ;;; Benchmarks
 
 (defconst approve-dev-speed-budgets
-  '((redraw-medium . 30) (expand-file . 30) (redraw-large . 100))
+  '((redraw-medium . 30) (expand-file . 30) (redraw-large . 100)
+    (lines-busy . 10) (lines-map . 50))
   "Speed budgets in milliseconds (docs/architecture.org, \"Speed\").")
 
 (defun approve-dev--open-fixture (name)
@@ -850,13 +852,63 @@ drawn anew."
       (magit-section-show section)
       (- (float-time) start))))
 
+(defun approve-dev--source-text (lines)
+  "Return a text of LINES lines, each as long as a line of code."
+  (with-temp-buffer
+    (dotimes (i lines)
+      (insert (format "    total_%d = combine(total_%d, values[%d]); // step %d\n"
+                      (1+ i) i (* 7 i) i)))
+    (buffer-string)))
+
+(defun approve-dev--wait-until (predicate)
+  "Wait for PREDICATE to return non-nil; signal an error after 30 seconds."
+  (let ((deadline (+ (float-time) 30)))
+    (while (not (funcall predicate))
+      (when (> (float-time) deadline)
+        (error "The benchmark waited too long"))
+      (accept-process-output nil 0.001))))
+
+(defun approve-dev--time-lines (runs)
+  "Return the milliseconds a 200 000-line buffer of a clone takes after an edit.
+The value is (BUSY MAP), the means of RUNS edits: how long Emacs is
+busy comparing the buffer with GitHub's text, which has three lines
+edited (`approve-lines-update'), and how long until the map arrives."
+  (let* ((text (approve-dev--source-text 200000))
+         (github (with-temp-buffer
+                   (insert text)
+                   (dolist (line '(50000 100000 150000))
+                     (goto-char (point-min))
+                     (forward-line (1- line))
+                     (insert "    // edited on GitHub\n"))
+                   (buffer-string)))
+         (maps 0) (busy 0) (answered 0))
+    (with-temp-buffer
+      (insert text)
+      (unwind-protect
+          (progn
+            (approve-lines-watch 'benchmark github :callback (lambda (_) (cl-incf maps)))
+            (approve-dev--wait-until (lambda () (= maps 1)))
+            (dotimes (run runs)
+              (goto-char (point-min))
+              (forward-line (* (1+ run) 1000))
+              (insert "    // edited here\n")
+              (let ((start (float-time)))
+                (approve-lines-update)
+                (setq busy (+ busy (- (float-time) start)))
+                (approve-dev--wait-until (lambda () (= maps (+ run 2))))
+                (setq answered (+ answered (- (float-time) start))))))
+        (approve-lines-unwatch)))
+    (list (/ (* 1000 busy) runs) (/ (* 1000 answered) runs))))
+
 ;;;###autoload
 (defun approve-dev-benchmark (&optional runs)
   "Measure Approve against its speed budgets with the fixtures.
 Each case is timed RUNS times (default 10) after a warm-up:
 redrawing the medium PR with the diff collapsed, expanding a
-500-line file with 5 threads, and redrawing the large PR.  Return
-an alist of (CASE MILLISECONDS BUDGET), and show it."
+500-line file with 5 threads, redrawing the large PR, and comparing
+a 200 000-line buffer with GitHub's text after an edit (Emacs busy,
+and the map).  Return an alist of (CASE MILLISECONDS BUDGET), and
+show it."
   (interactive)
   (let* ((runs (or runs 10))
          (medium (approve-dev--open-fixture "medium"))
@@ -878,7 +930,10 @@ an alist of (CASE MILLISECONDS BUDGET), and show it."
                                 (setq total (+ total (approve-dev--expand-once medium))))
                               (/ (* 1000 total) runs)))))
             (kill-buffer medium)
-            (kill-buffer large))))
+            (kill-buffer large)))
+         (lines (approve-dev--time-lines runs)))
+    (setq results (append results (list (list 'lines-busy (nth 0 lines))
+                                        (list 'lines-map (nth 1 lines)))))
     (setq results (mapcar (lambda (result)
                             (append result
                                     (list (alist-get (car result)

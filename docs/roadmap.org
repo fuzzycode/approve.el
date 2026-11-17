@@ -329,11 +329,20 @@ Mockups: a file's buffer with its threads (written with F21).
       =approve-clone-state=, and =approve-clone-pull-request-worktree=.
       Checked live on the scratch repository's #14, #15 and #16 and a fork
       of magit.
-- [ ] Line mapping: GitHub's lines at the PR head to the buffer's and
+- [X] Line mapping: GitHub's lines at the PR head to the buffer's and
       back, from a =diff= of the head blob and the buffer's text (D45:
       temporary files, an asynchronous process), redone when the buffer
       changes (on idle, coalesced).  It knows the lines edited locally
-      and the lines GitHub doesn't have.
+      and the lines GitHub doesn't have.  Done (2026-11-17):
+      =approve-lines.el=.  =approve-lines-watch= compares a text with a
+      buffer under a key (the head, an outdated thread's commit), at once
+      and after edits once Emacs has been idle =approve-lines-idle-delay=,
+      the buffer written once for all its texts; =approve-lines-to-buffer=
+      and =approve-lines-to-github= say =same=, =edited=, or =deleted= and
+      =added= here.  =approve-clone-file-text= reads GitHub's text from
+      the clone.  Checked on the SP8 worktrees: every thread on its text
+      in each state, edits not saved included.  On 200 000 lines Emacs is
+      busy 3 ms and the map arrives in 49 ms (=approve-dev-benchmark=).
 - [ ] =approve-feedback.el=, =approve-feedback-mode= (a minor mode):
       threads under their lines as overlays, with the file view's bubbles
       and folding, [[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]'s red, and an "edited locally" mark; outdated

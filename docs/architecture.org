@@ -25,6 +25,7 @@ callbacks it was given.
  │  approve-file.el              │                                          │
  │  approve-notifications.el     │                                          │
  │  approve-feedback.el (clone)  │                                          │
+ │  approve-lines.el (clone)     │                                          │
  ├───────────────────────────────┴──────────────────────────────────────────┤
  │ Renderers (section inserters; pure: read the store, insert text)         │
  │  approve-sections.el · approve-diff.el · approve-thread.el               │
@@ -129,6 +130,8 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 |                            | another; the clone's state; a file's text at a commit; a PR's worktree          |       |
 | =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads and actions in the buffers of its       |     7 |
 |                            | clone; ways to and from the PR buffer                                           |       |
+| =approve-lines.el=         | GitHub's lines in a clone's buffer (D45): a map from a diff of GitHub's text    |     7 |
+|                            | and the buffer's, in an asynchronous process, made again after edits on idle    |       |
 | =approve-dev.el=           | Development tools, fixture recording and replay (not packaged)                  |     0 |
 
 * Data model
@@ -645,11 +648,15 @@ markers and hiding the bodies of collapsed sections):
 | Expand one 500-line file with 5 threads                                     | < 30 ms              | 15.5 ms             |
 | Redraw, large PR (300 files, 20 000 lines), all collapsed                   | < 100 ms             | 36.2 ms             |
 | Keypress to input buffer for a comment                                      | < 50 ms (no network) | Phase 2             |
-| A clone's buffer after an edit, on idle, 200 000-line file (Phase 7, D45)   | Emacs busy < 10 ms,  | SP8, diff only:     |
-|                                                                             | marks < 50 ms later  | 6.9 ms, 40 ms       |
+| A clone's buffer after an edit, on idle, 200 000-line file (Phase 7, D45)   | Emacs busy < 10 ms,  | 3.1 ms, map 49 ms;  |
+|                                                                             | marks < 50 ms later  | marks: Phase 7      |
 
 The 500-line file is the medium PR's parser.go with a synthetic patch (ten
 hunks of 50 lines, changed words marked) and five threads moved onto it.
+The 200 000-line buffer (14 MB, three lines edited on GitHub's side, one
+more here before each run) was measured on 2026-11-17 with =approve-lines.el=:
+Emacs is busy writing the buffer, and the map arrives once =diff= (about
+40 ms of it) is done.
 Uncompiled code is about four times slower; =M-x approve-dev-benchmark=
 measures whatever is loaded.
 
@@ -664,7 +671,12 @@ the diff's file headings) insert their indentation with each line rather
 than indenting afterwards.  In a clone's buffers (D45), the buffer is
 diffed against GitHub's file by an asynchronous process on temporary
 files, after edits once Emacs is idle; never through a pipe, which
-blocks Emacs for seconds on a large file.
+blocks Emacs for seconds on a large file.  The buffer is written as
+Emacs holds it (=no-conversion=, which is UTF-8): encoding it as UTF-8
+takes 54 ms at 14 MB, writing it 4 ms.  It is written once for all the
+texts it is compared with, and copied first only when it holds carriage
+returns, which a change is checked for as it happens: =diff='s own
+=--strip-trailing-cr= takes a second at 14 MB with macOS's =diff=.
 
 * Security and privacy
 - The token comes from ghub (auth-source).  Approve never stores it.
@@ -676,4 +688,5 @@ blocks Emacs for seconds on a large file.
   (=approve-cache-directory=), keyed by object id.  Blobs never change, so the
   cache is always valid.  In a clone's buffers, the diff of a buffer
   against GitHub's file reads temporary files (D45), deleted once they
-  are no longer needed.
+  are no longer needed: when the buffer is killed, changes its major
+  mode or is no longer compared, and when Emacs exits.

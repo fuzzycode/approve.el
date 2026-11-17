@@ -20,7 +20,7 @@
 
 (defvar approve-dev-load-order
   '(approve-log approve-graphql approve-api approve-api-paging approve-api-queue
-    approve-api-url approve-model approve-session approve-queries approve-metadata approve-clone
+    approve-api-url approve-model approve-session approve-queries approve-metadata approve-clone approve-lines
     approve-faces approve-icons approve-html approve-render approve-pr approve-changes approve-thread
     approve-sections approve-conversation approve-diff approve-context approve-nav
     approve-eldoc approve-input approve-mutations approve-actions approve-review approve-commands

@@ -141,11 +141,16 @@ task only needs the files it touches.
   place on GitHub, the branch's pull requests (one query a session), the
   one shown and =approve-clone-pick-pull-request=, the clone's state
   against GitHub's head, and a pull request's worktree among the clones.
-- Next step: the line mapping, the next task of
-  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).  It came ahead of
-  notifications and the release, now [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], on 2026-11-16 at the
-  author's request: the feature before the documentation and the nice
-  to haves.
+- [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] came ahead of notifications and the release, now
+  [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], on 2026-11-16 at the author's request: the feature before
+  the documentation and the nice to haves.  Its line mapping is done
+  (2026-11-17, =approve-lines.el=): GitHub's text of a file and a
+  clone's buffer of it are compared by =diff= in an asynchronous
+  process, again after edits once Emacs is idle, and the map says where
+  GitHub's lines are, and which lines were edited or added here.
+  =approve-clone-file-text= reads GitHub's text from the clone.
+- Next step: =approve-feedback.el=, the feedback mode, the next task of
+  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
   phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]], at the author's request: nice to
   have, done once Approve has been used in the wild and there is
