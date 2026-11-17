@@ -69,6 +69,7 @@
 (require 'approve-merge)
 (require 'approve-dashboard)
 (require 'approve-clone)
+(require 'approve-feedback)
 
 (declare-function magit-add-section-hook "magit-section")
 
@@ -77,6 +78,8 @@
 ;; The core never requires the clone modules (decision D36); they join
 ;; it here, on the hooks it offers.
 (add-hook 'approve-visit-commit-functions #'approve-clone-show-commit)
+(add-hook 'approve-pr-redraw-hook #'approve-feedback-follow-pr-buffer)
+(add-hook 'approve-pr-mode-hook #'approve-feedback-setup-pr-buffer)
 
 ;;;###autoload
 (defalias 'approve-add-section-hook #'magit-add-section-hook
