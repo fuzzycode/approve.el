@@ -425,4 +425,62 @@ LINE 0 is above the first line."
       (expect (approve-feedback--overlays) :to-equal nil)
       (expect (local-variable-p 'right-margin-width) :to-be nil))))
 
+(describe "The feedback mode, following GitHub and the clone"
+  (it "says ↻ when a check finds changes on GitHub"
+    (test-feedback--with-one
+      (approve-feedback-mode 1)
+      (test-feedback--wait)
+      (expect (memq #'approve-changes--on-window window-selection-change-functions)
+              :to-be-truthy)
+      (with-current-buffer approve-model-store-buffer
+        (approve-session-put :changes '(:branch t :commits 1 :comments 0 :reviews 0))
+        (run-hooks 'approve-changes-hook))
+      (expect (test-feedback--lighter) :to-match "↻")
+      (expect (get-text-property 1 'help-echo approve-feedback--lighter)
+              :to-match "Updated on GitHub: .*approve-feedback-refresh to see it")))
+
+  (it "follows HEAD: on the same branch, to another, and off when it has none"
+    (let ((test-feedback--prs (list (test-feedback--row 202) (test-feedback--row 203)))
+          (head '("parser-rewrite" . "aaaa")))
+      (test-feedback--with-clone
+        (spy-on 'approve-clone-head :and-call-fake (lambda (_clone) head))
+        (approve-feedback-mode 1)
+        (test-feedback--wait)
+        (expect (memq #'approve-feedback--on-window window-selection-change-functions)
+                :to-be-truthy)
+        (let ((compared (spy-calls-count 'approve-clone-state)))
+          ;; Nothing moved: nothing is asked.
+          (approve-feedback--check-head (current-buffer))
+          (expect (spy-calls-count 'approve-clone-state) :to-equal compared)
+          ;; A commit: the clone is compared with GitHub's head again.
+          (setq head '("parser-rewrite" . "bbbb"))
+          (approve-feedback--check-head (current-buffer))
+          (expect (spy-calls-count 'approve-clone-state) :to-equal (1+ compared)))
+        ;; A checkout of a branch with another pull request.
+        (let ((other (plist-put (copy-sequence test-feedback--head) :branch "other")))
+          (spy-on 'approve-clone-branch-head
+                  :and-return-value (list :clone test-feedback--root :branch "other"
+                                          :remote "origin" :head other))
+          (spy-on 'approve-clone-branch-pull-requests
+                  :and-call-fake (lambda (_head &rest args)
+                                   (funcall (plist-get args :callback)
+                                            (list (test-feedback--row 203)))))
+          (setq head '("other" . "cccc"))
+          (approve-feedback--check-head (current-buffer))
+          (expect (alist-get 'number approve-feedback--pull-request) :to-equal 203)
+          ;; And one without.
+          (spy-on 'approve-clone-branch-pull-requests
+                  :and-call-fake (lambda (_head &rest args)
+                                   (funcall (plist-get args :callback) nil)))
+          (spy-on 'approve-clone-branch-head
+                  :and-return-value (list :clone test-feedback--root :branch "third"
+                                          :remote "origin"
+                                          :head (plist-put (copy-sequence other)
+                                                           :branch "third")))
+          (setq head '("third" . "dddd"))
+          (approve-feedback--check-head (current-buffer))
+          (expect approve-feedback-mode :to-be nil)
+          (expect (memq #'approve-feedback--on-window window-selection-change-functions)
+                  :to-be nil))))))
+
 ;;; test-approve-feedback.el ends here

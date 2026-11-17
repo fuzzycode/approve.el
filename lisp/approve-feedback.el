@@ -59,6 +59,12 @@
 ;;   threads, which of the branch's open pull requests it is, how the
 ;;   clone stands to GitHub's head, and what is loading or changed; its
 ;;   tooltip says it in words (D46).
+;; - Selecting the buffer checks the pull request for changes as
+;;   selecting its PR buffer does, and a window showing it keeps it
+;;   polled (D23, amended): the lighter says ↻ when GitHub has some.
+;;   Selecting it, or Emacs getting the focus back, also reads HEAD from
+;;   the clone's files: when it moved, the clone is compared with
+;;   GitHub's head again, or another branch's pull request shown.
 ;; - `approve-feedback-command-map' holds the mode's commands, for the
 ;;   user to bind: the mode binds no key of its own (D46).  TAB folds
 ;;   the threads of a line, T all of them, n and p go to the next and
@@ -82,6 +88,7 @@
 (require 'approve-icons)
 (require 'approve-render)
 (require 'approve-pr)
+(require 'approve-changes)
 (require 'approve-thread)
 (require 'approve-diff)
 (require 'approve-file)
@@ -131,6 +138,9 @@ was written on (decision D45); TEXT is \"\" when GitHub has no such file.")
 (defvar-local approve-feedback--margin nil
   "The buffer's own right margin before the mode widened it: (LOCAL . WIDTH).
 LOCAL is non-nil when `right-margin-width' had a local value.")
+
+(defvar-local approve-feedback--head-ref nil
+  "What HEAD was in the clone when last read: `approve-clone-head''s value.")
 
 ;;; Mode
 
@@ -232,13 +242,22 @@ BRANCH is as `approve-clone-branch-head' gives it."
         approve-feedback--fetching nil
         approve-feedback--error nil
         approve-feedback--shown nil
+        approve-feedback--head-ref (approve-clone-head (plist-get branch :clone))
         approve-model-store-buffer (approve-feedback--store-buffer pr))
   (approve-lines-unwatch)
   (approve-feedback--draw nil)
+  (approve-changes-follow-selection)
+  (add-hook 'window-selection-change-functions #'approve-feedback--on-window nil t)
+  (add-hook 'window-buffer-change-functions #'approve-feedback--on-window nil t)
+  (unless (advice-function-member-p #'approve-feedback--on-focus after-focus-change-function)
+    (add-function :after after-focus-change-function #'approve-feedback--on-focus))
   (approve-feedback-redraw))
 
 (defun approve-feedback--stop ()
   "Take what the mode added away from the current buffer."
+  (approve-changes-follow-selection 'stop)
+  (remove-hook 'window-selection-change-functions #'approve-feedback--on-window t)
+  (remove-hook 'window-buffer-change-functions #'approve-feedback--on-window t)
   (approve-lines-unwatch)
   (approve-feedback--draw nil)
   (dolist (variable '(approve-feedback--branch approve-feedback--pull-request
@@ -246,7 +265,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
                       approve-feedback--clone-state approve-feedback--lighter
                       approve-feedback--head approve-feedback--texts approve-feedback--fetching
                       approve-feedback--error approve-feedback--shown
-                      approve-model-store-buffer))
+                      approve-feedback--head-ref approve-model-store-buffer))
     (kill-local-variable variable)))
 
 ;;; The pull request's store
@@ -313,6 +332,88 @@ It is on `approve-clone-picked-functions'."
                  (not (equal (alist-get 'id pr) (alist-get 'id approve-feedback--pull-request))))
         (approve-feedback--show approve-feedback--branch pr
                                 (or (approve-clone-wait-pull-requests head) (list pr)))))))
+
+;;; Following the clone and GitHub
+
+(defun approve-feedback-follow-changes ()
+  "Say in the clone's buffers of the current PR buffer what changed on GitHub.
+A check for changes answered (decision D23): the lighter says ↻
+while GitHub has changes.  approve.el puts it on `approve-changes-hook'."
+  (dolist (buffer (approve-feedback--buffers (current-buffer)))
+    (with-current-buffer buffer
+      (approve-feedback--update-lighter))))
+
+(defun approve-feedback--follow-branch (branch prs)
+  "Show the pull request of BRANCH among PRS, now that HEAD is on it.
+The same pull request stays; another one takes its place; without an
+open one, the mode goes off and says why."
+  (let ((pr (approve-clone-shown-pull-request (plist-get branch :head) prs)))
+    (cond
+     ((null pr)
+      (approve-feedback-mode -1)
+      (message "Approve: no open pull request for %s" (plist-get branch :branch)))
+     ((equal (alist-get 'id pr) (alist-get 'id approve-feedback--pull-request))
+      (setq approve-feedback--branch branch
+            approve-feedback--clone-state nil)
+      (approve-feedback-redraw))
+     (t (approve-feedback--show branch pr prs)))))
+
+(defun approve-feedback--head-moved ()
+  "Find the pull request of the buffer's branch again: HEAD moved.
+That is a commit, a checkout or a pull (flow F21).  On the same
+branch, the clone is compared with GitHub's head again; on another,
+its pull request is asked for, once a session."
+  (let ((branch (approve-clone-branch-head (file-name-directory buffer-file-name)))
+        (buffer (current-buffer)))
+    (cond
+     ((null branch)
+      (approve-feedback-mode -1)
+      (message "Approve: %s is on no branch of a GitHub repository now"
+               (file-name-nondirectory buffer-file-name)))
+     ((approve-feedback--same-head-p (plist-get branch :head)
+                                     (plist-get approve-feedback--branch :head))
+      (setq approve-feedback--branch branch
+            approve-feedback--clone-state nil)
+      (approve-feedback-redraw))
+     (t
+      (approve-clone-branch-pull-requests
+       (plist-get branch :head)
+       :callback (lambda (prs)
+                   (when (buffer-live-p buffer)
+                     (with-current-buffer buffer
+                       (when approve-feedback-mode
+                         (approve-feedback--follow-branch branch prs)))))
+       :errorback (lambda (err)
+                    (approve-log 'warn "The pull requests of %s: %s"
+                                 (plist-get branch :branch)
+                                 (approve-api-error-message err))))))))
+
+(defun approve-feedback--check-head (buffer)
+  "Follow HEAD in the clone of BUFFER when it moved since it was last read."
+  (when (and (buffer-live-p buffer)
+             (buffer-local-value 'approve-feedback-mode buffer))
+    (with-current-buffer buffer
+      (let ((head (approve-clone-head (plist-get approve-feedback--branch :clone))))
+        (unless (equal head approve-feedback--head-ref)
+          (setq approve-feedback--head-ref head)
+          (condition-case-unless-debug err
+              (approve-feedback--head-moved)
+            (error (approve-log-condition "Following HEAD in a clone's buffer" err))))))))
+
+(defun approve-feedback--on-window (window)
+  "Look whether HEAD moved soon, as WINDOW, which shows this buffer, is selected.
+It is on the buffer's `window-selection-change-functions' and
+`window-buffer-change-functions', which run during redisplay."
+  (when (and (eq window (selected-window))
+             (eq (window-buffer window) (current-buffer)))
+    (run-at-time 0 nil #'approve-feedback--check-head (current-buffer))))
+
+(defun approve-feedback--on-focus ()
+  "Look whether HEAD moved soon, when Emacs gets the focus back.
+It is on `after-focus-change-function': a commit in a terminal
+comes back with the focus."
+  (when (frame-focus-state)
+    (run-at-time 0 nil #'approve-feedback--check-head (window-buffer (selected-window)))))
 
 ;;; GitHub's texts of the file
 
@@ -792,7 +893,9 @@ loads, and whether GitHub has changes."
                    (and approve-feedback--error
                         (format "Could not compare the file with GitHub's: %s"
                                 approve-feedback--error))
-                   (and changes "Updated on GitHub: refresh to see it")))
+                   (and changes
+                        (substitute-command-keys
+                         "Updated on GitHub: \\[approve-feedback-refresh] to see it"))))
        "\n"))))
 
 (defun approve-feedback--lighter-text ()
@@ -963,6 +1066,11 @@ From the first line, that can be the threads above it."
          (user-error "No unresolved thread before this")))))
 
 (add-hook 'approve-clone-picked-functions #'approve-feedback--picked)
+
+(defun approve-feedback-unload-function ()
+  "Stop following the focus, as `unload-feature' unloads this file."
+  (remove-function after-focus-change-function #'approve-feedback--on-focus)
+  nil)
 
 (provide 'approve-feedback)
 

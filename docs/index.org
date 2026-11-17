@@ -151,8 +151,18 @@ task only needs the files it touches.
   =approve-clone-file-text= reads GitHub's text from the clone.
 - Decided on 2026-11-17, by the author: [[file:decisions.org::*D47 Files are split by concern, never by length][D47]], files are split by
   concern, never by length; the ~600-line rule of thumb is gone.
-- Next step: =approve-feedback.el=, the feedback mode, the next task of
-  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).
+- The feedback mode is done (2026-11-17, =approve-feedback.el=): in a
+  buffer of a file in a clone, =M-x approve-feedback-mode= shows the
+  threads of the branch's pull request under their lines, folded, with
+  a bubble in the right margin, and the PR in the mode line.  Its store
+  is its PR buffer's, opened unseen when the PR is not open (D45,
+  amended at the author's choice); outdated threads are placed by the
+  text at their comment's =originalCommit=, now selected; D23's check
+  covers the buffers that share a store (D23, amended).
+- Next step: actions in a file's buffer, the next task of
+  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]]: reply, resolve, edit, delete, comment and suggest from the
+  clone's buffers, the rest of =approve-feedback-command-map=, the
+  dispatch and evil's =]t= =[t=.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
   phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]], at the author's request: nice to
   have, done once Approve has been used in the wild and there is

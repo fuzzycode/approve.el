@@ -80,6 +80,7 @@
 (add-hook 'approve-visit-commit-functions #'approve-clone-show-commit)
 (add-hook 'approve-pr-redraw-hook #'approve-feedback-follow-pr-buffer)
 (add-hook 'approve-pr-mode-hook #'approve-feedback-setup-pr-buffer)
+(add-hook 'approve-changes-hook #'approve-feedback-follow-changes)
 
 ;;;###autoload
 (defalias 'approve-add-section-hook #'magit-add-section-hook

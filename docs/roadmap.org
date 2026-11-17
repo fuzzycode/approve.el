@@ -343,13 +343,28 @@ Mockups: a file's buffer with its threads (written with F21).
       the clone.  Checked on the SP8 worktrees: every thread on its text
       in each state, edits not saved included.  On 200 000 lines Emacs is
       busy 3 ms and the map arrives in 49 ms (=approve-dev-benchmark=).
-- [ ] =approve-feedback.el=, =approve-feedback-mode= (a minor mode):
+- [X] =approve-feedback.el=, =approve-feedback-mode= (a minor mode):
       threads under their lines as overlays, with the file view's bubbles
       and folding, [[file:decisions.org::*D34 A thread mark is red only while it asks for changes][D34]]'s red, and an "edited locally" mark; outdated
       threads where they were and threads on removed lines between
       lines, folded, and threads on the whole file at the top (D45); the
       PR in the mode line.  One store per PR, shared by its PR buffer and every
       buffer of the clone, loaded once; [[file:decisions.org::*D23 Remote changes are announced, never auto-applied][D23]]'s notices there too.
+      Done (2026-11-17): the mode finds the branch's PR (asking before a
+      closed or merged one), shares its PR buffer's store, opened unseen
+      when the PR is not open ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]], amended at the author's choice), and
+      redraws with it.  GitHub's text comes from the clone, else from
+      GitHub; the threads go where =approve-lines.el= says, with a bubble
+      in the right margin (red, gold for =approve-edited-here=, dim) and
+      the file view's boxes, folded; =TAB T n p= and mouse-1 fold and go.
+      Outdated threads are placed by the text at their comment's
+      =originalCommit= (now selected); threads on removed lines under
+      the line before, with =◂=.  The lighter says =#15 💬7 2/2 ↑1=, =…=
+      and =↻= (D23, amended: a buffer sharing the store is checked and
+      polled), and HEAD is followed from the clone's files on selection
+      and focus.  Checked on the SP8 worktrees: all seven threads of #15
+      where SP8 found them.  The keys beyond folding, the dispatch and
+      evil's =]t= =[t= come with the actions.
 - [ ] Actions in a file's buffer: reply, resolve, edit, delete, and
       comment and suggest on the lines GitHub has ([[file:decisions.org::*D32 Reviews are written the way GitHub's API allows (SP1)][D32]]).  Context at
       point and preflights from the overlays of a buffer that isn't
@@ -366,7 +381,9 @@ Mockups: a file's buffer with its threads (written with F21).
 - [ ] Turning it on: the command =approve-feedback-mode=, which also takes
       a closed or merged PR after asking, and =approve-feedback-global-mode=
       (off by default), which turns it on by itself in the buffers of a
-      branch with an open PR (D45).
+      branch with an open PR (D45).  The command is there (2026-11-17,
+      with the mode), asking before a closed or merged PR; the global
+      mode is left.
 - Done when :: on a branch with a PR, with commits not pushed and edits
   not saved, the user reads the threads in the buffers they edit,
   replies, resolves and comments from there, and the browser shows the
