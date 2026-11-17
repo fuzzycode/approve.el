@@ -66,7 +66,7 @@ To try Approve in the Emacs you work in, =M-x load-file= =dev/load.el=.  It
 loads every module from =lisp/= (compiled after =make build=), takes the
 dependencies that Emacs lacks from Cask, replays the fixture PRs and sends
 other URLs to GitHub (=approve-dev-offline-fallback=).  Loading it again
-reloads everything and redraws the open PR buffers.
+reloads everything, keymaps included, and redraws the open PR buffers.
 
 The shell is fish: wrap loops in =bash -c '…'=.  Fish has no heredocs
 (=<<EOF=): write the text to a file first (a commit message: =git commit

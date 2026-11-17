@@ -8,7 +8,8 @@
 ;;
 ;; Loading it again reloads every module (compiled ones when `make
 ;; build' ran) and redraws the open PR buffers and the dashboard, so a
-;; fix shows at once; options left at their default take a changed default.
+;; fix shows at once; options left at their default take a changed default,
+;; faces their new spec, and keymaps their new bindings, in place.
 ;; Dependencies the Emacs lacks (often ghub and treepy) come from the
 ;; project's Cask (`make install').  It turns on `approve-dev-offline-mode' with
 ;; `approve-dev-offline-fallback': the fixture PRs open without a token,
@@ -70,6 +71,21 @@
                  (not (get face 'saved-face))
                  (not (get face 'customized-face)))
         (put face 'face-defface-spec nil)))
+    ;; `defvar-keymap' leaves a keymap it has defined before as it was.
+    ;; Its bindings are made again in the same keymap, before the
+    ;; modules bind more in it, so the buffers, modes and prefix keys
+    ;; that hold it have the new ones.
+    (dolist (name names)
+      (with-temp-buffer
+        (insert-file-contents (expand-file-name (concat name ".el") lisp))
+        (goto-char (point-min))
+        (while (re-search-forward "^(defvar-keymap \\(approve-[^ \n]+\\)" nil t)
+          (let ((symbol (intern (match-string 1))))
+            (goto-char (match-beginning 0))
+            (let ((form (read (current-buffer))))
+              (when (and (boundp symbol) (keymapp (symbol-value symbol)))
+                (setcdr (symbol-value symbol)
+                        (cdr (eval (nth 2 (macroexpand-1 form)) t)))))))))
     ;; A stale .elc, left by a build that did not finish, never wins over
     ;; its newer source.
     (let ((load-prefer-newer t))
