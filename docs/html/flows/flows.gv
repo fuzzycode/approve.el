@@ -360,7 +360,7 @@ fetch  [label="repository.object(expression: \"OID:path\")\n{ ... on Blob { text
 big    [label="binary or\ntoo big?" @dec];
 err    [label="the echo area says so" @err];
 buf    [label="*approve-file: …* read-only, file's major mode (hooks never run, D43)\nshares the PR's store · fringe marks from the patch\nthreads folded under their line's bubble, as in the diff\npoint on the same line as in the diff" @ok];
-keys   [label="n/p change · ]t thread · TAB fold · b base/head · v viewed\nc s comment (diff lines only) · RET the line in the diff\n(r R e k there) · q back" @note];
+keys   [label="n/p change · ]t thread · TAB fold · b base/head · v viewed\nc s comment (diff lines only) · r R e k + the line's threads\n(which one? when several) · RET the line in the diff · q back" @note];
 redraw [label="each redraw of the PR buffer\nredraws its file views"];
 moved  [label="the PR's commit on\nthe view's side moved?" @dec];
 u -> side; side -> base [@yes]; side -> head [@no];

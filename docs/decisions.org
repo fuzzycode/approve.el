@@ -571,6 +571,15 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   ([[*D17 Evil is supported, never required][D17]]), with font-lock and which-function: without it, an evil
   user's keys in the view were Emacs's until some other hook happened to
   turn it on.
+- Amended (2026-11-17) :: Phase 7 brought the thread actions from the
+  overlays, and the file view took them, as planned: =r R e k += (evil
+  =r R i D +=) act on the threads of the line at point, and ask which
+  one ("@bob: Should this be…") when the command takes several; the
+  threads come first, then their comments (=e=, =k= and =+= act on a
+  comment).  The view says which threads a line has
+  (=approve-context-threads-function=), and =approve-action-target= tries
+  the command's preflight on each.  The boxes still name no keys; the
+  dispatch does.  =RET= still goes to the diff.
 
 ** D44 What is new since your last review: other people's comments, after it
 - Status :: accepted (2026-11-16, by the author)

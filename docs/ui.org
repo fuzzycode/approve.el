@@ -727,9 +727,11 @@ through the API and kept for the session ([[file:flows.org::*F15 View the whole 
   speech bubble and their count at the right edge, and folds them (=TAB=
   on the line); lines whose threads are all resolved start folded, so only
   the bubble shows.  They are overlays, as the buffer holds the file's own
-  text, so point never enters them: they are read here and acted on in the
-  diff, where =RET= goes (the line, its threads unfolded), and their boxes
-  name no keys.
+  text, so point never enters them: =r R e k += (evil =r R i D +=) act on
+  the threads of the line at point, and ask which one when there are
+  several (=@bob: Should this be…=; D43, amended).  =RET= goes to the
+  line in the diff, its threads unfolded.  Their boxes name no keys; the
+  dispatch does.
 - =n= / =p= (evil =]c= / =[c=) move between changes, =]t= / =[t= between
   lines with unresolved threads.  =v= (evil =x=) marks the file viewed.
 - =c= and =s= work only on lines that are in the diff, as GitHub requires,

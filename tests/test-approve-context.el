@@ -119,6 +119,31 @@
       (goto-char (point-min))
       (search-forward "Status ")
       (forward-line 1)
-      (expect (plist-get (approve-context-at-point) :kind) :to-be 'pr))))
+      (expect (plist-get (approve-context-at-point) :kind) :to-be 'pr)))
+
+  (it "says the threads drawn under a line, where they are overlays"
+    (with-temp-buffer
+      (insert "one\ntwo\n")
+      (setq approve-model-store-buffer test-context--buffer
+            approve-context-file '(:path "internal/parser/parser.go"
+                                         :name "internal/parser/parser.go"
+                                         :side "RIGHT" :oid "6ffac57")
+            approve-context-threads-function (lambda (pos)
+                                               (and (= (line-number-at-pos pos) 2)
+                                                    '("PRRT_kwDO85-qIzFQYiTYBM"))))
+      (goto-char (point-min))
+      (expect (plist-member (approve-context-at-point) :threads) :to-equal '(:threads nil))
+      (forward-line 1)
+      (expect (plist-get (approve-context-at-point) :threads)
+              :to-equal '("PRRT_kwDO85-qIzFQYiTYBM"))
+      (expect (mapcar (lambda (context)
+                        (list (plist-get context :kind) (plist-get context :label)))
+                      (approve-context-of-threads '("PRRT_kwDO85-qIzFQYiTYBM")))
+              :to-equal
+              '((thread "@carol-example: This allocates on every call; hoist the buffer out of the l…")
+                (review-comment
+                 "@carol-example: This allocates on every call; hoist the buffer out of the l…")
+                (review-comment "@alice-example: Done, it is reused now.")
+                (review-comment "@carol-example: Thanks!"))))))
 
 ;;; test-approve-context.el ends here

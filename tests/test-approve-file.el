@@ -286,13 +286,15 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
         (expect (approve-context-at-point)
                 :to-equal (list :kind 'line :path test-file--path :side "RIGHT" :line 15
                                 :old nil :new 15 :line-kind 'add
-                                :url (approve-context-file-url test-file--path "RIGHT" 15)))
+                                :url (approve-context-file-url test-file--path "RIGHT" 15)
+                                :threads '("PRRT_kwDO85-qIzFQYiTYBM")))
         (approve-file--goto-line 3)
         (expect (approve-context-at-point)
                 :to-equal (list :kind 'code :path test-file--path :name test-file--path
                                 :side "RIGHT" :line 3
                                 :url (concat "https://github.com/acme-example/rocket/blob/"
-                                             test-file--head "/internal/parser/parser.go#L3")))
+                                             test-file--head "/internal/parser/parser.go#L3")
+                                :threads nil))
         (approve-copy)
         (expect (current-kill 0) :to-equal "internal/parser/parser.go:3")
         (approve-file-toggle-version)
@@ -446,6 +448,62 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
           ;; The PR buffer redrew, and the view with it.
           (expect (assq 14 (test-file--threads)) :to-equal '(14 . t))))))
 
+  (it "acts on the threads of the line at point, asking which when several take it"
+    (test-file--with-pr
+      (setq test-file--answer
+            (lambda (request)
+              (pcase (plist-get request :name)
+                ("mutations/resolve-review-thread.graphql"
+                 '((resolveReviewThread
+                    (thread (__typename . "PullRequestReviewThread")
+                            (id . "PRRT_kwDO85-qIzFQYiTYBM")
+                            (isResolved . t) (viewerCanResolve) (viewerCanUnresolve . t)))))
+                (_ '((deletePullRequestReviewComment (clientMutationId)))))))
+      (let ((view (test-file--open "RIGHT" 3)))
+        (set-buffer view)
+        ;; A line without threads.
+        (expect (approve-action-why-not 'approve-reply) :to-equal "No threads on this line")
+        (expect (approve-action-why-not 'approve-delete) :to-equal "No threads on this line")
+        (expect (approve-action-why-not 'approve-suggest)
+                :to-equal
+                "Line 3 is not in the diff: GitHub takes comments only on lines of the diff")
+        ;; Line 15 has one thread, of three comments by others.
+        (approve-file--goto-line 15)
+        (expect (approve-action-why-not 'approve-reply) :to-be nil)
+        (expect (approve-action-why-not 'approve-edit) :to-equal "You can't edit this comment")
+        (expect (approve-action-why-not 'approve-comment) :to-be nil)
+        (spy-on 'completing-read :and-call-fake (lambda (_prompt labels &rest _)
+                                                  (nth 1 labels)))
+        (call-interactively #'approve-resolve)
+        (expect 'completing-read :not :to-have-been-called)
+        (approve-test-wait-for (lambda () (null (approve-session-get :inflight))))
+        (expect (plist-get (car test-file--requests) :name)
+                :to-equal "mutations/resolve-review-thread.graphql")
+        (expect (alist-get 'threadId (plist-get (car test-file--requests) :variables))
+                :to-equal "PRRT_kwDO85-qIzFQYiTYBM")
+        ;; Deleting asks which of its comments: the second is alice's.
+        (spy-on 'y-or-n-p :and-return-value t)
+        (call-interactively #'approve-delete)
+        (expect (spy-calls-args-for 'completing-read 0)
+                :to-equal '("Which comment: "
+                            ("@carol-example: This allocates on every call; hoist the buffer out of the l…"
+                             "@alice-example: Done, it is reused now."
+                             "@carol-example: Thanks!")
+                            nil t))
+        (expect 'y-or-n-p :to-have-been-called-with "Delete @alice-example's comment? ")
+        (approve-test-wait-for (lambda () (null (approve-session-get :inflight))))
+        (expect (alist-get 'commentId (plist-get (car test-file--requests) :variables))
+                :to-equal "PRRC_kwDOjbJkqIaS7rYCer")
+        ;; Line 131 has the viewer's comment: editing takes it without asking.
+        (approve-file--goto-line 131)
+        (call-interactively #'approve-edit)
+        (expect (spy-calls-count 'completing-read) :to-equal 1)
+        (let ((input (seq-find (lambda (buffer)
+                                 (string-prefix-p "*approve-input" (buffer-name buffer)))
+                               (buffer-list))))
+          (expect (with-current-buffer input (buffer-string))
+                  :to-match "\\`These three lines can be one call:")))))
+
   (it "goes to its line in the diff on RET, unfolding its threads"
     (test-file--with-pr
       (with-current-buffer (test-file--open "RIGHT" 15)
@@ -518,6 +576,9 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
                          (normal "] t" approve-file-next-thread)
                          (normal "g b" approve-file-toggle-version)
                          (normal "x" approve-toggle-viewed)
+                         (normal "r" approve-reply)
+                         (normal "i" approve-edit)
+                         (normal "D" approve-delete)
                          (normal "?" approve-file-dispatch)
                          (visual "c" approve-comment)))
         (expect (member binding bound) :to-be-truthy))

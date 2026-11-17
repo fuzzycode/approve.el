@@ -56,8 +56,10 @@
 ;;   edge where the other has lines this one has not, coloured by what
 ;;   the pull request did (added, removed, changed); and the threads
 ;;   under their lines as in the diff, with the speech bubble at the
-;;   right edge; TAB folds them.  Threads are read here and acted on
-;;   in the diff (D43), so their boxes name no keys.
+;;   right edge; TAB folds them.  Point never enters them: r, R, e, k
+;;   and + act on the threads of the line at point, asking which when
+;;   there are several (`approve-context-threads-function'; decision
+;;   D43, amended), and their boxes name no keys.
 ;; - Each redraw of the PR buffer redraws its file views
 ;;   (`approve-pr-redraw-hook'); a view whose commit is no longer the
 ;;   pull request's head (or base) fetches the new version.  Killing
@@ -211,8 +213,8 @@ STATE is `folded' or `shown'; the other lines follow
 
 (defvar-keymap approve-file-mode-map
   :doc "Keymap of `approve-file-mode'.
-RET, o and y are bound by approve-nav.el, c, s and v by
-approve-commands.el, and ? by approve-menus.el."
+RET, o and y are bound by approve-nav.el, c, s, v, r, R, e, k and +
+by approve-commands.el, and ? by approve-menus.el."
   "n" #'approve-file-next-change
   "p" #'approve-file-previous-change
   "] t" #'approve-file-next-thread
@@ -324,7 +326,7 @@ added others in their place.  They are in order."
           (finish))))
     (nreverse blocks)))
 
-(defun approve-file--diff-lines (path hunks left)
+(defun approve-file-diff-lines (path hunks left)
   "Return the lines of the version that are in the diff of PATH.
 HUNKS are its parsed patch; the version is the base when LEFT, else
 the head.  Each is (LINE . PROPERTY): the line's number and its
@@ -463,7 +465,8 @@ Each overlay's `approve-file-mark' is (KIND SHAPE)."
 (defun approve-file--threads-text (threads)
   "Return THREADS drawn as the diff draws them, indented, as a string.
 They are drawn outside the file view, so their boxes name no keys:
-their commands work in the diff (decision D43)."
+the keys act on the threads of the line at point (decision D43,
+amended)."
   (with-temp-buffer
     (dolist (thread threads)
       (let ((start (point)))
@@ -502,6 +505,13 @@ after them stay theirs."
                                 (concat "\n" (string-remove-suffix
                                               "\n" (approve-file--threads-text threads)))))))))))
 
+(defun approve-file--threads-at (pos)
+  "Return the ids of the threads drawn under the line at POS.
+It is the view's `approve-context-threads-function'."
+  (mapcar (lambda (thread) (alist-get 'id thread))
+          (and approve-file--threads
+               (gethash (line-number-at-pos pos) approve-file--threads))))
+
 (defun approve-file--decorate ()
   "Draw the marks, the diff's lines and the threads of the file view anew."
   (let* ((path (plist-get approve-context-file :path))
@@ -512,7 +522,7 @@ after them stay theirs."
     (with-silent-modifications
       (remove-overlays (point-min) (point-max) 'approve-file t)
       (remove-list-of-text-properties (point-min) (point-max) '(approve-line))
-      (approve-file--at-lines (approve-file--diff-lines path hunks left)
+      (approve-file--at-lines (approve-file-diff-lines path hunks left)
                               (lambda (property)
                                 (put-text-property (point) (min (1+ (line-end-position))
                                                                 (point-max))
@@ -647,6 +657,7 @@ first change when LINE is nil, in every window that shows it."
   ;; The major mode killed the buffer's local variables.
   (setq approve-model-store-buffer owner
         approve-context-file view
+        approve-context-threads-function #'approve-file--threads-at
         approve-file--folds (make-hash-table)
         buffer-undo-list t
         buffer-read-only t)

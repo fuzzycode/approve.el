@@ -367,8 +367,9 @@ Those that can't run at point, or that you may not use, are dimmed."
 ;;;###autoload (autoload 'approve-file-dispatch "approve-menus" nil t)
 (transient-define-prefix approve-file-dispatch ()
   "Show the commands of the file view (decision D06).
-Those that can't run at point are dimmed.  The threads are acted on
-in the diff, which RET goes to (decision D43)."
+Those that can't run at point are dimmed.  The commands of threads
+act on those of the line at point, and ask which when there are
+several (decision D43, amended)."
   [:description approve-menus--file-heading
    ["Move"
     ("n" "Next change" approve-file-next-change)
@@ -383,6 +384,17 @@ in the diff, which RET goes to (decision D43)."
      :inapt-if (lambda () (approve-action-why-not 'approve-suggest)))
     ("v" "Toggle viewed" approve-toggle-viewed
      :inapt-if (lambda () (approve-action-why-not 'approve-toggle-viewed)))]
+   ["Threads on this line"
+    ("r" "Reply" approve-reply
+     :inapt-if (lambda () (approve-action-why-not 'approve-reply)))
+    ("R" "Resolve / unresolve" approve-resolve
+     :inapt-if (lambda () (approve-action-why-not 'approve-resolve)))
+    ("e" "Edit" approve-edit
+     :inapt-if (lambda () (approve-action-why-not 'approve-edit)))
+    ("k" "Delete" approve-delete
+     :inapt-if (lambda () (approve-action-why-not 'approve-delete)))
+    ("+" "React" approve-react
+     :inapt-if (lambda () (approve-action-why-not 'approve-react)))]
    ["Buffer"
     ("TAB" "Fold the line's threads" approve-file-toggle-threads)
     ("b" approve-file-toggle-version :description approve-menus--version-description

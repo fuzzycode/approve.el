@@ -44,6 +44,13 @@
 ;; (`pr'), in a PR's buffer.  Every context carries :url when there is
 ;; one, for opening and copying.
 ;;
+;; A buffer that draws threads as overlays under its lines, where
+;; point never goes (the file view), says which threads a line has
+;; (`approve-context-threads-function'): the context of the line
+;; carries them as :threads, and `approve-context-of-threads' gives
+;; the contexts of those threads and their comments, for the commands
+;; that act on one (approve-actions.el, `approve-action-target').
+;;
 ;; Layer rules: this is the model layer.  It reads the text properties
 ;; and sections of the current buffer and the store; it never changes
 ;; them, inserts text or calls the network.
@@ -68,6 +75,16 @@ as the file view (approve-file.el), sets it to a plist:
   :oid   the commit of that version
 Its lines that are in the diff carry `approve-line', as in the diff;
 the others are the context `code'.")
+
+(defvar-local approve-context-threads-function nil
+  "A function that says which threads are drawn under the line at a position.
+A buffer that draws threads as overlays under its lines, which point
+never enters (the file view), sets this to a function of POS that
+returns the ids of the threads of the line at POS, in order.  The
+context of a line there (`line', `lines' or `code') carries them as
+:threads, nil for none, and the commands of threads and comments act
+on them (`approve-action-target').")
+
 (defun approve-context--entity (typename id fields)
   "Return FIELDS of the entity TYPENAME ID as an alist, or nil if absent."
   (when (and id (approve-model-has-entity-p typename id))
@@ -95,8 +112,15 @@ SIDE is \"LEFT\" or \"RIGHT\", as GitHub's anchors want."
           :viewed (alist-get 'viewerViewedState file)
           :url (approve-context-file-url path))))
 
-(defun approve-context--line-plist (line)
-  "Return the context of the diff LINE, an `approve-line' plist."
+(defun approve-context-of-line (line)
+  "Return the context of the diff LINE, an `approve-line' plist.
+That is what point on LINE gives, kind `line'.
+
+Example:
+  (approve-context-of-line
+   \='(:path \"a.el\" :side \"RIGHT\" :old nil :new 42 :kind add))
+  => (:kind line :path \"a.el\" :side \"RIGHT\" :line 42 :old nil :new 42
+      :line-kind add :url \"…/files#diff-…R42\")"
   (let* ((side (plist-get line :side))
          (number (if (equal side "LEFT") (plist-get line :old) (plist-get line :new))))
     (list :kind 'line :path (plist-get line :path) :side side :line number
@@ -121,12 +145,18 @@ The region must start and end on diff lines of one file."
                                                     'approve-line))))
       (when (and first last
                  (equal (plist-get first :path) (plist-get last :path)))
-        (let ((from (approve-context--line-plist first))
-              (to (approve-context--line-plist last)))
-          (list :kind 'lines :path (plist-get to :path)
-                :side (plist-get to :side) :line (plist-get to :line)
-                :start-side (plist-get from :side) :start-line (plist-get from :line)
-                :url (plist-get to :url)))))))
+        (approve-context-of-lines first last)))))
+
+(defun approve-context-of-lines (first last)
+  "Return the context of the diff lines from FIRST to LAST, kind `lines'.
+Both are `approve-line' plists of one file; it is what a region from
+FIRST to LAST gives."
+  (let ((from (approve-context-of-line first))
+        (to (approve-context-of-line last)))
+    (list :kind 'lines :path (plist-get to :path)
+          :side (plist-get to :side) :line (plist-get to :line)
+          :start-side (plist-get from :side) :start-line (plist-get from :line)
+          :url (plist-get to :url))))
 
 (defun approve-context--thing (pos)
   "Return the context of the `approve-thing' at POS, or nil."
@@ -228,6 +258,45 @@ THREAD-ID is the id of its thread, for review comments."
             (and thread-id (list :thread-id thread-id))
             (and .state (list :state .state)))))
 
+(defun approve-context--label (comment-id)
+  "Return how the review comment COMMENT-ID is named in a choice.
+Its author and the start of its text, such as \"@bob: Should this
+be configurable…\", and \"(pending)\" when it is."
+  (let-alist (approve-model-get "PullRequestReviewComment" comment-id '(author body state))
+    (concat "@" (or .author.login "ghost") ": "
+            (truncate-string-to-width
+             (car (split-string (string-trim (or .body "")) "[\r\n]")) 60 nil nil "…")
+            (and (equal .state "PENDING") " (pending)"))))
+
+(defun approve-context-of-threads (ids)
+  "Return the contexts of the threads IDS and of their comments.
+They are what point can be on in the diff: each thread (kind
+`thread'), then each comment of each (kind `review-comment'), in
+order.  Each has :label, which names it in a choice: its author and
+the start of its text, the first comment's for a thread, as
+\"@bob: Should this be configurable…\".  The threads drawn under a
+line as overlays, its :threads, are acted on through them
+\(`approve-action-target')."
+  (let ((threads nil) (comments nil))
+    (dolist (id ids)
+      (when (approve-model-has-entity-p "PullRequestReviewThread" id)
+        (let* ((context (approve-context--thread id))
+               (nodes (approve-model-nodes
+                       (approve-model-get "PullRequestReviewThread" id 'comments)))
+               (ids (mapcar (lambda (comment) (alist-get 'id comment)) nodes)))
+          (when ids
+            (push (append context
+                          (list :label (concat (approve-context--label (car ids))
+                                               (and (plist-get context :resolved)
+                                                    " (resolved)"))))
+                  threads))
+          (dolist (comment ids)
+            (push (append (approve-context--comment 'review-comment
+                                                    "PullRequestReviewComment" comment id)
+                          (list :label (approve-context--label comment)))
+                  comments)))))
+    (append (nreverse threads) (nreverse comments))))
+
 (defun approve-context--parent-value (section type)
   "Return the value of the nearest ancestor of SECTION of TYPE, or nil."
   (let ((parent (oref section parent)))
@@ -291,21 +360,28 @@ author of a comment, applies to the section around it, the comment."
 at point\") lists the kinds and their keys.  An active region over
 diff lines gives `lines'.  When nothing more specific is at POS, the
 context is the pull request, kind `pr', in a buffer of one; in a
-buffer of lists, such as the dashboard, it is nil.
+buffer of lists, such as the dashboard, it is nil.  Where threads
+are drawn under the lines, a line's context says which in :threads
+\(`approve-context-threads-function').
 
 Example, on an added line:
   (:kind line :path \"a.el\" :side \"RIGHT\" :line 42 :old nil :new 42
    :line-kind add :url \"…/files#diff-…R42\")"
-  (let ((pos (or pos (point))))
-    (or (and (= pos (point)) (approve-context--region))
-        (approve-context--thing pos)
-        (when-let* ((line (get-text-property pos 'approve-line)))
-          (approve-context--line-plist line))
-        (approve-context--code pos)
-        (approve-context--link pos)
-        (approve-context--from-sections pos)
-        (and (approve-model-meta :number)
-             (list :kind 'pr :url (approve-context--pr-url))))))
+  (let* ((pos (or pos (point)))
+         (context
+          (or (and (= pos (point)) (approve-context--region))
+              (approve-context--thing pos)
+              (when-let* ((line (get-text-property pos 'approve-line)))
+                (approve-context-of-line line))
+              (approve-context--code pos)
+              (approve-context--link pos)
+              (approve-context--from-sections pos)
+              (and (approve-model-meta :number)
+                   (list :kind 'pr :url (approve-context--pr-url))))))
+    (if (and approve-context-threads-function
+             (memq (plist-get context :kind) '(line lines code)))
+        (append context (list :threads (funcall approve-context-threads-function pos)))
+      context)))
 
 (provide 'approve-context)
 

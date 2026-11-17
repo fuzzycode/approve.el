@@ -455,6 +455,13 @@ then walks up the sections from point to the first one that means something.
 
 Every context also carries =:url= when one exists (for =o= and copying).
 
+A buffer that draws threads as overlays under its lines, where point never
+goes (the file view), says which threads a line has
+(=approve-context-threads-function=).  Its =line=, =lines= and =code=
+contexts carry them as =:threads=, and =approve-context-of-threads= gives the
+contexts of those threads and of their comments, each with a =:label=
+(=@bob: Should this be…=), for the commands that act on one ([[*Actions][Actions]]).
+
 * Input buffers
 - =approve-input-read= (from approve-v2) opens a buffer in
   =approve-input-mode= (=gfm-mode=) below the current window
@@ -546,6 +553,15 @@ supplies its own parts (the ✱ of F00) and nothing else:
   comment's =@author=, =r= replies to the comment), else a =user-error=
   with what the command needs.  It also refuses where no pull request has
   loaded.
+- Where threads are drawn under the lines, point is never on one, and
+  the commands of threads and comments reach their preflight through
+  =approve-action-target=: when it refuses the line itself, it is tried on
+  each of the line's =:threads=, then on each of their comments, and the
+  command acts on the one it takes, asking which (=completing-read=) when
+  it takes several.  The menus ask the same, quietly
+  (=approve-action-why-not=), so =r= is dimmed on a line without threads
+  ("No threads on this line") and =e= where none of the comments is
+  yours.
 - =approve-action-run= signals =:why-not= as a =user-error= (for a reason
   only known once the command has started, such as a verdict GitHub
   refuses), then asks for

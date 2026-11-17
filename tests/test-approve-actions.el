@@ -320,6 +320,67 @@ ICON is non-nil when the loading icon follows the line."
         (expect 'approve-pr-redraw :to-have-been-called)
         (expect (test-actions--marked pr) :to-be nil)))))
 
+(describe "approve-action-target"
+  :var (pr)
+  (before-all
+    (approve-test-with-fixture "medium"
+      (setq pr (approve-test-open-pr "medium"))))
+  (after-all
+    (kill-buffer pr))
+  (before-each
+    (set-buffer pr)
+    (approve-nav-goto-file test-actions--path)
+    (goto-char (car (approve-diff-range-positions
+                     (list :path test-actions--path :side "RIGHT" :line 15))))
+    ;; As in a buffer that draws two threads under the line.
+    (setq-local approve-context-threads-function
+                (lambda (_pos) '("PRRT_kwDO85-qIzFQYiTYBM" "PRRT_kwDOkNvF9T3yvL1od7"))))
+  (after-each
+    (with-current-buffer pr
+      (kill-local-variable 'approve-context-threads-function)))
+
+  (it "is what the preflight takes at point, when it takes the line"
+    (spy-on 'completing-read)
+    (expect (plist-get (approve-action-target 'approve-comment) :kind) :to-be 'line)
+    (expect (plist-get (approve-context-at-point) :threads)
+            :to-equal '("PRRT_kwDO85-qIzFQYiTYBM" "PRRT_kwDOkNvF9T3yvL1od7"))
+    (expect 'completing-read :not :to-have-been-called))
+
+  (it "asks which of the line's threads, when the preflight takes several"
+    (spy-on 'completing-read :and-call-fake (lambda (_prompt labels &rest _) (nth 1 labels)))
+    (expect (plist-get (approve-action-target 'approve-reply) :thread-id)
+            :to-equal "PRRT_kwDOkNvF9T3yvL1od7")
+    (expect (spy-calls-args-for 'completing-read 0)
+            :to-equal '("Which thread: "
+                        ("@carol-example: This allocates on every call; hoist the buffer out of the l…"
+                         "@vera-example: These three lines can be one call:")
+                        nil t))
+    ;; Quietly, as the menus ask, the first one.
+    (expect (plist-get (approve-action-target 'approve-reply t) :thread-id)
+            :to-equal "PRRT_kwDO85-qIzFQYiTYBM")
+    (expect (spy-calls-count 'completing-read) :to-equal 1))
+
+  (it "takes the one comment the preflight takes, without asking"
+    (spy-on 'completing-read)
+    (expect (approve-action-target 'approve-edit)
+            :to-equal (append (approve-context--comment
+                               'review-comment "PullRequestReviewComment"
+                               "PRRC_kwDOekjTBMNbgPvJ0X" "PRRT_kwDOkNvF9T3yvL1od7")
+                              '(:label "@vera-example: These three lines can be one call:")))
+    (expect 'completing-read :not :to-have-been-called))
+
+  (it "says why not when it takes none, and when the line has no threads"
+    (approve-model-patch '((__typename . "PullRequestReviewComment")
+                           (id . "PRRC_kwDOekjTBMNbgPvJ0X") (viewerCanUpdate)))
+    (expect (approve-action-why-not 'approve-edit) :to-equal "You can't edit this comment")
+    (approve-model-patch '((__typename . "PullRequestReviewComment")
+                           (id . "PRRC_kwDOekjTBMNbgPvJ0X") (viewerCanUpdate . t)))
+    (setq-local approve-context-threads-function #'ignore)
+    (expect (approve-action-why-not 'approve-reply) :to-equal "No threads on this line")
+    (expect (approve-action-why-not 'approve-resolve) :to-equal "No threads on this line")
+    (expect (approve-action-why-not 'approve-suggest) :to-be nil)
+    (expect (approve-action-why-not 'approve-discard-review) :to-be nil)))
+
 (describe "approve-action-why-not"
   (after-each
     (put 'test-actions--command 'approve-preflight nil))

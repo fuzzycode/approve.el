@@ -619,7 +619,7 @@ have.
  └───────────────────────────┬────────────────────────────┘
                              ▼
  n/p change · ]t thread · TAB fold · b base/head · v viewed · c s comment (diff lines only)
- RET the line in the diff, its threads unfolded (r R e k there) · q back
+ r R e k + the line's threads (which one? when several) · RET the line in the diff · q back
 
  each redraw of the PR buffer redraws its file views
    │
@@ -627,9 +627,10 @@ have.
  ◇ the PR's commit on the view's side moved? ◇──yes──▶ fetch that version, show it on the same line
 #+end_example
 
-The threads are read in the file view and acted on in the diff, one =RET=
-away ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]]); Phase 7 brings actions from the overlays, for a
-clone's buffers, and the file view can take them then.
+The threads are read in the file view and acted on there, through the
+line they are under: =r R e k += take the line's threads, and ask which
+one when several fit ([[file:decisions.org::*D43 The file view: the file's mode without its hooks; threads are read there, acted on in the diff][D43]], amended in Phase 7, whose actions from the
+overlays a clone's buffers share).  The diff is one =RET= away.
 
 * F16 Inspect checks
 #+begin_example

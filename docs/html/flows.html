@@ -3255,7 +3255,8 @@ changed since.</p>
 <section class="shot" id="F15">
 <h2>F15 View the whole file <span class="ref">RET · F · Phase 6 · D43</span></h2>
 <p>API-only (D36): the blob comes from GraphQL and is cached by object id, which never changes. The threads are read
-there and acted on in the diff, one <code>RET</code> away (D43).</p>
+there and acted on there too: <code>r R e k +</code> take the threads of the line at point, asking which one when
+several fit (D43, amended). The diff is one <code>RET</code> away.</p>
 <div class="flow">
 <svg width="793pt" height="923pt"
  viewBox="0.00 0.00 793.00 923.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -3421,17 +3422,17 @@ there and acted on in the diff, one <code>RET</code> away (D43).</p>
 <!-- keys -->
 <g id="F15-node12" class="node note">
 <title>keys</title>
-<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="432.78,-145.74 27.12,-145.74 27.12,-92.1 438.78,-92.1 438.78,-139.74 432.78,-145.74"/>
-<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="432.78,-145.74 432.78,-139.74"/>
-<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="438.78,-139.74 432.78,-139.74"/>
-<text xml:space="preserve" text-anchor="middle" x="232.95" y="-130.97" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">n/p change · ]t thread · TAB fold · b base/head · v viewed</text>
-<text xml:space="preserve" text-anchor="middle" x="232.95" y="-115.97" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">c s comment (diff lines only) · RET the line in the diff</text>
-<text xml:space="preserve" text-anchor="middle" x="232.95" y="-100.97" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">(r R e k there) · q back</text>
+<polygon fill="none" stroke="#56526e" stroke-width="1.4" points="431.91,-145.74 6,-145.74 6,-92.1 437.91,-92.1 437.91,-139.74 431.91,-145.74"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="431.91,-145.74 431.91,-139.74"/>
+<polyline fill="none" stroke="#56526e" stroke-width="1.4" points="437.91,-139.74 431.91,-139.74"/>
+<text xml:space="preserve" text-anchor="middle" x="221.95" y="-130.97" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">n/p change · ]t thread · TAB fold · b base/head · v viewed</text>
+<text xml:space="preserve" text-anchor="middle" x="221.95" y="-115.97" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">c s comment (diff lines only) · r R e k + the line&#39;s threads</text>
+<text xml:space="preserve" text-anchor="middle" x="221.95" y="-100.97" font-family="JetBrains Mono" font-size="11.00" fill="#908caa">(which one? when several) · RET the line in the diff · q back</text>
 </g>
 <!-- buf&#45;&gt;keys -->
 <g id="F15-edge13" class="edge">
 <title>buf&#45;&gt;keys</title>
-<path fill="none" stroke="#908caa" stroke-width="1.2" stroke-dasharray="1,5" d="M352.23,-174.11C331.95,-164.89 310.29,-155.06 291.08,-146.33"/>
+<path fill="none" stroke="#908caa" stroke-width="1.2" stroke-dasharray="1,5" d="M347.99,-174.11C326.56,-164.89 303.68,-155.06 283.37,-146.33"/>
 </g>
 <!-- redraw -->
 <g id="F15-node13" class="node act">

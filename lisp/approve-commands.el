@@ -48,12 +48,17 @@
 ;; S (submit) and X (discard) act on the pending review as a whole:
 ;; approve-review.el and approve-menus.el.  Evil's keys are in
 ;; approve-evil.el.  In a file view (approve-file.el), c, s and v
-;; work on its lines that are in the diff, as in the diff.
+;; work on its lines that are in the diff, as in the diff, and r, R,
+;; e, k and + on the threads of the line at point, asking which when
+;; there are several (`approve-action-target').
 ;;
 ;; Each command starts with its preflight, `approve-commands--NAME-preflight':
 ;; what it acts on, or a `user-error' saying why it can't run here.
 ;; Its `approve-preflight' property names it, so the dispatch menu
 ;; dims the command where it can't run (`approve-action-why-not').
+;; The commands of threads and comments reach it through
+;; `approve-action-target', which tries the threads of the line where
+;; they are drawn as overlays.
 ;;
 ;; Layer rules: this is the actions layer.  The commands read the
 ;; context at point and the store, and leave the rest to the pipeline
@@ -259,6 +264,15 @@ in one file; it must stay in one hunk too (decision D32)."
        ((or (funcall on-diff (region-beginning)) (funcall on-diff (region-end)))
         (user-error "A range must start and end on lines of one file's diff"))))))
 
+(defun approve-commands--check-code (context)
+  "Signal a `user-error' when CONTEXT is a line GitHub takes no comment on.
+That is a line of a file's text that is not in the diff (kind
+`code'); its :why, when it has one, says why."
+  (when (eq (plist-get context :kind) 'code)
+    (user-error "%s" (or (plist-get context :why)
+                         (format "Line %s is not in the diff: GitHub takes comments only on lines of the diff"
+                                 (plist-get context :line))))))
+
 (defun approve-commands--code-target (context)
   "Return the target of a comment on CONTEXT: lines, or a whole file."
   (if (eq (plist-get context :kind) 'file)
@@ -302,9 +316,7 @@ view that is not in the diff (GitHub takes comments only there), or,
 off code, when the conversation is locked."
   (let ((context (approve-action-context)))
     (approve-commands--check-region context)
-    (when (eq (plist-get context :kind) 'code)
-      (user-error "Line %s is not in the diff: GitHub takes comments only on lines of the diff"
-                  (plist-get context :line)))
+    (approve-commands--check-code context)
     (unless (memq (plist-get context :kind) '(line lines file))
       (approve-commands--conversation-preflight))
     context))
@@ -331,8 +343,10 @@ at point."
 Signal a `user-error' when point is on no lines of the diff, or the
 region is on lines a comment can't hold."
   (let ((context (approve-action-context
-                  '(line lines) "Put point on added or unchanged lines of the diff")))
+                  (lambda (context) (memq (plist-get context :kind) '(line lines code)))
+                  "Put point on added or unchanged lines of the diff")))
     (approve-commands--check-region context)
+    (approve-commands--check-code context)
     context))
 
 (put 'approve-suggest 'approve-preflight #'approve-commands--suggest-preflight)
@@ -388,7 +402,7 @@ comment at point; with an active region, by quoting the region.  On
 a comment of the conversation, comment on the pull request quoting
 it (`approve-comment-on-pr')."
   (interactive "P")
-  (let* ((target (approve-commands--reply-preflight))
+  (let* ((target (approve-action-target 'approve-reply))
          (thread-id (plist-get target :thread-id)))
     (if (null thread-id)
         (approve-comment-on-pr t)
@@ -435,7 +449,7 @@ not resolve it (or unresolve it, when it is resolved)."
 (defun approve-resolve ()
   "Resolve the thread at point, or unresolve it when it is resolved (flow F07)."
   (interactive)
-  (pcase-let ((`(,id . ,resolved) (approve-commands--resolve-preflight)))
+  (pcase-let ((`(,id . ,resolved) (approve-action-target 'approve-resolve)))
     (approve-action-run
      :what (if resolved "unresolve the thread" "resolve the thread")
      :marks `((section approve-thread-section ,id))
@@ -482,7 +496,7 @@ On the pending review, write the body you will submit it with
 \(`approve-edit-review-body'); on the description, edit it
 \(`approve-edit-description')."
   (interactive)
-  (let ((context (approve-commands--edit-preflight)))
+  (let ((context (approve-action-target 'approve-edit)))
     (pcase (plist-get context :kind)
       ('pending-review (approve-edit-review-body))
       ('description (approve-edit-description))
@@ -524,7 +538,7 @@ not delete it."
 Deleting the last comment of a review without a body deletes the
 review too, as GitHub does."
   (interactive)
-  (pcase-let* ((`(,typename . ,id) (approve-commands--delete-preflight))
+  (pcase-let* ((`(,typename . ,id) (approve-action-target 'approve-delete))
                (comment (approve-model-get typename id '(viewerDidAuthor author state))))
     (when (y-or-n-p (format "Delete %s%s comment? "
                             (if (alist-get 'viewerDidAuthor comment)
@@ -590,7 +604,7 @@ Example: \"✓ you and 2 others\"."
 Choose one of GitHub's reactions; one you gave already, marked ✓,
 is taken back."
   (interactive)
-  (pcase-let* ((`(,typename . ,id) (approve-commands--react-preflight))
+  (pcase-let* ((`(,typename . ,id) (approve-action-target 'approve-react))
                (groups (approve-model-get typename id 'reactionGroups))
                (candidates
                 (mapcar (lambda (reaction)
@@ -655,7 +669,7 @@ Hiding asks for the reason GitHub shows instead of the text, such as
 off topic or outdated.  Those who may moderate the repository can
 hide what others wrote."
   (interactive)
-  (pcase-let* ((`(,typename ,id ,hidden) (approve-commands--hide-preflight))
+  (pcase-let* ((`(,typename ,id ,hidden) (approve-action-target 'approve-hide))
                (reason (unless hidden
                          (cdr (assoc (approve-manage-read-one
                                       (format "Hide @%s's %s, because: "
@@ -723,6 +737,11 @@ to the comment once GitHub has it."
 (keymap-set approve-file-mode-map "v" #'approve-toggle-viewed)
 (keymap-set approve-file-mode-map "c" #'approve-comment)
 (keymap-set approve-file-mode-map "s" #'approve-suggest)
+(keymap-set approve-file-mode-map "r" #'approve-reply)
+(keymap-set approve-file-mode-map "R" #'approve-resolve)
+(keymap-set approve-file-mode-map "e" #'approve-edit)
+(keymap-set approve-file-mode-map "k" #'approve-delete)
+(keymap-set approve-file-mode-map "+" #'approve-react)
 
 (provide 'approve-commands)
 

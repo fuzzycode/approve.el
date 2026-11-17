@@ -232,7 +232,8 @@ Lines that can't take comments in a range view are dimmed.</p>
 <p>The file at the PR head (the base for a removed line), fetched through the API (D36), in its own major mode, whose
 hooks never run (D43). Fringe marks show changes; threads sit under their lines as in the diff: the line's speech
 bubble counts them, and the line folds them (<code>TAB</code>); lines whose threads are all resolved start folded.
-They are read here and acted on in the diff, where <code>RET</code> goes. <code>b</code> (evil: <code>gb</code>)
+They are acted on here through their line: <code>r R e k +</code> take the line's threads, asking which one when
+several fit; <code>RET</code> goes to the diff. <code>b</code> (evil: <code>gb</code>)
 shows the other version.</p>
 <div class="emacs">
 <div class="tb">*approve-file: fuzzycode/approve lisp/approve-api.el @ e5f6a7b*</div>

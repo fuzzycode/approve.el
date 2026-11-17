@@ -61,6 +61,11 @@
 ;;   no `viewerCan…'), and changes nothing.  The command calls it
 ;;   first; its `approve-preflight' property names it, so the menus
 ;;   dim what can't run here (`approve-action-why-not', decision D06).
+;; - Where threads are drawn as overlays under the lines (the file
+;;   view, a clone's buffer), point is never on one: a command of
+;;   threads or comments acts on those of the line at point.
+;;   `approve-action-target' runs the command's preflight on each, and
+;;   asks which one when it takes several ("@bob: Should this…").
 ;; - `approve-action-run' says why not when :why-not says the viewer
 ;;   may not act (a reason found only once the command has started),
 ;;   asks for the text when there is :input, then marks the target in
@@ -100,6 +105,18 @@
 
 ;;; Context
 
+(defvar approve-action--candidate nil
+  "The context a preflight is tried on, in place of the context at point.
+`approve-action-target' binds it to each thread and comment of the
+line at point, where they are drawn as overlays; nil elsewhere.")
+
+(defun approve-action--takes-threads-p (applies)
+  "Return non-nil if a command acts on threads or comments.
+APPLIES is the test `approve-action-context' makes of a context for
+the command."
+  (seq-some applies '((:kind thread :thread-id "")
+                      (:kind review-comment :comment-id "" :thread-id ""))))
+
 (defun approve-action-context (&optional kinds needs)
   "Return the context at point, if a command for KINDS applies to it.
 KINDS is a list of context kinds, such as (thread review-comment), a
@@ -108,23 +125,110 @@ or nil for any context.  When the command does not apply to what is
 at point (the author of a comment, a link in it), it applies to the
 section around point if it can (the comment).  Else signal a
 `user-error' with NEEDS, which says what the command needs, such as
-\"Put point on a thread\".  Signal one too when no pull request has
-loaded here.
+\"Put point on a thread\"; on a line that has no threads drawn under
+it, where a command of threads would need one, it says so.  Signal
+one too when no pull request has loaded here.
+
+While `approve-action-target' tries a thread or comment of the line
+at point, that is the context, if KINDS are given and take it.
 
 Example:
   (approve-action-context \\='(file) \"Put point on a file\")
   => (:kind file :path \"a.el\" :viewed \"UNVIEWED\" :url \"…\")"
   (unless (approve-model-root-ref)
-    (user-error (if (derived-mode-p 'approve-pr-mode)
+    (user-error (if (or (derived-mode-p 'approve-pr-mode) approve-model-store-buffer)
                     "Wait until the pull request has loaded"
                   "Not in an Approve pull request buffer")))
   (let ((applies (lambda (context)
                    (cond ((null kinds) t)
                          ((functionp kinds) (funcall kinds context))
                          (t (memq (plist-get context :kind) kinds))))))
-    (or (seq-find applies (delq nil (list (approve-context-at-point)
-                                          (approve-context-of-sections))))
-        (user-error "%s" (or needs "That command does not apply here")))))
+    (if approve-action--candidate
+        (if (and kinds (funcall applies approve-action--candidate))
+            approve-action--candidate
+          (throw 'approve-action--skip nil))
+      (let ((context (approve-context-at-point)))
+        (or (seq-find applies (delq nil (list context (approve-context-of-sections))))
+            (and (plist-member context :threads)
+                 (null (plist-get context :threads))
+                 (approve-action--takes-threads-p applies)
+                 (user-error "No threads on this line"))
+            (user-error "%s" (or needs "That command does not apply here")))))))
+
+;;; What a command acts on
+
+(defun approve-action--try (preflight candidate)
+  "Return (CANDIDATE . VALUE) if PREFLIGHT takes CANDIDATE, a context.
+VALUE is what PREFLIGHT returns.  Return nil when CANDIDATE is not
+of a kind it takes, and its `user-error' when it refuses it."
+  (let ((approve-action--candidate candidate))
+    (catch 'approve-action--skip
+      (condition-case err
+          (cons candidate (funcall preflight))
+        (user-error err)))))
+
+(defun approve-action--labels (labels)
+  "Return LABELS, those that repeat an earlier one numbered: \"… (2)\"."
+  (let ((seen nil))
+    (mapcar (lambda (label)
+              (let ((count (1+ (seq-count (lambda (each) (equal each label)) seen))))
+                (push label seen)
+                (if (> count 1) (format "%s (%d)" label count) label)))
+            labels)))
+
+(defun approve-action--choose (preflight threads refusal quiet)
+  "Return what PREFLIGHT takes among THREADS and their comments.
+THREADS are the ids of the threads of the line at point; REFUSAL
+is the `user-error' PREFLIGHT gave the line itself.  The threads are
+tried first: when it takes one, it acts on threads, and their
+comments are not offered.  When it takes several, ask which, unless
+QUIET, which takes the first.  Signal its refusal of the first one
+it refused, or REFUSAL, when it takes none."
+  (let* ((tried (mapcar (lambda (candidate) (approve-action--try preflight candidate))
+                        (approve-context-of-threads threads)))
+         (taken (seq-filter (lambda (each) (consp (car-safe each))) tried))
+         (threads (seq-filter (lambda (each) (eq (plist-get (car each) :kind) 'thread))
+                              taken))
+         (taken (or threads taken))
+         (labels (approve-action--labels (mapcar (lambda (each) (plist-get (car each) :label))
+                                                 taken))))
+    (cond
+     ((null taken)
+      (let ((why (or (seq-find (lambda (each) (eq (car-safe each) 'user-error)) tried)
+                     refusal)))
+        (signal (car why) (cdr why))))
+     ((or quiet (null (cdr taken))) (cdar taken))
+     (t (let ((choice (approve-input-with-submit-key
+                        (completing-read (if threads "Which thread: " "Which comment: ")
+                                         labels nil t))))
+          (cdr (nth (or (seq-position labels choice) 0) taken)))))))
+
+(defun approve-action-target (command &optional quiet)
+  "Return what COMMAND acts on at point: the value of its preflight.
+COMMAND's `approve-preflight' property names the preflight (see
+`approve-action-why-not'); without one, the value is nil.
+
+Where threads are drawn as overlays under the lines (the file view,
+a clone's buffer), point is never on one: a command of threads or
+comments acts on those of the line at point, the :threads of its
+context.  When the preflight refuses the line, it is tried on each
+of them, then on each of their comments, and the command acts on
+the one it takes.  When it takes several, ask which, as \"@bob:
+Should this be configurable…\", unless QUIET, which takes the
+first.  Signal the preflight's `user-error' when it takes none.
+
+Example, on a line with two threads the viewer may reply to:
+  (approve-action-target \\='approve-reply)  ; asks which, then
+  => (:context (:kind thread …) :thread-id \"PRRT_2\" :thread …)"
+  (when-let* ((preflight (get command 'approve-preflight)))
+    (condition-case refusal
+        (funcall preflight)
+      (user-error
+       (let ((threads (and (not approve-action--candidate)
+                           (plist-get (approve-context-at-point) :threads))))
+         (if threads
+             (approve-action--choose preflight threads refusal quiet)
+           (signal (car refusal) (cdr refusal))))))))
 
 ;;; Whether a command can run here
 
@@ -134,16 +238,17 @@ COMMAND's `approve-preflight' property is a function of no arguments
 that returns what the command would act on, or signals a
 `user-error' saying why it can't; it must change nothing.  The
 command calls it first, and menus call this to dim what can't run
-here (decision D06).  A command without one can run anywhere.
+here (decision D06).  A command without one can run anywhere.  Where
+threads are drawn under the lines, it can run when it can on one of
+the line's threads or comments (`approve-action-target').
 
 Example:
   (put \='approve-resolve \='approve-preflight
        #\='approve-commands--resolve-preflight)
   (approve-action-why-not \='approve-resolve) => \"Put point on a thread\""
-  (when-let* ((preflight (get command 'approve-preflight)))
-    (condition-case err
-        (progn (funcall preflight) nil)
-      (user-error (error-message-string err)))))
+  (condition-case err
+      (progn (approve-action-target command t) nil)
+    (user-error (error-message-string err))))
 
 ;;; Marks of the actions in flight
 
