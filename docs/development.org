@@ -79,6 +79,9 @@ The shell is fish: wrap loops in =bash -c '…'=.  Fish has no heredocs
 - Names: public =approve-…=, private =approve--…=, per module
   =approve-<module>-…= where it helps.  Section inserters are
   =approve-insert-<name>-section=; section classes =approve-<name>-section=.
+- Modules hold one concern each, whatever their length ([[file:decisions.org::*D47 Files are split by concern, never by length][D47]]).  New code
+  goes in the module of its concern; a file is split only when it holds
+  two concerns, never because it is long.
 - Style: the [[https://github.com/bbatsov/emacs-lisp-style-guide][Emacs Lisp style guide]].  Small functions with docstrings;
   =cl-defun= with keyword arguments for anything with more than three
   parameters or optional callbacks.

@@ -1144,6 +1144,20 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   real work.  The current =Cask= lists all of these except transient, which
   magit pulls in; list it explicitly in Phase 0.
 
+** D47 Files are split by concern, never by length
+- Status :: accepted (2026-11-17, by the author)
+- Decision :: A module holds one concern, whatever its length.  Code that
+  belongs together stays in one file, however long it grows; a file is
+  split only when it holds two concerns, each then in its own module.
+  Length is never a reason to split, or to put new code elsewhere: new
+  code goes in the module of its concern.  This replaces the earlier rule
+  of thumb, "split a file when it passes ~600 lines".
+- Why :: A concern split across files for length is harder to read and
+  change than one long file, and an arbitrary line count puts code where
+  it doesn't belong.  Writing =approve-lines.el= (Phase 7), the line
+  count of =approve-clone.el= was weighed as a reason for a new file;
+  the author ruled it out: what belongs together stays together.
+
 * Open questions
 Each one names the spike or phase that will answer it ([[file:roadmap.org][roadmap]]).
 

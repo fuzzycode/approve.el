@@ -26,6 +26,9 @@ for each kind of task.
   adds extras, in their own modules (D36).
 - Faces only in `approve-faces.el`, inheriting from magit or built-in faces;
   icons only through `approve-icon`.
+- Files are split by concern, never by length (D47): what belongs together
+  stays together, however long the file. Put new code in the module of
+  its concern; don't propose splitting a file because it is long.
 - Evil is optional: never `require` it; bindings go in `approve-evil.el`.
 - Tests: buttercup, no network, fixtures in `tests/fixtures/`.
   `make build`, `make test` and `make lint` must pass before a commit.

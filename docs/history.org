@@ -86,7 +86,7 @@ feels familiar: we may have tried it.
 4. Normalize data; give renderers selectors, not raw responses.
 5. Stable section values, or visibility and point restore break.
 6. Several small queries beat one huge one; fetch rarely-used data lazily.
-7. Split files by concern, not by length: what belongs together stays together.
+7. Split files by concern, not by length: what belongs together stays together ([[file:decisions.org::*D47 Files are split by concern, never by length][D47]]).
 8. Measure speed with fixtures from the start.
 9. Record fixtures early; offline development is faster and safer.
 10. Restarting has cost four attempts; port what works instead of rewriting it.

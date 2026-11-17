@@ -64,7 +64,7 @@ Rules:
 
 * Modules
 Planned files.  Split a file when it holds two concerns, never for its
-length alone: what belongs together stays together.
+length alone: what belongs together stays together ([[file:decisions.org::*D47 Files are split by concern, never by length][D47]]).
 
 | File                       | Responsibility                                                                  | Phase |
 |----------------------------+---------------------------------------------------------------------------------+-------|

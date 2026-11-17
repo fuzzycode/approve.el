@@ -149,6 +149,8 @@ task only needs the files it touches.
   process, again after edits once Emacs is idle, and the map says where
   GitHub's lines are, and which lines were edited or added here.
   =approve-clone-file-text= reads GitHub's text from the clone.
+- Decided on 2026-11-17, by the author: [[file:decisions.org::*D47 Files are split by concern, never by length][D47]], files are split by
+  concern, never by length; the ~600-line rule of thumb is gone.
 - Next step: =approve-feedback.el=, the feedback mode, the next task of
   [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]] (review feedback in your clone).
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
