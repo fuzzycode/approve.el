@@ -63,7 +63,8 @@ Rules:
   the core offers, such as =approve-visit-commit-functions= (D37).
 
 * Modules
-Planned files.  Split a file when it passes ~600 lines or holds two concerns.
+Planned files.  Split a file when it holds two concerns, never for its
+length alone: what belongs together stays together.
 
 | File                       | Responsibility                                                                  | Phase |
 |----------------------------+---------------------------------------------------------------------------------+-------|
