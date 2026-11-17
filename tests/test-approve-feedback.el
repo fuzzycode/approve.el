@@ -45,17 +45,31 @@
   (mapconcat (lambda (n) (format "line %d\n" n)) (number-sequence 1 600) "")
   "GitHub's text of the file at the head, and the clone's at first.")
 
+(defconst test-feedback--head-oid "6ffac5752e1be53bad90e2beeb6d4b0e1f998cc7"
+  "The medium PR's head.")
+
+(defvar test-feedback--older nil
+  "GitHub's text of the file at commits other than the head, or nil.
+Nil means the head's, `test-feedback--text'.")
+
 (defun test-feedback--blob-answer (request)
-  "Return GitHub's answer to the blob query REQUEST: `test-feedback--text'."
+  "Return GitHub's answer to the blob query REQUEST.
+The file's text is `test-feedback--text' at the head, else
+`test-feedback--older'."
   (push request test-feedback--blobs)
-  (let ((timer (run-at-time
-                0 nil (plist-get request :on-success)
-                `((data (repository
-                         (__typename . "Repository") (id . "R_1")
-                         (object (__typename . "Blob") (id . "B_1")
-                                 (text . ,test-feedback--text) (isBinary) (isTruncated)
-                                 (byteSize . ,(string-bytes test-feedback--text))))))
-                nil)))
+  (let* ((expression (alist-get 'expression (plist-get request :variables)))
+         (text (if (and test-feedback--older
+                        (not (string-prefix-p test-feedback--head-oid expression)))
+                   test-feedback--older
+                 test-feedback--text))
+         (timer (run-at-time
+                 0 nil (plist-get request :on-success)
+                 `((data (repository
+                          (__typename . "Repository") (id . "R_1")
+                          (object (__typename . "Blob") (id . "B_1")
+                                  (text . ,text) (isBinary) (isTruncated)
+                                  (byteSize . ,(string-bytes text))))))
+                 nil)))
     (lambda () (cancel-timer timer))))
 
 (defun test-feedback--pr-buffers ()
@@ -285,10 +299,11 @@ LINE 0 is above the first line."
       (insert " edited")
       (test-feedback--start)
       (expect (test-feedback--drawn)
-              :to-equal '((0 (nil . file)) (16 (15 . same)) (132 (131 . edited))
-                          (135 (134 . same))))
-      ;; GitHub's text came from GitHub: the clone hasn't its head.
-      (expect (length test-feedback--blobs) :to-equal 1)
+              :to-equal '((0 (nil . file)) (16 (15 . same)) (55 (52 . removed))
+                          (62 (nil . outdated)) (132 (131 . edited)) (135 (134 . same))))
+      ;; GitHub's texts came from GitHub, the head's and the outdated
+      ;; thread's commit's: the clone hasn't them.
+      (expect (length test-feedback--blobs) :to-equal 2)
       (expect right-margin-width :to-be-greater-than 2)
       (let ((bubble (test-feedback--bubble 132)))
         (expect (substring-no-properties bubble) :to-match "1\\'")
@@ -308,7 +323,7 @@ LINE 0 is above the first line."
       (expect (spy-calls-args-for 'approve-clone-file-text 0)
               :to-equal (list test-feedback--root "6ffac5752e1be53bad90e2beeb6d4b0e1f998cc7"
                               test-feedback--path))
-      (expect (mapcar #'car (test-feedback--drawn)) :to-equal '(0 15 131 134))))
+      (expect (mapcar #'car (test-feedback--drawn)) :to-equal '(0 15 54 61 131 134))))
 
   (it "start folded, and TAB, T, n and p unfold them"
     (test-feedback--with-one
@@ -317,17 +332,21 @@ LINE 0 is above the first line."
       (end-of-line)
       (insert " edited")
       (test-feedback--start)
-      (expect (seq-filter #'test-feedback--threads-shown '(0 15 131 134)) :to-equal nil)
+      (expect (seq-filter #'test-feedback--threads-shown '(0 15 54 61 131 134)) :to-equal nil)
       (goto-char (point-min))
       (forward-line 14)
       (approve-feedback-toggle-threads)
       (expect (test-feedback--threads-shown 15) :to-be-truthy)
       (approve-feedback-toggle-threads)
       (expect (test-feedback--threads-shown 15) :to-be nil)
-      ;; The edited line's threads start with GitHub's text of it.
+      ;; The resolved thread on removed lines is passed by; the edited
+      ;; line's threads start with GitHub's text of it.
+      (approve-feedback-next-thread)
+      (expect (line-number-at-pos) :to-equal 61)
       (approve-feedback-next-thread)
       (expect (line-number-at-pos) :to-equal 131)
       (expect (test-feedback--threads-shown 131) :to-match "┊ on GitHub: line 131\n")
+      (approve-feedback-previous-thread)
       (approve-feedback-previous-thread)
       (expect (line-number-at-pos) :to-equal 15)
       (approve-feedback-previous-thread)
@@ -336,10 +355,10 @@ LINE 0 is above the first line."
       (expect (approve-feedback-previous-thread) :to-throw 'user-error)
       (forward-line 1)
       (approve-feedback-toggle-all-threads)
-      (expect (length (seq-filter #'test-feedback--threads-shown '(0 15 131 134)))
-              :to-equal 4)
+      (expect (length (seq-filter #'test-feedback--threads-shown '(0 15 54 61 131 134)))
+              :to-equal 6)
       (approve-feedback-toggle-all-threads)
-      (expect (seq-filter #'test-feedback--threads-shown '(0 15 131 134)) :to-equal nil)
+      (expect (seq-filter #'test-feedback--threads-shown '(0 15 54 61 131 134)) :to-equal nil)
       (forward-line 2)
       (expect (approve-feedback-toggle-threads) :to-throw 'user-error)))
 
@@ -348,13 +367,43 @@ LINE 0 is above the first line."
       (test-feedback--start)
       (goto-char (point-min))
       (insert "one\ntwo\n")
-      (expect (mapcar #'car (test-feedback--drawn)) :to-equal '(0 17 133 136))
+      (expect (mapcar #'car (test-feedback--drawn)) :to-equal '(0 17 56 63 133 136))
       (test-feedback--idle)
       (approve-test-wait-for (lambda () (approve-lines-current-p
-                                         (approve-lines-watched-map 'head))))
+                                         (approve-lines-watched-map test-feedback--head-oid))))
       (expect (test-feedback--drawn)
-              :to-equal '((0 (nil . file)) (17 (15 . same)) (133 (131 . same))
-                          (136 (134 . same))))))
+              :to-equal '((0 (nil . file)) (17 (15 . same)) (56 (52 . removed))
+                          (63 (nil . outdated)) (133 (131 . same)) (136 (134 . same))))))
+
+  (it "put an outdated thread where its line is now, by its commit's text"
+    ;; At the outdated thread's commit, the file lacked the head's first
+    ;; ten lines: its line 61 is the head's line 71.
+    (let ((test-feedback--older (mapconcat (lambda (n) (format "line %d\n" n))
+                                           (number-sequence 11 600) "")))
+      (test-feedback--with-one
+        (test-feedback--start)
+        (expect (assq 71 (test-feedback--drawn)) :to-equal '(71 (nil . outdated)))
+        (let ((bubble (test-feedback--bubble 71)))
+          (expect (get-text-property (1- (length bubble)) 'face bubble) :to-equal 'approve-dim)
+          (expect (get-text-property 0 'help-echo bubble) :to-match "outdated"))
+        (goto-char (point-min))
+        (forward-line 70)
+        (approve-feedback-toggle-threads)
+        (expect (test-feedback--threads-shown 71)
+                :to-match "┊ at [0-9a-f]\\{7\\}: line 71\n"))))
+
+  (it "put a thread on removed lines under the line before them, with their text"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (let ((bubble (test-feedback--bubble 54)))
+        (expect (substring-no-properties bubble) :to-equal "◂1")
+        (expect (get-text-property (1- (length bubble)) 'face bubble) :to-equal 'approve-dim)
+        (expect (get-text-property 0 'help-echo bubble) :to-match "removed after this one"))
+      (goto-char (point-min))
+      (forward-line 53)
+      (approve-feedback-toggle-threads)
+      (expect (test-feedback--threads-shown 54)
+              :to-match "┊ removed: \t// TODO(52): drop this fallback\n")))
 
   (it "leave nothing behind when the mode is turned off"
     (test-feedback--with-one

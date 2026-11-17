@@ -83,6 +83,7 @@
 (require 'approve-render)
 (require 'approve-pr)
 (require 'approve-thread)
+(require 'approve-diff)
 (require 'approve-file)
 (require 'approve-clone)
 (require 'approve-lines)
@@ -110,12 +111,16 @@ Its :oid is the head it was compared with.")
 ;; Without this, the mode line would drop the lighter's faces and tooltip.
 (put 'approve-feedback--lighter 'risky-local-variable t)
 
-(defvar-local approve-feedback--text nil
-  "GitHub's text of the file, compared with the buffer: (OID . TEXT).
-OID is the head it is at; TEXT is nil when GitHub has no such file.")
+(defvar-local approve-feedback--head nil
+  "The head the threads are placed from, or nil when the file isn't compared.")
+
+(defvar-local approve-feedback--texts nil
+  "GitHub's texts of the file compared with the buffer: ((OID . TEXT) ...).
+They are the head's, and the file at each commit an outdated thread
+was written on (decision D45); TEXT is \"\" when GitHub has no such file.")
 
 (defvar-local approve-feedback--fetching nil
-  "The head whose text is being fetched from GitHub, or nil.")
+  "The commits whose text of the file is being fetched from GitHub.")
 
 (defvar-local approve-feedback--error nil
   "Why GitHub's text of the file could not be had, or nil.")
@@ -222,7 +227,8 @@ BRANCH is as `approve-clone-branch-head' gives it."
         approve-feedback--path (file-relative-name (file-truename buffer-file-name)
                                                    (file-truename (plist-get branch :clone)))
         approve-feedback--clone-state nil
-        approve-feedback--text nil
+        approve-feedback--head nil
+        approve-feedback--texts nil
         approve-feedback--fetching nil
         approve-feedback--error nil
         approve-feedback--shown nil
@@ -238,7 +244,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
   (dolist (variable '(approve-feedback--branch approve-feedback--pull-request
                       approve-feedback--open approve-feedback--path
                       approve-feedback--clone-state approve-feedback--lighter
-                      approve-feedback--text approve-feedback--fetching
+                      approve-feedback--head approve-feedback--texts approve-feedback--fetching
                       approve-feedback--error approve-feedback--shown
                       approve-model-store-buffer))
     (kill-local-variable variable)))
@@ -308,7 +314,7 @@ It is on `approve-clone-picked-functions'."
         (approve-feedback--show approve-feedback--branch pr
                                 (or (approve-clone-wait-pull-requests head) (list pr)))))))
 
-;;; GitHub's text of the file
+;;; GitHub's texts of the file
 
 (defun approve-feedback--relevant-p ()
   "Return non-nil if the pull request changes the file, or has threads on it.
@@ -317,14 +323,34 @@ Otherwise the lighter is all the mode shows, and no text is compared."
     (or (seq-some #'here-p (approve-pr-list-fields 'files '(path)))
         (seq-some #'here-p (approve-pr-list-fields 'reviewThreads '(path))))))
 
+(defun approve-feedback--original-commit (thread)
+  "Return the commit THREAD was written on, from its first comment, or nil."
+  (alist-get 'oid (alist-get 'originalCommit
+                             (car (approve-model-nodes (alist-get 'comments thread))))))
+
+(defun approve-feedback--outdated-p (thread)
+  "Return non-nil if THREAD is on a line of the head that changed since.
+Its place is its original line at the commit it was written on."
+  (let-alist thread
+    (and (null .line) .originalLine (equal .diffSide "RIGHT")
+         (not (equal .subjectType "FILE")))))
+
+(defun approve-feedback--wanted (head)
+  "Return the commits whose text of the file the threads need: HEAD first.
+The others are those the outdated threads were written on."
+  (delete-dups
+   (cons head (delq nil (mapcar (lambda (thread)
+                                  (and (approve-feedback--outdated-p thread)
+                                       (approve-feedback--original-commit thread)))
+                                (approve-pr-threads-for-file approve-feedback--path))))))
+
 (defun approve-feedback--compare (oid text)
   "Compare TEXT, GitHub's file at OID, with the buffer, now and after edits.
 TEXT is \"\" when GitHub has no such file.  Each answer draws the
 threads again (`approve-feedback--decorate')."
-  (setq approve-feedback--text (cons oid text)
-        approve-feedback--fetching nil
-        approve-feedback--error nil)
-  (approve-lines-watch 'head text
+  (setf (alist-get oid approve-feedback--texts nil nil #'equal) text)
+  (setq approve-feedback--error nil)
+  (approve-lines-watch oid text
                        :callback (lambda (_map) (approve-feedback--decorate))
                        :errorback (lambda (err)
                                     (setq approve-feedback--error (cadr err))
@@ -334,10 +360,10 @@ threads again (`approve-feedback--decorate')."
   "Compare TEXT, GitHub's file at OID, with BUFFER, or note ERR."
   (when (buffer-live-p buffer)
     (with-current-buffer buffer
-      (when (and approve-feedback-mode (equal approve-feedback--fetching oid))
+      (when (and approve-feedback-mode (member oid approve-feedback--fetching))
+        (setq approve-feedback--fetching (delete oid approve-feedback--fetching))
         (if err
-            (setq approve-feedback--fetching nil
-                  approve-feedback--error (approve-api-error-message err))
+            (setq approve-feedback--error (approve-api-error-message err))
           (approve-feedback--compare oid text))
         (approve-feedback--update-lighter)))))
 
@@ -348,34 +374,39 @@ kept for the session as the file view keeps it (decision D45)."
   (if-let* ((text (approve-clone-file-text (plist-get approve-feedback--branch :clone)
                                            oid approve-feedback--path)))
       (approve-feedback--compare oid text)
-    (unless (equal approve-feedback--fetching oid)
-      (setq approve-feedback--fetching oid)
-      (let ((buffer (current-buffer)))
-        (approve-file-fetch oid approve-feedback--path
-                            :callback (lambda (text)
-                                        (approve-feedback--fetched buffer oid text))
-                            :errorback (lambda (err)
-                                         (approve-feedback--fetched buffer oid nil err)))))))
+    (push oid approve-feedback--fetching)
+    (let ((buffer (current-buffer)))
+      (approve-file-fetch oid approve-feedback--path
+                          :callback (lambda (text)
+                                      (approve-feedback--fetched buffer oid text))
+                          :errorback (lambda (err)
+                                       (approve-feedback--fetched buffer oid nil err))))))
 
 (defun approve-feedback--follow-head ()
-  "Follow GitHub's head: compare the clone and the file with it when it moved."
-  (let ((oid (approve-pr-field 'headRefOid)))
+  "Follow GitHub's head: compare the clone and the file with it when it moved.
+The file is compared with the texts the threads need, the head's and
+the outdated threads' commits', and no longer with the others."
+  (let* ((oid (approve-pr-field 'headRefOid))
+         (wanted (and (approve-feedback--relevant-p) (approve-feedback--wanted oid))))
     (unless (equal oid (plist-get approve-feedback--clone-state :oid))
       (setq approve-feedback--clone-state
             (append (list :oid oid)
                     (approve-clone-state (plist-get approve-feedback--branch :clone) oid))))
-    (cond
-     ((not (approve-feedback--relevant-p))
-      (when approve-feedback--text
-        (approve-lines-unwatch)
-        (setq approve-feedback--text nil)))
-     ((not (equal oid (car approve-feedback--text)))
-      (approve-feedback--fetch oid)))))
+    (setq approve-feedback--head (and wanted oid))
+    (dolist (text approve-feedback--texts)
+      (unless (member (car text) wanted)
+        (approve-lines-unwatch (car text))))
+    (setq approve-feedback--texts (seq-filter (lambda (text) (member (car text) wanted))
+                                              approve-feedback--texts))
+    (dolist (each wanted)
+      (unless (or (assoc each approve-feedback--texts)
+                  (member each approve-feedback--fetching))
+        (approve-feedback--fetch each)))))
 
-(defun approve-feedback--github-line (line)
-  "Return GitHub's text of LINE of the file, or nil."
-  (when-let* ((text (cdr approve-feedback--text))
-              ((> line 0)))
+(defun approve-feedback--github-line (oid line)
+  "Return LINE of GitHub's text of the file at OID, or nil."
+  (when-let* ((text (cdr (assoc oid approve-feedback--texts)))
+              ((and line (> line 0))))
     (let ((start 0))
       (while (and start (> line 1))
         (setq start (string-search "\n" text start)
@@ -387,24 +418,77 @@ kept for the session as the file view keeps it (decision D45)."
 
 ;;; Where the threads go
 
-(defun approve-feedback--where (map thread)
-  "Return where THREAD goes in the buffer by MAP: (LINE . WHERE), or nil.
-A thread on the whole file goes above the first line (LINE 0, WHERE
-`file'); one on a line of the head where `approve-lines-to-buffer'
-says, WHERE being `same', `edited' or `deleted'."
-  (let-alist thread
-    (cond
-     ((equal .subjectType "FILE") (cons 0 'file))
-     ((and .line (equal .diffSide "RIGHT")) (approve-lines-to-buffer map .line)))))
+(defun approve-feedback--hunks ()
+  "Return the parsed patch of the buffer's file in the pull request, or nil."
+  (approve-diff-parse (alist-get 'patch (approve-diff-file-entry approve-feedback--path))))
 
-(defun approve-feedback--place (map)
-  "Return the threads of the buffer's file by the lines they go under, by MAP.
-The value is ((LINE . ENTRIES) ...), in order of LINE, 0 above the
-first line.  Each of ENTRIES is (THREAD . WHERE), as
+(defun approve-feedback--from-base (hunks line)
+  "Return where the base's LINE is at the head, by the patch HUNKS.
+The value is (HEAD . REMOVED): HEAD is the line at the head, or when
+the pull request REMOVED it, the head's line before where it was, 0
+at the top."
+  (let ((old 1) (new 1))
+    (catch 'found
+      (dolist (hunk hunks)
+        (when (< line (approve-diff-hunk-old-start hunk))
+          (throw 'found (cons (+ line (- new old)) nil)))
+        (setq old (approve-diff-hunk-old-start hunk)
+              new (approve-diff-hunk-new-start hunk))
+        (pcase-dolist (`(,kind ,at ,_ ,_) (approve-diff-hunk-lines hunk))
+          (pcase kind
+            ('ctx (when (= at line)
+                    (throw 'found (cons new nil)))
+                  (cl-incf old)
+                  (cl-incf new))
+            ('del (when (= at line)
+                    (throw 'found (cons (1- new) t)))
+                  (cl-incf old))
+            ('add (cl-incf new)))))
+      (cons (+ line (- new old)) nil))))
+
+(defun approve-feedback--removed-lines (hunks thread)
+  "Return the text of the base's lines THREAD is on, from the patch HUNKS."
+  (let-alist thread
+    (let ((from (or .startLine .line)) (lines nil))
+      (dolist (hunk hunks)
+        (pcase-dolist (`(,kind ,old ,_ ,text) (approve-diff-hunk-lines hunk))
+          (when (and (memq kind '(del ctx)) old (<= from old .line))
+            (push text lines))))
+      (nreverse lines))))
+
+(defun approve-feedback--where (maps hunks thread)
+  "Return where THREAD goes in the buffer: (LINE . WHERE), or nil.
+MAPS are the maps of GitHub's texts by commit; HUNKS the file's
+patch.  A thread on the whole file goes above the first line (LINE
+0, WHERE `file'); one on a line of the head where the head's map
+says, WHERE being `same', `edited' or `deleted'; one on lines the
+pull request removed under the head's line before them (`removed');
+an outdated one where its original line is now, by the map of its
+commit (`outdated').  An outdated thread waits for that map."
+  (let-alist thread
+    (let ((head (cdr (assoc approve-feedback--head maps))))
+      (cond
+       ((equal .subjectType "FILE") (cons 0 'file))
+       ((and .line (equal .diffSide "RIGHT")) (approve-lines-to-buffer head .line))
+       ((and .line (equal .diffSide "LEFT"))
+        (pcase-let ((`(,line . ,removed) (approve-feedback--from-base hunks .line)))
+          (cond ((not removed) (approve-lines-to-buffer head line))
+                ((zerop line) (cons 0 'removed))
+                (t (cons (car (approve-lines-to-buffer head line)) 'removed)))))
+       ((approve-feedback--outdated-p thread)
+        (when-let* ((map (cdr (assoc (approve-feedback--original-commit thread) maps))))
+          (cons (car (approve-lines-to-buffer map .originalLine)) 'outdated)))))))
+
+(defun approve-feedback--place (maps)
+  "Return the threads of the buffer's file by the lines they go under, by MAPS.
+MAPS are the maps of GitHub's texts by commit, the head's among
+them.  The value is ((LINE . ENTRIES) ...), in order of LINE, 0 above
+the first line.  Each of ENTRIES is (THREAD . WHERE), as
 `approve-feedback--where' says, in the store's order."
-  (let ((lines nil))
+  (let ((hunks (approve-feedback--hunks))
+        (lines nil))
     (dolist (thread (approve-pr-threads-for-file approve-feedback--path))
-      (when-let* ((where (approve-feedback--where map thread)))
+      (when-let* ((where (approve-feedback--where maps hunks thread)))
         (if-let* ((line (assq (car where) lines)))
             (setcdr line (append (cdr line) (list (cons thread (cdr where)))))
           (push (list (car where) (cons thread (cdr where))) lines))))
@@ -428,54 +512,85 @@ first line.  Each of ENTRIES is (THREAD . WHERE), as
 
 (defun approve-feedback--bubble (entries asking)
   "Return the bubble of a line with the threads of ENTRIES.
-It is the speech bubble and the count of unresolved threads, or of
-all when none is.  Its colour says what matters most (decision D46):
-red when one asks for changes, its id in ASKING (D34); gold when the
-line was edited here; dim when all are resolved."
+It is the speech bubble, or a triangle ◂ when they are all on lines
+the pull request removed after the line, and the count of unresolved
+threads, or of all when none is.  Its colour says what matters most
+\(decision D46): red when one asks for changes, its id in ASKING
+\(D34); gold when the line was edited here; dim when all are resolved
+or outdated."
   (let* ((threads (mapcar #'car entries))
          (unresolved (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
                                 threads)))
     (approve-face-add
-     (concat (approve-icon 'comment)
+     (concat (if (seq-every-p (lambda (entry) (eq (cdr entry) 'removed)) entries)
+                 "◂"
+               (approve-icon 'comment))
              (number-to-string (if (> unresolved 0) unresolved (length threads))))
      (cond ((seq-some (lambda (thread) (member (alist-get 'id thread) asking)) threads)
             'approve-thread-mark-changes-requested)
            ((seq-some #'approve-feedback--edited-p entries) 'approve-edited-here)
-           ((> unresolved 0) 'approve-diff-bubble)
+           ((seq-some (lambda (entry) (and (not (alist-get 'isResolved (car entry)))
+                                           (not (eq (cdr entry) 'outdated))))
+                      entries)
+            'approve-diff-bubble)
            (t 'approve-dim)))))
+
+(defun approve-feedback--context (entry hunks)
+  "Return the rows that start ENTRY's thread when it is unfolded, or nil.
+They say where it was: GitHub's text of a line edited or deleted
+here, an outdated thread's line at its commit, the lines the pull
+request removed; HUNKS are the file's patch."
+  (let ((thread (car entry)))
+    (cl-flet ((row (label text)
+                (concat (approve-face (concat "┊ " label) 'approve-dim) " "
+                        (approve-face (or text "") 'approve-edited-here) "\n")))
+      (pcase (cdr entry)
+        ('edited (row "on GitHub:"
+                      (approve-feedback--github-line approve-feedback--head
+                                                     (alist-get 'line thread))))
+        ('deleted (row "deleted here:"
+                       (approve-feedback--github-line approve-feedback--head
+                                                      (alist-get 'line thread))))
+        ('outdated
+         (let ((oid (approve-feedback--original-commit thread)))
+           (row (format "at %s:" (substring oid 0 (min 7 (length oid))))
+                (approve-feedback--github-line oid (alist-get 'originalLine thread)))))
+        ('removed
+         (mapconcat (lambda (text) (row "removed:" text))
+                    (approve-feedback--removed-lines hunks thread) ""))))))
 
 (defun approve-feedback--bubble-help (entries unfolded)
   "Return the tooltip of the bubble of ENTRIES, UNFOLDED or not.
 Such as \"1 thread · edited here: GitHub has  (retries 3))\"."
-  (let ((edited (seq-find #'approve-feedback--edited-p entries)))
+  (let ((edited (seq-find #'approve-feedback--edited-p entries))
+        (kinds (delete-dups (mapcar #'cdr entries))))
     (concat (approve-feedback--count (length entries) "thread")
             (and edited
                  (format " · %s here: GitHub has %s" (cdr edited)
-                         (or (approve-feedback--github-line (alist-get 'line (car edited)))
+                         (or (approve-feedback--github-line approve-feedback--head
+                                                           (alist-get 'line (car edited)))
                              "")))
+            (and (memq 'outdated kinds) " · outdated: where its line was")
+            (and (memq 'removed kinds) " · on lines the pull request removed after this one")
             (if unfolded "\nmouse-1: fold" "\nmouse-1: unfold"))))
 
 (defun approve-feedback--threads-text (entries)
   "Return the threads of ENTRIES drawn as the file view draws them.
-The thread of a line edited here starts with GitHub's text of it.
-Their boxes name no keys: the dispatch does (decision D46)."
-  (let ((owner approve-model-store-buffer)
-        (github (mapcar (lambda (entry)
-                          (and (approve-feedback--edited-p entry)
-                               (approve-feedback--github-line (alist-get 'line (car entry)))))
-                        entries)))
+Each starts with where it was, when that isn't the line above it
+\(`approve-feedback--context').  Their boxes name no keys: the
+dispatch does (decision D46)."
+  (let* ((owner approve-model-store-buffer)
+         (hunks (approve-feedback--hunks))
+         (contexts (mapcar (lambda (entry) (approve-feedback--context entry hunks))
+                           entries)))
     (with-temp-buffer
       ;; New comments are marked as in the PR buffer (D44).
       (setq approve-model-store-buffer owner)
       (cl-loop for entry in entries
-               for text in github
+               for context in contexts
                do (let ((start (point)))
-                    (when text
-                      (insert (approve-face (if (eq (cdr entry) 'deleted)
-                                                "┊ deleted here: "
-                                              "┊ on GitHub: ")
-                                            'approve-dim)
-                              (approve-face text 'approve-edited-here) "\n"))
+                    (when context
+                      (insert context))
                     (approve-thread-insert (car entry))
                     (approve-render-prefix start (point) "  ")))
       (buffer-string))))
@@ -571,15 +686,20 @@ Nil takes the threads and the margin away."
         (approve-feedback--set-margin width)))))
 
 (defun approve-feedback--decorate ()
-  "Draw the threads under their lines again, by the latest map.
+  "Draw the threads under their lines again, by the latest maps.
 A map older than the buffer's text asks for another comparison,
-and the threads stay where the text took them until it answers."
-  (let ((map (and approve-feedback--text (approve-lines-watched-map 'head))))
+and the threads stay where the text took them until it answers.
+An outdated thread waits for the map of its commit."
+  (let* ((maps (mapcar (lambda (text) (cons (car text) (approve-lines-watched-map (car text))))
+                       approve-feedback--texts))
+         (head (cdr (assoc approve-feedback--head maps))))
     (cond
-     ((null approve-feedback--text) (approve-feedback--draw nil))
-     ((null map))
-     ((not (approve-lines-current-p map)) (approve-lines-update))
-     (t (approve-feedback--draw (approve-feedback--place map))))
+     ((null approve-feedback--head) (approve-feedback--draw nil))
+     ((null head))
+     ((seq-some (lambda (map) (and (cdr map) (not (approve-lines-current-p (cdr map)))))
+                maps)
+      (approve-lines-update))
+     (t (approve-feedback--draw (approve-feedback--place (seq-filter #'cdr maps)))))
     (approve-feedback--update-lighter)))
 
 (defun approve-feedback-redraw ()
