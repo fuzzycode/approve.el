@@ -58,6 +58,8 @@
 ;;   picked another.
 ;; - `approve-clone-state' says how a clone's HEAD stands to GitHub's
 ;;   head: the same, ahead, behind, diverged, or missing it.
+;; - `approve-clone-head' reads what HEAD is from the clone's files,
+;;   without git, so a buffer can tell cheaply whether it moved.
 ;; - `approve-clone-file-text' reads a file at GitHub's head from the
 ;;   clone, when it has the commit, for approve-lines.el to compare
 ;;   with the user's buffer of the file.
@@ -223,11 +225,10 @@ Each is (:host :owner :repo); GitHub ignores the case of names."
                                           (plist-get other key) nil nil t)))
                  '(:host :owner :repo))))
 
-(defun approve-clone--common-dir (clone)
-  "Return the git directory CLONE shares with its worktrees, or nil.
+(defun approve-clone--git-dir (clone)
+  "Return the git directory of CLONE itself, or nil.
 CLONE is a top directory.  It is read from files: .git is the
-directory, or a file naming it (a worktree, a submodule), whose
-commondir file names the shared one."
+directory, or a file naming it (a worktree, a submodule)."
   (let ((dot (expand-file-name ".git" clone)))
     (cond
      ((file-directory-p dot) (file-name-as-directory dot))
@@ -235,15 +236,55 @@ commondir file names the shared one."
       (with-temp-buffer
         (insert-file-contents dot)
         (when (re-search-forward "^gitdir: *\\(.+?\\) *$" nil t)
-          (let* ((gitdir (file-name-as-directory
-                          (expand-file-name (match-string 1) clone)))
-                 (common (expand-file-name "commondir" gitdir)))
-            (if (file-readable-p common)
-                (with-temp-buffer
-                  (insert-file-contents common)
-                  (file-name-as-directory
-                   (expand-file-name (string-trim (buffer-string)) gitdir)))
-              gitdir))))))))
+          (file-name-as-directory (expand-file-name (match-string 1) clone))))))))
+
+(defun approve-clone--common-dir (clone)
+  "Return the git directory CLONE shares with its worktrees, or nil.
+CLONE is a top directory.  It is read from files: the git directory
+\(`approve-clone--git-dir'), or the one its commondir file names."
+  (when-let* ((gitdir (approve-clone--git-dir clone)))
+    (let ((common (expand-file-name "commondir" gitdir)))
+      (if (file-readable-p common)
+          (with-temp-buffer
+            (insert-file-contents common)
+            (file-name-as-directory
+             (expand-file-name (string-trim (buffer-string)) gitdir)))
+        gitdir))))
+
+(defun approve-clone--read-ref (common ref)
+  "Return the commit REF names in the git directory COMMON, or nil.
+REF is a full name, such as \"refs/heads/main\": a file of its own,
+else a line of packed-refs."
+  (let ((loose (expand-file-name ref common))
+        (packed (expand-file-name "packed-refs" common)))
+    (cond
+     ((file-regular-p loose)
+      (with-temp-buffer
+        (insert-file-contents loose)
+        (string-trim (buffer-string))))
+     ((file-readable-p packed)
+      (with-temp-buffer
+        (insert-file-contents packed)
+        (and (re-search-forward (concat "^\\([[:xdigit:]]+\\) " (regexp-quote ref) "$") nil t)
+             (match-string 1)))))))
+
+(defun approve-clone-head (clone)
+  "Return what HEAD is in CLONE: (BRANCH . OID), read from its files.
+CLONE is a top directory, a worktree's too.  BRANCH is the branch
+checked out, nil on a detached HEAD; OID its commit, nil before the
+branch has one.  It takes no git process, so it is cheap enough to
+ask whenever HEAD may have moved."
+  (when-let* ((gitdir (approve-clone--git-dir clone))
+              (file (expand-file-name "HEAD" gitdir))
+              ((file-readable-p file)))
+    (let ((head (with-temp-buffer
+                  (insert-file-contents file)
+                  (string-trim (buffer-string)))))
+      (if (string-prefix-p "ref: " head)
+          (let ((ref (string-trim (substring head 5))))
+            (cons (string-remove-prefix "refs/heads/" ref)
+                  (approve-clone--read-ref (approve-clone--common-dir clone) ref)))
+        (cons nil head)))))
 
 (defun approve-clone-remotes (clone)
   "Return the remotes of CLONE, ((NAME . URL) ...), in the order of its config.

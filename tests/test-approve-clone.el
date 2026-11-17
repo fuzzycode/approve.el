@@ -536,6 +536,34 @@ PROPS may give :number, :head (the head repository), :branch and :draft."
                                    (alist-get "two" test-clone--shas nil nil #'equal))
               :to-equal '(:state missing)))))
 
+(describe "approve-clone-head"
+  (it "reads the branch and its commit from the clone's files, packed or not"
+    (test-clone--with-clones
+      (let* ((one (test-clone--dir "one"))
+             (branch (test-clone--git one "rev-parse" "--abbrev-ref" "HEAD"))
+             (first (alist-get "one" test-clone--shas nil nil #'equal)))
+        (expect (approve-clone-head one) :to-equal (cons branch first))
+        (test-clone--git one "commit" "-q" "--allow-empty" "-m" "Second")
+        (let ((second (test-clone--git one "rev-parse" "HEAD")))
+          (expect (approve-clone-head one) :to-equal (cons branch second))
+          (test-clone--git one "pack-refs" "--all")
+          (expect (file-exists-p (expand-file-name (concat ".git/refs/heads/" branch) one))
+                  :to-be nil)
+          (expect (approve-clone-head one) :to-equal (cons branch second))
+          (test-clone--git one "checkout" "-q" "--detach" first)
+          (expect (approve-clone-head one) :to-equal (cons nil first))))))
+
+  (it "reads a worktree's own HEAD, and nothing outside a clone"
+    (test-clone--with-clones
+      (let ((one (test-clone--dir "one"))
+            (tree (expand-file-name "tree" test-clone--root)))
+        (test-clone--git one "worktree" "add" "-q" "-b" "other" tree)
+        (test-clone--git tree "commit" "-q" "--allow-empty" "-m" "Other")
+        (expect (approve-clone-head tree)
+                :to-equal (cons "other" (test-clone--git tree "rev-parse" "HEAD")))
+        (expect (approve-clone-head (expand-file-name "notes" test-clone--root))
+                :to-be nil)))))
+
 (describe "approve-clone-file-text"
   (it "reads a file at a commit as git has it, carriage returns included"
     (test-clone--with-clones
