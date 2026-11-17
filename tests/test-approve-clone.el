@@ -536,6 +536,33 @@ PROPS may give :number, :head (the head repository), :branch and :draft."
                                    (alist-get "two" test-clone--shas nil nil #'equal))
               :to-equal '(:state missing)))))
 
+(describe "approve-clone-file-text"
+  (it "reads a file at a commit as git has it, carriage returns included"
+    (test-clone--with-clones
+      (let ((one (test-clone--dir "one")))
+        (make-directory (expand-file-name "src" one))
+        (with-temp-file (expand-file-name "src/main.c" one)
+          (set-buffer-file-coding-system 'utf-8-unix)
+          (insert "int main() {\r\n  return 0; /* å */\r\n}"))
+        (test-clone--git one "add" ".")
+        (test-clone--git one "commit" "-q" "-m" "Main")
+        (let ((oid (test-clone--git one "rev-parse" "HEAD")))
+          (expect (approve-clone-file-text one oid "src/main.c")
+                  :to-equal "int main() {\r\n  return 0; /* å */\r\n}")
+          (expect (approve-clone-file-text one (substring oid 0 7) "src/main.c")
+                  :to-equal "int main() {\r\n  return 0; /* å */\r\n}")))))
+
+  (it "gives \"\" for a file the commit hasn't, and nil for a commit the clone hasn't"
+    (test-clone--with-clones
+      (let ((one (test-clone--dir "one")))
+        (expect (approve-clone-file-text one (alist-get "one" test-clone--shas nil nil #'equal)
+                                         "src/main.c")
+                :to-equal "")
+        (expect (approve-clone-file-text one (alist-get "two" test-clone--shas nil nil #'equal)
+                                         "src/main.c")
+                :to-be nil)
+        (expect (approve-clone-file-text one "not a sha" "src/main.c") :to-be nil)))))
+
 ;;; A pull request's worktree
 
 (defconst test-clone--pr-head

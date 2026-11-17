@@ -126,7 +126,7 @@ Planned files.  Split a file when it passes ~600 lines or holds two concerns.
 | =approve-clone.el=         | A local clone (D36, D37, D45): the user's clones (=approve-clone-directories=), |  2, 7 |
 |                            | the one with a commit, shown in Magit; remotes read from the config; a buffer's |       |
 |                            | branch and its place on GitHub; a branch's PRs, the one shown and picking       |       |
-|                            | another; the clone's state; a PR's worktree                                     |       |
+|                            | another; the clone's state; a file's text at a commit; a PR's worktree          |       |
 | =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads and actions in the buffers of its       |     7 |
 |                            | clone; ways to and from the PR buffer                                           |       |
 | =approve-dev.el=           | Development tools, fixture recording and replay (not packaged)                  |     0 |

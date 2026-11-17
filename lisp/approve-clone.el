@@ -58,6 +58,9 @@
 ;;   picked another.
 ;; - `approve-clone-state' says how a clone's HEAD stands to GitHub's
 ;;   head: the same, ahead, behind, diverged, or missing it.
+;; - `approve-clone-file-text' reads a file at GitHub's head from the
+;;   clone, when it has the commit, for approve-lines.el to compare
+;;   with the user's buffer of the file.
 ;; - `approve-clone-pull-request-worktree' gives the worktree a pull
 ;;   request's lines open in: among the clones of its repositories, one
 ;;   whose branch pushes to its head branch, else one that tracks it,
@@ -598,6 +601,25 @@ never acted on (decision D45).  Two git calls at most."
                            ((zerop ahead) 'behind)
                            (t 'diverged))
               :ahead ahead :behind behind))))))
+
+;;; GitHub's text of a file
+
+(defun approve-clone-file-text (clone oid path)
+  "Return the text of PATH at the commit OID, read from CLONE, or nil.
+CLONE is a top directory; PATH is relative to it.  The text is as
+git has it, carriage returns included, as GitHub's API gives it
+\(decision D45).  It is \"\" when the commit has no such file, and nil
+when the clone hasn't the commit: GitHub has it, and Approve never
+fetches into a clone.  One git call, two when the file is missing."
+  (let ((default-directory clone)
+        (coding-system-for-read 'utf-8-unix))
+    (when (approve-clone--oid-p oid)
+      (with-temp-buffer
+        (cond
+         ((zerop (magit-process-git '(t nil) "cat-file" "blob" (concat oid ":" path)))
+          (buffer-string))
+         ((magit-git-success "cat-file" "-e" (concat oid "^{commit}"))
+          ""))))))
 
 ;;; A pull request's worktree
 
