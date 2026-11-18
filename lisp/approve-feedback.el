@@ -1084,6 +1084,16 @@ and whether GitHub has changes."
   (make-mode-line-mouse-map 'mouse-1 #'approve-feedback-mouse-dispatch)
   "Keymap of the mode-line item: a click opens the dispatch (decision D50).")
 
+(defcustom approve-feedback-mode-line-icon-height 1.2
+  "How large the speech bubble of the mode line is, against its text.
+The bubble of `approve-feedback-mode' in the mode line is a little
+larger than the text by default, as the icons beside it often are;
+1.0 draws it at the text's size:
+
+  (setopt approve-feedback-mode-line-icon-height 1.0)"
+  :type 'number
+  :group 'approve)
+
 (defun approve-feedback--mode-line-text ()
   "Return the mode-line item of the current buffer (decision D50).
 It is the speech bubble and the file's threads, resolved or not:
@@ -1099,13 +1109,14 @@ state and the counts, in words."
          (loading (or (not loaded) (approve-pr-loading-p) approve-feedback--fetching))
          (counts (and loaded (approve-feedback--thread-counts)))
          (changes (and loaded (approve-session-get :changes)))
-         (bubble (concat (approve-icon 'comment)
+         (bubble (concat (approve-icon 'comment nil approve-feedback-mode-line-icon-height)
                          (if counts (number-to-string (plist-get counts :here)) ""))))
     (propertize
-     (concat (cond ((null counts) bubble)
+     (concat " "
+             (cond ((null counts) bubble)
                    ((> (plist-get counts :asking) 0)
-                    (approve-face bubble 'approve-thread-mark-changes-requested))
-                   ((zerop (plist-get counts :unresolved)) (approve-face bubble 'approve-dim))
+                    (approve-face-add bubble 'approve-thread-mark-changes-requested))
+                   ((zerop (plist-get counts :unresolved)) (approve-face-add bubble 'approve-dim))
                    (t bubble))
              (and changes (concat " " (approve-face "↻" 'approve-updated)))
              (and loading " …")

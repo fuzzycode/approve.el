@@ -83,6 +83,17 @@
     (expect (approve-icon 'draft)
             :to-equal (nerd-icons-codicon "nf-cod-git_pull_request_draft")))
 
+  (it "draws an icon larger or smaller when given a height"
+    (setq approve-use-nerd-icons t)
+    (let ((icon (approve-icon 'comment nil 1.2)))
+      (expect icon :to-equal (nerd-icons-mdicon "nf-md-comment_outline"))
+      (expect (plist-get (get-text-property 0 'face icon) :height) :to-equal 1.2)
+      (expect (approve-icon 'comment) :not :to-be icon))
+    (setq approve-use-nerd-icons nil)
+    (approve-icon-clear-cache)
+    (expect (format "%S" (get-text-property 0 'face (approve-icon 'comment nil 1.2)))
+            :to-match ":height 1.2"))
+
   (it "has a glyph and a fallback for every icon"
     (dolist (entry approve-icons)
       (expect (assq (car entry) approve-icon-fallbacks) :not :to-be nil)

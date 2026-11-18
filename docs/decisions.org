@@ -769,7 +769,10 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     the speech bubble and the number of the file's threads, resolved
     or not, red while one asks for changes ([[*D34 A thread mark is red only while it asks for changes][D34]]), dim when none is
     unresolved; =↻= while GitHub has changes ([[*D23 Remote changes are announced, never auto-applied][D23]]), =…= while the
-    pull request or GitHub's text of the file loads.  The pull request's
+    pull request or GitHub's text of the file loads.  The bubble is
+    drawn at 1.2 times the text's height (the author's choice, among
+    glyphs and sizes tried in his mode line beside other icons), an
+    option.  The pull request's
     number and state, which of the branch's pull requests it is and how
     the clone stands to it are in its tooltip, with the counts in
     words; mouse-1 opens the dispatch.

@@ -216,38 +216,44 @@ frame, the font `nerd-icons-font-family' exists (checked once)."
     ("nf-ple-" . nerd-icons-powerline))
   "The nerd-icons function that draws each prefix of glyph names.")
 
-(defun approve-icon--glyph (code)
-  "Return the nerd-icons glyph named CODE, such as \"nf-md-tag\", or nil."
+(defun approve-icon--glyph (code &optional height)
+  "Return the nerd-icons glyph named CODE, such as \"nf-md-tag\", or nil.
+HEIGHT, a factor of the text's height, draws it larger or smaller."
   (when-let* ((family (seq-find (lambda (family) (string-prefix-p (car family) code))
                                 approve-icon--families)))
     (condition-case nil
-        (funcall (cdr family) code)
+        (if height
+            (funcall (cdr family) code :height height)
+          (funcall (cdr family) code))
       (error nil))))
 
-(defun approve-icon--make (name face nerd)
+(defun approve-icon--make (name face nerd &optional height)
   "Return the icon NAME with FACE, a glyph when NERD is non-nil.
 Fall back to the Unicode text when the glyph is unknown, and to
-\"?\" when NAME has no fallback either."
+\"?\" when NAME has no fallback either.  HEIGHT scales it."
   (let ((glyph (and nerd
                     (when-let* ((code (alist-get name approve-icons)))
-                      (approve-icon--glyph code)))))
+                      (approve-icon--glyph code height)))))
     (cond
      (glyph (if face (approve-face-add glyph face) glyph))
-     (t (approve-face (or (alist-get name approve-icon-fallbacks) "?")
-                      face)))))
+     (t (let ((text (approve-face (or (alist-get name approve-icon-fallbacks) "?")
+                                  face)))
+          (if height (approve-face-add text (list :height height)) text))))))
 
-(defun approve-icon (name &optional face)
+(defun approve-icon (name &optional face height)
   "Return the icon NAME as a string, with FACE if non-nil.
 NAME is a semantic name from `approve-icons', such as `approved'.
 The string is a nerd-icons glyph or a Unicode fallback, see
-`approve-use-nerd-icons'.  Its width can be 1 or 2 columns: align
-with `string-width'.  Icons are cached; do not modify the string.
+`approve-use-nerd-icons'.  HEIGHT, a factor of the text's height,
+draws it larger or smaller, as in the mode line.  Its width can be 1
+or 2 columns: align with `string-width'.  Icons are cached; do not
+modify the string.
 
 Example: (insert (approve-icon \\='approved \\='approve-approved) \" bob\")"
   (let* ((nerd (approve-icon-nerd-p))
-         (key (list name face nerd)))
+         (key (list name face nerd height)))
     (or (gethash key approve-icon--cache)
-        (puthash key (approve-icon--make name face nerd) approve-icon--cache))))
+        (puthash key (approve-icon--make name face nerd height) approve-icon--cache))))
 
 (provide 'approve-icons)
 

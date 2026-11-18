@@ -859,7 +859,9 @@ lines with those lines (=┊ removed:=):
 
 The mode line shows a speech bubble and the number of the file's
 threads, resolved or not, through =global-mode-string=, so doom-modeline
-shows it too ([[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]).  Its tooltip says the rest in words, and
+shows it too ([[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]).  The bubble is a little larger than the text
+(=approve-feedback-mode-line-icon-height=, 1.2), as the icons beside it
+often are.  Its tooltip says the rest in words, and
 mouse-1 opens the dispatch.  The header line is left alone:
 | Item    | Means                                                                    |
 |---------+--------------------------------------------------------------------------|
