@@ -436,9 +436,13 @@ BRANCH is as `approve-clone-branch-head' gives it."
 ;;; The pull request's store
 
 (defun approve-feedback--loaded-p ()
-  "Return non-nil if the current buffer's pull request is in its store."
+  "Return non-nil if the current buffer's pull request is in its store.
+That is once its core query has answered: the others of a load, the
+threads or the files, can answer first, and the pull request has no
+number, state or head until it does."
   (and (buffer-live-p approve-model-store-buffer)
-       (approve-model-root-ref)))
+       (approve-model-root-ref)
+       (approve-pr-loaded-p 'core)))
 
 (defun approve-feedback--buffers (&optional owner)
   "Return the buffers in the feedback mode, those of the PR buffer OWNER if given."
@@ -653,7 +657,7 @@ kept for the session as the file view keeps it (decision D45)."
 The file is compared with the texts the threads need, the head's and
 the outdated threads' commits', and no longer with the others."
   (let* ((oid (approve-pr-field 'headRefOid))
-         (wanted (and (approve-feedback--relevant-p) (approve-feedback--wanted oid))))
+         (wanted (and oid (approve-feedback--relevant-p) (approve-feedback--wanted oid))))
     (unless (equal oid (plist-get approve-feedback--clone-state :oid))
       (setq approve-feedback--clone-state
             (append (list :oid oid)
@@ -1300,7 +1304,9 @@ and whether GitHub has changes."
                            (alist-get 'nameWithOwner (alist-get 'repository
                                                                 approve-feedback--pull-request))
                            .number .title
-                           (if (and (eq .isDraft t) (equal .state "OPEN")) "draft" (downcase .state)))
+                           (if (and (eq .isDraft t) (equal .state "OPEN"))
+                               "draft"
+                             (downcase (or .state ""))))
                    (concat (format "%s into %s" (plist-get head :branch) .baseRefName)
                            (and index (cdr open)
                                 (format " · %d of %d open pull requests of this branch"

@@ -255,6 +255,39 @@ outdated thread's commit's too."
           (expect (approve-pr-field 'number) :to-equal 202)
           (expect (test-feedback--tooltip) :not :to-match "open pull requests of this branch")))))
 
+  (it "waits for the pull request's core, which can answer after its other queries"
+    (let ((test-feedback--prs (list (test-feedback--row 202))))
+      (test-feedback--with-clone
+        (let* ((held nil)
+               (answer approve-api-transport)
+               (approve-api-transport
+                (lambda (request)
+                  (if (equal (plist-get request :name) "queries/pull-request.graphql")
+                      (progn (push request held) #'ignore)
+                    (funcall answer request)))))
+          (approve-feedback-mode 1)
+          (approve-test-wait-for (lambda () (approve-pr-loaded-p 'threads)))
+          ;; The threads are in the store, the pull request's fields not.
+          (expect (approve-model-root-ref) :to-be-truthy)
+          (expect (approve-feedback--loaded-p) :to-be nil)
+          (approve-feedback-redraw)
+          (expect test-feedback--blobs :to-equal nil)
+          (expect (test-feedback--mode-line) :to-match "… \\'")
+          (expect (test-feedback--tooltip) :to-match "#202  Pull request 202 · open")
+          (expect (approve-feedback--overlays) :to-equal nil)
+          ;; Once it answers, the threads are drawn.
+          (funcall answer (car held))
+          (test-feedback--wait)
+          (approve-test-wait-for (lambda () (approve-feedback--overlays)))
+          (expect (mapcar #'car (test-feedback--drawn)) :to-equal '(0 15 54 61 131 134))))))
+
+  (it "says a pull request without a state in its tooltip"
+    (let ((test-feedback--prs (list (test-feedback--row 202))))
+      (test-feedback--with-clone
+        (approve-feedback-mode 1)
+        (expect (approve-feedback--tooltip '((number . 202) (title . "Parser")) nil t nil)
+                :to-match "#202  Parser · \n"))))
+
   (it "asks before a merged pull request, and stays off when declined"
     (let ((test-feedback--prs (list (test-feedback--row 202 "MERGED"))))
       (test-feedback--with-clone
