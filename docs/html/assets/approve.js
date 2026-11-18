@@ -39,6 +39,7 @@
       "external": ["nf-md-open_in_new", 0xf03cc],
       "person": ["nf-md-account_outline", 0xf0013],
       "bell": ["nf-md-bell_outline", 0xf009c],
+      "pull-requests": ["nf-md-source_pull", 0xf04c2],
       "milestone": ["nf-md-flag_outline", 0xf023d],
       "reaction-thumbs-up": ["nf-md-thumb_up_outline", 0xf0514],
       "reaction-thumbs-down": ["nf-md-thumb_down_outline", 0xf0512],
@@ -76,6 +77,7 @@
       "external": ["nf-cod-link_external", 0xeb14],
       "person": ["nf-cod-account", 0xeb99],
       "bell": ["nf-cod-bell", 0xeaa2],
+      "pull-requests": ["nf-cod-git_pull_request", 0xea64],
       "milestone": ["nf-cod-milestone", 0xeb20]
     },
     fontawesome: {
@@ -105,6 +107,7 @@
       "external": ["nf-fa-external_link", 0xf08e],
       "person": ["nf-fa-user_o", 0xf2c0],
       "bell": ["nf-fa-bell_o", 0xf0a2],
+      "pull-requests": ["nf-fa-code_branch", 0xf126],
       "milestone": ["nf-fa-flag_o", 0xf11d]
     },
     octicons: {
@@ -134,6 +137,7 @@
       "external": ["nf-oct-link_external", 0xf465],
       "person": ["nf-oct-person", 0xf415],
       "bell": ["nf-oct-bell", 0xf49a],
+      "pull-requests": ["nf-oct-git_pull_request", 0xf407],
       "milestone": ["nf-oct-milestone", 0xf45d]
     }
   };
@@ -148,7 +152,7 @@
     "file-copied": "⧉", "file-changed": "⚙",
     "check-pending": "◐", "check-skipped": "⊘", "pending-comment": "✎", "label": "🏷", "push": "↑",
     "loading": "⟳", "error": "✗", "comment": "💬", "commit": "●", "issue": "◉",
-    "lock": "🔒", "external": "↗", "person": "👤", "bell": "●", "milestone": "⚑",
+    "lock": "🔒", "external": "↗", "person": "👤", "bell": "●", "pull-requests": "PR", "milestone": "⚑",
     "reaction-thumbs-up": "👍", "reaction-thumbs-down": "👎", "reaction-laugh": "😄",
     "reaction-hooray": "🎉", "reaction-confused": "😕", "reaction-heart": "❤️",
     "reaction-rocket": "🚀", "reaction-eyes": "👀"

@@ -32,6 +32,7 @@ and notifications (F01, F19).</p>
   <li><a href="#search">Search results</a></li>
   <li><a href="#filters">Search filters</a></li>
   <li><a href="#url">Open by URL</a></li>
+  <li><a href="#mode-line">Mode-line count (later)</a></li>
   <li><a href="#notifications">Notifications (later)</a></li>
 </ul>
 
@@ -172,6 +173,39 @@ and notifications (F01, F19).</p>
 <p><span class="pi">Pull request URL</span> <span class="m">(default https://github.com/fuzzycode/approve/pull/1234)</span>: <span class="cursor"> </span></p>
 </div>
 </div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="mode-line">
+<h2>Mode-line count (later) <span class="ref">approve-mode-line-mode · D48 · Phase 8</span></h2>
+<p>A global minor mode, off by default, counts the lists of <code>approve-dashboard-sections</code> marked
+<code>:mode-line t</code>: "Needs my review" by default. An icon and GitHub's count for each, asked every
+<code>approve-mode-line-interval</code> seconds (300), when Emacs gets the focus back, and after a review is submitted.</p>
+<div class="emacs">
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  (ELisp/l)                                   <span class="pi"><i data-i="pull-requests">PR</i> 3</span></div>
+</div>
+<ul>
+  <li>The icon is the list's <code>:icon</code>, <code>pull-requests</code> when it has none (Material Design's
+      <code>nf-md-source_pull</code>, D31); an octicon is set in <code>approve-icons</code>. Another marked list adds its own,
+      in the lists' order: <span class="pi"><i data-i="pull-requests">PR</i> 3</span>  <span class="er"><i data-i="changes-requested">✗</i> 1</span>.</li>
+  <li>At 0 the icon and the 0 stay, <span class="d"><i data-i="pull-requests">PR</i> 0</span>, so it is seen to run. Before the first
+      answer: <span class="pi"><i data-i="pull-requests">PR</i> …</span>; when GitHub can't be asked, the last count stays (or
+      <span class="d">?</span>) and the tooltip says why.</li>
+</ul>
+<p>Its tooltip:</p>
+<div class="emacs">
+<div class="buf short">
+<p><span class="b">Needs my review: 3</span></p>
+<p><span class="m">fuzzycode/approve#1234</span>  Add retry logic to the GraphQL client  <span class="u">@alice</span>  <span class="d">2h</span></p>
+<p><span class="m">org/editor#88</span>           Fix crash when opening empty files     <span class="u">@erin</span>   <span class="d">1d</span></p>
+<p><span class="m">org/editor#87</span>           New theme                              <span class="u">@frank</span>  <span class="d">3d</span></p>
+<p><span class="d">mouse-1: the dashboard · mouse-3: ask GitHub now</span></p>
+</div>
+</div>
+<ul>
+  <li>Up to five pull requests, then "… N more". mouse-1 opens the dashboard at the list, or the pull request itself
+      when it is the only one; mouse-3 asks GitHub again.</li>
+</ul>
 </section>
 
 <!-- ================================================================== -->

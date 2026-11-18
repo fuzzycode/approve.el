@@ -167,6 +167,10 @@ task only needs the files it touches.
   not on others ("Line 41 was edited here; …").  The rest of
   =approve-feedback-command-map=, evil's =]t= =[t= and
   =approve-feedback-dispatch= (mouse-1 on the lighter) came with them.
+- Added to [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]] the same day, at the author's request: a count of
+  pull requests in the mode line ([[file:decisions.org::*D48 A count in the mode line, from the dashboard's lists][D48]]), the dashboard's lists marked
+  =:mode-line t= ("Needs my review" by default), asked every five
+  minutes, with the pull requests in its tooltip.
 - Next step: between the buffers, the next task of
   [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]]: =f= (evil =gF=) in the PR buffer opens the line in the
   clone, =RET= in the map the PR buffer at this line, and =n= / =p= go on

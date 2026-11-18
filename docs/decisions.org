@@ -528,6 +528,49 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   text must not move under the reader ([[*D23 Remote changes are announced, never auto-applied][D23]]).  =gR= follows approve-v2's
   dashboard and sits next to =gr=, which refreshes everything.
 
+** D48 A count in the mode line, from the dashboard's lists
+- Status :: accepted (2026-11-17, by the author: what it counts, the
+  icon, zero, the tooltip and the clicks); the interval and how it is
+  turned on are proposed, to check when it is built (Phase 8).
+- Decision ::
+  - =approve-mode-line-mode=, a global minor mode, off by default, puts a
+    count of pull requests in the mode line, through
+    =global-mode-string= (which doom-modeline and the like show too); the
+    construct =approve-mode-line-string= is there for a mode line of
+    one's own.
+  - It counts the lists of =approve-dashboard-sections= ([[*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]) marked
+    =:mode-line t=: an icon and the number GitHub finds (=issueCount=)
+    for each, in the lists' order.  The default marks "Needs my review"
+    (=is:open review-requested:@me=).  A list's =:icon= names the icon in
+    =approve-icons=, =pull-requests= when it has none: Material Design's
+    =nf-md-source_pull= ([[*D31 Icons come from Material Design][D31]]).  An octicon is the user's to set
+    there, such as =nf-oct-git_pull_request=.
+  - Each marked list is asked with its own search, for its count and
+    first five rows (=approve-query-search=, cost 1): when the mode turns
+    on, every =approve-mode-line-interval= seconds (300 by default), when
+    Emacs gets the focus back (at most once a minute), and after a
+    review is submitted from Approve.  When the dashboard loads a
+    marked list, its count is taken from there.  An answer to an older
+    request is dropped.  A failure keeps the last count (or shows =?=)
+    and the tooltip says why; a token error stops the asking until
+    mouse-3 or the mode is turned on again.
+  - At 0 the icon and the 0 stay, dim, so the user sees it is on.
+    Before the first answer it shows =…=.
+  - Its tooltip names the list and its count, then the pull requests
+    found, up to five (repository and number, title, author, age) and
+    "… N more".  mouse-1 opens the dashboard at that list, or the pull
+    request itself when it is the only one; mouse-3 asks GitHub again,
+    now.
+- Why :: The searches a user cares about are the dashboard's already, so
+  one definition serves both, and a click lands where the count came
+  from.  The PR glyph and a number say "pull requests waiting" at a
+  glance; Material Design keeps it in step with the rest ([[*D31 Icons come from Material Design][D31]]), and
+  =approve-icons= takes any glyph.  A dim 0 tells the user it runs and
+  nothing waits.  The tooltip, and opening a lone pull request at once,
+  save a trip through the dashboard.  Off by default, as it asks GitHub
+  on a timer; five minutes, as [[*D23 Remote changes are announced, never auto-applied][D23]]'s poll of a PR buffer, costs 12 of
+  the 5000 points an hour for a list.
+
 ** D40 C-c C-c applies and sends, everywhere
 - Status :: accepted (2026-11-15, by the author)
 - Decision :: =C-c C-c= sends or applies wherever Approve asks for text or a

@@ -448,9 +448,22 @@ On a clone of the scratch repository, find out and note in
   the newest open PR of a branch, switchable.
 
 * Phase 8 — Notifications, polish, release
-Implements F19.
+Implements F19.  Mockups: notifications, the mode-line count.
 - [ ] =approve-notifications.el= and the filter transient.
 - [ ] Dashboard unread marks ([[file:decisions.org::*Open questions][Q6]]).
+- [ ] A count of pull requests in the mode line ([[file:decisions.org::*D48 A count in the mode line, from the dashboard's lists][D48]]), added
+      (2026-11-17) at the author's request: =approve-mode-line-mode=, a
+      global minor mode, off by default, shows an icon and GitHub's count
+      for each list of =approve-dashboard-sections= marked =:mode-line t=
+      ("Needs my review" by default), its =:icon= or =pull-requests=
+      (=nf-md-source_pull=).  Asked every =approve-mode-line-interval=
+      seconds (300), on focus (at most once a minute) and after a submit;
+      the dashboard's loads update it.  A dim 0; =…= before the first
+      answer; the last count kept and the reason in the tooltip on a
+      failure.  The tooltip lists up to five of the pull requests;
+      mouse-1 opens the dashboard at the list, or the only pull request;
+      mouse-3 asks again.  Tests with a fake search and timers run by
+      hand.  [[file:ui.org::*Mode-line count (Phase 8)][Mockup]].
 - [ ] Performance pass on the large fixture and on real huge PRs.
 - [ ] User manual ([[file:decisions.org::*Open questions][Q5]]), README with screenshots, customization docs.
 - [ ] MELPA recipe and release.

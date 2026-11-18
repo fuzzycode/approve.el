@@ -415,6 +415,42 @@ them all, and =zp= folds the others.  =?= opens the dashboard's dispatch:
 =s= will open search with the section's filter, once search exists
 (Phase 9).
 
+* Mode-line count (Phase 8)
+=approve-mode-line-mode= (a global minor mode, off by default) puts a count
+of pull requests in the mode line: an icon and a number for each list of
+=approve-dashboard-sections= marked =:mode-line t=, "Needs my review" by
+default ([[file:decisions.org::*D48 A count in the mode line, from the dashboard's lists][D48]]).  It asks GitHub every =approve-mode-line-interval=
+seconds (300), when Emacs gets the focus back, and after a review is
+submitted.
+#+begin_example
+ <N>  approve-api.el   42%  L41  (ELisp/l)                                  PR 3
+#+end_example
+
+The icon is the list's =:icon=, =pull-requests= when it has none
+(=nf-md-source_pull=; the fallback "PR" is shown here).  Another marked
+list adds its own, in the lists' order: =PR 3  ✗ 1=.  The number is GitHub's
+count; at 0 the icon and the 0 stay, dim, so it is seen to run.  Before
+the first answer it shows =PR …=; when GitHub can't be asked, the last
+count stays (or =PR ?=) and the tooltip says why.
+
+Its tooltip, and its clicks:
+#+begin_example
+ Needs my review: 3
+ fuzzycode/approve#1234  Add retry logic to the GraphQL client  @alice  2h
+ org/editor#88           Fix crash when opening empty files     @erin   1d
+ org/editor#87           New theme                              @frank  3d
+ mouse-1: the dashboard · mouse-3: ask GitHub now
+#+end_example
+
+- Up to five pull requests, then "… N more".  mouse-1 opens the dashboard
+  at the list, or the pull request itself when it is the only one (the
+  tooltip then says "mouse-1: open #1234").
+- =approve-mode-line-string= is the construct, for a mode line of one's
+  own; the mode puts it in =global-mode-string=.
+- An octicon is set in =approve-icons=, for =pull-requests= or the list's
+  =:icon=: =(setf (alist-get 'pull-requests approve-icons)
+  "nf-oct-git_pull_request")=.
+
 * Search
 =M-x approve-search= prompts for a query (with history), or =s= in the
 dashboard opens the filter transient.  Results use the dashboard's list
@@ -1195,6 +1231,7 @@ rows align with =string-width=.  The other sets that were compared are on
 | =milestone=            | =nf-md-flag_outline=                 | ⚑       |
 | =person=               | =nf-md-account_outline=              | 👤       |
 | =bell=                 | =nf-md-bell_outline=                 | ●        |
+| =pull-requests=        | =nf-md-source_pull=                  | PR       |
 | =lock=                 | =nf-md-lock_outline=                 | 🔒       |
 | =external=             | =nf-md-open_in_new=                  | ↗        |
 | =loading=              | =nf-md-loading=                      | ⟳        |
