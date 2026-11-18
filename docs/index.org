@@ -171,6 +171,9 @@ task only needs the files it touches.
   pull requests in the mode line ([[file:decisions.org::*D48 A count in the mode line, from the dashboard's lists][D48]]), the dashboard's lists marked
   =:mode-line t= ("Needs my review" by default), asked every five
   minutes, with the pull requests in its tooltip.
+- Also decided that day ([[file:decisions.org::*D49 Released from GitHub first; MELPA once there is interest][D49]]): the release is from GitHub, a tagged
+  version installed from the repository; MELPA waits until Approve has
+  been used in the wild and there is interest.
 - Next step: between the buffers, the next task of
   [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]]: =f= (evil =gF=) in the PR buffer opens the line in the
   clone, =RET= in the map the PR buffer at this line, and =n= / =p= go on

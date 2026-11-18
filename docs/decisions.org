@@ -1230,6 +1230,21 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   count of =approve-clone.el= was weighed as a reason for a new file;
   the author ruled it out: what belongs together stays together.
 
+** D49 Released from GitHub first; MELPA once there is interest
+- Status :: accepted (2026-11-17, by the author)
+- Decision :: The first release (Phase 8) is a tagged version on GitHub,
+  installed from the repository: =package-vc-install= (with =:lisp-dir=
+  =lisp=), =use-package='s =:vc=, straight or elpaca, as the README shows.
+  Approve is not submitted to MELPA then.  Once it has been used in the
+  wild and there is interest, it may be, with a new decision.  Until
+  then the code stays as MELPA would take it: =make lint= keeps
+  package-lint and checkdoc clean.
+- Why :: Approve should be tried and judged by its first users before it
+  is offered to everyone: a release from GitHub reaches the people who
+  look for it, and changes can still be made freely.  A package on MELPA
+  is a promise to maintain it for many, worth making once there is
+  interest.  Keeping lint clean costs little and leaves the way open.
+
 * Open questions
 Each one names the spike or phase that will answer it ([[file:roadmap.org][roadmap]]).
 

@@ -466,9 +466,17 @@ Implements F19.  Mockups: notifications, the mode-line count.
       hand.  [[file:ui.org::*Mode-line count (Phase 8)][Mockup]].
 - [ ] Performance pass on the large fixture and on real huge PRs.
 - [ ] User manual ([[file:decisions.org::*Open questions][Q5]]), README with screenshots, customization docs.
-- [ ] MELPA recipe and release.
-- Done when :: a new user can install from MELPA, set a token, run
-  =approve-dashboard= and review, following only the README.
+- [ ] Release from GitHub, not MELPA ([[file:decisions.org::*D49 Released from GitHub first; MELPA once there is interest][D49]]; changed 2026-11-17 at the
+      author's request): a tagged version, installed from the repository
+      with =package-vc-install= (its =:lisp-dir= is =lisp=), =use-package=
+      =:vc=, straight or elpaca, as the README shows.  Check that each
+      finds =graphql/= beside =lisp/=, and that =make lint= stays clean so
+      a MELPA recipe needs no change to the code later.
+- Done when :: a new user can install Approve from GitHub, set a token,
+  run =approve-dashboard= and review, following only the README.
+- Changed (2026-11-17) :: the release is from GitHub; MELPA waits until
+  Approve has been used in the wild and there is interest
+  ([[file:decisions.org::*D49 Released from GitHub first; MELPA once there is interest][D49]], [[*Ideas][Ideas]]).
 - Moved (2026-11-16) :: the split layout and =L= (F18) went to
   [[*Phase 11 — The split layout][Phase 11]], at the author's request: nice to have, done once
   Approve has been used in the wild and there is feedback.
@@ -600,6 +608,9 @@ if they want one, which is easy to do.
 
 * Ideas
 Not planned yet.  Each needs a decision before it enters a phase.
+- Publish to MELPA, once the release from GitHub has been used in the
+  wild and there is interest ([[file:decisions.org::*D49 Released from GitHub first; MELPA once there is interest][D49]]): a recipe for the package in
+  =lisp/= with the =graphql/= files, and MELPA's review.
 - A failing check's log in a buffer (Actions REST API), with timestamps.
 - Required checks that never reported, listed as GitHub's "Expected —
   Waiting for status to be reported" (F16).  =isRequired= exists only on
