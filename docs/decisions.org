@@ -282,6 +282,12 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   load it again.  Redrawing, change detection and the actions work as
   they do for the file views, at the cost of a PR buffer in the buffer
   list that the user didn't open.
+- Amended (2026-11-18) :: The author's choice, writing the ways between
+  the buffers: =f= in a PR buffer opens the file with that pull
+  request's threads.  When its branch shows another of its pull
+  requests, the one =f= comes from is picked for the branch, as =P=
+  picks one: remembered for the session, every buffer of the branch
+  shows it, and a closed or merged one shows without asking.
 
 * UI
 ** D04 Buffers are magit-section trees built from section hooks

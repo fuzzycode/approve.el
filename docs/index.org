@@ -176,10 +176,15 @@ task only needs the files it touches.
   been used in the wild and there is interest.  The author writes the
   README and the user's documentation, with an agent's help, once the
   work has moved from =feature/revamp= to =main= (both Phase 8 tasks).
-- Next step: between the buffers, the next task of
-  [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]]: =f= (evil =gF=) in the PR buffer opens the line in the
-  clone, =RET= in the map the PR buffer at this line, and =n= / =p= go on
-  to the next of the PR's files.
+- Between the buffers is done (2026-11-18).  =f= (evil =gF=) in the PR
+  buffer and the file view opens the line, thread or file at point in
+  the worktree that has the branch, on GitHub's line where the buffer
+  has it now; the PR it comes from is picked for the branch (D45,
+  amended).  =RET= in the map goes back to the line in the diff, else
+  to the line's first thread, else to the file; =n= / =p= go on through
+  the PR's files and wrap around.
+- Next step: the last task of [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]],
+  =approve-feedback-global-mode=.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last
   phase, [[file:roadmap.org::*Phase 11 — The split layout][Phase 11]], at the author's request: nice to
   have, done once Approve has been used in the wild and there is

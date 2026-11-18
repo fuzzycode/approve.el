@@ -23,8 +23,11 @@
   "The branch of the clone on GitHub.")
 
 (defun test-feedback--row (number &optional state)
-  "Return a pull request of the branch: NUMBER in STATE, open by default."
-  `((__typename . "PullRequest") (id . ,(format "PR_%d" number)) (number . ,number)
+  "Return a pull request of the branch: NUMBER in STATE, open by default.
+The medium PR, #202, has its id in the store."
+  `((__typename . "PullRequest")
+    (id . ,(if (= number 202) "PR_kwDOPCDj7SnvM_RcFp" (format "PR_%d" number)))
+    (number . ,number)
     (url . ,(format "https://github.com/acme-example/rocket/pull/%d" number))
     (title . ,(format "Pull request %d" number)) (state . ,(or state "OPEN")) (isDraft)
     (updatedAt . "2026-10-03T10:00:00Z") (baseRefName . "main")
@@ -118,11 +121,12 @@ and the clone are gone after."
        (with-temp-file file
          (insert test-feedback--text))
        (approve-file-clear-cache)
+       (clrhash approve-clone--picked)
        (spy-on 'approve-clone-branch-head
                :and-return-value (list :clone test-feedback--root :branch "parser-rewrite"
                                        :remote "origin" :head test-feedback--head))
        (spy-on 'approve-clone-wait-pull-requests
-               :and-call-fake (lambda (_head) test-feedback--prs))
+               :and-call-fake (lambda (_head &optional _refresh) test-feedback--prs))
        (spy-on 'approve-clone-state :and-return-value '(:state ahead :ahead 1 :behind 0))
        (spy-on 'approve-clone-file-text :and-return-value nil)
        (let ((buffer (find-file-noselect file)))
@@ -136,9 +140,17 @@ and the clone are gone after."
                (with-current-buffer input
                  (setq approve-input--done t))
                (kill-buffer input)))
-           (kill-buffer buffer)
+           (dolist (other (buffer-list))
+             (when (and (buffer-file-name other)
+                        (string-prefix-p test-feedback--root (buffer-file-name other)))
+               (with-current-buffer other
+                 (set-buffer-modified-p nil))
+               (kill-buffer other)))
+           (when (buffer-live-p buffer)
+             (kill-buffer buffer))
            (mapc #'kill-buffer (test-feedback--pr-buffers))
            (approve-file-clear-cache)
+           (clrhash approve-clone--picked)
            (delete-directory test-feedback--root t))))))
 
 (defun test-feedback--wait ()
@@ -176,10 +188,13 @@ LINE 0 is above the first line."
     (and text (string-match-p "╭" text) (substring-no-properties text))))
 
 (defun test-feedback--start ()
-  "Turn the mode on, and wait until the threads are drawn."
+  "Turn the mode on, and wait until the threads are drawn.
+That is once every text of GitHub's is compared with the buffer, an
+outdated thread's commit's too."
   (approve-feedback-mode 1)
   (test-feedback--wait)
-  (approve-test-wait-for #'approve-feedback--overlays))
+  (approve-test-wait-for (lambda () (and (approve-feedback--overlays)
+                                         (approve-feedback--settled-p)))))
 
 (defun test-feedback--idle ()
   "Compare the lines again, as Emacs would once idle after an edit."
@@ -378,7 +393,12 @@ LINE 0 is above the first line."
       (approve-feedback-previous-thread)
       (expect (point) :to-equal (point-min))
       (expect (test-feedback--threads-shown 0) :to-match "On this file")
-      (expect (approve-feedback-previous-thread) :to-throw 'user-error)
+      ;; Before the first, the last again: the pull request's other
+      ;; files with threads aren't in this clone.
+      (approve-feedback-previous-thread)
+      (expect (line-number-at-pos) :to-equal 134)
+      (expect (test-feedback--threads-shown 134) :to-be-truthy)
+      (goto-char (point-min))
       (forward-line 1)
       (approve-feedback-toggle-all-threads)
       (expect (length (seq-filter #'test-feedback--threads-shown '(0 15 54 61 131 134)))
@@ -748,5 +768,229 @@ The buffer the input was for is current after."
   (it "open the dispatch only where the mode is on"
     (with-temp-buffer
       (expect (approve-feedback-dispatch) :to-throw 'user-error))))
+
+(defun test-feedback--pr-goto-line (number)
+  "Move point to the added or context line NUMBER of the file in the PR buffer."
+  (approve-nav-goto-file test-feedback--path)
+  (goto-char (point-min))
+  (let ((found nil))
+    (while (and (not found) (not (eobp)))
+      (let ((line (get-text-property (point) 'approve-line)))
+        (if (and line (equal (plist-get line :path) test-feedback--path)
+                 (equal (plist-get line :side) "RIGHT") (eql (plist-get line :new) number))
+            (setq found (point))
+          (forward-line 1))))
+    (or found (error "No line %s of %s" number test-feedback--path))))
+
+(defun test-feedback--edit ()
+  "Edit the buffer without saving: a line added at the top, and line 131."
+  (goto-char (point-min))
+  (insert "new first line\n")
+  (forward-line 130)
+  (end-of-line)
+  (insert " edited"))
+
+(defun test-feedback--add-file (path)
+  "Write PATH in the clone, with GitHub's text of the medium PR's file."
+  (let ((file (expand-file-name path test-feedback--root)))
+    (make-directory (file-name-directory file) t)
+    (write-region test-feedback--text nil file nil 'silent)
+    file))
+
+(describe "f in a PR buffer"
+  (it "opens the line at point in the clone, where the buffer has it now"
+    (test-feedback--with-one
+      (spy-on 'approve-clone-file-text :and-return-value test-feedback--text)
+      (spy-on 'approve-clone-pull-request-worktree :and-return-value test-feedback--root)
+      (spy-on 'message :and-call-through)
+      (test-feedback--edit)
+      (let ((clone (current-buffer))
+            (pr (approve-test-open-pr "medium")))
+        (with-current-buffer pr
+          (test-feedback--pr-goto-line 15)
+          (approve-feedback-visit-file))
+        (expect (spy-calls-args-for 'approve-clone-pull-request-worktree 0)
+                :to-equal '((:host "github.com" :owner "acme-example" :repo "rocket"
+                                   :branch "parser-rewrite")
+                            (:host "github.com" :owner "acme-example" :repo "rocket")))
+        (expect (window-buffer (selected-window)) :to-be clone)
+        (expect approve-feedback-mode :to-be t)
+        (expect approve-model-store-buffer :to-be pr)
+        (expect approve-feedback--destination :to-be nil)
+        (expect (line-number-at-pos) :to-equal 16)
+        (expect (test-feedback--threads-shown 16) :to-be-truthy)
+        ;; A line edited here: the line in its place, and the echo area
+        ;; says so.
+        (with-current-buffer pr
+          (test-feedback--pr-goto-line 131)
+          (approve-feedback-visit-file))
+        (expect (line-number-at-pos) :to-equal 132)
+        (expect (test-feedback--threads-shown 132) :to-match "┊ on GitHub: line 131")
+        (expect (spy-calls-args-for 'message (1- (spy-calls-count 'message)))
+                :to-equal '("Approve: %s" "GitHub's line 131 was edited here; this line is in its place")))))
+
+  (it "goes on to the line once GitHub's text is in, unless point moved"
+    (test-feedback--with-one
+      (spy-on 'approve-clone-pull-request-worktree :and-return-value test-feedback--root)
+      (test-feedback--edit)
+      (let ((pr (approve-test-open-pr "medium")))
+        (with-current-buffer pr
+          (test-feedback--pr-goto-line 15)
+          (approve-feedback-visit-file))
+        ;; GitHub's line meanwhile, as the clone hasn't GitHub's head.
+        (expect (line-number-at-pos) :to-equal 15)
+        (expect approve-feedback--destination :to-be-truthy)
+        (approve-test-wait-for (lambda () (null approve-feedback--destination)))
+        (expect (line-number-at-pos) :to-equal 16)
+        (expect (test-feedback--threads-shown 16) :to-be-truthy))))
+
+  (it "opens a thread where it is drawn, saying why it isn't on its line"
+    (test-feedback--with-one
+      (spy-on 'approve-clone-file-text :and-return-value test-feedback--text)
+      (spy-on 'approve-clone-pull-request-worktree :and-return-value test-feedback--root)
+      (spy-on 'message :and-call-through)
+      (let ((pr (approve-test-open-pr "medium")))
+        (with-current-buffer pr
+          (approve-nav-goto-file test-feedback--path)
+          (goto-char (oref (approve-test-find-section 'approve-thread-section
+                                                      "PRRT_kwDOBjizZBfYz5abyp")
+                           start))
+          (approve-feedback-visit-file))
+        (expect (line-number-at-pos) :to-equal 61)
+        (expect (test-feedback--threads-shown 61) :to-match "┊ at [0-9a-f]\\{7\\}: line 61")
+        (expect (spy-calls-args-for 'message (1- (spy-calls-count 'message)))
+                :to-equal '("Approve: %s" "The thread is outdated: its line was here")))))
+
+  (it "shows the pull request it comes from, as if picked for the branch"
+    (let ((test-feedback--prs (list (test-feedback--row 203) (test-feedback--row 202))))
+      (test-feedback--with-clone
+        (spy-on 'approve-clone-pull-request-worktree :and-return-value test-feedback--root)
+        (approve-feedback-mode 1)
+        (expect (alist-get 'number approve-feedback--pull-request) :to-equal 203)
+        (let ((pr (approve-test-open-pr "medium")))
+          (with-current-buffer pr
+            (test-feedback--pr-goto-line 15)
+            (approve-feedback-visit-file))
+          (expect (alist-get 'number approve-feedback--pull-request) :to-equal 202)
+          (expect approve-model-store-buffer :to-be pr)
+          (expect (alist-get 'number (approve-clone-shown-pull-request test-feedback--head
+                                                                       test-feedback--prs))
+                  :to-equal 202)))))
+
+  (it "offers the file view when no clone has the branch, or the file"
+    (test-feedback--with-one
+      (spy-on 'approve-clone-pull-request-worktree :and-return-value nil)
+      (spy-on 'y-or-n-p :and-return-value t)
+      (spy-on 'approve-file-show)
+      (let ((pr (approve-test-open-pr "medium"))
+            (empty (file-name-as-directory (make-temp-file "approve-empty-" t))))
+        (unwind-protect
+            (with-current-buffer pr
+              (test-feedback--pr-goto-line 15)
+              (approve-feedback-visit-file)
+              (expect (spy-calls-args-for 'y-or-n-p 0)
+                      :to-equal '("No clone has parser-rewrite checked out; show the file view instead? "))
+              (expect 'approve-file-show
+                      :to-have-been-called-with test-feedback--path "RIGHT" 15)
+              (spy-on 'approve-clone-pull-request-worktree :and-return-value empty)
+              (spy-on 'y-or-n-p :and-return-value nil)
+              (approve-feedback-visit-file)
+              (expect (car (spy-calls-args-for 'y-or-n-p 0))
+                      :to-equal (format "%s isn't in %s (deleted or moved there); show the file view instead? "
+                                        test-feedback--path (abbreviate-file-name empty)))
+              (expect 'approve-file-show :to-have-been-called-times 1))
+          (delete-directory empty t)))
+      ;; A file view only says why.
+      (with-temp-buffer
+        (setq-local approve-context-file (list :path test-feedback--path))
+        (expect (approve-feedback--file-view-instead test-feedback--path nil "No clone")
+                :to-throw 'user-error '("No clone")))))
+
+  (it "is in the dispatches of the PR buffer and the file view, dimmed off a file"
+    (test-feedback--with-one
+      (let ((pr (approve-test-open-pr "medium")))
+        (expect (keymap-lookup approve-pr-mode-map "f") :to-be 'approve-feedback-visit-file)
+        (expect (keymap-lookup approve-file-mode-map "f") :to-be 'approve-feedback-visit-file)
+        (dolist (prefix '(approve-dispatch approve-file-dispatch))
+          (expect (plist-get (cdr (transient-get-suffix prefix "f")) :command)
+                  :to-be 'approve-feedback-visit-file))
+        (with-current-buffer pr
+          (goto-char (oref (approve-test-find-section 'approve-description-section) start))
+          (expect (approve-action-why-not 'approve-feedback-visit-file)
+                  :to-equal "Put point on a file, a line of the diff or a thread")
+          (approve-nav-goto-file test-feedback--path)
+          (expect (approve-feedback--visit-preflight)
+                  :to-equal (list test-feedback--path :side "RIGHT" :line 13))))))
+
+  (it "is gF in evil's normal state"
+    (cl-letf (((symbol-function 'evil-define-key*) #'ignore)
+              ((symbol-function 'evil-set-initial-state) #'ignore))
+      (require 'approve-evil))
+    (expect (assoc "gF" approve-evil-pr-bindings)
+            :to-equal '("gF" . approve-feedback-visit-file))
+    (expect (assoc "gF" approve-evil-file-bindings)
+            :to-equal '("gF" . approve-feedback-visit-file))))
+
+(describe "RET in the feedback mode's map"
+  (it "shows the PR buffer at the line, else its thread, else the file"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (let ((owner approve-model-store-buffer)
+            (clone (current-buffer)))
+        (expect (keymap-lookup approve-feedback-command-map "RET")
+                :to-be 'approve-feedback-visit-pr)
+        (test-feedback--goto 15)
+        (approve-feedback-visit-pr)
+        (expect (window-buffer (selected-window)) :to-be owner)
+        (with-current-buffer owner
+          (expect (plist-get (get-text-property (point) 'approve-line) :new) :to-equal 15))
+        ;; The outdated thread drawn under line 61, which isn't in the diff.
+        (set-buffer clone)
+        (test-feedback--goto 61)
+        (approve-feedback-visit-pr)
+        (with-current-buffer owner
+          (let ((section (magit-current-section)))
+            (expect (oref section type) :to-be 'approve-thread-section)
+            (expect (oref section value) :to-equal "PRRT_kwDOBjizZBfYz5abyp")))
+        ;; A line with neither.
+        (set-buffer clone)
+        (test-feedback--goto 5)
+        (approve-feedback-visit-pr)
+        (with-current-buffer owner
+          (let ((section (magit-current-section)))
+            (expect (oref section type) :to-be 'approve-file-section)
+            (expect (oref section value) :to-equal test-feedback--path)))))))
+
+(describe "n and p in the feedback mode's map"
+  (it "go on to the pull request's next and previous files with threads"
+    (test-feedback--with-one
+      (let ((migrations (test-feedback--add-file "internal/store/migrations.go"))
+            (lexer (test-feedback--add-file "internal/parser/lexer.go")))
+        (test-feedback--start)
+        (test-feedback--goto 134)
+        ;; Past the last thread of parser.go: migrations.go, its thread on
+        ;; the whole file.
+        (approve-feedback-next-thread)
+        (expect (buffer-file-name (window-buffer (selected-window))) :to-equal migrations)
+        (with-current-buffer (window-buffer (selected-window))
+          (expect approve-feedback-mode :to-be t)
+          (approve-test-wait-for (lambda () (null approve-feedback--destination)))
+          (expect (point) :to-equal (point-min))
+          (expect (test-feedback--threads-shown 0) :to-match "On this file")
+          ;; Back: parser.go's last thread.
+          (approve-feedback-previous-thread))
+        (with-current-buffer (window-buffer (selected-window))
+          (expect buffer-file-name :to-equal (expand-file-name test-feedback--path
+                                                               test-feedback--root))
+          (expect (line-number-at-pos) :to-equal 134)
+          ;; Before its first: lexer.go, its thread on lines the pull
+          ;; request removed.
+          (goto-char (point-min))
+          (approve-feedback-previous-thread))
+        (with-current-buffer (window-buffer (selected-window))
+          (expect buffer-file-name :to-equal lexer)
+          (approve-test-wait-for (lambda () (null approve-feedback--destination)))
+          (expect (line-number-at-pos) :to-equal 7)
+          (expect (test-feedback--threads-shown 7) :to-match "┊ removed:"))))))
 
 ;;; test-approve-feedback.el ends here

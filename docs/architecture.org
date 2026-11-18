@@ -136,7 +136,7 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | another; the clone's state; a file's text at a commit; a PR's worktree          |       |
 | =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads in the buffers of its clone, what is at |     7 |
 |                            | point there, the actions on them (the core's commands in its map), its          |       |
-|                            | dispatch; ways to and from the PR buffer                                        |       |
+|                            | dispatch; ways to and from the PR buffer (=f= there, =RET= and =n= =p= here)    |       |
 | =approve-lines.el=         | GitHub's lines in a clone's buffer (D45): a map from a diff of GitHub's text    |     7 |
 |                            | and the buffer's, in an asynchronous process, made again after edits on idle    |       |
 | =approve-dev.el=           | Development tools, fixture recording and replay (not packaged)                  |     0 |

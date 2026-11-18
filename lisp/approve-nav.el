@@ -371,7 +371,7 @@ See `approve-next-new-comment'."
 
 ;;; Visiting, opening, copying
 
-(defun approve-nav--thread-of-comment (comment-id)
+(defun approve-nav-thread-of-comment (comment-id)
   "Return the id of the thread that holds the review comment COMMENT-ID."
   (alist-get 'id (seq-find (lambda (thread)
                              (seq-some (lambda (comment)
@@ -606,7 +606,7 @@ or person at point.  Elsewhere, toggle the section."
        (approve-nav-goto-file (plist-get context :path))))
     ('review-comment
      (if (eq (oref (magit-current-section) type) 'approve-pending-comment-section)
-         (approve-nav-goto-thread (or (approve-nav--thread-of-comment
+         (approve-nav-goto-thread (or (approve-nav-thread-of-comment
                                        (plist-get context :comment-id))
                                       (user-error "That comment's thread is not loaded")))
        (approve-nav--toggle-or "Nothing to visit here")))

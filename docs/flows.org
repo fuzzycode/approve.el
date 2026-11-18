@@ -826,7 +826,8 @@ in =approve-clone.el=.
    ├─ [user] TAB · T in the map, or mouse-1 on a bubble ──▶ unfold / fold the line's threads, or all
    │
    ├─ [user] n / p in the map (evil ]t [t) ──▶ the next / previous unresolved thread,
-   │      unfolded; past the last in this file, the next of the PR's files, visited in the clone
+   │      unfolded; past the last in this file, the next of the PR's files, visited in the clone;
+   │      past the last file, the first again
    │
    └─ [user] r R e k + on the line's threads, c s on the line or region
           │
@@ -860,6 +861,10 @@ in =approve-clone.el=.
 - The global mode is off by default.  With it on, a file of a branch with
   an open PR turns the mode on; outside GitHub clones it costs nothing
   ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]).
+- =n= and =p= go through the PR's files in the diff's order, those with
+  an unresolved thread, passing by the files the clone hasn't (the echo
+  area says so); past the last, they go on from the first, this file
+  included.
 
 * F22 Find a buffer's PR, and a PR's clone
 Both ways between a clone and GitHub ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]): a file's buffer finds its
@@ -930,7 +935,9 @@ branch checked out.  Code lives in =approve-clone.el=.
         ▼
      visit it in the worktree, the mode on (F21); point on GitHub's line mapped
      onto the buffer, its threads unfolded (a line edited there: the line in
-     its place, the echo area says so; a removed line: between the lines)
+     its place, the echo area says so; a removed line: between the lines);
+     a thread where it is drawn; a file at its first change.  When the branch
+     shows another of its PRs, this one is picked for it, as with P
 
 
  [user] RET in the map, in a file's buffer
@@ -939,15 +946,21 @@ branch checked out.  Code lives in =approve-clone.el=.
      the PR buffer (opened if need be, on the same store)
         │
         ▼
-     ◇ the line at point as on GitHub, and in the diff? ◇──no──▶ the file's heading in
-        │ yes                                               the diff, unfolded
-        ▼
-     the line in the diff, its threads unfolded
+     ◇ the line at point as on GitHub, and in the diff? ◇──no──▶ ◇ threads drawn under it? ◇
+        │ yes                                                    │ yes          │ no
+        ▼                                                        ▼              ▼
+     the line in the diff, its threads unfolded     its first thread   the file's heading
+                                                    in the diff        in the diff, unfolded
 #+end_example
 
 The PR buffer and the clone's buffers share one store, so going between
 them loads nothing.  =f= and =gF= join the dispatch (=?=) of the PR buffer
 and the file view; without a clone they say why and offer the file view.
+The file opens where =approve-feedback-display-action= says: in the
+window of the PR buffer by default, as the file view does.  =RET= on a
+line that isn't in the diff but has threads (an outdated one, one on
+removed lines, the file's) goes to the first of them (the author's
+choice).
 
 * F23 Commit a suggestion, or a batch of them
 As GitHub's "Commit suggestion" and "Add suggestion to batch", without a

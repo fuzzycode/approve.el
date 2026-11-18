@@ -55,7 +55,7 @@
 ;;   for the pull requests a branch heads (a fork's into its parent
 ;;   too); `approve-clone-shown-pull-request' is the one Approve shows,
 ;;   the open one updated last unless `approve-clone-pick-pull-request'
-;;   picked another.
+;;   picked another, or `approve-clone-set-pull-request' set one.
 ;; - `approve-clone-state' says how a clone's HEAD stands to GitHub's
 ;;   head: the same, ahead, behind, diverged, or missing it.
 ;; - `approve-clone-head' reads what HEAD is from the clone's files,
@@ -576,16 +576,18 @@ them; return the one read."
                                   nil t nil nil default)))
     (cdr (assoc choice choices))))
 
-(defun approve-clone-wait-pull-requests (head)
+(defun approve-clone-wait-pull-requests (head &optional refresh)
   "Return the pull requests of HEAD, asking GitHub first if need be.
-HEAD is a branch on GitHub, (:host :owner :repo :branch).  It waits,
-saying so in the echo area; \\[keyboard-quit] stops waiting.  Signal a
-`user-error' with GitHub's message when the question fails."
+HEAD is a branch on GitHub, (:host :owner :repo :branch).  GitHub is
+asked once a session, or again if REFRESH.  It waits, saying so in
+the echo area; \\[keyboard-quit] stops waiting.  Signal a `user-error'
+with GitHub's message when the question fails."
   (let* ((none (make-symbol "none"))
          (prs none)
          (failure nil))
     (approve-clone-branch-pull-requests
      head
+     :refresh refresh
      :callback (lambda (answer) (setq prs answer))
      :errorback (lambda (err) (setq failure err)))
     (when (eq prs none)
@@ -613,10 +615,18 @@ branch (decision D45), and `approve-clone-picked-functions' are run."
          (shown (approve-clone-shown-pull-request head prs t))
          (pr (approve-clone-read-pull-request
               (format "Pull request of %s: " (plist-get head :branch)) prs shown)))
-    (puthash (approve-clone--head-key head) (alist-get 'id pr) approve-clone--picked)
-    (run-hook-with-args 'approve-clone-picked-functions head pr)
+    (approve-clone-set-pull-request head pr)
     (message "Showing #%s for %s" (alist-get 'number pr) (plist-get head :branch))
     pr))
+
+(defun approve-clone-set-pull-request (head pr)
+  "Make PR the pull request Approve shows for HEAD, a branch, this session.
+HEAD is (:host :owner :repo :branch); PR a pull request of it, as
+`approve-clone-branch-pull-requests' gives them, in any state.  It is
+what \\[approve-clone-pick-pull-request] picks; every buffer of the
+branch shows it, as `approve-clone-picked-functions' are run."
+  (puthash (approve-clone--head-key head) (alist-get 'id pr) approve-clone--picked)
+  (run-hook-with-args 'approve-clone-picked-functions head pr))
 
 ;;; The clone's state
 

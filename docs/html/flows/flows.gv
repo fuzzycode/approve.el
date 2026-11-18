@@ -485,7 +485,8 @@ life   [label="while the buffer lives:\l\
   D23's check (focus, timer) → ↻ in the lighter; [user] g in the map → F17\l\
   [user] TAB · T in the map, mouse-1 on a bubble → unfold / fold the line, or all\l\
   [user] n / p in the map (evil ]t / [t) → the next / previous unresolved\l\
-      thread, unfolded; past the file's last, the PR's next file, in the clone\l" @note];
+      thread, unfolded; past the file's last, the PR's next file, in the clone;\l\
+      past the last file, the first again\l" @note];
 show -> life [style=dashed];
 
 subgraph cluster_act { label="actions (Phase 7's later tasks)";
@@ -538,7 +539,7 @@ subgraph cluster_f { label="f — a PR's line in your clone (evil: gF)";
   several [label="the one that pushes there;\nstill several: completing-read,\nremembered for the session"];
   there  [label="the file there?" @dec];
   nofile [label="\"sp8/lines.txt isn't in /tmp/wt;\nshow the file view instead? (y or n)\"" @err];
-  visit  [label="visit it in the worktree, the mode on (F21)\npoint on GitHub's line mapped onto the buffer,\nits threads unfolded (an edited line: the line in\nits place, the echo area says so)" @ok];
+  visit  [label="visit it in the worktree, the mode on (F21)\npoint on GitHub's line mapped onto the buffer,\nits threads unfolded (an edited line: the line in\nits place, the echo area says so); a thread where\nit is drawn; another PR of the branch: picked, as with P" @ok];
   f -> clones -> refs -> count;
   count -> nowt [label=" none", class="no", fontcolor="#eb6f92"]; nowt -> f15 [label=" y"];
   count -> several [label=" several"]; count -> there [label=" one"]; several -> there;
@@ -549,8 +550,11 @@ subgraph cluster_ret { label="RET in the map — back to the PR buffer";
   prbuf  [label="the PR buffer\n(opened if need be, on the same store)"];
   indiff [label="the line at point as on\nGitHub, and in the diff?" @dec];
   line   [label="the line in the diff,\nits threads unfolded" @ok];
+  thr    [label="threads drawn\nunder the line?" @dec];
+  first  [label="its first thread\nin the diff" @ok];
   head   [label="the file's heading\nin the diff, unfolded" @ok];
-  ret -> prbuf -> indiff; indiff -> line [@yes]; indiff -> head [@no];
+  ret -> prbuf -> indiff; indiff -> line [@yes]; indiff -> thr [@no];
+  thr -> first [@yes]; thr -> head [@no];
 }
 f21 -> P [style=invis]; f15 -> ret [style=invis];
 

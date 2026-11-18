@@ -82,6 +82,13 @@
 ;;   (`approve-context-threads-function') and where a range's lines are
 ;;   (`approve-diff-range-positions-function'); the actions run in the
 ;;   PR buffer's store, which redraws them all.
+;; - Between the buffers: f in a PR buffer or a file view
+;;   (`approve-feedback-visit-file') opens the line, thread or file at
+;;   point in the worktree that has the pull request's branch, point on
+;;   GitHub's line where the buffer has it now; RET in the map
+;;   (`approve-feedback-visit-pr') shows the PR buffer at the line at
+;;   point.  n and p go on to the pull request's next file with an
+;;   unresolved thread, in the clone.
 ;;
 ;; Layer rules: a module for a local clone (D36), which the core never
 ;; requires; approve.el does.  It spans the layers above the clone's
@@ -120,6 +127,20 @@
 
 (declare-function approve-evil-setup-feedback "approve-evil" (map))
 (declare-function evil-normalize-keymaps "evil-core" (&optional state))
+
+;;; Options
+
+(defcustom approve-feedback-display-action '(display-buffer-same-window)
+  "How your file is shown when a pull request's line opens it in a clone.
+A `display-buffer' action, for \\<approve-pr-mode-map>\\[approve-feedback-visit-file] in a PR buffer or a file view.
+By default the file takes the window of the pull request, as the
+file view does, and \\<approve-feedback-command-map>\\[approve-feedback-visit-pr] in `approve-feedback-command-map' comes back.
+To show it in another window:
+
+  (setq approve-feedback-display-action
+        \\='((display-buffer-reuse-window display-buffer-pop-up-window)))"
+  :type 'sexp
+  :group 'approve)
 
 ;;; State of a buffer
 
@@ -168,6 +189,11 @@ LOCAL is non-nil when `right-margin-width' had a local value.")
 (defvar-local approve-feedback--head-ref nil
   "What HEAD was in the clone when last read: `approve-clone-head''s value.")
 
+(defvar-local approve-feedback--destination nil
+  "Where point goes once the threads are placed, or nil: (TARGET . POSITION).
+TARGET is as `approve-feedback--place-of' takes it.  POSITION is
+where point was put meanwhile: when it has moved since, it stays.")
+
 ;;; Mode
 
 (defvar-keymap approve-feedback-command-map
@@ -180,6 +206,8 @@ to one, under a leader key for example:
 \\[approve-feedback-dispatch] in it lists them all."
   "g" #'approve-feedback-refresh
   "P" #'approve-clone-pick-pull-request
+  "RET" #'approve-feedback-visit-pr
+  "<return>" #'approve-feedback-visit-pr
   "TAB" #'approve-feedback-toggle-threads
   "<tab>" #'approve-feedback-toggle-threads
   "T" #'approve-feedback-toggle-all-threads
@@ -240,6 +268,13 @@ approve-evil.el, which the mode requires then (decision D17)."
 
 ;;; Turning it on and off
 
+(defvar approve-feedback--found nil
+  "What the mode turns on with, or nil: (BRANCH PR PRS).
+BRANCH is as `approve-clone-branch-head' gives it, PR the pull
+request to show and PRS the branch's.  The commands that open a file
+for a pull request bind it to what they found, so the mode turns on
+with that, asking nothing.")
+
 (defun approve-feedback--choose (head prs)
   "Return the pull request of HEAD to show among PRS, or nil.
 HEAD is the branch on GitHub; PRS its pull requests.  It is the one
@@ -259,15 +294,18 @@ merged one.  Signal a `user-error' when the buffer has no file in a
 clone of a GitHub repository, or its branch no pull request."
   (unless buffer-file-name
     (user-error "This buffer visits no file"))
-  (let* ((branch (or (approve-clone-branch-head (file-name-directory buffer-file-name))
-                     (user-error "%s is on no branch of a GitHub repository"
-                                 (file-name-nondirectory buffer-file-name))))
-         (head (plist-get branch :head))
-         (prs (approve-clone-wait-pull-requests head))
-         (pr (approve-feedback--choose head prs)))
-    (when pr
-      (approve-feedback--show branch pr prs)
-      t)))
+  (if approve-feedback--found
+      (progn (apply #'approve-feedback--show approve-feedback--found)
+             t)
+    (let* ((branch (or (approve-clone-branch-head (file-name-directory buffer-file-name))
+                       (user-error "%s is on no branch of a GitHub repository"
+                                   (file-name-nondirectory buffer-file-name))))
+           (head (plist-get branch :head))
+           (prs (approve-clone-wait-pull-requests head))
+           (pr (approve-feedback--choose head prs)))
+      (when pr
+        (approve-feedback--show branch pr prs)
+        t))))
 
 (defun approve-feedback--store-buffer (pr)
   "Return the PR buffer of PR, opening and loading it unseen if need be.
@@ -295,6 +333,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
         approve-feedback--fetching nil
         approve-feedback--error nil
         approve-feedback--shown nil
+        approve-feedback--destination nil
         approve-feedback--head-ref (approve-clone-head (plist-get branch :clone))
         approve-model-store-buffer (approve-feedback--store-buffer pr)
         approve-context-function #'approve-feedback--context-at
@@ -321,7 +360,8 @@ BRANCH is as `approve-clone-branch-head' gives it."
                       approve-feedback--clone-state approve-feedback--lighter
                       approve-feedback--head approve-feedback--texts approve-feedback--fetching
                       approve-feedback--error approve-feedback--shown
-                      approve-feedback--head-ref approve-model-store-buffer
+                      approve-feedback--head-ref approve-feedback--destination
+                      approve-model-store-buffer
                       approve-context-function approve-context-threads-function
                       approve-diff-range-positions-function))
     (kill-local-variable variable)))
@@ -848,7 +888,8 @@ Nil takes the threads and the margin away."
   "Draw the threads under their lines again, by the latest maps.
 A map older than the buffer's text asks for another comparison,
 and the threads stay where the text took them until it answers.
-An outdated thread waits for the map of its commit."
+An outdated thread waits for the map of its commit.  Point goes
+where `approve-feedback--destination' says, once that is known."
   (let* ((maps (mapcar (lambda (text) (cons (car text) (approve-lines-watched-map (car text))))
                        approve-feedback--texts))
          (head (cdr (assoc approve-feedback--head maps))))
@@ -859,7 +900,9 @@ An outdated thread waits for the map of its commit."
                 maps)
       (approve-lines-update))
      (t (approve-feedback--draw (approve-feedback--place (seq-filter #'cdr maps)))))
-    (approve-feedback--update-lighter)))
+    (approve-feedback--update-lighter)
+    (when approve-feedback--destination
+      (approve-feedback--reach))))
 
 (defun approve-feedback-redraw ()
   "Draw what the current buffer shows of its pull request again, from the store.
@@ -1105,25 +1148,90 @@ first line: line 0."
   (goto-char (overlay-start overlay)))
 
 (defun approve-feedback-next-thread ()
-  "Move to the next line with an unresolved thread, and unfold its threads."
+  "Move to the next line with an unresolved thread, and unfold its threads.
+Past the last one of the file, the first of the next of the pull
+request's files with one, in the diff's order, visited in the clone;
+past the last file, the first again."
   (interactive)
   (approve-feedback--check)
   (let ((here (approve-feedback--here)))
-    (approve-feedback--goto
-     (or (seq-find (lambda (overlay) (> (approve-feedback--line-of overlay) here))
-                   (approve-feedback--unresolved-overlays))
-         (user-error "No unresolved thread after this")))))
+    (if-let* ((overlay (seq-find (lambda (overlay) (> (approve-feedback--line-of overlay) here))
+                                 (approve-feedback--unresolved-overlays))))
+        (approve-feedback--goto overlay)
+      (approve-feedback--other-file t))))
 
 (defun approve-feedback-previous-thread ()
   "Move to the previous line with an unresolved thread, and unfold its threads.
-From the first line, that can be the threads above it."
+From the first line, that can be the threads above it.  Before the
+first one of the file, the last of the previous of the pull
+request's files with one, visited in the clone; before the first
+file, the last again."
   (interactive)
   (approve-feedback--check)
   (let ((here (approve-feedback--here)))
-    (approve-feedback--goto
-     (or (seq-find (lambda (overlay) (< (approve-feedback--line-of overlay) here))
-                   (reverse (approve-feedback--unresolved-overlays)))
-         (user-error "No unresolved thread before this")))))
+    (if-let* ((overlay (seq-find (lambda (overlay) (< (approve-feedback--line-of overlay) here))
+                                 (reverse (approve-feedback--unresolved-overlays)))))
+        (approve-feedback--goto overlay)
+      (approve-feedback--other-file nil))))
+
+(defun approve-feedback--thread-files ()
+  "Return the pull request's files with an unresolved thread, in the diff's order."
+  (let ((unresolved (make-hash-table :test #'equal)))
+    (dolist (thread (approve-pr-list-fields 'reviewThreads '(path isResolved)))
+      (unless (alist-get 'isResolved thread)
+        (puthash (alist-get 'path thread) t unresolved)))
+    (seq-filter (lambda (path) (gethash path unresolved))
+                (mapcar (lambda (file) (alist-get 'path file)) (approve-pr-files)))))
+
+(defun approve-feedback--other-file (forward)
+  "Go to the next of the pull request's files with an unresolved thread.
+That is its first unresolved thread, visited in the clone; the
+previous file and its last thread unless FORWARD.  The files are in
+the diff's order, and those the clone hasn't are passed by, saying
+so.  Past the last file, it goes on from the first, which can be
+this one again."
+  (unless (approve-feedback--loaded-p)
+    (user-error "No unresolved thread %s this" (if forward "after" "before")))
+  (let* ((clone (plist-get approve-feedback--branch :clone))
+         (files (approve-feedback--thread-files))
+         (files (if forward files (reverse files)))
+         (index (seq-position files approve-feedback--path))
+         (order (if index
+                    (append (nthcdr (1+ index) files) (seq-take files (1+ index)))
+                  files))
+         (missing nil)
+         (next (seq-find (lambda (path)
+                           (or (file-exists-p (expand-file-name path clone))
+                               (progn (push path missing) nil)))
+                         order))
+         (wrapped (and next index (<= (seq-position files next) index)))
+         (note (string-join
+                (delq nil (list (and missing
+                                     (format "%s not in the clone"
+                                             (if (cdr missing)
+                                                 (format "passed by %d files" (length missing))
+                                               (concat "passed by " (car missing)))))
+                                (and wrapped
+                                     (if (equal next approve-feedback--path)
+                                         (format "from the %s unresolved thread again"
+                                                 (if forward "first" "last"))
+                                       (format "from the pull request's %s file again"
+                                               (if forward "first" "last"))))))
+                "; ")))
+    (cond
+     ((null next)
+      (user-error "No unresolved thread in the pull request%s"
+                  (if (string-empty-p note) "" (concat "'s files here: " note))))
+     ((equal next approve-feedback--path)
+      (approve-feedback--goto
+       (or (funcall (if forward #'car (lambda (list) (car (last list))))
+                    (approve-feedback--unresolved-overlays))
+           (user-error "No unresolved thread is placed here"))))
+     (t
+      (approve-feedback--visit (expand-file-name next clone) approve-feedback--pull-request
+                               (list :unresolved (if forward 'first 'last)))))
+    (unless (string-empty-p note)
+      (message "Approve: %s" note))))
 
 (add-hook 'approve-clone-picked-functions #'approve-feedback--picked)
 
@@ -1248,6 +1356,353 @@ by the head's map; the base's lines, and those edited here, are not."
                 (push (point) positions))))
           (nreverse positions))))))
 
+;;; Going to a place of GitHub's
+
+(defun approve-feedback--head-line (side line)
+  "Return where LINE on SIDE is at the pull request's head: (LINE . REMOVED).
+SIDE \"LEFT\" is the base: by the file's patch, a line the pull request
+removed is REMOVED, and goes to the head's line before where it was,
+0 at the top."
+  (if (equal side "LEFT")
+      (approve-feedback--from-base (approve-feedback--hunks) line)
+    (cons line nil)))
+
+(defun approve-feedback--overlay-of-line (line)
+  "Return the overlay of the threads under LINE, 0 above the first line, or nil."
+  (seq-find (lambda (overlay) (= (approve-feedback--line-of overlay) line))
+            (approve-feedback--overlays)))
+
+(defconst approve-feedback--thread-notes
+  '((edited . "The thread's line was edited here: this line is in its place")
+    (deleted . "The thread's line was deleted here: it was after this line")
+    (outdated . "The thread is outdated: its line was here")
+    (removed . "The thread is on lines the pull request removed after this one"))
+  "What the echo area says when point goes to a thread that isn't under its line.
+By where the thread is drawn, as `approve-feedback--where' says.")
+
+(defun approve-feedback--line-note (line head removed state)
+  "Return what the echo area says when point goes to GitHub's LINE, or nil.
+HEAD is LINE at the pull request's head, REMOVED non-nil when the
+pull request removed it from the base, STATE where the head's line
+is in the buffer, as `approve-lines-to-buffer' says."
+  (cond
+   (removed (format "The pull request removed line %d of the base; it was %s"
+                    line (if (zerop head) "above the first line" "after this line")))
+   ((eq state 'edited)
+    (format "GitHub's line %d was edited here; this line is in its place" head))
+   ((eq state 'deleted)
+    (format "GitHub's line %d was deleted here; it was after this line" head))))
+
+(defun approve-feedback--place-of (target)
+  "Return where TARGET is in the buffer now, or nil when that isn't known yet.
+TARGET is one of:
+  (:side SIDE :line LINE)  GitHub's LINE on SIDE, \"RIGHT\" for the
+                           pull request's head, \"LEFT\" for its base
+  (:thread ID)             the thread ID, where it is drawn
+  (:unresolved first)      the first line with an unresolved thread
+  (:unresolved last)       the last one
+The value is a plist: :line, the buffer's line, 0 above the first;
+:overlay, the threads drawn under it, to unfold; :note, what the echo
+area says when that isn't the line itself (edited or deleted here,
+removed by the pull request), or nil.  GitHub's lines are placed by
+the head's map of the buffer's text as it is now, threads where they
+are drawn."
+  (cond
+   ((plist-get target :thread)
+    (let ((id (plist-get target :thread)))
+      (seq-some (lambda (overlay)
+                  (when-let* ((entry (seq-find (lambda (entry)
+                                                 (equal (alist-get 'id (car entry)) id))
+                                               (overlay-get overlay 'approve-feedback-entries))))
+                    (list :line (approve-feedback--line-of overlay) :overlay overlay
+                          :note (alist-get (cdr entry) approve-feedback--thread-notes))))
+                (approve-feedback--overlays))))
+   ((plist-get target :unresolved)
+    (when-let* ((overlays (approve-feedback--unresolved-overlays))
+                (overlay (if (eq (plist-get target :unresolved) 'last)
+                             (car (last overlays))
+                           (car overlays))))
+      (list :line (approve-feedback--line-of overlay) :overlay overlay)))
+   (t
+    (when-let* ((map (and approve-feedback--head
+                          (approve-lines-watched-map approve-feedback--head)))
+                ((approve-lines-current-p map)))
+      (pcase-let* ((line (plist-get target :line))
+                   (`(,head . ,removed) (approve-feedback--head-line (plist-get target :side)
+                                                                    line))
+                   (`(,here . ,state) (if (zerop head)
+                                          (cons 0 'same)
+                                        (approve-lines-to-buffer map head))))
+        (list :line here :overlay (approve-feedback--overlay-of-line here)
+              :note (approve-feedback--line-note line head removed state)))))))
+
+(defun approve-feedback--settled-p ()
+  "Return non-nil if the threads are placed as they will be, or can't be.
+That is when the file isn't compared with GitHub's, when a text of
+GitHub's could not be had, or when every one is in and compared with
+the buffer's text as it is now."
+  (or (null approve-feedback--head)
+      approve-feedback--error
+      (and (null approve-feedback--fetching)
+           (seq-every-p (lambda (text)
+                          (approve-lines-current-p (approve-lines-watched-map (car text))))
+                        approve-feedback--texts))))
+
+(defun approve-feedback--goto-line (line)
+  "Move point to the start of LINE, the start of the buffer for 0."
+  (goto-char (save-restriction
+               (widen)
+               (save-excursion
+                 (goto-char (point-min))
+                 (forward-line (max 0 (1- line)))
+                 (point)))))
+
+(defun approve-feedback--move (place)
+  "Move point to PLACE, as `approve-feedback--place-of' gives it.
+Its threads unfold, and the echo area says its note."
+  (when-let* ((overlay (plist-get place :overlay)))
+    (approve-feedback--toggle overlay 'show))
+  (approve-feedback--goto-line (plist-get place :line))
+  (dolist (window (get-buffer-window-list nil nil t))
+    (set-window-point window (point)))
+  (when-let* ((note (plist-get place :note)))
+    (message "Approve: %s" note)))
+
+(defun approve-feedback--reach ()
+  "Move point where `approve-feedback--destination' says, once that is known.
+When point has moved since it was asked, or the place can't be
+known, point stays where it is."
+  (pcase-let ((`(,target . ,position) approve-feedback--destination))
+    (cond
+     ((null target))
+     ((/= (point) position)
+      (setq approve-feedback--destination nil))
+     ((not (approve-feedback--loaded-p)))
+     ((when-let* ((place (approve-feedback--place-of target)))
+        (setq approve-feedback--destination nil)
+        (approve-feedback--move place)
+        t))
+     ((approve-feedback--settled-p)
+      (setq approve-feedback--destination nil)
+      (cond ((plist-get target :thread)
+             (message "Approve: the thread isn't drawn in this buffer"))
+            ((plist-get target :unresolved)
+             (message "Approve: no unresolved thread is drawn in this buffer")))))))
+
+(defun approve-feedback--rough-line (target)
+  "Return the line point goes to until TARGET is placed, or nil to stay.
+It is GitHub's line of a line or a thread at the pull request's head:
+the buffer's line most of the time."
+  (when (approve-feedback--loaded-p)
+    (pcase-let ((`(,side ,line)
+                 (if-let* ((id (plist-get target :thread)))
+                     (and (approve-model-has-entity-p "PullRequestReviewThread" id)
+                          (let-alist (approve-model-get "PullRequestReviewThread" id
+                                                        '(line diffSide))
+                            (list .diffSide .line)))
+                   (list (plist-get target :side) (plist-get target :line)))))
+      (and line (car (approve-feedback--head-line side line))))))
+
+(defun approve-feedback--go (target)
+  "Move point to TARGET, as `approve-feedback--place-of' takes it.
+Its threads unfold.  Until the threads are placed, point is on
+GitHub's line, and goes on once they are, unless it has moved.  The
+clone's text is compared with the buffer's in milliseconds (decision
+D45), so that is waited for, a second at most; a text fetched from
+GitHub is not."
+  (when-let* ((line (approve-feedback--rough-line target)))
+    (approve-feedback--goto-line line))
+  (setq approve-feedback--destination (cons target (point)))
+  (dolist (text approve-feedback--texts)
+    (when approve-feedback--destination
+      (approve-lines-current-map (car text))))
+  (approve-feedback--reach))
+
+(defun approve-feedback--show-in (pr)
+  "Show PR's threads in the current buffer, a file's in a clone with its branch.
+PR is an alist with the pull request's `id' and `number' at least.
+When the branch shows another pull request, PR becomes the one it
+shows this session, in every buffer of the branch, as if picked
+with \\[approve-clone-pick-pull-request] (decision D45, amended).  Signal a `user-error' when the
+branch heads no such pull request."
+  (let ((id (alist-get 'id pr)))
+    (unless (and approve-feedback-mode
+                 (equal id (alist-get 'id approve-feedback--pull-request)))
+      (let* ((branch (or (approve-clone-branch-head (file-name-directory buffer-file-name))
+                         (user-error "%s is on no branch of a GitHub repository"
+                                     (file-name-nondirectory buffer-file-name))))
+             (head (plist-get branch :head))
+             (find (lambda (prs)
+                     (seq-find (lambda (each) (equal (alist-get 'id each) id)) prs)))
+             (prs (approve-clone-wait-pull-requests head))
+             (prs (if (funcall find prs) prs (approve-clone-wait-pull-requests head t)))
+             (row (or (funcall find prs)
+                      (user-error "#%s is no pull request of %s"
+                                  (alist-get 'number pr) (plist-get head :branch)))))
+        (unless (equal id (alist-get 'id (approve-clone-shown-pull-request head prs)))
+          (approve-clone-set-pull-request head row))
+        (unless approve-feedback-mode
+          (let ((approve-feedback--found (list branch row prs)))
+            (approve-feedback-mode 1)))))))
+
+(defun approve-feedback--visit (file pr target &optional action)
+  "Visit FILE, in a clone, with PR's threads, and move point to TARGET.
+PR is a pull request of the branch checked out there, an alist with
+its `id' and `number' at least (`approve-feedback--show-in').  TARGET
+is as `approve-feedback--place-of' takes it, or nil.  The buffer is
+shown by the `display-buffer' ACTION, in the selected window when
+nil."
+  (let ((buffer (find-file-noselect file)))
+    (if action
+        (pop-to-buffer buffer action)
+      (pop-to-buffer-same-window buffer))
+    (with-current-buffer buffer
+      (approve-feedback--show-in pr)
+      (when target
+        (approve-feedback--go target)))))
+
+;;; Between the PR buffer and the clone
+
+(defun approve-feedback--first-change (path)
+  "Return the first change the pull request made in PATH, as a target.
+That is the first line it added, or changed; where it removed lines,
+when it added none in their place; nil when the patch says none."
+  (let ((removed nil))
+    (catch 'found
+      (dolist (hunk (approve-diff-parse (alist-get 'patch (approve-diff-file-entry path))))
+        (pcase-dolist (`(,kind ,old ,new ,_) (approve-diff-hunk-lines hunk))
+          (pcase kind
+            ('add (throw 'found (list :side "RIGHT" :line new)))
+            ('del (unless removed
+                    (setq removed (list :side "LEFT" :line old))))
+            (_ (when removed
+                 (throw 'found removed))))))
+      removed)))
+
+(defun approve-feedback--thread-target (id)
+  "Return the path of the thread ID and the thread as a target, or nil."
+  (when (and id (approve-model-has-entity-p "PullRequestReviewThread" id))
+    (cons (approve-model-get "PullRequestReviewThread" id 'path) (list :thread id))))
+
+(defun approve-feedback--target-of (context)
+  "Return what CONTEXT opens in a clone, (PATH . TARGET), or nil.
+A line of the diff or of a file view is that line, a thread or one
+of its comments the thread, a file its first change."
+  (pcase (plist-get context :kind)
+    ((and (or 'line 'lines 'code) (guard (plist-get context :line)))
+     (cons (plist-get context :path)
+           (list :side (plist-get context :side) :line (plist-get context :line))))
+    ('thread (approve-feedback--thread-target (plist-get context :thread-id)))
+    ('review-comment
+     (approve-feedback--thread-target
+      (or (plist-get context :thread-id)
+          (approve-nav-thread-of-comment (plist-get context :comment-id)))))
+    ('file (cons (plist-get context :path)
+                 (approve-feedback--first-change (plist-get context :path))))))
+
+(defun approve-feedback--visit-preflight ()
+  "Return what `approve-feedback-visit-file' opens: (PATH . TARGET).
+TARGET is as `approve-feedback--place-of' takes it, or nil.  Signal a
+`user-error' when point is on no line, thread or file, or before the
+pull request has loaded."
+  (unless (approve-model-root-ref)
+    (user-error (if (or (derived-mode-p 'approve-pr-mode) approve-model-store-buffer)
+                    "Wait until the pull request has loaded"
+                  "Not in an Approve pull request buffer")))
+  (or (seq-some #'approve-feedback--target-of
+                (delq nil (list (approve-context-at-point) (approve-context-of-sections))))
+      (user-error "Put point on a file, a line of the diff or a thread")))
+
+(put 'approve-feedback-visit-file 'approve-preflight #'approve-feedback--visit-preflight)
+
+(defun approve-feedback--pr-worktree ()
+  "Return the worktree that has the pull request's branch checked out, or nil.
+It is found among the clones of `approve-clone-directories', asking
+which when several are as good (decision D45).  Signal a
+`user-error' when the branch is gone."
+  (let-alist (approve-pr-fields '(headRefName headRepository))
+    (unless .headRepository.nameWithOwner
+      (user-error "The pull request's branch is gone"))
+    (let ((host (approve-model-meta :host))
+          (head (split-string .headRepository.nameWithOwner "/")))
+      (approve-clone-pull-request-worktree
+       (list :host host :owner (car head) :repo (cadr head) :branch .headRefName)
+       (list :host host :owner (approve-model-meta :owner) :repo (approve-model-meta :repo))))))
+
+(defun approve-feedback--file-view-instead (path target why)
+  "Say WHY PATH can't open in a clone, and offer the file view at TARGET.
+In a file view, only say why."
+  (if approve-context-file
+      (user-error "%s" why)
+    (when (y-or-n-p (format "%s; show the file view instead? " why))
+      (pcase-let ((`(,side ,line)
+                   (if-let* ((id (plist-get target :thread)))
+                       (let-alist (approve-model-get "PullRequestReviewThread" id
+                                                     '(line diffSide))
+                         (list .diffSide .line))
+                     (list (plist-get target :side) (plist-get target :line)))))
+        (approve-file-show path (and line side) line)))))
+
+;;;###autoload
+(defun approve-feedback-visit-file ()
+  "Open the line, thread or file at point in your clone (flow F22).
+The file opens in the worktree that has the pull request's branch
+checked out, among the clones of `approve-clone-directories',
+shown by `approve-feedback-display-action', with the pull request's
+threads (`approve-feedback-mode').  Point goes to GitHub's line where
+the buffer has it now, its threads unfolded: a line edited there is
+in its place, a line the pull request removed is where it was, and
+the echo area says so.  A file goes to its first change.  When the
+branch shows another of its pull requests, this one is shown from
+then on, as \\<approve-feedback-command-map>\\[approve-clone-pick-pull-request] would pick it.  Without a clone, the
+file view is offered instead (\\<approve-pr-mode-map>\\[approve-visit-file])."
+  (interactive)
+  (pcase-let* ((`(,path . ,target) (approve-feedback--visit-preflight))
+               (worktree (approve-feedback--pr-worktree))
+               (file (and worktree (expand-file-name path worktree))))
+    (cond
+     ((null worktree)
+      (approve-feedback--file-view-instead
+       path target (format "No clone has %s checked out" (approve-pr-field 'headRefName))))
+     ((not (file-exists-p file))
+      (approve-feedback--file-view-instead
+       path target (format "%s isn't in %s (deleted or moved there)"
+                           path (abbreviate-file-name worktree))))
+     (t
+      (approve-feedback--visit file (approve-pr-fields '(id number)) target
+                               approve-feedback-display-action)))))
+
+(defun approve-feedback--visit-pr-preflight ()
+  "Return the context `approve-feedback-visit-pr' goes to in the PR buffer.
+Signal a `user-error' when the mode is off here, or the pull request
+hasn't loaded."
+  (approve-feedback--check)
+  (unless (approve-feedback--loaded-p)
+    (user-error "Wait until the pull request has loaded"))
+  (approve-context-at-point))
+
+(put 'approve-feedback-visit-pr 'approve-preflight #'approve-feedback--visit-pr-preflight)
+
+(defun approve-feedback-visit-pr ()
+  "Show the pull request's buffer at the line at point (flow F22).
+Where the line, or the region's lines, are GitHub's and in the pull
+request's diff, at that line in the diff, its threads unfolded; else
+at the first of the threads drawn under the line; else at the file's
+diff.  The PR buffer is shown where it is already, else in this
+window; \\<approve-pr-mode-map>\\[approve-feedback-visit-file] there comes back."
+  (interactive)
+  (let ((context (approve-feedback--visit-pr-preflight)))
+    (if-let* (((not (memq (plist-get context :kind) '(line lines))))
+              (thread (car (plist-get context :threads))))
+        (progn
+          (pop-to-buffer (approve-model-owner-buffer)
+                         '(display-buffer-reuse-window display-buffer-same-window))
+          (approve-nav-goto-thread thread))
+      (approve-nav-goto-diff-line context))))
+
+(keymap-set approve-pr-mode-map "f" #'approve-feedback-visit-file)
+(keymap-set approve-file-mode-map "f" #'approve-feedback-visit-file)
+
 ;;; The dispatch
 
 (defun approve-feedback--dispatch-heading ()
@@ -1322,6 +1777,8 @@ same key."
     ("C" "On the pull request" approve-comment-on-pr
      :inapt-if (lambda () (approve-action-why-not 'approve-comment-on-pr)))]
    ["Pull request"
+    ("RET" "The PR buffer, at this line" approve-feedback-visit-pr
+     :inapt-if (lambda () (approve-action-why-not 'approve-feedback-visit-pr)))
     ("P" "Pick another pull request" approve-clone-pick-pull-request)
     ("g" "Refresh" approve-feedback-refresh)
     ("o" "Open in browser" approve-browse)
@@ -1338,6 +1795,19 @@ same key."
   (interactive "e")
   (select-window (posn-window (event-start event)))
   (call-interactively #'approve-feedback-dispatch))
+
+(defun approve-feedback--visit-file-inapt-p ()
+  "Return non-nil if `approve-feedback-visit-file' can't run at point."
+  (approve-action-why-not 'approve-feedback-visit-file))
+
+;; The dispatches of the PR buffer and the file view list f, as their
+;; buffers bind it (decisions D06 and D46).
+(transient-append-suffix 'approve-dispatch "O"
+  '("f" "Your file (clone)" approve-feedback-visit-file
+    :inapt-if approve-feedback--visit-file-inapt-p))
+(transient-append-suffix 'approve-file-dispatch "y"
+  '("f" "Your file (clone)" approve-feedback-visit-file
+    :inapt-if approve-feedback--visit-file-inapt-p))
 
 (defun approve-feedback-unload-function ()
   "Stop following the focus, as `unload-feature' unloads this file."

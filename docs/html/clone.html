@@ -155,7 +155,7 @@ commit; one on removed lines with those lines.</p>
 <ul>
   <li><code>T</code> in the map unfolds or folds every thread. <code>n</code>/<code>p</code> in the map (evil:
   <code>]t</code>/<code>[t</code>) go to the next or previous unresolved thread and unfold it; past the last one of
-  the file, the next of the PR's files opens in the clone.</li>
+  the file, the next of the PR's files opens in the clone, and past the last file, the first again.</li>
   <li><code>c</code> on line 41 says "Line 41 was edited here; GitHub takes comments only on its own lines".</li>
 </ul>
 </section>
@@ -260,10 +260,11 @@ echo area.</p>
   next/previous unresolved thread (evil: <code>]t</code>/<code>[t</code>)</li>
   <li><code>c</code> <code>s</code> comment, suggest · <code>r</code> <code>R</code> <code>e</code> <code>k</code> <code>+</code>
   on the line's threads · <code>C</code> on the pull request</li>
-  <li><code>RET</code> the PR buffer at this line · <code>P</code> pick another PR · <code>g</code> refresh ·
+  <li><code>RET</code> the PR buffer at this line (else the line's first thread, else the file) · <code>P</code> pick another PR · <code>g</code> refresh ·
   <code>o</code> browser · <code>S</code> <code>X</code> submit, discard</li>
   <li>In the PR buffer and the file view, <code>f</code> (evil: <code>gF</code>) opens the line, thread or file at point
-  in your clone; <code>F</code> and <code>gf</code> still open Approve's file view.</li>
+  in your clone, with that PR's threads (picked for the branch, as <code>P</code> would); <code>F</code> and <code>gf</code>
+  still open Approve's file view.</li>
 </ul>
 </section>
 

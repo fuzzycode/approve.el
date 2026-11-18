@@ -509,6 +509,30 @@ PROPS may give :number, :head (the head repository), :branch and :draft."
       (setq test-clone--reply (lambda (_) (test-clone--answer)))
       (expect (approve-clone-pick-pull-request) :to-throw 'user-error))))
 
+(describe "approve-clone-set-pull-request"
+  (it "makes a pull request, of any state, the one a branch shows"
+    (test-clone--with-api
+      (let* ((open (test-clone--pr "PR_1" "OPEN" "2026-11-15T10:00:00Z"))
+             (merged (test-clone--pr "PR_3" "MERGED" "2026-11-16T10:00:00Z"))
+             (told nil)
+             (approve-clone-picked-functions (list (lambda (head pr) (push (cons head pr) told)))))
+        (approve-clone-set-pull-request test-clone--head merged)
+        (expect (approve-clone-shown-pull-request test-clone--head (list open merged))
+                :to-be merged)
+        (expect told :to-equal (list (cons test-clone--head merged)))))))
+
+(describe "approve-clone-wait-pull-requests"
+  (it "asks GitHub once a session, and again when told to"
+    (test-clone--with-api
+      (expect (mapcar (lambda (pr) (alist-get 'number pr))
+                      (approve-clone-wait-pull-requests test-clone--head))
+              :to-equal '(16 15))
+      (approve-clone-wait-pull-requests test-clone--head)
+      (expect (length test-clone--sent) :to-equal 1)
+      (setq test-clone--reply (lambda (_) (test-clone--answer)))
+      (expect (approve-clone-wait-pull-requests test-clone--head t) :to-be nil)
+      (expect (length test-clone--sent) :to-equal 2))))
+
 ;;; The clone's state
 
 (describe "approve-clone-state"

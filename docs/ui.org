@@ -548,7 +548,9 @@ suggestion in it.  =#= has
 no key in the buffer: it is seldom used.
 
 The mockup is the whole menu; the menu lists only the commands that exist.
-Today that is Review without =V=, and Buffer without =L=, =!= and =f=;
+Today that is Review without =V=, and Buffer without =L= and =!=; =f=
+comes with the clone's module (approve-feedback.el, D36), which adds it
+here and to the file view's dispatch;
 the rest join with the phases that add their commands ([[file:roadmap.org][roadmap]]).
 
 In a file view, =?= opens its own dispatch (=approve-file-dispatch=), with
@@ -845,7 +847,7 @@ lines with those lines (=┊ removed:=):
 - =T= in the map unfolds or folds every thread.  =n= / =p= in the map (evil
   =]t= / =[t=) go to the next or previous unresolved thread and unfold
   it; past the last one of the file, the next of the PR's files opens in
-  the clone.
+  the clone, and past the last file, the first again.
 - Threads on the whole file sit above the first line:
   #+begin_example
         On this file                                                                          💬1

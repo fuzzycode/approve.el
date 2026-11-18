@@ -390,12 +390,26 @@ Mockups: a file's buffer with its threads (written with F21).
       them all, dimmed where they can't run.  =approve-feedback.el= went
       to the top layer: it arranges the core's commands.  =RET= comes
       with the next task.
-- [ ] Between the buffers, added by the clone modules (the core never
+- [X] Between the buffers, added by the clone modules (the core never
       requires them): from the PR buffer, a diff line or thread opens in
       the local file (=f=, evil =gF=); from a file's buffer, the PR buffer
       at that line (=RET= in the map);
       next and previous unresolved thread across the PR's files, visiting
-      them in the clone.
+      them in the clone.  Done (2026-11-18): =approve-feedback-visit-file=
+      (=f=, evil =gF=, in the PR buffer, the file view and their
+      dispatches) opens a line, a thread or a file in the worktree
+      that has the branch, point on GitHub's line where the buffer has
+      it now, its threads unfolded, the echo area saying when the line
+      was edited or deleted there, or removed by the PR; without a
+      clone, or the file, it offers the file view.  It shows the PR it
+      comes from, picked for the branch as =P= would (D45, amended at
+      the author's choice).  =RET= in the map
+      (=approve-feedback-visit-pr=) goes to the line in the diff, else
+      to the first of the line's threads (the author's choice), else to
+      the file.  =n= / =p= (evil =]t= =[t=) go on to the PR's next file
+      with an unresolved thread, in the diff's order, passing by those
+      the clone hasn't, and wrap around (the author's choice).  Checked
+      on the SP8 worktrees: =f= on #15's line 33 opened =wt-equal=.
 - [ ] Turning it on: the command =approve-feedback-mode=, which also takes
       a closed or merged PR after asking, and =approve-feedback-global-mode=
       (off by default), which turns it on by itself in the buffers of a
