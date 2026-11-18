@@ -187,6 +187,13 @@ task only needs the files it touches.
   the files of a branch with an open PR, never waiting, never asking.
   Every task of Phase 7 is done; its done-when is for the author to
   call.
+- Tried on the scratch repository's #4 the same day, the author asked
+  for keys and a visible count ([[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]], superseding D46's keys and
+  lighter): the map is under =approve-feedback-prefix-key= (=C-c '=),
+  evil's =za= =zo= =zc= =zR= =zM= fold threads and pass on to the
+  buffer's own folding, and the mode line shows a speech bubble and the
+  file's threads through =global-mode-string=, which doom-modeline shows
+  too.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

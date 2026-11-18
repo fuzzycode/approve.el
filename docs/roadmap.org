@@ -423,6 +423,16 @@ Mockups: a file's buffer with its threads (written with F21).
       branch seen costs no git call, and git's own files (a commit
       message) are passed by.  The command asks GitHub again when none
       of the branch's PRs is open, and =C-u g= forgets the branches.
+- [X] Keys and a mode-line item, at the author's request after trying
+      the mode on the scratch repository's #4 (2026-11-18, [[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]],
+      superseding D46's keys and lighter): the map is under
+      =approve-feedback-prefix-key=, =C-c '= by default; in evil's normal
+      state the mode's own =za= =zo= =zc= =zR= =zM= fold threads and pass
+      on to the buffer's own folding (the author's are hideshow's, bound
+      for =hs-minor-mode=, which =evil-fold-list= never sees).  The
+      lighter, which doom-modeline hides, gave way to an item in
+      =global-mode-string=: the speech bubble and the file's threads, =↻=
+      and =…=, the rest in its tooltip.
 - Done when :: on a branch with a PR, with commits not pushed and edits
   not saved, the user reads the threads in the buffers they edit,
   replies, resolves and comments from there, and the browser shows the

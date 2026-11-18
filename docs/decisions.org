@@ -673,6 +673,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   mockups in ui.org and html/clone.html; to adjust as the work finds
   the need).  The author chose no default prefix, every thread folded,
   the mode line only, and the threads' marks in the right margin.
+  Its keys and its lighter are superseded by [[*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]] (2026-11-18).
 - Decision ::
   - The feedback mode ([[file:flows.org::*F21 Review feedback in a file you edit][F21]]) binds no key in the user's buffers, except
     evil's =]t= and =[t= (next and previous thread, as in Approve's
@@ -733,6 +734,52 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   amended), and the dispatch dims them as the PR buffer's does.  Evil's
   =]t= =[t= are bound by =approve-evil-setup-feedback=, which the mode
   calls when evil is loaded: the core never requires the clone's modules.
+
+** D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line
+- Status :: accepted (2026-11-18, by the author, after trying the mode
+  on the scratch repository's #4; supersedes [[*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]'s keys and lighter)
+- Found :: Without a key, the threads stayed folded for anyone who
+  hadn't bound the map: the bubbles were there, and nothing at hand
+  unfolded them.  The author's mode line is doom-modeline, which shows
+  no minor mode's lighter.  Told to (=doom-modeline-minor-modes=), it
+  shows every one, and wraps them in its own tooltip and menu, so the
+  lighter's tooltip and its click were lost.  The author's =za=, =zo=,
+  =zc=, =zR= and =zM= are hideshow's, bound for =hs-minor-mode= in his
+  config (Doom and evil-collection do the same), so =evil-fold-list=
+  never sees them.
+- Decision ::
+  - =approve-feedback-command-map= is under a prefix key in the mode's
+    keymap, =approve-feedback-prefix-key=, =C-c '= by default (a
+    minor mode's =C-c= and punctuation), nil for none.  It works in
+    Emacs and in evil's states: =C-c ' TAB= unfolds the line's threads,
+    =C-c ' ?= opens the dispatch.  In an Org file it shadows Org's
+    =C-c '=; the option moves it.
+  - In evil's normal state the mode binds, as its own minor-mode keys
+    (=evil-define-minor-mode-key=, which go before those of the modes
+    that bound theirs earlier): =]t= =[t= as before, and the fold keys.
+    =za= =zo= =zO= =zc= =zC= fold or unfold the threads of the line at
+    point; on a line without threads, they do what the key does
+    without the mode (hideshow's, outline's, the user's own folding).
+    =zR= =zr= and =zM= =zm= unfold or fold every thread of the file and
+    do what the key does without the mode too, as vim's open and close
+    every fold.
+  - The lighter goes.  The mode line has an item through
+    =global-mode-string= (as D48's count), which the default mode line
+    and doom-modeline show alike, in the buffers where the mode is on:
+    the speech bubble and the number of the file's threads, resolved
+    or not, red while one asks for changes ([[*D34 A thread mark is red only while it asks for changes][D34]]), dim when none is
+    unresolved; =↻= while GitHub has changes ([[*D23 Remote changes are announced, never auto-applied][D23]]), =…= while the
+    pull request or GitHub's text of the file loads.  The pull request's
+    number and state, which of the branch's pull requests it is and how
+    the clone stands to it are in its tooltip, with the counts in
+    words; mouse-1 opens the dispatch.
+- Why :: A mode whose threads start folded needs a key to unfold them
+  that works at once; a prefix the user can move or drop keeps D46's
+  respect for the buffer's own keys.  The fold keys are where an evil
+  user's fingers go for "unfold", and passing them on keeps the
+  buffer's own folding, whatever binds it.  The bubble and a count say
+  at a glance whether the file has feedback, in any mode line, and the
+  tooltip holds the rest without taking room.
 
 * Data and network
 ** D07 ghub, wrapped by approve-api

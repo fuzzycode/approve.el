@@ -163,9 +163,13 @@ and the clone are gone after."
     (approve-pr-redraw))
   (approve-test-wait-for (lambda () (not approve-feedback--fetching))))
 
-(defun test-feedback--lighter ()
-  "Return the lighter of the current buffer, without its properties."
-  (substring-no-properties approve-feedback--lighter))
+(defun test-feedback--mode-line ()
+  "Return the mode-line item of the current buffer, without its properties."
+  (substring-no-properties approve-feedback--mode-line))
+
+(defun test-feedback--tooltip ()
+  "Return the tooltip of the mode-line item of the current buffer."
+  (get-text-property 0 'help-echo approve-feedback--mode-line))
 
 (defun test-feedback--drawn ()
   "Return the threads drawn here: ((LINE (GITHUB-LINE . WHERE) ...) ...).
@@ -212,21 +216,30 @@ outdated thread's commit's too."
         (expect (buffer-name approve-model-store-buffer)
                 :to-equal "*approve: acme-example/rocket#202*")
         (expect (get-buffer-window approve-model-store-buffer t) :to-be nil)
-        (expect (test-feedback--lighter) :to-match "#202 …")
+        (expect (test-feedback--mode-line) :to-match "… \\'")
         (test-feedback--wait)
         (expect approve-feedback--path :to-equal test-feedback--path)
-        (expect (test-feedback--lighter) :not :to-match "…")
-        ;; Five unresolved threads in the file, the first of two open
-        ;; pull requests, a commit not pushed.
-        (expect (test-feedback--lighter) :to-match "#202 .*5 1/2 ↑1\\'")
-        (let ((tooltip (get-text-property 1 'help-echo approve-feedback--lighter)))
+        (expect (test-feedback--mode-line) :not :to-match "…")
+        ;; The bubble and the file's six threads; the rest in the tooltip.
+        (expect (test-feedback--mode-line) :to-match "[^0-9]6 \\'")
+        (let ((tooltip (test-feedback--tooltip)))
           (expect tooltip :to-match "acme-example/rocket#202")
           (expect tooltip :to-match "parser-rewrite into main · 1 of 2 open pull requests")
           (expect tooltip :to-match "1 commit not pushed")
-          (expect tooltip :to-match "5 unresolved threads in this file")
-          (expect tooltip :to-match "mouse-1: Approve's menu\\'")
-          (expect (get-text-property 1 'local-map approve-feedback--lighter)
-                  :to-be approve-feedback--lighter-map)))))
+          (expect tooltip :to-match (concat "6 threads in this file, 5 unresolved, "
+                                            "1 asking for changes; "
+                                            "15 unresolved in the pull request"))
+          (expect tooltip :to-match "mouse-1, C-c ' \\?: Approve's menu\\'")
+          (expect (get-text-property 0 'local-map approve-feedback--mode-line)
+                  :to-be approve-feedback--mode-line-map))
+        ;; In global-mode-string, where doom-modeline shows it too, in
+        ;; the buffers where the mode is on; no lighter.
+        (expect (member approve-feedback--mode-line-construct global-mode-string)
+                :to-be-truthy)
+        (expect approve-feedback--mode-line-construct
+                :to-equal '(approve-feedback-mode ("" approve-feedback--mode-line)))
+        (expect (get 'approve-feedback--mode-line 'risky-local-variable) :to-be t)
+        (expect (cadr (assq 'approve-feedback-mode minor-mode-alist)) :to-be nil))))
 
   (it "shares the store of the PR buffer that is open"
     (let ((test-feedback--prs (list (test-feedback--row 202))))
@@ -236,7 +249,7 @@ outdated thread's commit's too."
           (expect approve-model-store-buffer :to-be pr)
           (expect (test-feedback--pr-buffers) :to-equal (list pr))
           (expect (approve-pr-field 'number) :to-equal 202)
-          (expect (test-feedback--lighter) :not :to-match "1/")))))
+          (expect (test-feedback--tooltip) :not :to-match "open pull requests of this branch")))))
 
   (it "asks before a merged pull request, and stays off when declined"
     (let ((test-feedback--prs (list (test-feedback--row 202 "MERGED"))))
@@ -251,7 +264,7 @@ outdated thread's commit's too."
         (approve-feedback-mode 1)
         (expect approve-feedback-mode :to-be t)
         ;; The row says it is merged until the store says otherwise.
-        (expect (test-feedback--lighter) :to-match "#202 … merged\\'"))))
+        (expect (test-feedback--tooltip) :to-match "#202  Pull request 202 · merged"))))
 
   (it "says why it can't turn on, and stays off"
     (let ((test-feedback--prs nil))
@@ -272,7 +285,7 @@ outdated thread's commit's too."
         (test-feedback--wait)
         (approve-feedback-mode -1)
         (expect approve-model-store-buffer :to-be nil)
-        (expect approve-feedback--lighter :to-be nil)
+        (expect approve-feedback--mode-line :to-be nil)
         (expect approve-feedback--pull-request :to-be nil)))))
 
 (describe "The feedback mode's PR buffer"
@@ -308,7 +321,7 @@ outdated thread's commit's too."
           (expect approve-feedback--pull-request :to-be pr)
           (expect (buffer-name approve-model-store-buffer)
                   :to-equal "*approve: acme-example/rocket#203*")
-          (expect (test-feedback--lighter) :to-match "#203 … 2/2"))))))
+          (expect (test-feedback--tooltip) :to-match "#203 .*\n.*2 of 2 open pull requests"))))))
 
 (describe "approve-feedback-refresh"
   (it "loads the pull request again in its PR buffer"
@@ -486,9 +499,9 @@ outdated thread's commit's too."
       (with-current-buffer approve-model-store-buffer
         (approve-session-put :changes '(:branch t :commits 1 :comments 0 :reviews 0))
         (run-hooks 'approve-changes-hook))
-      (expect (test-feedback--lighter) :to-match "↻")
-      (expect (get-text-property 1 'help-echo approve-feedback--lighter)
-              :to-match "Updated on GitHub: .*approve-feedback-refresh to see it")))
+      (expect (test-feedback--mode-line) :to-match "↻")
+      (expect (test-feedback--tooltip)
+              :to-match "Updated on GitHub: C-c ' g to see it")))
 
   (it "follows HEAD: on the same branch, to another, and off when it has none"
     (let ((test-feedback--prs (list (test-feedback--row 202) (test-feedback--row 203)))
@@ -715,7 +728,7 @@ The buffer the input was for is current after."
       (expect (test-feedback--sent)
               :to-equal '("mutations/resolve-review-thread.graphql"
                           ((threadId . "PRRT_kwDOmVrZbzhFWoiCSv"))))
-      (expect (test-feedback--lighter) :to-match "#202 .*4 ↑1\\'")
+      (expect (test-feedback--tooltip) :to-match "6 threads in this file, 4 unresolved")
       ;; The viewer's pending comment, the only one to edit there.
       (test-feedback--goto 134)
       (let ((clone (current-buffer)))
@@ -747,18 +760,99 @@ The buffer the input was for is current after."
       (expect (keymap-lookup approve-feedback-command-map "?")
               :to-be 'approve-feedback-dispatch)))
 
-  (it "bind evil's ]t and [t alone in the user's buffers"
+  (it "are under the prefix key, C-c ' by default, which can be changed"
+    (expect (keymap-lookup approve-feedback-mode-map "C-c ' TAB")
+            :to-be 'approve-feedback-toggle-threads)
+    (expect (keymap-lookup approve-feedback-mode-map "C-c ' ?")
+            :to-be 'approve-feedback-dispatch)
+    (unwind-protect
+        (progn
+          (customize-set-variable 'approve-feedback-prefix-key "C-c a")
+          (expect (keymap-lookup approve-feedback-mode-map "C-c '") :to-be nil)
+          (expect (keymap-lookup approve-feedback-mode-map "C-c a r") :to-be 'approve-reply)
+          (customize-set-variable 'approve-feedback-prefix-key nil)
+          (expect (keymap-lookup approve-feedback-mode-map "C-c a") :to-be nil))
+      (customize-set-variable 'approve-feedback-prefix-key "C-c '"))
+    (expect (keymap-lookup approve-feedback-mode-map "C-c ' r") :to-be 'approve-reply))
+
+  (it "bind evil's ]t, [t and fold keys as the mode's own, in normal state"
     (let ((bound nil))
-      (cl-letf (((symbol-function 'evil-define-key*)
-                 (lambda (state map key def)
-                   (when (eq map approve-feedback-mode-map)
-                     (push (list state (key-description key) def) bound))))
+      (cl-letf (((symbol-function 'evil-define-minor-mode-key)
+                 (lambda (state mode key def)
+                   (push (list state mode (key-description key) def) bound)))
+                ((symbol-function 'evil-define-key*) #'ignore)
                 ((symbol-function 'evil-set-initial-state) #'ignore))
         (require 'approve-evil)
-        (approve-evil-setup-feedback approve-feedback-mode-map))
+        (approve-evil-setup-feedback))
       (expect (reverse bound)
-              :to-equal '((normal "] t" approve-feedback-next-thread)
-                          (normal "[ t" approve-feedback-previous-thread)))))
+              :to-equal '((normal approve-feedback-mode "] t" approve-feedback-next-thread)
+                          (normal approve-feedback-mode "[ t" approve-feedback-previous-thread)
+                          (normal approve-feedback-mode "z a" approve-feedback-toggle-fold)
+                          (normal approve-feedback-mode "z o" approve-feedback-open-fold)
+                          (normal approve-feedback-mode "z O" approve-feedback-open-fold)
+                          (normal approve-feedback-mode "z c" approve-feedback-close-fold)
+                          (normal approve-feedback-mode "z C" approve-feedback-close-fold)
+                          (normal approve-feedback-mode "z R" approve-feedback-open-all-folds)
+                          (normal approve-feedback-mode "z r" approve-feedback-open-all-folds)
+                          (normal approve-feedback-mode "z M" approve-feedback-close-all-folds)
+                          (normal approve-feedback-mode "z m" approve-feedback-close-all-folds)))))
+
+  (it "fold the line's threads, else do what the key does without the mode"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (let ((map (make-sparse-keymap))
+            (old (current-local-map))
+            (passed nil)
+            (keys [?z ?a]))
+        ;; The buffer's own folding, as hideshow's z keys would be.
+        (keymap-set map "z a" (lambda () (interactive) (push 'toggle passed)))
+        (keymap-set map "z R" (lambda () (interactive) (push 'open-all passed)))
+        (keymap-set approve-feedback-mode-map "z a" #'approve-feedback-toggle-fold)
+        (keymap-set approve-feedback-mode-map "z R" #'approve-feedback-open-all-folds)
+        (spy-on 'this-command-keys-vector :and-call-fake (lambda () keys))
+        (unwind-protect
+            (progn
+              (use-local-map map)
+              (test-feedback--goto 15)
+              (approve-feedback-toggle-fold)
+              (expect (test-feedback--threads-shown 15) :to-be-truthy)
+              (expect passed :to-equal nil)
+              (test-feedback--goto 5)
+              (approve-feedback-toggle-fold)
+              (expect passed :to-equal '(toggle))
+              ;; zR: every thread, and the buffer's folds too.
+              (setq keys [?z ?R])
+              (approve-feedback-open-all-folds)
+              (expect (length (seq-filter #'test-feedback--threads-shown
+                                          '(0 15 54 61 131 134)))
+                      :to-equal 6)
+              (expect passed :to-equal '(open-all toggle)))
+          (use-local-map old)
+          (keymap-unset approve-feedback-mode-map "z a" t)
+          (keymap-unset approve-feedback-mode-map "z R" t)))))
+
+  (it "say so where there are no threads and nothing else folds"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (spy-on 'this-command-keys-vector :and-return-value [?z ?a])
+      (spy-on 'message)
+      (test-feedback--goto 5)
+      (approve-feedback-toggle-fold)
+      (expect 'message :to-have-been-called-with "No threads %s" "on this line")))
+
+  (it "fold threads for the actions the fold keys name"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--goto 15)
+      (expect (approve-feedback-fold-threads :open) :to-be t)
+      (expect (test-feedback--threads-shown 15) :to-be-truthy)
+      (expect (approve-feedback-fold-threads :close) :to-be t)
+      (expect (test-feedback--threads-shown 15) :to-be nil)
+      (test-feedback--goto 5)
+      (expect (approve-feedback-fold-threads :toggle) :to-be nil)
+      (expect (approve-feedback-fold-threads :open-all) :to-be t)
+      (expect (length (seq-filter #'test-feedback--threads-shown '(0 15 54 61 131 134)))
+              :to-equal 6)))
 
   (it "dim in the dispatch what can't run on the line at point"
     (test-feedback--with-one

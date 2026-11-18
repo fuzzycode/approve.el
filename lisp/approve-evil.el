@@ -46,8 +46,10 @@
 ;;
 ;; Input buffers start in insert state, to write at once.
 ;;
-;; In a file's buffer in a clone, the feedback mode binds only ]t and
-;; [t (`approve-evil-setup-feedback', decision D46).
+;; In a file's buffer in a clone, the feedback mode binds ]t and [t,
+;; and the fold keys za, zo, zc, zR and zM, which fold its threads and
+;; pass on to the buffer's own folds (`approve-evil-setup-feedback',
+;; decision D50).
 ;;
 ;; The modes require this file once evil is loaded; nothing here
 ;; requires evil.
@@ -60,6 +62,7 @@
 (require 'approve-file)
 
 (declare-function evil-define-key* "evil-core" (state keymap key def &rest bindings))
+(declare-function evil-define-minor-mode-key "evil-core" (state mode key def &rest bindings))
 (declare-function evil-set-initial-state "evil-core" (mode state))
 
 (defconst approve-evil-pr-bindings
@@ -187,19 +190,33 @@ zp folds every list but the one at point, as in a PR buffer.")
 
 (defconst approve-evil-feedback-bindings
   '(("]t" . approve-feedback-next-thread)
-    ("[t" . approve-feedback-previous-thread))
+    ("[t" . approve-feedback-previous-thread)
+    ("za" . approve-feedback-toggle-fold)
+    ("zo" . approve-feedback-open-fold)
+    ("zO" . approve-feedback-open-fold)
+    ("zc" . approve-feedback-close-fold)
+    ("zC" . approve-feedback-close-fold)
+    ("zR" . approve-feedback-open-all-folds)
+    ("zr" . approve-feedback-open-all-folds)
+    ("zM" . approve-feedback-close-all-folds)
+    ("zm" . approve-feedback-close-all-folds))
   "Keys of `approve-feedback-mode' in evil's normal state: (KEY . COMMAND).
-The mode's only keys in the user's buffers (decision D46): the next
-and previous unresolved thread, as in Approve's buffers.  The others
-are in `approve-feedback-command-map', for the user to bind.")
+The next and previous unresolved thread, as in Approve's buffers,
+and the fold keys: on a line with threads they fold those, elsewhere
+they do what they do without the mode, and zR and zM fold every
+thread and do that too (decision D50).  The other commands are under
+`approve-feedback-prefix-key'.")
 
-(defun approve-evil-setup-feedback (map)
-  "Bind `approve-evil-feedback-bindings' in MAP in evil's normal state.
-MAP is the feedback mode's keymap; approve-feedback.el, a module for
-a local clone that the core never requires (decision D36), calls
-this as the mode turns on."
+(defun approve-evil-setup-feedback ()
+  "Bind `approve-evil-feedback-bindings' for the feedback mode, in normal state.
+approve-feedback.el, a module for a local clone that the core never
+requires (decision D36), calls this as the mode turns on.  They are
+the mode's minor-mode keys (`evil-define-minor-mode-key'), which go
+before those of the modes that defined theirs earlier, such as a
+folding mode's z keys: the feedback mode passes those on itself."
   (dolist (binding approve-evil-feedback-bindings)
-    (evil-define-key* 'normal map (kbd (car binding)) (cdr binding))))
+    (evil-define-minor-mode-key 'normal 'approve-feedback-mode
+      (kbd (car binding)) (cdr binding))))
 
 (defun approve-evil-setup ()
   "Bind `approve-evil-pr-bindings' in evil's normal state.

@@ -30,9 +30,10 @@
 ;; The feedback mode: the review threads of a branch's pull request in
 ;; the user's own buffers of its files, in a clone with the branch
 ;; checked out (docs/flows.org, F21; docs/ui.org, "A file's buffer in
-;; your clone"; decisions D45 and D46).  The buffer stays the user's:
-;; its major mode, its hooks and its keys.  Approve adds overlays and a
-;; mode-line lighter, and never changes the text.
+;; your clone"; decisions D45, D46 and D50).  The buffer stays the user's:
+;; its major mode, its hooks and its keys, but a prefix key and evil's
+;; z keys.  Approve adds overlays and an item in the mode line, and
+;; never changes the text.
 ;;
 ;; - `approve-feedback-mode' finds the buffer's branch and the pull
 ;;   request Approve shows for it (approve-clone.el): the open one
@@ -58,22 +59,27 @@
 ;;   dim when all are resolved; the threads after the line's text, the
 ;;   file view's boxes, folded at first (D46).  Between comparisons they
 ;;   move with the text.
-;; - The lighter says the pull request's number, the file's unresolved
-;;   threads, which of the branch's open pull requests it is, how the
-;;   clone stands to GitHub's head, and what is loading or changed; its
-;;   tooltip says it in words (D46).
+;; - The mode line shows a speech bubble and the file's threads, red
+;;   when one asks for changes, dim when none is unresolved, then ↻
+;;   when GitHub has changes and … while loading: an item in
+;;   `global-mode-string', which doom-modeline shows too (D50).  Its
+;;   tooltip says the pull request, which of the branch's open pull
+;;   requests it is, how the clone stands to GitHub's head, and the
+;;   counts, in words.
 ;; - Selecting the buffer checks the pull request for changes as
 ;;   selecting its PR buffer does, and a window showing it keeps it
-;;   polled (D23, amended): the lighter says ↻ when GitHub has some.
+;;   polled (D23, amended): the mode line says ↻ when GitHub has some.
 ;;   Selecting it, or Emacs getting the focus back, also reads HEAD from
 ;;   the clone's files: when it moved, the clone is compared with
 ;;   GitHub's head again, or another branch's pull request shown.
-;; - `approve-feedback-command-map' holds the mode's commands, for the
-;;   user to bind: the mode binds no key of its own (D46), but evil's
-;;   ]t and [t.  TAB folds the threads of a line, T all of them, n and
-;;   p go to the next and previous unresolved thread; mouse-1 on a
-;;   bubble folds its line.  `approve-feedback-dispatch' lists them
-;;   all; mouse-1 on the lighter opens it.
+;; - `approve-feedback-command-map' holds the mode's commands, under
+;;   `approve-feedback-prefix-key', C-c ' by default (D50).  TAB folds
+;;   the threads of a line, T all of them, n and p go to the next and
+;;   previous unresolved thread; mouse-1 on a bubble folds its line.
+;;   In evil's normal state ]t and [t move too, and za, zo, zc, zR and
+;;   zM fold threads, the buffer's other folds where there are none.
+;;   `approve-feedback-dispatch' lists them all; mouse-1 on the
+;;   mode-line item opens it.
 ;; - The actions of a PR buffer work here, on the threads of the line
 ;;   at point (point never enters them; asking which when there are
 ;;   several) and on GitHub's lines: r R e k + reply, resolve, edit,
@@ -128,7 +134,7 @@
 (require 'approve-clone)
 (require 'approve-lines)
 
-(declare-function approve-evil-setup-feedback "approve-evil" (map))
+(declare-function approve-evil-setup-feedback "approve-evil" ())
 (declare-function evil-normalize-keymaps "evil-core" (&optional state))
 
 ;;; Options
@@ -163,10 +169,11 @@ To show it in another window:
   "How the clone stands to GitHub's head: `approve-clone-state''s plist.
 Its :oid is the head it was compared with.")
 
-(defvar-local approve-feedback--lighter nil
-  "The lighter of the mode, computed when something it says changes.")
-;; Without this, the mode line would drop the lighter's faces and tooltip.
-(put 'approve-feedback--lighter 'risky-local-variable t)
+(defvar-local approve-feedback--mode-line nil
+  "The mode-line item of the buffer, computed when something it says changes.
+It is shown through `global-mode-string' (decision D50).")
+;; Without this, the mode line would drop the item's faces and tooltip.
+(put 'approve-feedback--mode-line 'risky-local-variable t)
 
 (defvar-local approve-feedback--head nil
   "The head the threads are placed from, or nil when the file isn't compared.")
@@ -200,9 +207,10 @@ where point was put meanwhile: when it has moved since, it stays.")
 ;;; Mode
 
 (defvar-keymap approve-feedback-command-map
-  :doc "The commands of `approve-feedback-mode', for a key of your choice.
-The mode binds no key in your buffers (decision D46); bind this map
-to one, under a leader key for example:
+  :doc "The commands of `approve-feedback-mode', under its prefix key.
+The mode binds this map to `approve-feedback-prefix-key', C-c \\='
+by default (decision D50); bind it elsewhere too, under a leader key
+for example:
 
   (keymap-set approve-feedback-mode-map \"C-c a\" approve-feedback-command-map)
 
@@ -230,10 +238,38 @@ to one, under a leader key for example:
   "?" #'approve-feedback-dispatch)
 
 (defvar-keymap approve-feedback-mode-map
-  :doc "Keymap of `approve-feedback-mode', empty: the mode binds no key.
-Bind `approve-feedback-command-map' here to reach its commands.  Evil's
-]t and [t go to the next and previous unresolved thread, in normal
-state (approve-evil.el).")
+  :doc "Keymap of `approve-feedback-mode'.
+It holds `approve-feedback-command-map' under `approve-feedback-prefix-key'.
+In evil's normal state, ]t and [t go to the next and previous
+unresolved thread, and za, zo, zc, zR and zM fold threads too
+\(approve-evil.el, decision D50).")
+
+(defun approve-feedback--set-prefix-key (symbol key)
+  "Set SYMBOL, `approve-feedback-prefix-key', to KEY, and bind it.
+The old prefix key no longer holds `approve-feedback-command-map' in
+`approve-feedback-mode-map'; KEY does, unless nil."
+  (when-let* ((old (and (boundp symbol) (symbol-value symbol))))
+    (keymap-unset approve-feedback-mode-map old t))
+  (set-default symbol key)
+  (when key
+    (keymap-set approve-feedback-mode-map key approve-feedback-command-map)))
+
+(defcustom approve-feedback-prefix-key "C-c '"
+  "The key that holds the feedback mode's commands, or nil for none.
+In a buffer with `approve-feedback-mode' on, it is the prefix of
+`approve-feedback-command-map', in Emacs and in evil's states alike:
+\\<approve-feedback-mode-map>\\[approve-feedback-toggle-threads] unfolds the threads of the line at point,
+\\[approve-reply] replies to one and \\[approve-feedback-dispatch] lists every command (decision
+D50).  It is a key as `keymap-set' takes it.  Set it with
+`setopt' or the Customize interface, which bind the new key:
+
+  (setopt approve-feedback-prefix-key \"C-c a\")"
+  :type '(choice (const :tag "None" nil) key)
+  :set #'approve-feedback--set-prefix-key
+  :group 'approve)
+
+;; A reload of this file makes the keymap again: the key goes back in.
+(approve-feedback--set-prefix-key 'approve-feedback-prefix-key approve-feedback-prefix-key)
 
 ;;;###autoload
 (define-minor-mode approve-feedback-mode
@@ -241,16 +277,23 @@ state (approve-evil.el).")
 The buffer's file is in a clone with a branch that heads a pull
 request on GitHub.  The mode shows its open pull request updated
 last, or the one picked with \\[approve-clone-pick-pull-request]; it asks before showing a
-closed or merged one.  It changes no text, and binds no key: its
-commands are in `approve-feedback-command-map'.  The mode line says
-the pull request's number and state, and how the clone stands to it."
-  :lighter approve-feedback--lighter
+closed or merged one.  It changes no text.  Its commands are under
+`approve-feedback-prefix-key': \\<approve-feedback-mode-map>\\[approve-feedback-toggle-threads] unfolds the threads of the
+line at point, \\[approve-feedback-dispatch] lists them all.  In evil's normal state,
+]t and [t go from thread to thread and the z keys fold them.
+The mode line shows a speech bubble and the file's threads, and its
+tooltip says the rest: the pull request, its state, and how the
+clone stands to it.
+
+\\{approve-feedback-command-map}"
+  :lighter nil
   :keymap approve-feedback-mode-map
   :group 'approve
   (if approve-feedback-mode
       (condition-case err
           (if (approve-feedback--start)
-              (approve-feedback--setup-evil)
+              (progn (approve-feedback--add-mode-line)
+                     (approve-feedback--setup-evil))
             (approve-feedback--stop)
             (setq approve-feedback-mode nil))
         ((error quit)
@@ -260,12 +303,12 @@ the pull request's number and state, and how the clone stands to it."
     (approve-feedback--stop)))
 
 (defun approve-feedback--setup-evil ()
-  "Bind evil's ]t and [t in the mode's keymap, when evil is loaded.
-They are the mode's only keys (decision D46), bound in
+  "Bind evil's keys of the mode, when evil is loaded.
+That is ]t and [t, and the fold keys (decision D50), bound in
 approve-evil.el, which the mode requires then (decision D17)."
   (when (featurep 'evil)
     (require 'approve-evil)
-    (approve-evil-setup-feedback approve-feedback-mode-map)
+    (approve-evil-setup-feedback)
     (when (and (bound-and-true-p evil-local-mode) (fboundp 'evil-normalize-keymaps))
       (evil-normalize-keymaps))))
 
@@ -365,7 +408,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
   (approve-feedback--draw nil)
   (dolist (variable '(approve-feedback--branch approve-feedback--pull-request
                       approve-feedback--open approve-feedback--path
-                      approve-feedback--clone-state approve-feedback--lighter
+                      approve-feedback--clone-state approve-feedback--mode-line
                       approve-feedback--head approve-feedback--texts approve-feedback--fetching
                       approve-feedback--error approve-feedback--shown
                       approve-feedback--head-ref approve-feedback--destination
@@ -443,11 +486,11 @@ It is on `approve-clone-picked-functions'."
 
 (defun approve-feedback-follow-changes ()
   "Say in the clone's buffers of the current PR buffer what changed on GitHub.
-A check for changes answered (decision D23): the lighter says ↻
+A check for changes answered (decision D23): the mode line says ↻
 while GitHub has changes.  approve.el puts it on `approve-changes-hook'."
   (dolist (buffer (approve-feedback--buffers (current-buffer)))
     (with-current-buffer buffer
-      (approve-feedback--update-lighter))))
+      (approve-feedback--update-mode-line))))
 
 (defun approve-feedback--follow-branch (branch prs)
   "Show the pull request of BRANCH among PRS, now that HEAD is on it.
@@ -525,7 +568,7 @@ comes back with the focus."
 
 (defun approve-feedback--relevant-p ()
   "Return non-nil if the pull request changes the file, or has threads on it.
-Otherwise the lighter is all the mode shows, and no text is compared."
+Otherwise the mode line is all the mode shows, and no text is compared."
   (cl-flet ((here-p (entry) (equal (alist-get 'path entry) approve-feedback--path)))
     (or (seq-some #'here-p (approve-pr-list-fields 'files '(path)))
         (seq-some #'here-p (approve-pr-list-fields 'reviewThreads '(path))))))
@@ -561,7 +604,7 @@ threads again (`approve-feedback--decorate')."
                        :callback (lambda (_map) (approve-feedback--decorate))
                        :errorback (lambda (err)
                                     (setq approve-feedback--error (cadr err))
-                                    (approve-feedback--update-lighter))))
+                                    (approve-feedback--update-mode-line))))
 
 (defun approve-feedback--fetched (buffer oid text &optional err)
   "Compare TEXT, GitHub's file at OID, with BUFFER, or note ERR."
@@ -572,7 +615,7 @@ threads again (`approve-feedback--decorate')."
         (if err
             (setq approve-feedback--error (approve-api-error-message err))
           (approve-feedback--compare oid text))
-        (approve-feedback--update-lighter)))))
+        (approve-feedback--update-mode-line)))))
 
 (defun approve-feedback--fetch (oid)
   "Get GitHub's text of the buffer's file at OID, and compare it with the buffer.
@@ -908,7 +951,7 @@ where `approve-feedback--destination' says, once that is known."
                 maps)
       (approve-lines-update))
      (t (approve-feedback--draw (approve-feedback--place (seq-filter #'cdr maps)))))
-    (approve-feedback--update-lighter)
+    (approve-feedback--update-mode-line)
     (when approve-feedback--destination
       (approve-feedback--reach))))
 
@@ -920,26 +963,51 @@ Every redraw of the PR buffer calls it in the buffers of its clone."
         (progn
           (approve-feedback--follow-head)
           (approve-feedback--decorate))
-      (approve-feedback--update-lighter))))
+      (approve-feedback--update-mode-line))))
 
-;;; The lighter
+;;; The mode-line item
+
+(defconst approve-feedback--mode-line-construct
+  '(approve-feedback-mode ("" approve-feedback--mode-line))
+  "What `global-mode-string' holds for the feedback mode (decision D50).
+It shows `approve-feedback--mode-line' in the buffers where the mode
+is on, wherever the mode line shows `global-mode-string': the
+default one and doom-modeline's alike.")
+
+(defun approve-feedback--add-mode-line ()
+  "Put the feedback mode's item in `global-mode-string', once."
+  (unless (and (listp global-mode-string)
+               (member approve-feedback--mode-line-construct global-mode-string))
+    (setq global-mode-string
+          (append (if (listp global-mode-string) global-mode-string (list global-mode-string))
+                  (list approve-feedback--mode-line-construct)))))
 
 (defun approve-feedback--count (count noun)
   "Return \"COUNT NOUN\", NOUN in the plural unless COUNT is 1."
   (format "%d %s%s" count noun (if (= count 1) "" "s")))
 
-(defun approve-feedback--unresolved ()
-  "Return the unresolved threads: (IN-THIS-FILE . IN-THE-PULL-REQUEST)."
-  (let ((here 0) (all 0))
+(defun approve-feedback--thread-counts ()
+  "Return the threads counted in the mode line, as a plist.
+:here, the threads of this file; :unresolved, those of them that are
+unresolved; :asking, those that ask for changes (decision D34); :all,
+the unresolved threads of the pull request."
+  (let ((here 0) (unresolved 0) (all 0)
+        (asking (seq-count (lambda (thread)
+                             (equal (alist-get 'path thread) approve-feedback--path))
+                           (approve-pr-threads-asking-for-changes))))
     (dolist (thread (approve-pr-list-fields 'reviewThreads '(path isResolved)))
-      (unless (alist-get 'isResolved thread)
-        (cl-incf all)
-        (when (equal (alist-get 'path thread) approve-feedback--path)
-          (cl-incf here))))
-    (cons here all)))
+      (let ((mine (equal (alist-get 'path thread) approve-feedback--path))
+            (open (not (alist-get 'isResolved thread))))
+        (when mine
+          (cl-incf here))
+        (when open
+          (cl-incf all)
+          (when mine
+            (cl-incf unresolved)))))
+    (list :here here :unresolved unresolved :asking asking :all all)))
 
 (defun approve-feedback--clone-arrows (state)
-  "Return the lighter's arrows of the clone's STATE, or nil.
+  "Return the arrows of the clone's STATE, as the dispatch shows them, or nil.
 STATE is `approve-clone-state''s: \"↑N\" commits not pushed, \"↓N\"
 commits not pulled, both when diverged, \"↓?\" when GitHub's head is
 missing from the clone."
@@ -960,21 +1028,29 @@ missing from the clone."
                        (plist-get state :ahead) (plist-get state :behind)))
     ('missing "GitHub's head isn't in the clone: fetch to compare")))
 
-(defun approve-feedback--state-icon (state draft)
-  "Return the icon of a pull request in STATE, a draft if DRAFT."
-  (pcase state
-    ("MERGED" (approve-icon 'merged 'approve-state-merged))
-    ("CLOSED" (approve-icon 'closed 'approve-state-closed))
-    (_ (if draft
-           (approve-icon 'draft 'approve-state-draft)
-         (approve-icon 'open 'approve-state-open)))))
+(defun approve-feedback--threads-words (counts)
+  "Return what COUNTS, of `approve-feedback--thread-counts', mean, in words."
+  (let ((here (plist-get counts :here))
+        (unresolved (plist-get counts :unresolved))
+        (asking (plist-get counts :asking)))
+    (concat (if (zerop here)
+                "No thread in this file"
+              (concat (approve-feedback--count here "thread") " in this file"
+                      (cond ((= unresolved here)
+                             (if (= here 1) ", unresolved" ", all unresolved"))
+                            ((zerop unresolved)
+                             (if (= here 1) ", resolved" ", all resolved"))
+                            (t (format ", %d unresolved" unresolved)))
+                      (and (> asking 0)
+                           (format ", %d asking for changes" asking))))
+            (format "; %d unresolved in the pull request" (plist-get counts :all)))))
 
-(defun approve-feedback--tooltip (fields unresolved loading changes)
-  "Return the lighter's tooltip: what it says, in words.
+(defun approve-feedback--tooltip (fields counts loading changes)
+  "Return the mode-line item's tooltip: what Approve knows, in words.
 FIELDS are the pull request's (`number', `title', `state', `isDraft',
-`baseRefName'); UNRESOLVED the counts of `approve-feedback--unresolved',
-or nil before the store is loaded; LOADING and CHANGES whether it
-loads, and whether GitHub has changes."
+`baseRefName'); COUNTS those of `approve-feedback--thread-counts', or
+nil before the store is loaded; LOADING and CHANGES whether it loads,
+and whether GitHub has changes."
   (let-alist fields
     (let* ((open approve-feedback--open)
            (index (seq-position open approve-feedback--pull-request
@@ -992,68 +1068,55 @@ loads, and whether GitHub has changes."
                                 (format " · %d of %d open pull requests of this branch"
                                         (1+ index) (length open))))
                    (approve-feedback--clone-words approve-feedback--clone-state)
-                   (and unresolved
-                        (if (zerop (cdr unresolved))
-                            "No unresolved thread in the pull request"
-                          (format "%s in this file, %d in the pull request"
-                                  (approve-feedback--count (car unresolved) "unresolved thread")
-                                  (cdr unresolved))))
+                   (and counts (approve-feedback--threads-words counts))
                    (and loading "Loading the pull request…")
                    (and approve-feedback--error
                         (format "Could not compare the file with GitHub's: %s"
                                 approve-feedback--error))
                    (and changes
                         (substitute-command-keys
-                         "Updated on GitHub: \\[approve-feedback-refresh] to see it"))
-                   "mouse-1: Approve's menu"))
+                         "Updated on GitHub: \\<approve-feedback-mode-map>\\[approve-feedback-refresh] to see it"))
+                   (substitute-command-keys
+                    "mouse-1, \\<approve-feedback-mode-map>\\[approve-feedback-dispatch]: Approve\\='s menu")))
        "\n"))))
 
-(defvar approve-feedback--lighter-map
+(defvar approve-feedback--mode-line-map
   (make-mode-line-mouse-map 'mouse-1 #'approve-feedback-mouse-dispatch)
-  "Keymap of the lighter: a click opens the dispatch (decision D46).")
+  "Keymap of the mode-line item: a click opens the dispatch (decision D50).")
 
-(defun approve-feedback--lighter-text ()
-  "Return the lighter of the current buffer (decision D46).
-It is the pull request's icon and number; then … while it loads,
-the file's unresolved threads, \"1/2\" when the branch has more open
-pull requests, the clone's arrows, ↻ when GitHub has changes, and the
-state of a closed or merged pull request.  Its tooltip says it in
-words."
+(defun approve-feedback--mode-line-text ()
+  "Return the mode-line item of the current buffer (decision D50).
+It is the speech bubble and the file's threads, resolved or not:
+red when one asks for changes (decision D34), dim when none is
+unresolved.  Then ↻ when GitHub has changes (decision D23), and …
+while the pull request or GitHub's text of the file loads.  Its
+tooltip says the rest: the pull request, the branch, the clone's
+state and the counts, in words."
   (let* ((loaded (approve-feedback--loaded-p))
          (fields (if loaded
                      (approve-pr-fields '(number title state isDraft baseRefName))
                    approve-feedback--pull-request))
          (loading (or (not loaded) (approve-pr-loading-p) approve-feedback--fetching))
-         (unresolved (and loaded (approve-feedback--unresolved)))
+         (counts (and loaded (approve-feedback--thread-counts)))
          (changes (and loaded (approve-session-get :changes)))
-         (open approve-feedback--open)
-         (index (seq-position open approve-feedback--pull-request
-                              (lambda (a b) (equal (alist-get 'id a) (alist-get 'id b))))))
-    (let-alist fields
-      (propertize
-       (concat " "
-               (string-join
-                (delq nil
-                      (list (concat (approve-feedback--state-icon .state (eq .isDraft t))
-                                    (format "#%s" .number))
-                            (and loading "…")
-                            (and unresolved (> (car unresolved) 0)
-                                 (concat (approve-icon 'comment)
-                                         (number-to-string (car unresolved))))
-                            (and index (cdr open) (format "%d/%d" (1+ index) (length open)))
-                            (approve-feedback--clone-arrows approve-feedback--clone-state)
-                            (and changes (approve-face "↻" 'approve-updated))
-                            (pcase .state
-                              ("MERGED" (approve-face "merged" 'approve-state-merged))
-                              ("CLOSED" (approve-face "closed" 'approve-state-closed)))))
-                " "))
-       'help-echo (approve-feedback--tooltip fields unresolved loading changes)
-       'mouse-face 'mode-line-highlight
-       'local-map approve-feedback--lighter-map))))
+         (bubble (concat (approve-icon 'comment)
+                         (if counts (number-to-string (plist-get counts :here)) ""))))
+    (propertize
+     (concat (cond ((null counts) bubble)
+                   ((> (plist-get counts :asking) 0)
+                    (approve-face bubble 'approve-thread-mark-changes-requested))
+                   ((zerop (plist-get counts :unresolved)) (approve-face bubble 'approve-dim))
+                   (t bubble))
+             (and changes (concat " " (approve-face "↻" 'approve-updated)))
+             (and loading " …")
+             " ")
+     'help-echo (approve-feedback--tooltip fields counts loading changes)
+     'mouse-face 'mode-line-highlight
+     'local-map approve-feedback--mode-line-map)))
 
-(defun approve-feedback--update-lighter ()
-  "Compute the lighter of the current buffer again."
-  (setq approve-feedback--lighter (approve-feedback--lighter-text))
+(defun approve-feedback--update-mode-line ()
+  "Compute the mode-line item of the current buffer again."
+  (setq approve-feedback--mode-line (approve-feedback--mode-line-text))
   (force-mode-line-update))
 
 ;;; Commands
@@ -1134,6 +1197,79 @@ line, the threads above it when the line has none of its own."
                  'hide)))
     (dolist (overlay overlays)
       (approve-feedback--toggle overlay show))))
+
+(defun approve-feedback-fold-threads (action)
+  "Fold or unfold threads for a folding ACTION, as the fold keys do.
+ACTION is `:toggle', `:open' or `:close' for the threads of the
+line at point, `:open-all' or `:close-all' for every thread of the
+file.  Return non-nil when there were threads to act on; nil when
+the line, or the file, has none, or the mode is off."
+  (when approve-feedback-mode
+    (if (memq action '(:open-all :close-all))
+        (when-let* ((overlays (approve-feedback--overlays)))
+          (dolist (overlay overlays)
+            (approve-feedback--toggle overlay (if (eq action :open-all) 'show 'hide)))
+          t)
+      (when-let* ((overlay (approve-feedback--overlay-at (point))))
+        (approve-feedback--toggle overlay (pcase action
+                                            (:toggle nil)
+                                            (:close 'hide)
+                                            (_ 'show)))
+        t))))
+
+(defun approve-feedback--key-elsewhere ()
+  "Run what the keys of the current command run when the mode is off.
+That is the buffer's own folding, under evil's z keys: hideshow's,
+outline's, the user's own.  Return non-nil when there is such a
+command."
+  (let ((command (let ((approve-feedback-mode nil))
+                   (key-binding (this-command-keys-vector) t))))
+    (when (and command (commandp command)
+               (not (eq command this-command)))
+      (call-interactively command)
+      t)))
+
+(defun approve-feedback--fold (action what)
+  "Do the folding ACTION on threads, else, or also, what the key does elsewhere.
+ACTION is as `approve-feedback-fold-threads' takes it.  A line's
+fold passes the key on when the line has no threads; a fold of
+every thread passes it on too, as vim's zR and zM open and close
+every fold.  WHAT names what is missing in the echo area when
+nothing was done."
+  (let* ((done (approve-feedback-fold-threads action))
+         (passed (and (or (not done) (memq action '(:open-all :close-all)))
+                      (approve-feedback--key-elsewhere))))
+    (unless (or done passed)
+      (message "No threads %s" what))))
+
+(defun approve-feedback-toggle-fold ()
+  "Fold or unfold the threads of the line at point, else what the key folds.
+On a line without threads, the key does what it does without the
+feedback mode: evil's za folds code as the buffer does (decision D50)."
+  (interactive)
+  (approve-feedback--fold :toggle "on this line"))
+
+(defun approve-feedback-open-fold ()
+  "Unfold the threads of the line at point, else what the key unfolds."
+  (interactive)
+  (approve-feedback--fold :open "on this line"))
+
+(defun approve-feedback-close-fold ()
+  "Fold the threads of the line at point, else what the key folds."
+  (interactive)
+  (approve-feedback--fold :close "on this line"))
+
+(defun approve-feedback-open-all-folds ()
+  "Unfold every thread of the file, and what the key unfolds without the mode.
+As vim's zR unfolds every fold: the buffer's own too (decision D50)."
+  (interactive)
+  (approve-feedback--fold :open-all "in this file"))
+
+(defun approve-feedback-close-all-folds ()
+  "Fold every thread of the file, and what the key folds without the mode.
+As vim's zM folds every fold: the buffer's own too (decision D50)."
+  (interactive)
+  (approve-feedback--fold :close-all "in this file"))
 
 (defun approve-feedback--unresolved-overlays ()
   "Return the overlays of the lines with an unresolved thread, in order."
@@ -1846,7 +1982,7 @@ same key."
   (transient-setup 'approve-feedback-dispatch))
 
 (defun approve-feedback-mouse-dispatch (event)
-  "Open the dispatch of the buffer whose lighter was clicked, EVENT."
+  "Open the dispatch of the buffer whose mode-line item was clicked, EVENT."
   (interactive "e")
   (select-window (posn-window (event-start event)))
   (call-interactively #'approve-feedback-dispatch))
@@ -1865,8 +2001,12 @@ same key."
     :inapt-if approve-feedback--visit-file-inapt-p))
 
 (defun approve-feedback-unload-function ()
-  "Stop following the focus, as `unload-feature' unloads this file."
+  "Stop following the focus, as `unload-feature' unloads this file.
+The mode-line item leaves `global-mode-string' too."
   (remove-function after-focus-change-function #'approve-feedback--on-focus)
+  (when (listp global-mode-string)
+    (setq global-mode-string (delete approve-feedback--mode-line-construct
+                                     global-mode-string)))
   nil)
 
 (provide 'approve-feedback)

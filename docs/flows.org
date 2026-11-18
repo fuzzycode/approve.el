@@ -765,9 +765,10 @@ window; =q= there closes it.  With the buffer open, details follow point.
 
 * F21 Review feedback in a file you edit
 The PR's threads in your own buffer of a file, in a clone with the PR's
-branch checked out ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]], [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]).  The buffer stays yours: its mode, its
-hooks, its keys.  Approve adds overlays and a mode-line lighter, and
-changes no text.  Code lives in =approve-feedback.el=, and the clone's side
+branch checked out ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]], [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]], [[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]).  The buffer stays yours: its
+mode, its hooks, its keys, but a prefix key and evil's fold keys.
+Approve adds overlays and an item in the mode line, and changes no
+text.  Code lives in =approve-feedback.el=, and the clone's side
 in =approve-clone.el=.
 
 #+begin_example
@@ -789,14 +790,14 @@ in =approve-clone.el=.
         │ yes                                │ no
         │                                    ▼
         │                     load it in the background (F02), once;
-        │                     the lighter says "#15 …" meanwhile
+        │                     the mode line says "💬 …" meanwhile
         ◀────────────────────────────────────┘
         ▼
      GitHub's file at headRefOid: ◇ the clone has the commit? ◇
         │ yes: git cat-file                  │ no: the API (the file view's cache)
         ◀────────────────────────────────────┘
         ▼
-     ◇ the PR changes this file? ◇──no, and no thread on it──▶ the lighter alone
+     ◇ the PR changes this file? ◇──no, and no thread on it──▶ the mode line alone
         │ yes
         ▼
      diff it against the buffer's text (asynchronous, temporary files)
@@ -810,7 +811,8 @@ in =approve-clone.el=.
  │   outdated                 where it was (its commit), dim    │
  │   on removed lines         between lines, ◂ for a bubble     │
  │   on the whole file        above the first line              │
- │ the lighter: " #15", unresolved threads, the clone's state   │
+ │ the mode line: 💬 and the file's threads, ↻, …; the tooltip  │
+ │ the PR, the branch, the clone's state, the counts in words   │
  └──────────────────────────────────────────────────────────────┘
    │
    ├─ [user] edits ──▶ overlays move with the text ──▶ Emacs idle (coalesced)
@@ -820,12 +822,14 @@ in =approve-clone.el=.
    ├─ HEAD moves (a commit, a checkout, a pull) ──▶ the branch's PR again (F22)
    │      same PR: the clone's state again · another: its threads · none: overlays go
    │
-   ├─ D23's check (focus, timer) ──▶ ↻ in the lighter: updated on GitHub
-   │      [user] g in the map or the dispatch ──▶ F17 ──▶ every buffer of the PR redrawn
+   ├─ D23's check (focus, timer) ──▶ ↻ in the mode line: updated on GitHub
+   │      [user] C-c ' g or the dispatch ──▶ F17 ──▶ every buffer of the PR redrawn
    │
-   ├─ [user] TAB · T in the map, or mouse-1 on a bubble ──▶ unfold / fold the line's threads, or all
+   ├─ [user] C-c ' TAB · C-c ' T, evil za zo zc · zR zM, or mouse-1 on a bubble ──▶
+   │      unfold / fold the line's threads, or all; za on a line without threads,
+   │      and zR zM always, also do what they do without the mode (fold code)
    │
-   ├─ [user] n / p in the map (evil ]t [t) ──▶ the next / previous unresolved thread,
+   ├─ [user] C-c ' n / p (evil ]t [t) ──▶ the next / previous unresolved thread,
    │      unfolded; past the last in this file, the next of the PR's files, visited in the clone;
    │      past the last file, the first again
    │
@@ -845,10 +849,12 @@ in =approve-clone.el=.
        F00: the store patched ──▶ every buffer of the PR redrawn (PR buffer, file views, the clone's)
 #+end_example
 
-- The commands are in =approve-feedback-command-map=, which no key reaches
-  until the user binds it ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]); =M-x approve-feedback-dispatch= and
-  mouse-1 on the lighter open the dispatch either way.  Evil's =]t= and
-  =[t= go to the next and previous thread, as in Approve's buffers.
+- The commands are in =approve-feedback-command-map=, under
+  =approve-feedback-prefix-key= (=C-c '= by default, [[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]); =C-c ' ?=,
+  =M-x approve-feedback-dispatch= and mouse-1 on the mode-line item open
+  the dispatch.  In evil's normal state, =]t= and =[t= go to the next and
+  previous thread, as in Approve's buffers, and the fold keys fold
+  threads, passing on to the buffer's own folding where there are none.
 - Every thread starts folded, its line's bubble in the right margin
   ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]), so code keeps its shape while it is edited and nothing
   sits in its way.  Point never enters a thread: the commands act on the
@@ -904,7 +910,7 @@ branch checked out.  Code lives in =approve-clone.el=.
         │ one or more
         ▼
      the one picked with P this session, else the one updated last
-     (the lighter says "1/2" when there are more) ──▶ F21
+     (the tooltip says "1 of 2" when there are more) ──▶ F21
 
  [user] P (pick another)
         │

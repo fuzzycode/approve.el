@@ -781,9 +781,10 @@ through the API and kept for the session ([[file:flows.org::*F15 View the whole 
 
 * A file's buffer in your clone (feedback mode)
 The PR's threads in your own buffer of a file, in a clone with the PR's
-branch checked out ([[file:flows.org::*F21 Review feedback in a file you edit][F21]], [[file:flows.org::*F22 Find a buffer's PR, and a PR's clone][F22]]; [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]], [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]).  The buffer
-keeps its mode, hooks and keys; Approve adds overlays and a mode-line
-lighter and never changes its text.  Here the PR is #1234 of
+branch checked out ([[file:flows.org::*F21 Review feedback in a file you edit][F21]], [[file:flows.org::*F22 Find a buffer's PR, and a PR's clone][F22]]; [[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]], [[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]], [[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]).  The buffer
+keeps its mode, hooks and keys, but a prefix key (=C-c '=) and evil's fold
+keys; Approve adds overlays and an item in the mode line and never
+changes its text.  Here the PR is #1234 of
 fuzzycode/approve, from =feature/retry=, with one commit not pushed and
 line 41 edited since.
 
@@ -802,7 +803,7 @@ the right margin, out of the text:
    45     (puthash request-id (list :timer timer :buffer buffer)                            💬1
    46              approve-api--pending-requests)
    47     (apply #'ghub-graphql query variables "…")))                                      💬1
- <N>  approve-api.el   42%  L41  (ELisp/l  #1234 💬5 ↑1)
+ <N>  approve-api.el   42%  L41  (ELisp/l)                                       💬6
 #+end_example
 
 - The margin is three columns (=right-margin-width=, buffer-local), there
@@ -823,7 +824,7 @@ the right margin, out of the text:
   like, nor in the lines' text.  Nothing marks the PR's changes either:
   the buffer is for editing, and diff-hl or Magit show what changed.
 
-=TAB= in the map, or mouse-1 on a bubble, unfolds a line's threads.  An
+=C-c ' TAB=, evil's =za=, or mouse-1 on a bubble unfolds a line's threads.  An
 edited line's start with GitHub's text of the line, an outdated thread
 with its line at its own commit (=┊ at 3f2a1b9:=), and a thread on removed
 lines with those lines (=┊ removed:=):
@@ -844,8 +845,10 @@ lines with those lines (=┊ removed:=):
   the dispatch does.  Point never enters the boxes; the commands act on
   the threads of the line at point, and ask which one when there are
   several.
-- =T= in the map unfolds or folds every thread.  =n= / =p= in the map (evil
-  =]t= / =[t=) go to the next or previous unresolved thread and unfold
+- =C-c ' T= unfolds or folds every thread; evil's =zR= / =zM= unfold or fold
+  them, and the buffer's own folds too.  On a line without threads, =za=,
+  =zo= and =zc= fold code as they do without the mode.  =C-c ' n= / =C-c ' p=
+  (evil =]t= / =[t=) go to the next or previous unresolved thread and unfold
   it; past the last one of the file, the next of the PR's files opens in
   the clone, and past the last file, the first again.
 - Threads on the whole file sit above the first line:
@@ -854,28 +857,28 @@ lines with those lines (=┊ removed:=):
     1 ;;; approve-api.el --- Talk to GitHub's API  -*- lexical-binding: t; -*-
   #+end_example
 
-The lighter says what Approve knows; its tooltip says it in words, and
+The mode line shows a speech bubble and the number of the file's
+threads, resolved or not, through =global-mode-string=, so doom-modeline
+shows it too ([[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]).  Its tooltip says the rest in words, and
 mouse-1 opens the dispatch.  The header line is left alone:
-| Lighter      | Means                                                              |
-|--------------+--------------------------------------------------------------------|
-| =#1234=      | The PR; no unresolved thread in this file                          |
-| =#1234 💬3=  | 3 unresolved threads in this file                                  |
-| =#1234 …=    | The PR is loading                                                  |
-| =#1234 1/2=  | The branch has 2 open PRs; =P= in the map picks another            |
-| =#1234 ↑1=   | 1 commit not pushed                                                |
-| =#1234 ↓2=   | GitHub has 2 commits the clone hasn't: pull to see them            |
-| =#1234 ↑1↓3= | The branch and GitHub's differ (rebased, or pushed from elsewhere) |
-| =#1234 ↓?=   | GitHub's head isn't in the clone: fetch to compare                 |
-| =#1234 ↻=    | Updated on GitHub (D23): =g= in the map refreshes                  |
-| =#14 merged= | A merged PR, taken by the command after asking                     |
+| Item    | Means                                                                    |
+|---------+--------------------------------------------------------------------------|
+| =💬6=   | 6 threads in this file: red while one asks for changes, dim when none is |
+|         | unresolved, or there is none                                             |
+| =💬6 ↻= | Updated on GitHub (D23): =C-c ' g= refreshes                             |
+| =💬6 …= | The PR, or GitHub's text of the file, is loading                         |
 
+Its tooltip: the PR and its state, the branch and which of its open PRs
+it is (=P= in the map picks another), how the clone stands to GitHub's
+head (commits not pushed, not pulled, both, or GitHub's head missing:
+fetch to compare), and the counts:
 #+begin_example
  fuzzycode/approve#1234  Add retry logic to the GraphQL client · open
  feature/retry into main · 1 of 2 open pull requests of this branch
  1 commit not pushed
- 3 unresolved threads in this file, 7 in the pull request
- Updated on GitHub: g to refresh
- mouse-1: Approve's menu
+ 6 threads in this file, 4 unresolved, 1 asking for changes; 7 unresolved in the pull request
+ Updated on GitHub: C-c ' g to see it
+ mouse-1, C-c ' ?: Approve's menu
 #+end_example
 
 ** Feedback dispatch (=approve-feedback-dispatch=)
@@ -1129,31 +1132,43 @@ the thing at point applies to the section around it: on a comment's =@author=,
 =r= replies to the comment and =e= edits it.  A range is named as GitHub does:
 =a.go:13–14=, or =a.go:-13–+14= from a removed line to an added one.
 
-In a file's buffer of a clone, the feedback mode binds no key but evil's
-=]t= and =[t= ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]).  Its commands are in =approve-feedback-command-map=,
-for the user to bind, under a leader key for example:
+In a file's buffer of a clone, the feedback mode's commands are in
+=approve-feedback-command-map=, under =approve-feedback-prefix-key=: =C-c '=
+by default, in Emacs and in evil's states ([[file:decisions.org::*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]).  Set it to another key,
+or nil, and bind the map elsewhere too, under a leader key for example:
 #+begin_src emacs-lisp
-(keymap-set approve-feedback-mode-map "C-c a" approve-feedback-command-map)
+(setopt approve-feedback-prefix-key "C-c a")   ; another prefix, or nil
+(evil-define-minor-mode-key 'normal 'approve-feedback-mode
+  (kbd "SPC m") approve-feedback-command-map)  ; under an evil leader too
 #+end_src
-=M-x approve-feedback-dispatch= and mouse-1 on the lighter open the
-dispatch without a binding.  The map's keys are Approve's letters:
-| Command                                    | In the map  | Context                       |
-|--------------------------------------------+-------------+-------------------------------|
-| Dispatch                                   | =?=         | any                           |
-| Fold / unfold the line's threads           | =TAB=       | a line with threads           |
-| (also mouse-1 on its bubble in the margin) |             |                               |
-| Fold / unfold every thread                 | =T=         | any                           |
-| Next / previous unresolved thread          | =n= =p=     | any (on to the PR's files)    |
-| (evil normal state: also =]t= =[t=)        |             |                               |
-| Comment, suggest                           | =c= =s=     | line, region                  |
-| Reply, resolve, edit, delete, react        | =r= =R= =e= | the line's threads            |
-|                                            | =k= =+=     |                               |
-| Conversation comment                       | =C=         | any                           |
-| The PR buffer at this line                 | =RET=       | any                           |
-| Pick another PR of the branch              | =P=         | any                           |
-| Refresh                                    | =g=         | any                           |
-| Open in browser                            | =o=         | thread, else the PR           |
-| Submit review, discard it                  | =S= =X=     | any                           |
+=C-c ' ?=, =M-x approve-feedback-dispatch= and mouse-1 on the mode-line
+item open the dispatch.  The map's keys are Approve's letters:
+| Command                                    | After =C-c '= | Context                    |
+|--------------------------------------------+---------------+----------------------------|
+| Dispatch                                   | =?=           | any                        |
+| Fold / unfold the line's threads           | =TAB=         | a line with threads        |
+| (also mouse-1 on its bubble in the margin) |               |                            |
+| Fold / unfold every thread                 | =T=           | any                        |
+| Next / previous unresolved thread          | =n= =p=       | any (on to the PR's files) |
+| Comment, suggest                           | =c= =s=       | line, region               |
+| Reply, resolve, edit, delete, react        | =r= =R= =e=   | the line's threads         |
+|                                            | =k= =+=       |                            |
+| Conversation comment                       | =C=           | any                        |
+| The PR buffer at this line                 | =RET=         | any                        |
+| Pick another PR of the branch              | =P=           | any                        |
+| Refresh                                    | =g=           | any                        |
+| Open in browser                            | =o=           | thread, else the PR        |
+| Submit review, discard it                  | =S= =X=       | any                        |
+
+In evil's normal state, the mode's own keys go before those of other
+minor modes:
+| Command                                     | Evil normal           |
+|---------------------------------------------+-----------------------|
+| Next / previous unresolved thread           | =]t= =[t=             |
+| Fold / unfold the line's threads; elsewhere | =za=, =zo= =zO=,      |
+| what the key does without the mode          | =zc= =zC=             |
+| Unfold / fold every thread, and every other | =zR= =zr= / =zM= =zm= |
+| fold as the key does without the mode       |                       |
 
 * Faces
 All in =approve-faces.el=, group =approve-faces=.  Main ones and what they

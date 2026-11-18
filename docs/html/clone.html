@@ -25,9 +25,9 @@
 <main>
 <h1>Review feedback in your clone</h1>
 <p class="lead">A pull request's threads in your own buffers of its files, on a branch with the PR checked out
-(Phase 7, F21, F22, D45, D46). The buffer stays yours: its mode, hooks and keys. Approve adds overlays and a
-mode-line lighter, and never changes the text.
-<span class="hint-click">Click a line with a bubble to unfold its threads, like <code>TAB</code> in the map.</span></p>
+(Phase 7, F21, F22, D45, D46, D50). The buffer stays yours: its mode, hooks and keys, but a prefix key and evil's fold keys. Approve adds overlays and
+an item in the mode line, and never changes the text.
+<span class="hint-click">Click a line with a bubble to unfold its threads, like <code>C-c ' TAB</code> or evil's <code>za</code>.</span></p>
 
 <ul class="toc">
   <li><a href="#buffer">A file's buffer, as it opens</a></li>
@@ -110,7 +110,7 @@ bubble in the right margin, out of the text: hover over one for its tooltip.</p>
 </div>
 </div>
 </div>
-<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>5 <span class="wa">↑1</span></div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="er"><i data-i="comment">💬</i>6</span></div>
 </div>
 <div class="echo"></div>
 </div>
@@ -131,7 +131,7 @@ bubble in the right margin, out of the text: hover over one for its tooltip.</p>
 
 <!-- ================================================================== -->
 <section class="shot" id="unfolded">
-<h2>A line's threads, unfolded <span class="ref">TAB in the map · mouse-1 on a bubble</span></h2>
+<h2>A line's threads, unfolded <span class="ref">C-c ' TAB · evil za · mouse-1 on a bubble</span></h2>
 <p>An edited line's threads start with GitHub's text of the line; an outdated one's with the line as it was at its
 commit; one on removed lines with those lines.</p>
 <div class="emacs">
@@ -148,7 +148,7 @@ commit; one on removed lines with those lines.</p>
 <p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
 <p><span class="mg d" title="1 outdated thread, shown where it was at 3f2a1b9 · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">42</span>     (<span class="kw">when</span> progress-message</p>
 </div>
-<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>5 <span class="wa">↑1</span></div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L41  <span class="pi">ELisp/l</span>  <span class="er"><i data-i="comment">💬</i>6</span></div>
 </div>
 <div class="echo"></div>
 </div>
@@ -184,39 +184,39 @@ commit; one on removed lines with those lines.</p>
 
 <!-- ================================================================== -->
 <section class="shot" id="lighter">
-<h2>The mode line <span class="ref">D46 · the header line is left alone</span></h2>
-<p>The lighter says what Approve knows; its tooltip says it in words, and mouse-1 opens the dispatch. Messages go to the
+<h2>The mode line <span class="ref">D50 · global-mode-string · the header line is left alone</span></h2>
+<p>A speech bubble and the number of the file's threads, resolved or not, through <code>global-mode-string</code>, so
+doom-modeline shows it too. Its tooltip says the rest in words, and mouse-1 opens the dispatch. Messages go to the
 echo area.</p>
 <div class="emacs">
 <div class="buf">
-<p><span class="pi"><i data-i="open">●</i> #1234</span>                 the PR; no unresolved thread in this file</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="comment">💬</i>3              3 unresolved threads in this file</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> <i data-i="loading">…</i>               the PR is loading</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> 1/2             the branch has 2 open PRs; <span class="k">P</span> in the map picks another</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↑1</span>              1 commit not pushed</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↓2</span>              GitHub has 2 commits the clone hasn't: pull to see them</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="er">↑1↓3</span>            the branch and GitHub's differ (rebased, or pushed from elsewhere)</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↓?</span>              GitHub's head isn't in the clone: fetch to compare</p>
-<p><span class="pi"><i data-i="open">●</i> #1234</span> <span class="wa">↻</span>               updated on GitHub (D23): <span class="k">g</span> in the map refreshes</p>
-<p><span class="pi"><i data-i="merged">⮌</i> #14</span> <span class="d">merged</span>            a merged PR, taken by the command after asking</p>
+<p><i data-i="comment">💬</i>6                6 threads in this file</p>
+<p><span class="er"><i data-i="comment">💬</i>6</span>                one asks for changes (D34)</p>
+<p><span class="d"><i data-i="comment">💬</i>6</span>                none is unresolved (and <span class="d">💬0</span>: no thread in this file)</p>
+<p><i data-i="comment">💬</i>6 <span class="wa">↻</span>              updated on GitHub (D23): <span class="k">C-c ' g</span> refreshes</p>
+<p><i data-i="comment">💬</i>6 <i data-i="loading">…</i>              the PR, or GitHub's text of the file, is loading</p>
 </div>
 </div>
-<p>Its tooltip:</p>
+<p>Its tooltip: the PR and its state, the branch and which of its open PRs it is (<code>P</code> in the map picks
+another), how the clone stands to GitHub's head, and the counts:</p>
 <div class="emacs">
 <div class="buf short">
 <p><span class="b">fuzzycode/approve#1234</span>  Add retry logic to the GraphQL client <span class="d">· open</span></p>
 <p><span class="d">feature/retry into main · 1 of 2 open pull requests of this branch</span></p>
 <p>1 commit not pushed</p>
-<p>3 unresolved threads in this file, 7 in the pull request</p>
-<p><span class="wa">Updated on GitHub:</span> <span class="k">g</span> to refresh</p>
-<p><span class="d">mouse-1: Approve's menu</span></p>
+<p>6 threads in this file, 4 unresolved, 1 asking for changes; 7 unresolved in the pull request</p>
+<p><span class="wa">Updated on GitHub:</span> <span class="k">C-c ' g</span> to see it</p>
+<p><span class="d">mouse-1, <span class="k">C-c ' ?</span>: Approve's menu</span></p>
 </div>
 </div>
+<p>The clone's state reads, in the tooltip: "1 commit not pushed", "GitHub has 2 commits the clone hasn't: pull to
+see them", "The branch and GitHub's differ: 1 not pushed, 3 not pulled", or "GitHub's head isn't in the clone: fetch
+to compare"; a merged or closed PR, taken by the command after asking, says so on its first line.</p>
 </section>
 
 <!-- ================================================================== -->
 <section class="shot" id="dispatch">
-<h2>Feedback dispatch <span class="ref">M-x approve-feedback-dispatch · ? in the map · mouse-1 on the lighter</span></h2>
+<h2>Feedback dispatch <span class="ref">C-c ' ? · M-x approve-feedback-dispatch · mouse-1 on the mode-line item</span></h2>
 <p>Every command of the map, dimmed where its preflight says it can't run: here point is on line 41, edited, so
 <span class="k">c</span> and <span class="k">s</span> are.</p>
 <div class="emacs">
@@ -225,7 +225,7 @@ echo area.</p>
 <div class="buf short">
 <p class="cur"><span class="mg wa" title="1 thread · edited here: GitHub has  (retries approve-api-retries)) · mouse-1: unfold"><i data-i="comment">💬</i>1</span>  <span class="ln">41</span>          (retries (approve-api--retries)))</p>
 </div>
-<div class="ml off"> <span class="b">approve-api.el</span>   42%  L41  ELisp/l  #1234 <i data-i="comment">💬</i>5 ↑1</div>
+<div class="ml off"> <span class="b">approve-api.el</span>   42%  L41  ELisp/l  <span class="er"><i data-i="comment">💬</i>6</span></div>
 </div>
 <div class="tr">
 <p><span class="kh">#1234 Add retry logic to the GraphQL client</span> <span class="d">· 1/2 ·</span> <span class="wa">↑1</span></p>
@@ -247,21 +247,25 @@ echo area.</p>
 
 <!-- ================================================================== -->
 <section class="shot" id="keys">
-<h2>Keys <span class="ref">approve-feedback-command-map · D46</span></h2>
-<p>The mode binds no key in your buffers but evil's <code>]t</code> and <code>[t</code>. Its commands are in
-<code>approve-feedback-command-map</code>, for you to bind, under a leader key for example:</p>
+<h2>Keys <span class="ref">approve-feedback-prefix-key · evil's fold keys · D50</span></h2>
+<p>The mode's commands are in <code>approve-feedback-command-map</code>, under <code>approve-feedback-prefix-key</code>:
+<code>C-c '</code> by default, in Emacs and in evil's states. Set another key, or nil, and bind the map under a leader
+too if you like:</p>
 <div class="emacs">
 <div class="buf short">
-<p>(<span class="fn">keymap-set</span> approve-feedback-mode-map <span class="st">"C-c a"</span> approve-feedback-command-map)</p>
+<p>(<span class="fn">setopt</span> approve-feedback-prefix-key <span class="st">"C-c a"</span>)</p>
 </div>
 </div>
 <ul>
-  <li><code>?</code> dispatch · <code>TAB</code> fold the line's threads · <code>T</code> all · <code>n</code>/<code>p</code>
-  next/previous unresolved thread (evil: <code>]t</code>/<code>[t</code>)</li>
+  <li><code>C-c '</code> then: <code>?</code> dispatch · <code>TAB</code> fold the line's threads · <code>T</code> all ·
+  <code>n</code>/<code>p</code> next/previous unresolved thread</li>
   <li><code>c</code> <code>s</code> comment, suggest · <code>r</code> <code>R</code> <code>e</code> <code>k</code> <code>+</code>
   on the line's threads · <code>C</code> on the pull request</li>
   <li><code>RET</code> the PR buffer at this line (else the line's first thread, else the file) · <code>P</code> pick another PR · <code>g</code> refresh ·
   <code>o</code> browser · <code>S</code> <code>X</code> submit, discard</li>
+  <li>Evil's normal state, the mode's own keys: <code>]t</code>/<code>[t</code> next/previous unresolved thread;
+  <code>za</code> <code>zo</code> <code>zc</code> fold the line's threads, and fold code as usual on a line without;
+  <code>zR</code>/<code>zM</code> unfold/fold every thread, and every other fold too.</li>
   <li>In the PR buffer and the file view, <code>f</code> (evil: <code>gF</code>) opens the line, thread or file at point
   in your clone, with that PR's threads (picked for the branch, as <code>P</code> would); <code>F</code> and <code>gf</code>
   still open Approve's file view.</li>
