@@ -1110,7 +1110,11 @@ state and the counts, in words."
          (counts (and loaded (approve-feedback--thread-counts)))
          (changes (and loaded (approve-session-get :changes)))
          (bubble (concat (approve-icon 'comment nil approve-feedback-mode-line-icon-height)
-                         (if counts (number-to-string (plist-get counts :here)) ""))))
+                         (and counts
+                              ;; Half a space, as doom-modeline puts between
+                              ;; its icons and their text.
+                              (concat (propertize " " 'display '(space :width 0.5))
+                                      (number-to-string (plist-get counts :here)))))))
     (propertize
      (concat " "
              (cond ((null counts) bubble)

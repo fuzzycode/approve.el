@@ -222,6 +222,10 @@ outdated thread's commit's too."
         (expect (test-feedback--mode-line) :not :to-match "…")
         ;; The bubble and the file's six threads; the rest in the tooltip.
         (expect (test-feedback--mode-line) :to-match "[^0-9]6 \\'")
+        ;; Half a space between the bubble and the count.
+        (let ((count (string-search "6" approve-feedback--mode-line)))
+          (expect (get-text-property (1- count) 'display approve-feedback--mode-line)
+                  :to-equal '(space :width 0.5)))
         (let ((tooltip (test-feedback--tooltip)))
           (expect tooltip :to-match "acme-example/rocket#202")
           (expect tooltip :to-match "parser-rewrite into main · 1 of 2 open pull requests")
