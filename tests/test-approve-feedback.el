@@ -135,6 +135,8 @@ and the clone are gone after."
                ,@body)
            (with-current-buffer buffer
              (set-buffer-modified-p nil))
+           (when approve-feedback-global-mode
+             (approve-feedback-global-mode -1))
            (dolist (input (buffer-list))
              (when (string-prefix-p "*approve-input" (buffer-name input))
                (with-current-buffer input
@@ -255,6 +257,9 @@ outdated thread's commit's too."
     (let ((test-feedback--prs nil))
       (test-feedback--with-clone
         (expect (approve-feedback-mode 1) :to-throw 'user-error '("No pull request for parser-rewrite"))
+        ;; None was open: GitHub was asked again, as one may be now.
+        (expect (spy-calls-all-args 'approve-clone-wait-pull-requests)
+                :to-equal (list (list test-feedback--head) (list test-feedback--head t)))
         (expect approve-feedback-mode :to-be nil)
         (spy-on 'approve-clone-branch-head :and-return-value nil)
         (expect (approve-feedback-mode 1) :to-throw 'user-error)
@@ -992,5 +997,53 @@ The buffer the input was for is current after."
           (approve-test-wait-for (lambda () (null approve-feedback--destination)))
           (expect (line-number-at-pos) :to-equal 7)
           (expect (test-feedback--threads-shown 7) :to-match "┊ removed:"))))))
+
+(describe "approve-feedback-global-mode"
+  (it "turns the mode on in the files of a branch with an open pull request"
+    (test-feedback--with-one
+      (spy-on 'approve-clone-known-branch-head
+              :and-return-value (list :clone test-feedback--root :branch "parser-rewrite"
+                                      :remote "origin" :head test-feedback--head))
+      (spy-on 'approve-clone-branch-pull-requests
+              :and-call-fake (lambda (_head &rest args)
+                               (funcall (plist-get args :callback) test-feedback--prs)))
+      (spy-on 'y-or-n-p)
+      (approve-feedback-global-mode 1)
+      (expect approve-feedback-mode :to-be t)
+      (expect (alist-get 'number approve-feedback--pull-request) :to-equal 202)
+      ;; A file opened since.
+      (with-current-buffer (find-file-noselect
+                            (test-feedback--add-file "internal/store/migrations.go"))
+        (expect approve-feedback-mode :to-be t))
+      ;; Not git's own files, and nothing is asked of a file elsewhere.
+      (let ((asked (spy-calls-count 'approve-clone-known-branch-head)))
+        (with-temp-buffer
+          (setq buffer-file-name (expand-file-name ".git/COMMIT_EDITMSG" test-feedback--root))
+          (approve-feedback--turn-on)
+          (expect approve-feedback-mode :to-be nil)
+          (setq buffer-file-name nil))
+        (expect (spy-calls-count 'approve-clone-known-branch-head) :to-equal asked))
+      (expect 'y-or-n-p :not :to-have-been-called)
+      (approve-feedback-global-mode -1)
+      (expect approve-feedback-mode :to-be nil)))
+
+  (it "leaves a branch alone whose pull requests are closed or merged"
+    (let ((test-feedback--prs (list (test-feedback--row 202 "MERGED"))))
+      (test-feedback--with-clone
+        (spy-on 'approve-clone-known-branch-head
+                :and-return-value (list :clone test-feedback--root :branch "parser-rewrite"
+                                        :remote "origin" :head test-feedback--head))
+        (spy-on 'approve-clone-branch-pull-requests
+                :and-call-fake (lambda (_head &rest args)
+                                 (funcall (plist-get args :callback) test-feedback--prs)))
+        (spy-on 'y-or-n-p)
+        (approve-feedback-global-mode 1)
+        (expect approve-feedback-mode :to-be nil)
+        (expect 'y-or-n-p :not :to-have-been-called)
+        ;; Once picked, it shows.
+        (puthash (approve-clone--head-key test-feedback--head) "PR_kwDOPCDj7SnvM_RcFp"
+                 approve-clone--picked)
+        (approve-feedback--turn-on)
+        (expect approve-feedback-mode :to-be t)))))
 
 ;;; test-approve-feedback.el ends here

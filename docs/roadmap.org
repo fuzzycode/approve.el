@@ -410,12 +410,19 @@ Mockups: a file's buffer with its threads (written with F21).
       with an unresolved thread, in the diff's order, passing by those
       the clone hasn't, and wrap around (the author's choice).  Checked
       on the SP8 worktrees: =f= on #15's line 33 opened =wt-equal=.
-- [ ] Turning it on: the command =approve-feedback-mode=, which also takes
+- [X] Turning it on: the command =approve-feedback-mode=, which also takes
       a closed or merged PR after asking, and =approve-feedback-global-mode=
       (off by default), which turns it on by itself in the buffers of a
       branch with an open PR (D45).  The command is there (2026-11-17,
       with the mode), asking before a closed or merged PR; the global
-      mode is left.
+      mode is left.  Done (2026-11-18): the global mode turns the mode on
+      once the branch's pull requests are in, without waiting and
+      without asking: an open PR, or one picked for the branch.  A
+      clone's branch is found once a session
+      (=approve-clone-known-branch-head=), so a file of a clone and
+      branch seen costs no git call, and git's own files (a commit
+      message) are passed by.  The command asks GitHub again when none
+      of the branch's PRs is open, and =C-u g= forgets the branches.
 - Done when :: on a branch with a PR, with commits not pushed and edits
   not saved, the user reads the threads in the buffers they edit,
   replies, resolves and comments from there, and the browser shows the

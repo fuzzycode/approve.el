@@ -132,11 +132,13 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 | =approve-notifications.el= | Notifications buffer                                                            |     8 |
 | =approve-clone.el=         | A local clone (D36, D37, D45): the user's clones (=approve-clone-directories=), |  2, 7 |
 |                            | the one with a commit, shown in Magit; remotes read from the config; a buffer's |       |
-|                            | branch and its place on GitHub; a branch's PRs, the one shown and picking       |       |
-|                            | another; the clone's state; a file's text at a commit; a PR's worktree          |       |
+|                            | branch and its place on GitHub (kept a session for each clone and branch); a    |       |
+|                            | branch's PRs, the one shown and picking another; the clone's state; a file's    |       |
+|                            | text at a commit; a PR's worktree                                               |       |
 | =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads in the buffers of its clone, what is at |     7 |
 |                            | point there, the actions on them (the core's commands in its map), its          |       |
-|                            | dispatch; ways to and from the PR buffer (=f= there, =RET= and =n= =p= here)    |       |
+|                            | dispatch; ways to and from the PR buffer (=f= there, =RET= and =n= =p= here);   |       |
+|                            | =approve-feedback-global-mode=                                                  |       |
 | =approve-lines.el=         | GitHub's lines in a clone's buffer (D45): a map from a diff of GitHub's text    |     7 |
 |                            | and the buffer's, in an asynchronous process, made again after edits on idle    |       |
 | =approve-dev.el=           | Development tools, fixture recording and replay (not packaged)                  |     0 |

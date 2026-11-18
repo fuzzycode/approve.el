@@ -81,6 +81,7 @@
 (add-hook 'approve-pr-redraw-hook #'approve-feedback-follow-pr-buffer)
 (add-hook 'approve-pr-mode-hook #'approve-feedback-setup-pr-buffer)
 (add-hook 'approve-changes-hook #'approve-feedback-follow-changes)
+(add-hook 'approve-pr-clear-cache-functions #'approve-clone-clear-cache)
 
 ;;;###autoload
 (defalias 'approve-add-section-hook #'magit-add-section-hook

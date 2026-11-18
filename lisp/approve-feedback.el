@@ -38,6 +38,9 @@
 ;;   request Approve shows for it (approve-clone.el): the open one
 ;;   updated last, or the one picked with `approve-clone-pick-pull-request'.
 ;;   It asks before showing a closed or merged one.
+;;   `approve-feedback-global-mode', off by default, turns it on by
+;;   itself in the buffers of a branch with an open pull request,
+;;   without waiting and never asking.
 ;; - The pull request's store is its PR buffer's, shared as the file
 ;;   views share it (D45, amended): when the PR is not open, the mode
 ;;   opens its buffer without showing it and loads it there, once for
@@ -271,9 +274,9 @@ approve-evil.el, which the mode requires then (decision D17)."
 (defvar approve-feedback--found nil
   "What the mode turns on with, or nil: (BRANCH PR PRS).
 BRANCH is as `approve-clone-branch-head' gives it, PR the pull
-request to show and PRS the branch's.  The commands that open a file
-for a pull request bind it to what they found, so the mode turns on
-with that, asking nothing.")
+request to show and PRS the branch's.  The global mode, and the
+commands that open a file for a pull request, bind it to what they
+found, so the mode turns on with that, asking nothing.")
 
 (defun approve-feedback--choose (head prs)
   "Return the pull request of HEAD to show among PRS, or nil.
@@ -291,7 +294,9 @@ closed or merged one updated last, after asking."
   "Find the pull request of the current buffer's branch and show it.
 Return non-nil when shown; nil when the user declined a closed or
 merged one.  Signal a `user-error' when the buffer has no file in a
-clone of a GitHub repository, or its branch no pull request."
+clone of a GitHub repository, or its branch no pull request.  The
+branch's pull requests are asked of GitHub once a session, and again
+when none of them is open: one may have been opened since."
   (unless buffer-file-name
     (user-error "This buffer visits no file"))
   (if approve-feedback--found
@@ -302,6 +307,9 @@ clone of a GitHub repository, or its branch no pull request."
                                    (file-name-nondirectory buffer-file-name))))
            (head (plist-get branch :head))
            (prs (approve-clone-wait-pull-requests head))
+           (prs (if (approve-clone-shown-pull-request head prs)
+                    prs
+                  (approve-clone-wait-pull-requests head t)))
            (pr (approve-feedback--choose head prs)))
       (when pr
         (approve-feedback--show branch pr prs)
@@ -1702,6 +1710,53 @@ window; \\<approve-pr-mode-map>\\[approve-feedback-visit-file] there comes back.
 
 (keymap-set approve-pr-mode-map "f" #'approve-feedback-visit-file)
 (keymap-set approve-file-mode-map "f" #'approve-feedback-visit-file)
+
+;;; The global mode
+
+(defvar approve-feedback-global-mode)
+
+(defun approve-feedback--turn-on-with (branch prs)
+  "Turn the feedback mode on here, with the pull request of BRANCH among PRS.
+That is the one the branch shows, open or picked, if any; nothing
+when the global mode was turned off meanwhile, or the mode on."
+  (when-let* (((and approve-feedback-global-mode buffer-file-name
+                    (not approve-feedback-mode)))
+              (pr (approve-clone-shown-pull-request (plist-get branch :head) prs)))
+    (condition-case-unless-debug err
+        (let ((approve-feedback--found (list branch pr prs)))
+          (approve-feedback-mode 1))
+      (error (approve-log-condition "Turning on the feedback mode" err)))))
+
+(defun approve-feedback--turn-on ()
+  "Turn the feedback mode on soon, if the branch heads an open pull request.
+It is how `approve-feedback-global-mode' turns it on, in each buffer
+whose major mode is set.  A file outside a clone of GitHub costs
+nothing, and one in a clone and branch seen this session no git
+call.  The branch's pull requests are asked of GitHub once a session,
+without waiting: the mode turns on when they are in (decision D45).
+It never asks: a closed or merged pull request shows only once picked
+with \\[approve-clone-pick-pull-request], and the files of git's own directory, such as a commit
+message, never."
+  (when (and buffer-file-name
+             (not approve-feedback-mode)
+             (not (file-remote-p buffer-file-name))
+             (not (string-match-p "/\\.git/" buffer-file-name)))
+    (condition-case-unless-debug err
+        (when-let* ((branch (approve-clone-known-branch-head
+                             (file-name-directory buffer-file-name))))
+          (approve-clone-branch-pull-requests
+           (plist-get branch :head)
+           :callback (lambda (prs) (approve-feedback--turn-on-with branch prs))
+           :errorback (lambda (err)
+                        (approve-log 'warn "The pull requests of %s: %s"
+                                     (plist-get branch :branch)
+                                     (approve-api-error-message err)))))
+      (error (approve-log-condition "Turning on the feedback mode" err)))))
+
+;;;###autoload
+(define-globalized-minor-mode approve-feedback-global-mode approve-feedback-mode
+  approve-feedback--turn-on
+  :group 'approve)
 
 ;;; The dispatch
 

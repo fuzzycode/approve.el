@@ -50,7 +50,9 @@
 ;;   URL names: on github.com or the host of `approve-api-host', an
 ;;   SSH alias followed through ssh -G.
 ;; - `approve-clone-branch-head' gives a buffer's clone, its branch, and
-;;   the repository and branch it goes to on GitHub.
+;;   the repository and branch it goes to on GitHub;
+;;   `approve-clone-known-branch-head' keeps it for the session, for
+;;   the files opened in a clone and branch already seen.
 ;; - `approve-clone-branch-pull-requests' asks GitHub, once a session,
 ;;   for the pull requests a branch heads (a fork's into its parent
 ;;   too); `approve-clone-shown-pull-request' is the one Approve shows,
@@ -399,6 +401,30 @@ reading its config file too; else two git calls through Magit."
       (list :clone clone :branch branch :remote (car target)
             :head (append repository (list :branch (cadr target)))))))
 
+(defvar approve-clone--branch-heads (make-hash-table :test #'equal)
+  "The places of branches on GitHub found this session, by clone and branch.
+A key is (CLONE . BRANCH); a value, what `approve-clone-branch-head'
+gave, nil included.")
+
+(defun approve-clone-known-branch-head (&optional directory)
+  "Return what `approve-clone-branch-head' gives for DIRECTORY, kept a session.
+It is found once for each clone and branch: the branch is read from
+the clone's HEAD file, without git, so a file opened in a clone and
+branch already seen costs no git call (decision D45).  A clone's
+configuration changed since is seen after `approve-clone-clear-cache'.
+nil outside a clone, on a detached HEAD, and when the branch goes to
+no GitHub repository."
+  (let ((directory (or directory default-directory)))
+    (when-let* ((top (locate-dominating-file directory ".git"))
+                (clone (file-name-as-directory (expand-file-name top)))
+                (branch (car (approve-clone-head clone))))
+      (let* ((key (cons clone branch))
+             (none (make-symbol "none"))
+             (known (gethash key approve-clone--branch-heads none)))
+        (if (eq known none)
+            (puthash key (approve-clone-branch-head clone) approve-clone--branch-heads)
+          known)))))
+
 ;;; The pull requests of a branch
 
 (defvar approve-clone--pull-requests (make-hash-table :test #'equal)
@@ -420,8 +446,11 @@ pull request picked, as in `approve-clone-branch-pull-requests'.")
 
 (defun approve-clone-clear-cache ()
   "Forget the pull requests of branches asked about this session.
-The ones picked are kept."
-  (clrhash approve-clone--pull-requests))
+The places of branches on GitHub are forgotten too
+\(`approve-clone-known-branch-head'); the pull requests picked are
+kept."
+  (clrhash approve-clone--pull-requests)
+  (clrhash approve-clone--branch-heads))
 
 (defun approve-clone--head-key (head)
   "Return the cache key of HEAD, a branch on GitHub (:host :owner :repo :branch)."

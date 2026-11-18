@@ -860,7 +860,11 @@ in =approve-clone.el=.
   load it again.
 - The global mode is off by default.  With it on, a file of a branch with
   an open PR turns the mode on; outside GitHub clones it costs nothing
-  ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]).
+  ([[file:decisions.org::*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]).  It never waits for GitHub, and never asks: the mode turns on
+  once the branch's PRs are in (asked once a session), with the open
+  one, or the one picked for the branch.  A clone and branch seen once
+  costs no git call after; git's own files, such as a commit message,
+  are passed by (D45, amended).
 - =n= and =p= go through the PR's files in the diff's order, those with
   an unresolved thread, passing by the files the clone hasn't (the echo
   area says so); past the last, they go on from the first, this file

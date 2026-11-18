@@ -322,6 +322,40 @@ config."
         (test-clone--git two "remote" "add" "origin" "https://gitlab.com/me/project.git")
         (expect (approve-clone-branch-head two) :to-be nil)))))
 
+(describe "approve-clone-known-branch-head"
+  (it "asks git once a session for each clone and branch"
+    (test-clone--with-branches
+      (approve-clone-clear-cache)
+      (test-clone--git one "checkout" "-q" "feature")
+      (spy-on 'approve-clone-branch-head :and-call-through)
+      (let ((head (approve-clone-known-branch-head one)))
+        (expect (plist-get (plist-get head :head) :branch) :to-equal "feature")
+        (expect (approve-clone-known-branch-head one) :to-be head)
+        (expect 'approve-clone-branch-head :to-have-been-called-times 1)
+        ;; Another branch checked out: asked anew.
+        (test-clone--git one "checkout" "-q" "local-name")
+        (expect (plist-get (plist-get (approve-clone-known-branch-head one) :head) :branch)
+                :to-equal "other-name")
+        (expect 'approve-clone-branch-head :to-have-been-called-times 2)
+        (approve-clone-clear-cache)
+        (approve-clone-known-branch-head one)
+        (expect 'approve-clone-branch-head :to-have-been-called-times 3))))
+
+  (it "keeps a clone off GitHub, and asks nothing outside one or detached"
+    (test-clone--with-branches
+      (approve-clone-clear-cache)
+      (spy-on 'approve-clone-branch-head :and-call-through)
+      (let ((two (test-clone--dir "two")))
+        (expect (approve-clone-known-branch-head two) :to-be nil)
+        (expect (approve-clone-known-branch-head two) :to-be nil)
+        (expect 'approve-clone-branch-head :to-have-been-called-times 1))
+      (test-clone--git one "checkout" "-q" "--detach")
+      (expect (approve-clone-known-branch-head one) :to-be nil)
+      (expect (approve-clone-known-branch-head (expand-file-name "notes/" test-clone--root))
+              :to-be nil)
+      (expect 'approve-clone-branch-head :to-have-been-called-times 1)
+      (approve-clone-clear-cache))))
+
 ;;; The pull requests of a branch
 
 (defconst test-clone--head

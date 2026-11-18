@@ -453,7 +453,7 @@ load -> q -> okq; okq -> fail [@no]; okq -> full [@yes];
 %% F21
 subgraph cluster_on { label="turning on";
   cmd    [label="[user] M-x approve-feedback-mode\nin a file's buffer" @user];
-  glob   [label="a file opens, with\napprove-feedback-global-mode on"];
+  glob   [label="a file opens, with\napprove-feedback-global-mode on\n(never waits, never asks)"];
   f22    [label="F22  the buffer's PR" @goto, href="#F22"];
   one    [label="a PR?" @dec];
   nopr   [label="the command: \"No pull request for spike/x\"\nthe global mode: nothing" @err];

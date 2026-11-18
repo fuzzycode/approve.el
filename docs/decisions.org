@@ -288,6 +288,17 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   requests, the one =f= comes from is picked for the branch, as =P=
   picks one: remembered for the session, every buffer of the branch
   shows it, and a closed or merged one shows without asking.
+- Amended (2026-11-18) :: Found writing the global mode: it turns the
+  mode on once the branch's pull requests are in, without waiting, so
+  opening a file never waits for GitHub; it never asks, and shows an
+  open pull request or the one picked for the branch.  A clone's
+  branch and its place on GitHub are found once a session for each
+  clone and branch (the branch read from the =HEAD= file), so the
+  files after the first cost no git call; =C-u g= forgets them with
+  the branches' pull requests.  The files of git's own directory (a
+  commit message) are passed by.  As the answers are kept for the
+  session, =M-x approve-feedback-mode= asks GitHub again when none of
+  the branch's pull requests is open: one may have been opened since.
 
 * UI
 ** D04 Buffers are magit-section trees built from section hooks
