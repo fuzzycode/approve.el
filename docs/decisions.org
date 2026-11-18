@@ -845,7 +845,42 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   fold must open it, or it lands nowhere.  Separate keys for every
   thread (=zR= =zM=) and every fold of code (=zr= =zm=) let the user
   fold the code and keep the feedback open, or the other way.
-* Data and network
+
+** D52 A picker of the pull request's threads
+- Status :: accepted (2026-11-18, by the author, who asked for it; he
+  chose every thread, plain completion, the whole pull request, and
+  the line in the clone from a clone's buffer)
+- Decision ::
+  - =approve-jump-thread= reads one of the pull request's threads with
+    =completing-read= and goes to it: =j j= in the PR buffer (the jump
+    menu), =C-c ' j= in a file of a clone (the feedback mode's map and
+    dispatch), =M-x= anywhere that shares a PR buffer's store.
+  - Every thread is offered, grouped by file (=group-function=): the
+    file at point first, then the others in the diff's order.  In a
+    file, the threads still open come by line, then the resolved and
+    outdated ones, dimmed.  A candidate is the path, the lines as
+    GitHub names them (=55=, =13–14=, =-32= on the base, =-13–+14=,
+    =file=; an outdated thread's original lines) and the first
+    comment's author and words; typing a path narrows to its file.
+    After it, an annotation: how many comments, how many new since
+    your last review ([[*D44 What is new since your last review: other people's comments, after it][D44]]), pending, asks for changes ([[*D34 A thread mark is red only while it asks for changes][D34]]), resolved,
+    outdated.  Its category is =approve-thread=, for marginalia or
+    embark; Approve depends on neither, nor on consult ([[*D25 Dependencies][D25]]).
+  - In the PR buffer, and the file view, the thread is shown in the diff.
+    In a file of a clone it opens at its line in the clone, in this file
+    or another of the pull request's, its folds opened and the thread
+    unfolded, as =]t= goes there ([[*D51 Threads fold inside the buffer's own folds][D51]]); a file the clone hasn't shows
+    it in the PR buffer, saying so.  A buffer says how in
+    =approve-goto-thread-function=, which the feedback mode sets: the
+    core never requires the clone's modules ([[*D36 No clone needed; a local clone adds to it][D36]]).
+  - The mark is set where point was, and in evil the command is a jump:
+    =C-o= comes back.
+- Why :: =]t= visits threads one at a time; a pull request with many
+  needs a way to see them all and go straight to one, as an outline
+  does.  Completion is what Emacs users already filter with, and
+  groups and annotations show the shape of the review in any
+  completion UI, vertico's or the default.  A thread opens where the
+  user works: in the clone, the code to change is right there.* Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
 - Decision :: All network calls go through =approve-api.el=, which wraps

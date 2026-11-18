@@ -629,10 +629,30 @@ what they will do ("Mark ready for review", "Reopen pull request",
   t Next unresolved thread         T Previous unresolved thread
   n Next new comment (3 since your review)   N Previous new comment
   /  File…  (completing-read over changed files)
+  j  Thread…  (completing-read over every thread of the PR)
 #+end_example
 
 =n= and =N= are dimmed when nothing is new since your last review, or you
 haven't reviewed the pull request yet.
+
+=j j= picks any thread of the pull request with completion
+([[file:decisions.org::*D52 A picker of the pull request's threads][D52]]), grouped by file: the file at point first, then the diff's
+order.  In a file, the open threads by line, then the resolved and
+outdated ones, dimmed.  Each shows its lines and first words, then how
+many comments, how many are new, and its state.  Typing a path narrows
+to its file.  As vertico shows it:
+#+begin_example
+ Thread:
+ internal/parser/parser.go
+   15       @bob: Why a map here? A slice keeps the order.               3 comments · 1 new
+   131      @carol: Cap the table: it grows with every request.          asks for changes
+   -52      @alice: Who builds the request now?                          resolved
+   61       @bob: Why quiet? Nothing sets it.                            outdated
+ internal/store/migrations.go
+   file     @dave: Please add a down migration.                          pending
+#+end_example
+The thread opens in the diff; =C-c ' j= in a file of your clone opens it
+there, at its line ([[*A file's buffer in your clone (feedback mode)][feedback mode]]).
 
 ** Review range (=V=)
 #+begin_example
@@ -853,7 +873,9 @@ lines with those lines (=┊ removed:=):
   =C-c ' n= / =C-c ' p= (evil =]t= / =[t=) go to the next or previous
   unresolved thread and unfold it, opening the folds that hide it; past
   the last one of the file, the next of the PR's files opens in the
-  clone, and past the last file, the first again.
+  clone, and past the last file, the first again.  =C-c ' j= picks any
+  thread of the pull request with completion and opens it at its line in
+  the clone ([[file:decisions.org::*D52 A picker of the pull request's threads][D52]]; the picker is [[*Jump (=j=)][the PR buffer's =j j=]]).
 - The buffer's own folds (hideshow's, outline's) hide the threads of
   the lines they hide.  The line that shows a fold counts them in its
   bubble; its tooltip says where they are, and mouse-1 or =C-c ' TAB= opens
@@ -912,8 +934,9 @@ Every command of the map, dimmed where its preflight says it can't run
   T   Fold or unfold all      s Suggest a change         P   Pick another pull request
   n   Next unresolved         C On the pull request       g   Refresh
   p   Previous unresolved                                o   Open in browser
-  r   Reply                                              S   Submit review…
-  R   Resolve                                            X   Discard pending review
+  j   Jump to a thread…                                  S   Submit review…
+  r   Reply                                              X   Discard pending review
+  R   Resolve
   e   Edit
   k   Delete
   +   React
@@ -1172,6 +1195,7 @@ item open the dispatch.  The map's keys are Approve's letters:
 | on a fold's, it opens the fold)            |               |                            |
 | Fold / unfold every thread                 | =T=           | any                        |
 | Next / previous unresolved thread          | =n= =p=       | any (on to the PR's files) |
+| Jump to any thread of the PR (completion)  | =j=           | any (opens in the clone)   |
 | Comment, suggest                           | =c= =s=       | line, region               |
 | Reply, resolve, edit, delete, react        | =r= =R= =e=   | the line's threads         |
 |                                            | =k= =+=       |                            |

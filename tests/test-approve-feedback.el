@@ -897,7 +897,8 @@ The buffer the input was for is current after."
                  (lambda (state mode key def)
                    (push (list state mode (key-description key) def) bound)))
                 ((symbol-function 'evil-define-key*) #'ignore)
-                ((symbol-function 'evil-set-initial-state) #'ignore))
+                ((symbol-function 'evil-set-initial-state) #'ignore)
+                ((symbol-function 'evil-add-command-properties) #'ignore))
         (require 'approve-evil)
         (approve-evil-setup-feedback))
       (expect (reverse bound)
@@ -1319,7 +1320,8 @@ The buffer the input was for is current after."
 
   (it "is gF in evil's normal state"
     (cl-letf (((symbol-function 'evil-define-key*) #'ignore)
-              ((symbol-function 'evil-set-initial-state) #'ignore))
+              ((symbol-function 'evil-set-initial-state) #'ignore)
+              ((symbol-function 'evil-add-command-properties) #'ignore))
       (require 'approve-evil))
     (expect (assoc "gF" approve-evil-pr-bindings)
             :to-equal '("gF" . approve-feedback-visit-file))
@@ -1387,6 +1389,52 @@ The buffer the input was for is current after."
           (approve-test-wait-for (lambda () (null approve-feedback--destination)))
           (expect (line-number-at-pos) :to-equal 7)
           (expect (test-feedback--threads-shown 7) :to-match "┊ removed:"))))))
+
+(describe "Picking a thread in the feedback mode"
+  (it "goes to the thread's line in the clone, in this file or another"
+    (test-feedback--with-one
+      (let ((migrations (test-feedback--add-file "internal/store/migrations.go")))
+        (test-feedback--start)
+        (expect approve-goto-thread-function :to-be #'approve-feedback--goto-thread)
+        ;; The file at point comes first.
+        (expect (approve-nav--jump-thread-preflight) :to-equal test-feedback--path)
+        (expect (plist-get (cdar (approve-nav--thread-candidates test-feedback--path)) :path)
+                :to-equal test-feedback--path)
+        ;; A thread of this file, in a fold: the fold opens.
+        (let ((id (alist-get 'id (caar (overlay-get (approve-feedback--overlay-of-line 131)
+                                                    'approve-feedback-entries))))
+              (fold (test-feedback--fold 125 140)))
+          (test-feedback--goto 5)
+          (approve-jump-thread id)
+          (expect (line-number-at-pos) :to-equal 131)
+          (expect (overlay-buffer fold) :to-be nil)
+          (expect (test-feedback--threads-shown 131) :to-be-truthy)
+          (expect (line-number-at-pos (mark t)) :to-equal 5))
+        ;; Another file's: it opens in the clone.
+        (approve-jump-thread (alist-get 'id (car (approve-pr-threads-for-file
+                                                  "internal/store/migrations.go"))))
+        (expect (buffer-file-name (window-buffer (selected-window))) :to-equal migrations)
+        (with-current-buffer (window-buffer (selected-window))
+          (expect approve-feedback-mode :to-be t)
+          (approve-test-wait-for (lambda () (null approve-feedback--destination)))
+          (expect (test-feedback--threads-shown 0) :to-match "On this file")))))
+
+  (it "shows the thread in the PR buffer when the clone hasn't its file"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (spy-on 'message)
+      (let* ((thread (seq-find (lambda (thread)
+                                 (not (file-exists-p (expand-file-name (alist-get 'path thread)
+                                                                       test-feedback--root))))
+                               (approve-pr-threads)))
+             (pr approve-model-store-buffer))
+        (approve-jump-thread (alist-get 'id thread))
+        (expect (window-buffer (selected-window)) :to-be pr)
+        (with-current-buffer pr
+          (expect (oref (magit-current-section) value) :to-equal (alist-get 'id thread)))
+        (expect 'message :to-have-been-called-with
+                "Approve: %s isn't in the clone; the thread is in the pull request"
+                (alist-get 'path thread))))))
 
 (describe "approve-feedback-global-mode"
   (it "turns the mode on in the files of a branch with an open pull request"

@@ -155,6 +155,132 @@
     (expect (keymap-lookup approve-pr-mode-map "j") :to-be 'approve-jump)
     (expect (get 'approve-jump 'transient--prefix) :to-be-truthy)))
 
+(defun test-nav--threads ()
+  "Return the medium PR's threads: alists of id, path, line and state."
+  (approve-pr-list-fields 'reviewThreads '(id path line isResolved isOutdated subjectType)))
+
+(describe "Picking a thread"
+  (it "names a thread's lines as GitHub does"
+    (cl-flet ((lines (&rest fields) (approve-nav--thread-lines fields)))
+      (expect (lines '(line . 55) '(diffSide . "RIGHT")) :to-equal "55")
+      (expect (lines '(line . 14) '(startLine . 13) '(diffSide . "RIGHT")) :to-equal "13–14")
+      (expect (lines '(line . 14) '(startLine . 14) '(diffSide . "RIGHT")) :to-equal "14")
+      (expect (lines '(line . 32) '(diffSide . "LEFT")) :to-equal "-32")
+      (expect (lines '(line . 14) '(startLine . 13) '(diffSide . "RIGHT")
+                     '(startDiffSide . "LEFT"))
+              :to-equal "-13–+14")
+      (expect (lines '(originalLine . 61) '(diffSide . "RIGHT")) :to-equal "61")
+      (expect (lines '(line . 1) '(subjectType . "FILE")) :to-be nil)))
+
+  (it "offers every thread, by file: the one at point first, then the diff's order"
+    (test-nav--with-medium
+      (let* ((threads (test-nav--threads))
+             (paths (mapcar (lambda (file) (alist-get 'path file)) (approve-pr-files)))
+             (with-threads (seq-filter (lambda (path)
+                                         (seq-find (lambda (thread)
+                                                     (equal (alist-get 'path thread) path))
+                                                   threads))
+                                       paths))
+             (first (car (last with-threads)))
+             (candidates (approve-nav--thread-candidates first))
+             (order (delete-dups (mapcar (lambda (each) (plist-get (cdr each) :path))
+                                         candidates))))
+        (expect (length candidates) :to-equal (length threads))
+        (expect order :to-equal (cons first (remove first with-threads)))
+        (dolist (path order)
+          (let ((states (mapcar (lambda (each)
+                                  (let ((thread (seq-find (lambda (thread)
+                                                            (equal (alist-get 'id thread)
+                                                                   (plist-get (cdr each) :id)))
+                                                          threads)))
+                                    (if (or (alist-get 'isResolved thread)
+                                            (alist-get 'isOutdated thread))
+                                        1 0)))
+                                (seq-filter (lambda (each)
+                                              (equal (plist-get (cdr each) :path) path))
+                                            candidates))))
+            ;; The open ones first in each file.
+            (expect states :to-equal (sort (copy-sequence states) #'<))))
+        ;; A resolved thread is dimmed, and says so.
+        (let* ((resolved (seq-find (lambda (thread) (alist-get 'isResolved thread)) threads))
+               (candidate (seq-find (lambda (each)
+                                      (equal (plist-get (cdr each) :id)
+                                             (alist-get 'id resolved)))
+                                    candidates)))
+          (expect (car candidate) :to-match (concat "\\`" (regexp-quote
+                                                           (alist-get 'path resolved))
+                                                    ":"))
+          (expect (member 'approve-dim (ensure-list (get-text-property
+                                                     0 'face (car candidate))))
+                  :to-be-truthy)
+          (expect (plist-get (cdr candidate) :notes) :to-match "resolved")))))
+
+  (it "groups the threads by file, shows their notes and returns the one picked"
+    (test-nav--with-medium
+      (let* ((candidates (approve-nav--thread-candidates nil))
+             (picked (nth 2 candidates))
+             (seen nil))
+        (spy-on 'completing-read
+                :and-call-fake
+                (lambda (prompt collection &rest _)
+                  (let* ((metadata (cdr (funcall collection "" nil 'metadata)))
+                         (group (alist-get 'group-function metadata))
+                         (label (car picked))
+                         (path (plist-get (cdr picked) :path)))
+                    (setq seen
+                          (list prompt (alist-get 'category metadata)
+                                (funcall group label nil)
+                                (equal (concat path ":" (funcall group label t)) label)
+                                (funcall (alist-get 'annotation-function metadata) label)
+                                (alist-get 'display-sort-function metadata)
+                                (length (all-completions "" collection))))
+                    (substring-no-properties label))))
+        (expect (approve-nav-read-thread "Thread: ") :to-equal (plist-get (cdr picked) :id))
+        (expect (nth 0 seen) :to-equal "Thread: ")
+        (expect (nth 1 seen) :to-be 'approve-thread)
+        (expect (nth 2 seen) :to-equal (plist-get (cdr picked) :path))
+        (expect (nth 3 seen) :to-be t)
+        (expect (nth 4 seen) :to-equal (and (plist-get (cdr picked) :notes)
+                                            (concat "  " (plist-get (cdr picked) :notes))))
+        (expect (nth 5 seen) :to-be #'identity)
+        (expect (nth 6 seen) :to-equal (length candidates)))))
+
+  (it "goes to the thread picked, in the diff, the mark where point was"
+    (test-nav--with-medium
+      (let ((id (alist-get 'id (car (last (test-nav--threads))))))
+        (approve-jump-description)
+        (let ((from (point)))
+          (approve-jump-thread id)
+          (expect (test-nav--section-at-point) :to-equal (cons 'approve-thread-section id))
+          (expect (invisible-p (point)) :to-be nil)
+          (expect (mark t) :to-equal from)))))
+
+  (it "goes to the PR buffer from a buffer that shares its store"
+    (test-nav--with-medium
+      (let ((pr (current-buffer))
+            (id (alist-get 'id (car (test-nav--threads)))))
+        (with-temp-buffer
+          (setq approve-model-store-buffer pr)
+          (approve-jump-thread id))
+        (expect (window-buffer (selected-window)) :to-be pr)
+        (expect (test-nav--section-at-point) :to-equal (cons 'approve-thread-section id)))))
+
+  (it "says why where it can't pick"
+    (with-temp-buffer
+      (expect (approve-nav--jump-thread-preflight) :to-throw 'user-error
+              '("Not in a buffer of a pull request")))
+    (test-nav--with-medium
+      (approve-nav-goto-file "pkg/api/types.go")
+      (expect (approve-nav--jump-thread-preflight) :to-equal "pkg/api/types.go")
+      (approve-model-patch `((__typename . "PullRequest") (id . ,(approve-pr-field 'id))
+                             (reviewThreads (nodes))))
+      (expect (approve-nav--jump-thread-preflight) :to-throw 'user-error
+              '("No threads in this pull request"))))
+
+  (it "is j in the jump menu"
+    (expect (plist-get (cdr (transient-get-suffix 'approve-jump "j")) :command)
+            :to-be 'approve-jump-thread)))
+
 (describe "approve-fold-others"
   (it "folds every section but the one at point, and in the diff every file but its own"
     (test-nav--with-medium
@@ -299,20 +425,25 @@
       (expect (current-kill 0) :to-equal "bob-example"))))
 
 (describe "approve-evil"
-  (it "starts input buffers in insert state"
-    (let ((initial nil))
+  (it "starts input buffers in insert state, and makes picking a thread a jump"
+    (let ((initial nil)
+          (properties nil))
       (cl-letf (((symbol-function 'evil-define-key*) #'ignore)
                 ((symbol-function 'evil-set-initial-state)
-                 (lambda (mode state) (push (cons mode state) initial))))
+                 (lambda (mode state) (push (cons mode state) initial)))
+                ((symbol-function 'evil-add-command-properties)
+                 (lambda (command &rest props) (push (cons command props) properties))))
         (load "approve-evil" nil t))
-      (expect initial :to-equal '((approve-input-mode . insert)))))
+      (expect initial :to-equal '((approve-input-mode . insert)))
+      (expect properties :to-equal '((approve-jump-thread :jump t)))))
 
   (it "binds Approve's keys in normal state without shadowing motions"
     (let ((bound nil))
       (cl-letf (((symbol-function 'evil-define-key*)
                  (lambda (state map key def)
                    (push (list state map (key-description key) def) bound)))
-                ((symbol-function 'evil-set-initial-state) #'ignore))
+                ((symbol-function 'evil-set-initial-state) #'ignore)
+                ((symbol-function 'evil-add-command-properties) #'ignore))
         (load "approve-evil" nil t))
       (expect (seq-find (lambda (b) (and (eq (nth 1 b) approve-pr-mode-map)
                                          (equal (nth 2 b) "g r")))

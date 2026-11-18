@@ -175,7 +175,8 @@ No network.  This is mostly magit-section plus jumps.
    │
    ├─ move around ───────────▶ n/p (gj/gk), TAB, ^ (parent), M-n/M-p (sibling)
    ├─ go somewhere ──────────▶ j … transient: description, conversation, checks,
-   │                            commits, files, pending review, a file by name
+   │                            commits, files, pending review, a file by name,
+   │                            j j a thread of the PR, picked by completion (D52)
    ├─ find the next work ────▶ ]u next unviewed file · ]t next unresolved thread
    │                            j n next comment new since my last review
    ├─ learn about a thing ───▶ eldoc in the echo area (user, label, sha, check)
@@ -837,6 +838,9 @@ in =approve-clone.el=.
    ├─ [user] C-c ' n / p (evil ]t [t) ──▶ the next / previous unresolved thread,
    │      unfolded, the folds that hide it opened; past the last in this file, the next
    │      of the PR's files, visited in the clone; past the last file, the first again
+   │
+   ├─ [user] C-c ' j ──▶ any thread of the PR, picked by completion (D52), at its line in
+   │      the clone, this file or another; a file the clone hasn't: the PR buffer
    │
    └─ [user] r R e k + on the line's threads, c s on the line or region
           │

@@ -64,6 +64,7 @@
 (declare-function evil-define-key* "evil-core" (state keymap key def &rest bindings))
 (declare-function evil-define-minor-mode-key "evil-core" (state mode key def &rest bindings))
 (declare-function evil-set-initial-state "evil-core" (mode state))
+(declare-function evil-add-command-properties "evil-common" (command &rest properties))
 
 (defconst approve-evil-pr-bindings
   '(("j" . evil-next-visual-line)
@@ -237,7 +238,9 @@ state."
   (dolist (binding '(("c" . approve-comment) ("s" . approve-suggest)
                      ("?" . approve-file-dispatch)))
     (evil-define-key* 'visual approve-file-mode-map (kbd (car binding)) (cdr binding)))
-  (evil-set-initial-state 'approve-input-mode 'insert))
+  (evil-set-initial-state 'approve-input-mode 'insert)
+  ;; A thread picked anywhere is a jump: C-o comes back (decision D52).
+  (evil-add-command-properties #'approve-jump-thread :jump t))
 
 (approve-evil-setup)
 

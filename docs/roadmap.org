@@ -448,6 +448,15 @@ Mockups: a file's buffer with its threads (written with F21).
       are its innermost fold (=za= =zo= =zc=, =zO= =zC= both), =zR= =zM=
       fold every thread alone, =zr= =zm= are left to the code, and only
       the mode's keys are passed on.
+- [X] A picker of the pull request's threads, at the author's request
+      (2026-11-18, [[file:decisions.org::*D52 A picker of the pull request's threads][D52]]): =approve-jump-thread=, =j j= in the PR buffer
+      and =C-c ' j= in a file of a clone.  Every thread, by file (the
+      one at point first, then the diff's order), open ones before the
+      resolved and outdated, each with its lines, first words and
+      notes (comments, new, pending, asks for changes, resolved,
+      outdated); category =approve-thread=.  It opens in the diff, or
+      at its line in the clone, through =approve-goto-thread-function=;
+      in evil it is a jump.
 - Done when :: on a branch with a PR, with commits not pushed and edits
   not saved, the user reads the threads in the buffers they edit,
   replies, resolves and comments from there, and the browser shows the

@@ -93,7 +93,7 @@ done -> fin [@yes];
 rankdir=LR;
 u      [label="[user] wants to…" @user];
 mv     [label="n/p (gj/gk) · TAB · ^ parent · M-n/M-p sibling"];
-jump   [label="j … jump menu: description, conversation,\nchecks, commits, files, pending review, a file"];
+jump   [label="j … jump menu: description, conversation,\nchecks, commits, files, pending review, a file,\na thread of the PR, picked by completion (j j)"];
 work   [label="]u next unviewed file · ]t next unresolved thread\nj n next comment new since my last review"];
 learn  [label="eldoc in the echo area\nuser · label · sha · check · date"];
 follow [label="RET: file or diff line → the whole file (F15)\ncommit → Magit, from a clone that has it (D37), else GitHub\nPR link → open in Approve · check → details URL"];
@@ -490,7 +490,9 @@ life   [label="while the buffer lives:\l\
       the fold counts them in its bubble; a fold's first line's threads follow it\l\
   [user] C-c ' n / p (evil ]t / [t) → the next / previous unresolved\l\
       thread, unfolded, its folds opened; past the file's last, the PR's next file,\l\
-      in the clone; past the last file, the first again\l" @note];
+      in the clone; past the last file, the first again\l\
+  [user] C-c ' j → any thread of the PR, picked by completion, at its line\l\
+      in the clone (another file opens there; not in the clone: the PR buffer)\l" @note];
 show -> life [style=dashed];
 
 subgraph cluster_act { label="actions (Phase 7's later tasks)";

@@ -102,7 +102,7 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | line's notice, checks on selection and focus, polling, also for buffers that    |       |
 |                            | share a PR buffer's store, and a hook for them                                  |       |
 | =approve-nav.el=           | Read-only commands: visit (=RET=), browse (=o=), copy (=y=), jumps, next        |     1 |
-|                            | unviewed file and unresolved thread                                             |       |
+|                            | unviewed file and unresolved thread, the thread picker (=j j=, D52)             |       |
 | =approve-eldoc.el=         | Eldoc: one-line =:echo= from the store, full details for the eldoc buffer,      |     1 |
 |                            | lazy detail queries, session cache, =approve-show-details= (=K=)                |       |
 | =approve-input.el=         | Input buffers: =gfm-mode= derived, commit/abort, drafts, completion, preview    |     2 |

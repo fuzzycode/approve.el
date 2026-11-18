@@ -80,7 +80,8 @@
 ;; - `approve-feedback-command-map' holds the mode's commands, under
 ;;   `approve-feedback-prefix-key', C-c ' by default (D50).  TAB folds
 ;;   the threads of a line, T all of them, n and p go to the next and
-;;   previous unresolved thread; mouse-1 on a bubble folds its line.
+;;   previous unresolved thread, j to any thread of the pull request,
+;;   picked with completion (D52); mouse-1 on a bubble folds its line.
 ;;   In evil's normal state ]t and [t move too, and the z keys fold
 ;;   threads as the innermost fold of their line, the buffer's other
 ;;   folds where there are none or they are folded already; zR and zM
@@ -237,6 +238,7 @@ for example:
   "T" #'approve-feedback-toggle-all-threads
   "n" #'approve-feedback-next-thread
   "p" #'approve-feedback-previous-thread
+  "j" #'approve-jump-thread
   "c" #'approve-comment
   "s" #'approve-suggest
   "C" #'approve-comment-on-pr
@@ -402,6 +404,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
         approve-model-store-buffer (approve-feedback--store-buffer pr)
         approve-context-function #'approve-feedback--context-at
         approve-context-threads-function #'approve-feedback--threads-at
+        approve-goto-thread-function #'approve-feedback--goto-thread
         approve-diff-range-positions-function #'approve-feedback--range-positions)
   (approve-lines-unwatch)
   (approve-feedback--draw nil)
@@ -430,6 +433,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
                       approve-feedback--head-ref approve-feedback--destination
                       approve-model-store-buffer
                       approve-context-function approve-context-threads-function
+                      approve-goto-thread-function
                       approve-diff-range-positions-function))
     (kill-local-variable variable)))
 
@@ -1701,6 +1705,25 @@ this one again."
     (unless (string-empty-p note)
       (message "Approve: %s" note))))
 
+(defun approve-feedback--goto-thread (thread-id)
+  "Go to the thread THREAD-ID in the clone, as `approve-jump-thread' picked it.
+It is the buffers' `approve-goto-thread-function' (decision D52).
+The thread's file opens in the clone, unless it is this one, and
+point goes to its line, the folds that hide it opened and the thread
+unfolded.  A file the clone hasn't shows the thread in the PR
+buffer, saying so."
+  (approve-feedback--check)
+  (let* ((path (approve-model-get "PullRequestReviewThread" thread-id 'path))
+         (file (expand-file-name path (plist-get approve-feedback--branch :clone)))
+         (target (list :thread thread-id)))
+    (cond
+     ((equal path approve-feedback--path) (approve-feedback--go target))
+     ((file-exists-p file)
+      (approve-feedback--visit file approve-feedback--pull-request target))
+     (t
+      (approve-nav-show-thread thread-id)
+      (message "Approve: %s isn't in the clone; the thread is in the pull request" path)))))
+
 (add-hook 'approve-clone-picked-functions #'approve-feedback--picked)
 
 ;;; What is at point
@@ -2280,6 +2303,8 @@ same key."
      :inapt-if (lambda () (approve-action-why-not 'approve-feedback-toggle-all-threads)))
     ("n" "Next unresolved" approve-feedback-next-thread)
     ("p" "Previous unresolved" approve-feedback-previous-thread)
+    ("j" "Jump to a thread…" approve-jump-thread
+     :inapt-if (lambda () (approve-action-why-not 'approve-jump-thread)))
     ("r" "Reply" approve-reply
      :inapt-if (lambda () (approve-action-why-not 'approve-reply)))
     ("R" "Resolve / unresolve" approve-resolve

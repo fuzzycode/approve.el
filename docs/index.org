@@ -202,6 +202,11 @@ task only needs the files it touches.
   does.  A line's threads are its innermost fold: =zc= folds them, then
   the code, =zo= the other way, =zO= =zC= both; =zR= =zM= fold threads
   alone, and =zr= =zm= are left to the code.
+- Asked for by the author the same day ([[file:decisions.org::*D52 A picker of the pull request's threads][D52]]): =approve-jump-thread=, a
+  picker of every thread of the pull request with completion, grouped by
+  file and annotated with its comments and state.  =j j= in the PR
+  buffer shows the thread in the diff; =C-c ' j= in a file of a clone
+  opens it at its line in the clone.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

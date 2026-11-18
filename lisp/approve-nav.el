@@ -46,7 +46,9 @@
 ;; and the jumps the `approve-jump' transient (j) offers, defined in
 ;; approve-menus.el, among them `approve-next-new-comment' and
 ;; `approve-previous-new-comment' (j n, j N), to the comments new since
-;; the viewer's last review (decision D44).  Moving into a file's diff,
+;; the viewer's last review (decision D44), and `approve-jump-thread'
+;; (j j), which picks any thread of the pull request with completion,
+;; grouped by file (decision D52).  Moving into a file's diff,
 ;; a thread or a comment expands what hides it.  This file binds its keys in `approve-pr-mode-map',
 ;; and RET, o and y in `approve-file-mode-map' too.
 ;; The dashboard binds RET, o, y, TAB and O to the same commands: on a
@@ -75,6 +77,8 @@
 (require 'approve-sections)
 (require 'approve-conversation)
 (require 'approve-diff)
+(require 'approve-render)
+(require 'approve-thread)
 (require 'approve-input)
 (require 'approve-file)
 
@@ -368,6 +372,187 @@ See `approve-next-new-comment'."
                                              (approve-pr-files))
                             nil t))))
   (approve-nav-goto-file path))
+
+;;; Picking a thread
+
+(defvar-local approve-goto-thread-function nil
+  "How the current buffer goes to a thread `approve-jump-thread' picked, or nil.
+A function of the thread's id.  Nil goes to the thread in the PR
+buffer's diff, showing the PR buffer if need be.  The feedback mode
+sets it in a file of a clone, where a thread opens at its line in the
+clone (decision D52).")
+
+(defun approve-nav--thread-lines (thread)
+  "Return the lines of THREAD as GitHub names them, or nil on the whole file.
+Such as \"55\" or \"13–14\"; lines of the base have a minus, \"-32\",
+and a range from a removed line to an added one says each end's side,
+\"-13–+14\".  An outdated thread's lines are those it was written on."
+  (let-alist thread
+    (let* ((outdated (null .line))
+           (line (if outdated .originalLine .line))
+           (start (if outdated .originalStartLine .startLine))
+           (start-side (or .startDiffSide .diffSide)))
+      (cl-flet ((sign (side) (if (equal side "LEFT") "-" "")))
+        (cond ((or (equal .subjectType "FILE") (null line)) nil)
+              ((or (null start) (eql start line)) (format "%s%d" (sign .diffSide) line))
+              ((equal start-side .diffSide)
+               (format "%s%d–%s%d" (sign start-side) start (sign .diffSide) line))
+              (t (format "%s%d–%s%d" (if (equal start-side "LEFT") "-" "+") start
+                         (if (equal .diffSide "LEFT") "-" "+") line)))))))
+
+(defun approve-nav--thread-notes (thread asking since)
+  "Return what the thread picker says after THREAD, or nil.
+That is how many comments it has, how many are new since SINCE, the
+viewer's last review (decision D44), and whether it is pending, asks
+for changes (its id is in ASKING, decision D34), is resolved or
+outdated."
+  (let* ((comments (approve-model-nodes (alist-get 'comments thread)))
+         (new (seq-count (lambda (comment) (approve-pr-new-p comment since)) comments))
+         (notes (delq nil
+                      (list (and (cdr comments)
+                                 (approve-face (format "%d comments" (length comments))
+                                               'approve-dim))
+                            (and (> new 0) (approve-face (format "%d new" new) 'approve-new))
+                            (and (equal (alist-get 'state (car comments)) "PENDING")
+                                 (approve-face "pending" 'approve-pending))
+                            (and (member (alist-get 'id thread) asking)
+                                 (approve-face "asks for changes"
+                                               'approve-thread-mark-changes-requested))
+                            (and (alist-get 'isResolved thread)
+                                 (approve-face "resolved" 'approve-resolved))
+                            (and (alist-get 'isOutdated thread)
+                                 (approve-face "outdated" 'approve-outdated))))))
+    (and notes (string-join notes (approve-face " · " 'approve-dim)))))
+
+(defun approve-nav--rank< (a b)
+  "Return non-nil if the list of numbers A sorts before B, element by element."
+  (cond ((or (null a) (null b)) nil)
+        ((< (car a) (car b)) t)
+        ((> (car a) (car b)) nil)
+        (t (approve-nav--rank< (cdr a) (cdr b)))))
+
+(defun approve-nav--thread-candidates (first)
+  "Return the pull request's threads for the thread picker, in order.
+Each is (LABEL :id ID :path PATH :notes NOTES).  They go by file:
+the file FIRST, when it has threads, then the others in the diff's
+order.  In a file, the threads that are neither resolved nor
+outdated come first, then those, dimmed; each part by line.  LABEL
+is the path, the lines and the first comment's author and words:
+\"src/a.go:13–14  @bob: Why a map?\"; NOTES what follows it
+\(`approve-nav--thread-notes')."
+  (let* ((threads (approve-pr-threads))
+         (asking (mapcar (lambda (thread) (alist-get 'id thread))
+                         (approve-pr-threads-asking-for-changes)))
+         (since (approve-pr-last-review-time))
+         (order (delete-dups (append (and first (list first))
+                                     (mapcar (lambda (file) (alist-get 'path file))
+                                             (approve-pr-files))
+                                     (mapcar (lambda (thread) (alist-get 'path thread))
+                                             threads))))
+         (sorted (sort (copy-sequence threads)
+                       (lambda (a b)
+                         (cl-flet ((rank (thread)
+                                     (let-alist thread
+                                       (list (seq-position order .path)
+                                             (if (or .isResolved .isOutdated) 1 0)
+                                             (or .line .originalLine 0)))))
+                           (approve-nav--rank< (rank a) (rank b))))))
+         (lines (mapcar (lambda (thread) (or (approve-nav--thread-lines thread) "file"))
+                        sorted))
+         (width (apply #'max (mapcar #'string-width lines)))
+         (seen (make-hash-table :test #'equal)))
+    (cl-mapcar
+     (lambda (thread lines)
+       (let-alist thread
+         (let* ((label (concat .path ":" (approve-face (approve-render-pad lines width)
+                                                       'approve-number)
+                               "  " (approve-thread-summary thread)))
+                (count (puthash label (1+ (gethash label seen 0)) seen))
+                (label (if (> count 1) (format "%s (%d)" label count) label))
+                (label (if (or .isResolved .isOutdated)
+                           (approve-face-add label 'approve-dim)
+                         label)))
+           (list label :id .id :path .path
+                 :notes (approve-nav--thread-notes thread asking since)))))
+     sorted lines)))
+
+(defun approve-nav--jump-thread-preflight ()
+  "Return the path of the file at point, or nil, for `approve-jump-thread'.
+Signal a `user-error' outside a buffer of a pull request, before it
+has loaded, or when it has no threads."
+  (unless (or (derived-mode-p 'approve-pr-mode) approve-model-store-buffer)
+    (user-error "Not in a buffer of a pull request"))
+  (unless (approve-model-root-ref)
+    (user-error "Wait until the pull request has loaded"))
+  (unless (approve-pr-list-fields 'reviewThreads '(id))
+    (user-error "No threads in this pull request"))
+  (or (ignore-errors (plist-get (approve-context-at-point) :path))
+      (when-let* (((derived-mode-p 'approve-pr-mode))
+                  (section (approve-nav--current-file)))
+        (oref section value))))
+
+(defun approve-nav-read-thread (prompt &optional first)
+  "Read one of the pull request's threads with PROMPT; return its id.
+The threads are grouped by file, FIRST's first, as
+`approve-nav--thread-candidates' orders them; under a file's group
+each shows its lines and first words, followed by its notes.  Its
+completion category is `approve-thread'."
+  (let* ((candidates (approve-nav--thread-candidates first))
+         (entry (lambda (candidate) (cdr (assoc candidate candidates))))
+         (collection
+          (lambda (string predicate action)
+            (if (eq action 'metadata)
+                `(metadata
+                  (category . approve-thread)
+                  (group-function
+                   . ,(lambda (candidate transform)
+                        (let ((path (plist-get (funcall entry candidate) :path)))
+                          (cond ((not transform) path)
+                                ((and path (string-prefix-p (concat path ":") candidate))
+                                 (substring candidate (1+ (length path))))
+                                (t candidate)))))
+                  (annotation-function
+                   . ,(lambda (candidate)
+                        (when-let* ((notes (plist-get (funcall entry candidate) :notes)))
+                          (concat "  " notes))))
+                  (display-sort-function . identity)
+                  (cycle-sort-function . identity))
+              (complete-with-action action candidates string predicate))))
+         (choice (approve-input-with-submit-key
+                   (completing-read prompt collection nil t))))
+    (or (plist-get (funcall entry choice) :id)
+        (user-error "No such thread"))))
+
+(defun approve-nav-show-thread (thread-id)
+  "Go to the thread THREAD-ID in the PR buffer's diff.
+Outside the PR buffer, it is shown where a window shows it, else in
+the selected window."
+  (unless (derived-mode-p 'approve-pr-mode)
+    (pop-to-buffer (approve-model-owner-buffer)
+                   '(display-buffer-reuse-window display-buffer-same-window)))
+  (approve-nav-goto-thread thread-id))
+
+(defun approve-jump-thread (thread-id)
+  "Go to a thread of the pull request, THREAD-ID, picked with completion.
+Every thread is offered, grouped by file: the file at point first,
+then the others in the diff's order.  In each, the threads still
+open come by line, then the resolved and outdated ones, dimmed.
+Each shows its lines and its first comment's author and words,
+then how many comments it has, how many are new since your last
+review, and whether it is pending, asks for changes, is resolved or
+outdated.  Typing a path narrows to its file.
+
+In the PR buffer and the file view, the thread is shown in the diff;
+in a file of a clone (`approve-feedback-mode'), at its line in the
+clone, its folds opened and the thread unfolded
+\(`approve-goto-thread-function', decision D52).  The mark is set
+where point was."
+  (interactive
+   (list (approve-nav-read-thread "Thread: " (approve-nav--jump-thread-preflight))))
+  (push-mark)
+  (funcall (or approve-goto-thread-function #'approve-nav-show-thread) thread-id))
+
+(put 'approve-jump-thread 'approve-preflight #'approve-nav--jump-thread-preflight)
 
 ;;; Visiting, opening, copying
 

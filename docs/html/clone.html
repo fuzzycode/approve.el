@@ -269,8 +269,9 @@ to compare"; a merged or closed PR, taken by the command after asking, says so o
 <p> <span class="k">T</span>   Fold or unfold all      <span class="ina">s Suggest a change</span>         <span class="k">P</span>   Pick another pull request</p>
 <p> <span class="k">n</span>   Next unresolved         <span class="k">C</span> On the pull request      <span class="k">g</span>   Refresh</p>
 <p> <span class="k">p</span>   Previous unresolved                                <span class="k">o</span>   Open in browser</p>
-<p> <span class="k">r</span>   Reply                                              <span class="k">S</span>   Submit review…</p>
-<p> <span class="k">R</span>   Resolve                                            <span class="k">X</span>   Discard pending review</p>
+<p> <span class="k">j</span>   Jump to a thread…                                  <span class="k">S</span>   Submit review…</p>
+<p> <span class="k">r</span>   Reply                                              <span class="k">X</span>   Discard pending review</p>
+<p> <span class="k">R</span>   Resolve</p>
 <p> <span class="k">e</span>   Edit</p>
 <p> <span class="ina">k   Delete</span></p>
 <p> <span class="k">+</span>   React</p>
@@ -293,7 +294,8 @@ too if you like:</p>
 </div>
 <ul>
   <li><code>C-c '</code> then: <code>?</code> dispatch · <code>TAB</code> fold the line's threads · <code>T</code> all ·
-  <code>n</code>/<code>p</code> next/previous unresolved thread</li>
+  <code>n</code>/<code>p</code> next/previous unresolved thread · <code>j</code> any thread of the PR, picked with
+  completion and opened at its line in the clone (D52)</li>
   <li><code>c</code> <code>s</code> comment, suggest · <code>r</code> <code>R</code> <code>e</code> <code>k</code> <code>+</code>
   on the line's threads · <code>C</code> on the pull request</li>
   <li><code>RET</code> the PR buffer at this line (else the line's first thread, else the file) · <code>P</code> pick another PR · <code>g</code> refresh ·

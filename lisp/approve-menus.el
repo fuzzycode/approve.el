@@ -113,7 +113,9 @@
     ("N" "Previous new comment" approve-previous-new-comment
      :inapt-if approve-menus--nothing-new-p)]
    ["Find"
-    ("/" "File…" approve-jump-file)]])
+    ("/" "File…" approve-jump-file)
+    ("j" "Thread…" approve-jump-thread
+     :inapt-if (lambda () (approve-action-why-not 'approve-jump-thread)))]])
 
 (keymap-set approve-pr-mode-map "j" #'approve-jump)
 

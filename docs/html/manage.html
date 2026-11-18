@@ -36,6 +36,7 @@ eldoc.</p>
   <li><a href="#range">Re-review: review range</a></li>
   <li><a href="#file">Whole-file view</a></li>
   <li><a href="#jump">Jump menu</a></li>
+  <li><a href="#threads">Thread picker</a></li>
   <li><a href="#eldoc">Eldoc: echo area</a></li>
   <li><a href="#eldoc-buffer">Eldoc: the eldoc buffer</a></li>
   <li><a href="#eldoc-outdated">Eldoc: an outdated thread</a></li>
@@ -293,8 +294,35 @@ shows the other version.</p>
 <p> <span class="k">t</span> Next unresolved thread         <span class="k">T</span> Previous unresolved thread  <span class="m">(3 left)</span></p>
 <p> <span class="k">n</span> Next new comment <span class="wa">(4 since your review)</span>     <span class="k">N</span> Previous new comment</p>
 <p> <span class="k">/</span> File…</p>
+<p> <span class="k">j</span> Thread…  <span class="m">(every thread of the PR, grouped by file)</span></p>
 </div>
 </div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="threads">
+<h2>Thread picker <span class="ref">j j (evil: J j) · C-c ' j in a clone · D52</span></h2>
+<p>Every thread of the pull request, grouped by file: the file at point first, then the diff's order. In a file, the
+open threads by line, then the resolved and outdated ones, dimmed. Typing a path narrows to its file; as vertico
+shows it:</p>
+<div class="emacs">
+<div class="mini">
+<p><span class="pi">Thread:</span> <span class="cursor"> </span></p>
+<p> <span class="kh">internal/parser/parser.go</span></p>
+<p class="sel">   <span class="b">15</span>       <span class="u">@bob</span>: Why a map here? A slice keeps the order.             <span class="m">3 comments ·</span> <span class="wa">1 new</span></p>
+<p>   <span class="b">131</span>      <span class="u">@carol</span>: Cap the table: it grows with every request.        <span class="er">asks for changes</span></p>
+<p class="d">   -52      @alice: Who builds the request now?                        resolved</p>
+<p class="d">   61       @bob: Why quiet? Nothing sets it.                          outdated</p>
+<p> <span class="kh">internal/store/migrations.go</span></p>
+<p>   <span class="b">file</span>     <span class="u">@dave</span>: Please add a down migration.                        <span class="m">pending</span></p>
+</div>
+</div>
+<ul>
+  <li>In the PR buffer the thread opens in the diff. In a file of your clone (<code>C-c ' j</code>) it opens at its
+  line in the clone, in this file or another, its folds opened and the thread unfolded; a file the clone hasn't
+  shows it in the PR buffer.</li>
+  <li>The mark is set where point was; in evil, <code>C-o</code> comes back.</li>
+</ul>
 </section>
 
 <!-- ================================================================== -->

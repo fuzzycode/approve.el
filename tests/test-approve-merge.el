@@ -135,7 +135,8 @@ The PR can be merged: no conflicts, nothing blocks it."
     (let ((bound nil))
       (cl-letf (((symbol-function 'evil-define-key*)
                  (lambda (state _map key def) (push (list state (key-description key) def) bound)))
-                ((symbol-function 'evil-set-initial-state) #'ignore))
+                ((symbol-function 'evil-set-initial-state) #'ignore)
+                ((symbol-function 'evil-add-command-properties) #'ignore))
         (load "approve-evil" nil t))
       (expect (member '(normal "g m" approve-merge) bound) :to-be-truthy)))
 
