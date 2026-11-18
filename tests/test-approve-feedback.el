@@ -557,6 +557,85 @@ outdated thread's commit's too."
   (goto-char (point-min))
   (forward-line (1- line)))
 
+(defconst test-feedback--fold-keys
+  '(("z a" . approve-feedback-toggle-fold)
+    ("z o" . approve-feedback-open-fold)
+    ("z O" . approve-feedback-open-fold-recursively)
+    ("z c" . approve-feedback-close-fold)
+    ("z C" . approve-feedback-close-fold-recursively)
+    ("z R" . approve-feedback-open-all-folds)
+    ("z M" . approve-feedback-close-all-folds))
+  "The mode's fold keys, as evil's normal state has them.")
+
+(defmacro test-feedback--with-fold-keys (&rest body)
+  "Run BODY with the mode's fold keys, and a folding of the buffer's own.
+That folding is a local map, `map' in BODY, binding the mode's z
+keys, zr and zm to a command that pushes its keys to `passed'."
+  (declare (indent 0) (debug t))
+  `(let ((map (make-sparse-keymap))
+         (old (current-local-map))
+         (passed nil))
+     (dolist (key (append (mapcar #'car test-feedback--fold-keys) '("z r" "z m")))
+       (keymap-set map key (lambda () (interactive) (push key passed))))
+     (dolist (binding test-feedback--fold-keys)
+       (keymap-set approve-feedback-mode-map (car binding) (cdr binding)))
+     (unwind-protect
+         (progn
+           (use-local-map map)
+           ,@body)
+       (use-local-map old)
+       (keymap-unset approve-feedback-mode-map "z" t))))
+
+(defun test-feedback--press (keys)
+  "Run what KEYS run in the current buffer, as the command loop would."
+  (let* ((vector (kbd keys))
+         (command (key-binding vector t)))
+    (cl-letf (((symbol-function 'this-command-keys-vector) (lambda () vector)))
+      (let ((this-command command))
+        (call-interactively command)))))
+
+(defun test-feedback--fold (from to &optional start-of-line)
+  "Fold the lines after FROM to TO, as hideshow folds a block; return the fold.
+The fold is an overlay that makes the text invisible from the end of
+line FROM to the end of line TO, which isearch opens by deleting
+it.  With START-OF-LINE, from the start of the line after FROM."
+  (save-excursion
+    (let* ((start (progn (test-feedback--goto (if start-of-line (1+ from) from))
+                         (if start-of-line (point) (pos-eol))))
+           (end (progn (test-feedback--goto to) (pos-eol)))
+           (overlay (make-overlay start end)))
+      (add-to-invisibility-spec '(test-fold . t))
+      (overlay-put overlay 'invisible 'test-fold)
+      (overlay-put overlay 'isearch-open-invisible #'delete-overlay)
+      overlay)))
+
+(defun test-feedback--bubble-on (line)
+  "Return the bubble in the right margin of LINE, its own or a fold's, or nil."
+  (save-excursion
+    (test-feedback--goto line)
+    (when-let* ((overlay (or (seq-find (lambda (overlay)
+                                         (= (approve-feedback--line-of overlay) line))
+                                       (approve-feedback--overlays))
+                             (approve-feedback--carrier-at (point))))
+                (before (overlay-get overlay 'before-string)))
+      (cadr (get-text-property 0 'display before)))))
+
+(defun test-feedback--after-folds ()
+  "Return the threads shown after folds: ((LINE . TEXT) ...).
+LINE is the line where the fold ends, which the screen line shows."
+  (save-restriction
+    (widen)
+    (mapcar (lambda (overlay)
+              (cons (line-number-at-pos (overlay-start overlay))
+                    (substring-no-properties (or (overlay-get overlay 'before-string)
+                                                 (overlay-get overlay 'after-string)))))
+            (seq-filter (lambda (overlay) (and (overlay-get overlay 'approve-feedback-extra)
+                                               (or (overlay-get overlay 'before-string)
+                                                   (overlay-get overlay 'after-string))
+                                               (not (overlay-get overlay
+                                                                 'approve-feedback-carried))))
+                        (overlays-in (point-min) (point-max))))))
+
 (defun test-feedback--select (first last)
   "Select the buffer's lines FIRST to LAST, as a region over them.
 The mark is active from then on in the buffer, as `transient-mark-mode' says."
@@ -793,47 +872,85 @@ The buffer the input was for is current after."
                           (normal approve-feedback-mode "[ t" approve-feedback-previous-thread)
                           (normal approve-feedback-mode "z a" approve-feedback-toggle-fold)
                           (normal approve-feedback-mode "z o" approve-feedback-open-fold)
-                          (normal approve-feedback-mode "z O" approve-feedback-open-fold)
+                          (normal approve-feedback-mode "z O"
+                                  approve-feedback-open-fold-recursively)
                           (normal approve-feedback-mode "z c" approve-feedback-close-fold)
-                          (normal approve-feedback-mode "z C" approve-feedback-close-fold)
+                          (normal approve-feedback-mode "z C"
+                                  approve-feedback-close-fold-recursively)
                           (normal approve-feedback-mode "z R" approve-feedback-open-all-folds)
-                          (normal approve-feedback-mode "z r" approve-feedback-open-all-folds)
-                          (normal approve-feedback-mode "z M" approve-feedback-close-all-folds)
-                          (normal approve-feedback-mode "z m" approve-feedback-close-all-folds)))))
+                          (normal approve-feedback-mode "z M" approve-feedback-close-all-folds)))))
 
-  (it "fold the line's threads, else do what the key does without the mode"
+  (it "fold the line's threads as its innermost fold, else pass the key on"
     (test-feedback--with-one
       (test-feedback--start)
-      (let ((map (make-sparse-keymap))
-            (old (current-local-map))
-            (passed nil)
-            (keys [?z ?a]))
-        ;; The buffer's own folding, as hideshow's z keys would be.
-        (keymap-set map "z a" (lambda () (interactive) (push 'toggle passed)))
-        (keymap-set map "z R" (lambda () (interactive) (push 'open-all passed)))
-        (keymap-set approve-feedback-mode-map "z a" #'approve-feedback-toggle-fold)
-        (keymap-set approve-feedback-mode-map "z R" #'approve-feedback-open-all-folds)
-        (spy-on 'this-command-keys-vector :and-call-fake (lambda () keys))
-        (unwind-protect
-            (progn
-              (use-local-map map)
-              (test-feedback--goto 15)
-              (approve-feedback-toggle-fold)
-              (expect (test-feedback--threads-shown 15) :to-be-truthy)
-              (expect passed :to-equal nil)
-              (test-feedback--goto 5)
-              (approve-feedback-toggle-fold)
-              (expect passed :to-equal '(toggle))
-              ;; zR: every thread, and the buffer's folds too.
-              (setq keys [?z ?R])
-              (approve-feedback-open-all-folds)
-              (expect (length (seq-filter #'test-feedback--threads-shown
-                                          '(0 15 54 61 131 134)))
-                      :to-equal 6)
-              (expect passed :to-equal '(open-all toggle)))
-          (use-local-map old)
-          (keymap-unset approve-feedback-mode-map "z a" t)
-          (keymap-unset approve-feedback-mode-map "z R" t)))))
+      (test-feedback--with-fold-keys
+        ;; za: the line's threads, and only them.
+        (test-feedback--goto 15)
+        (test-feedback--press "z a")
+        (expect (test-feedback--threads-shown 15) :to-be-truthy)
+        (expect passed :to-equal nil)
+        ;; zc folds them, then the code: they are folded already.
+        (test-feedback--press "z c")
+        (expect (test-feedback--threads-shown 15) :to-be nil)
+        (expect passed :to-equal nil)
+        (test-feedback--press "z c")
+        (expect passed :to-equal '("z c"))
+        ;; zo unfolds them, then the code.
+        (test-feedback--press "z o")
+        (expect (test-feedback--threads-shown 15) :to-be-truthy)
+        (expect passed :to-equal '("z c"))
+        (test-feedback--press "z o")
+        (expect passed :to-equal '("z o" "z c"))
+        ;; zC and zO do both at once.
+        (test-feedback--press "z C")
+        (expect (test-feedback--threads-shown 15) :to-be nil)
+        (expect (car passed) :to-equal "z C")
+        (test-feedback--press "z O")
+        (expect (test-feedback--threads-shown 15) :to-be-truthy)
+        (expect (car passed) :to-equal "z O")
+        ;; A line without threads: the key does what it does without the mode.
+        (setq passed nil)
+        (test-feedback--goto 5)
+        (test-feedback--press "z a")
+        (expect passed :to-equal '("z a"))
+        ;; zR and zM: every thread, and nothing else.
+        (test-feedback--press "z R")
+        (expect (length (seq-filter #'test-feedback--threads-shown
+                                    '(0 15 54 61 131 134)))
+                :to-equal 6)
+        (test-feedback--press "z M")
+        (expect (seq-filter #'test-feedback--threads-shown '(0 15 54 61 131 134))
+                :to-equal nil)
+        (expect passed :to-equal '("z a"))
+        ;; In a file without threads, they pass on.
+        (let ((approve-feedback--drawn nil))
+          (test-feedback--press "z R"))
+        (expect passed :to-equal '("z R" "z a")))))
+
+  (it "drop the error of the key passed on when the threads were folded"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--with-fold-keys
+        (keymap-set map "z O" (lambda () (interactive) (user-error "No fold here")))
+        (keymap-set map "z o" (lambda () (interactive) (user-error "No fold here")))
+        (test-feedback--goto 15)
+        (test-feedback--press "z O")
+        (expect (test-feedback--threads-shown 15) :to-be-truthy)
+        ;; With nothing done to the threads, the error is the key's.
+        (expect (test-feedback--press "z o") :to-throw 'user-error '("No fold here")))))
+
+  (it "pass on only keys of the mode's, never M-x"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--with-fold-keys
+        (spy-on 'message)
+        (spy-on 'this-command-keys-vector :and-return-value (kbd "M-x"))
+        (spy-on 'execute-extended-command)
+        (test-feedback--goto 5)
+        (let ((this-command 'approve-feedback-toggle-fold))
+          (call-interactively #'approve-feedback-toggle-fold))
+        (expect 'execute-extended-command :not :to-have-been-called)
+        (expect 'message :to-have-been-called-with "%s" "No threads on this line"))))
 
   (it "say so where there are no threads and nothing else folds"
     (test-feedback--with-one
@@ -842,7 +959,12 @@ The buffer the input was for is current after."
       (spy-on 'message)
       (test-feedback--goto 5)
       (approve-feedback-toggle-fold)
-      (expect 'message :to-have-been-called-with "No threads %s" "on this line")))
+      (expect 'message :to-have-been-called-with "%s" "No threads on this line")
+      ;; Threads that are as the key wants them say so.
+      (test-feedback--goto 15)
+      (approve-feedback-close-fold)
+      (expect 'message :to-have-been-called-with
+              "%s" "Threads on this line already folded")))
 
   (it "fold threads for the actions the fold keys name"
     (test-feedback--with-one
@@ -850,8 +972,11 @@ The buffer the input was for is current after."
       (test-feedback--goto 15)
       (expect (approve-feedback-fold-threads :open) :to-be t)
       (expect (test-feedback--threads-shown 15) :to-be-truthy)
+      ;; Unfolded already: nothing to do.
+      (expect (approve-feedback-fold-threads :open) :to-be nil)
       (expect (approve-feedback-fold-threads :close) :to-be t)
       (expect (test-feedback--threads-shown 15) :to-be nil)
+      (expect (approve-feedback-fold-threads :close) :to-be nil)
       (test-feedback--goto 5)
       (expect (approve-feedback-fold-threads :toggle) :to-be nil)
       (expect (approve-feedback-fold-threads :open-all) :to-be t)
@@ -899,6 +1024,140 @@ The buffer the input was for is current after."
     (make-directory (file-name-directory file) t)
     (write-region test-feedback--text nil file nil 'silent)
     file))
+
+(describe "The feedback mode and the buffer's own folds"
+  (it "count the threads of the lines a fold hides on the line that shows it"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (approve-feedback-fold-threads :open-all)
+      (let ((fold (test-feedback--fold 50 62)))
+        (approve-feedback--follow-folds)
+        ;; Lines 54 and 61 show neither bubble nor threads...
+        (dolist (line '(54 61))
+          (let ((overlay (approve-feedback--overlay-of-line line)))
+            (expect (overlay-get overlay 'before-string) :to-be nil)
+            (expect (overlay-get overlay 'after-string) :to-be nil)))
+        (expect (test-feedback--after-folds) :to-equal nil)
+        ;; ... line 50, which shows the fold, has their bubble: one is
+        ;; unresolved.
+        (let ((bubble (test-feedback--bubble-on 50)))
+          (expect (substring-no-properties bubble) :to-match "[^0-9]1\\'")
+          (expect (get-text-property 0 'help-echo bubble)
+                  :to-equal (concat "2 threads in the folded code, on lines 54, 61\n"
+                                    "mouse-1: unfold the code")))
+        (expect right-margin-width :to-equal 3)
+        ;; Once the fold opens, they are as they were.
+        (delete-overlay fold)
+        (approve-feedback--follow-folds)
+        (expect (test-feedback--bubble-on 50) :to-be nil)
+        (expect (test-feedback--threads-shown 54) :to-be-truthy)
+        (expect (test-feedback--threads-shown 61) :to-be-truthy))))
+
+  (it "count a fold's first line's threads with those it hides"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--fold 131 140)
+      (approve-feedback--follow-folds)
+      (let ((bubble (test-feedback--bubble-on 131)))
+        (expect (substring-no-properties bubble) :to-match "[^0-9]2\\'")
+        (expect (get-text-property 0 'help-echo bubble)
+                :to-equal (concat "1 thread · 1 more thread in the folded code, on line 134\n"
+                                  "mouse-1: unfold")))
+      (expect (approve-feedback--carrier-at (point)) :to-be nil)))
+
+  (it "show a fold's first line's threads after the fold, as its screen line ends"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--goto 15)
+      (approve-feedback-fold-threads :open)
+      (let ((fold (test-feedback--fold 15 20)))
+        (approve-feedback--follow-folds)
+        (expect (overlay-get (approve-feedback--overlay-of-line 15) 'after-string) :to-be nil)
+        (expect (test-feedback--bubble-on 15) :to-be-truthy)
+        (expect (mapcar #'car (test-feedback--after-folds)) :to-equal '(20))
+        (expect (cdr (car (test-feedback--after-folds))) :to-match "\\` \n.*╭")
+        ;; Its screen lines take no line number: they start on line 20.
+        (test-feedback--goto 20)
+        (expect (get-char-property (pos-eol) 'display-line-numbers-disable) :to-be t)
+        ;; Folded with the line before, it shows nothing.
+        (delete-overlay fold)
+        (test-feedback--fold 14 20)
+        (approve-feedback--follow-folds)
+        (expect (test-feedback--after-folds) :to-equal nil)
+        (expect (overlay-get (approve-feedback--overlay-of-line 15) 'after-string) :to-be nil)
+        (expect (test-feedback--bubble-on 14) :to-be-truthy))))
+
+  (it "put the bubble of a fold that starts a line on the line before it"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--fold 50 62 t)
+      (approve-feedback--follow-folds)
+      (expect (test-feedback--bubble-on 50) :to-be-truthy)
+      (expect (get-text-property 0 'help-echo (test-feedback--bubble-on 50))
+              :to-match "\\`2 threads in the folded code")))
+
+  (it "keep it when the threads are drawn again"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (test-feedback--fold 50 62)
+      (approve-feedback-redraw)
+      (expect (test-feedback--bubble-on 50) :to-be-truthy)
+      (expect (overlay-get (approve-feedback--overlay-of-line 54) 'before-string) :to-be nil)))
+
+  (it "paint the threads again only when the folds change"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (expect (memq #'approve-feedback--follow-folds post-command-hook) :to-be-truthy)
+      (spy-on 'approve-feedback--paint-all :and-call-through)
+      (approve-feedback--follow-folds)
+      (expect 'approve-feedback--paint-all :not :to-have-been-called)
+      (let ((fold (test-feedback--fold 50 62)))
+        (approve-feedback--follow-folds)
+        (expect 'approve-feedback--paint-all :to-have-been-called-times 1)
+        ;; Text that moves the folds and the threads alike changes nothing.
+        (goto-char (point-min))
+        (insert "one\ntwo\n")
+        (approve-feedback--follow-folds)
+        (expect 'approve-feedback--paint-all :to-have-been-called-times 1)
+        (expect (test-feedback--bubble-on 52) :to-be-truthy)
+        (delete-overlay fold)
+        (approve-feedback--follow-folds)
+        (expect 'approve-feedback--paint-all :to-have-been-called-times 2))
+      (approve-feedback-mode -1)
+      (expect (memq #'approve-feedback--follow-folds post-command-hook) :to-be nil)))
+
+  (it "open the folds that hide a thread it goes to, as isearch does"
+    (test-feedback--with-one
+      (test-feedback--start)
+      ;; Outline's folds: the lines after each tenth are its body.
+      (setq-local outline-regexp "line [0-9]*0$")
+      (outline-minor-mode 1)
+      (outline-hide-body)
+      (approve-feedback--follow-folds)
+      (expect (get-text-property 0 'help-echo (test-feedback--bubble-on 130))
+              :to-match "\\`2 threads in the folded code, on lines 131, 134")
+      (test-feedback--goto 100)
+      (approve-feedback-next-thread)
+      (expect (line-number-at-pos) :to-equal 131)
+      (expect (invisible-p (point)) :to-be nil)
+      (expect (test-feedback--threads-shown 131) :to-be-truthy)
+      ;; The line 130 shows its lines again: no bubble of hidden threads.
+      (expect (test-feedback--bubble-on 130) :to-be nil)
+      ;; Line 61's fold is still closed.
+      (expect (overlay-get (approve-feedback--overlay-of-line 61) 'before-string) :to-be nil)
+      (outline-minor-mode -1)))
+
+  (it "open the folds of a fold's bubble with TAB"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (let ((fold (test-feedback--fold 50 62)))
+        (approve-feedback--follow-folds)
+        (test-feedback--goto 50)
+        (expect (approve-action-why-not 'approve-feedback-toggle-threads) :to-be nil)
+        (approve-feedback-toggle-threads)
+        (expect (overlay-buffer fold) :to-be nil)
+        (expect (test-feedback--bubble-on 50) :to-be nil)
+        (expect (test-feedback--bubble-on 54) :to-be-truthy)))))
 
 (describe "f in a PR buffer"
   (it "opens the line at point in the clone, where the buffer has it now"

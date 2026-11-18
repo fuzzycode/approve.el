@@ -59,6 +59,11 @@
 ;;   dim when all are resolved; the threads after the line's text, the
 ;;   file view's boxes, folded at first (D46).  Between comparisons they
 ;;   move with the text.
+;; - The buffer's own folds (hideshow's, outline's, any invisible
+;;   text) hide the threads of the lines they hide: the line that
+;;   shows a fold counts them in its bubble, and a line where a fold
+;;   starts has its threads after the fold (D51).  Going to a thread
+;;   opens the folds that hide it, as isearch does.
 ;; - The mode line shows a speech bubble and the file's threads, red
 ;;   when one asks for changes, dim when none is unresolved, then ↻
 ;;   when GitHub has changes and … while loading: an item in
@@ -76,8 +81,10 @@
 ;;   `approve-feedback-prefix-key', C-c ' by default (D50).  TAB folds
 ;;   the threads of a line, T all of them, n and p go to the next and
 ;;   previous unresolved thread; mouse-1 on a bubble folds its line.
-;;   In evil's normal state ]t and [t move too, and za, zo, zc, zR and
-;;   zM fold threads, the buffer's other folds where there are none.
+;;   In evil's normal state ]t and [t move too, and the z keys fold
+;;   threads as the innermost fold of their line, the buffer's other
+;;   folds where there are none or they are folded already; zR and zM
+;;   every thread (D51).
 ;;   `approve-feedback-dispatch' lists them all; mouse-1 on the
 ;;   mode-line item opens it.
 ;; - The actions of a PR buffer work here, on the threads of the line
@@ -192,6 +199,12 @@ was written on (decision D45); TEXT is \"\" when GitHub has no such file.")
 (defvar-local approve-feedback--shown nil
   "The ids of the threads unfolded here; the others are folded (D46).")
 
+(defvar-local approve-feedback--drawn nil
+  "The overlays of the threads drawn here, one for each line, in order.")
+
+(defvar-local approve-feedback--asking nil
+  "The ids of the threads that asked for changes when they were drawn (D34).")
+
 (defvar-local approve-feedback--margin nil
   "The buffer's own right margin before the mode widened it: (LOCAL . WIDTH).
 LOCAL is non-nil when `right-margin-width' had a local value.")
@@ -241,8 +254,8 @@ for example:
   :doc "Keymap of `approve-feedback-mode'.
 It holds `approve-feedback-command-map' under `approve-feedback-prefix-key'.
 In evil's normal state, ]t and [t go to the next and previous
-unresolved thread, and za, zo, zc, zR and zM fold threads too
-\(approve-evil.el, decision D50).")
+unresolved thread, and za, zo, zO, zc, zC, zR and zM fold threads too
+\(approve-evil.el, decision D51).")
 
 (defun approve-feedback--set-prefix-key (symbol key)
   "Set SYMBOL, `approve-feedback-prefix-key', to KEY, and bind it.
@@ -304,7 +317,7 @@ clone stands to it.
 
 (defun approve-feedback--setup-evil ()
   "Bind evil's keys of the mode, when evil is loaded.
-That is ]t and [t, and the fold keys (decision D50), bound in
+That is ]t and [t, and the fold keys (decisions D50 and D51), bound in
 approve-evil.el, which the mode requires then (decision D17)."
   (when (featurep 'evil)
     (require 'approve-evil)
@@ -395,6 +408,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
   (approve-changes-follow-selection)
   (add-hook 'window-selection-change-functions #'approve-feedback--on-window nil t)
   (add-hook 'window-buffer-change-functions #'approve-feedback--on-window nil t)
+  (add-hook 'post-command-hook #'approve-feedback--follow-folds nil t)
   (unless (advice-function-member-p #'approve-feedback--on-focus after-focus-change-function)
     (add-function :after after-focus-change-function #'approve-feedback--on-focus))
   (approve-feedback-redraw))
@@ -404,6 +418,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
   (approve-changes-follow-selection 'stop)
   (remove-hook 'window-selection-change-functions #'approve-feedback--on-window t)
   (remove-hook 'window-buffer-change-functions #'approve-feedback--on-window t)
+  (remove-hook 'post-command-hook #'approve-feedback--follow-folds t)
   (approve-lines-unwatch)
   (approve-feedback--draw nil)
   (dolist (variable '(approve-feedback--branch approve-feedback--pull-request
@@ -411,6 +426,7 @@ BRANCH is as `approve-clone-branch-head' gives it."
                       approve-feedback--clone-state approve-feedback--mode-line
                       approve-feedback--head approve-feedback--texts approve-feedback--fetching
                       approve-feedback--error approve-feedback--shown
+                      approve-feedback--drawn approve-feedback--asking
                       approve-feedback--head-ref approve-feedback--destination
                       approve-model-store-buffer
                       approve-context-function approve-context-threads-function
@@ -809,12 +825,15 @@ request removed; HUNKS are the file's patch."
          (mapconcat (lambda (text) (row "removed:" text))
                     (approve-feedback--removed-lines hunks thread) ""))))))
 
-(defun approve-feedback--bubble-help (entries unfolded)
+(defun approve-feedback--bubble-help (entries unfolded &optional carried)
   "Return the tooltip of the bubble of ENTRIES, UNFOLDED or not.
-Such as \"1 thread · edited here: GitHub has  (retries 3))\"."
+Such as \"1 thread · edited here: GitHub has  (retries 3))\".  CARRIED
+are the overlays of the lines the buffer's own folds hide here, whose
+threads the bubble counts too (decision D51).  Without ENTRIES of its
+own, a click on the bubble opens the folds."
   (let ((edited (seq-find #'approve-feedback--edited-p entries))
         (kinds (delete-dups (mapcar #'cdr entries))))
-    (concat (approve-feedback--count (length entries) "thread")
+    (concat (and entries (approve-feedback--count (length entries) "thread"))
             (and edited
                  (format " · %s here: GitHub has %s" (cdr edited)
                          (or (approve-feedback--github-line approve-feedback--head
@@ -822,7 +841,18 @@ Such as \"1 thread · edited here: GitHub has  (retries 3))\"."
                              "")))
             (and (memq 'outdated kinds) " · outdated: where its line was")
             (and (memq 'removed kinds) " · on lines the pull request removed after this one")
-            (if unfolded "\nmouse-1: fold" "\nmouse-1: unfold"))))
+            (and carried
+                 (concat (and entries " · ")
+                         (approve-feedback--count
+                          (length (approve-feedback--carried-entries carried))
+                          (if entries "more thread" "thread"))
+                         " in the folded code, on line" (if (cdr carried) "s " " ")
+                         (mapconcat (lambda (overlay)
+                                      (number-to-string (approve-feedback--line-of overlay)))
+                                    carried ", ")))
+            (cond ((null entries) "\nmouse-1: unfold the code")
+                  (unfolded "\nmouse-1: fold")
+                  (t "\nmouse-1: unfold")))))
 
 (defun approve-feedback--threads-text (entries)
   "Return the threads of ENTRIES drawn as the file view draws them.
@@ -845,44 +875,253 @@ dispatch does (decision D46)."
                     (approve-render-prefix start (point) "  ")))
       (buffer-string))))
 
-(defun approve-feedback--paint (overlay &optional asking)
-  "Give OVERLAY, the threads of a line, its bubble, and its threads unless folded.
-ASKING are the ids of the threads that ask for changes, asked of
-the store when nil.  The bubble is in the right margin; a line's
-threads follow it, a string after its text, so the line numbers of
-the lines after them stay theirs.  The threads above the first line
-have a heading of their own, with their bubble."
-  (let* ((entries (overlay-get overlay 'approve-feedback-entries))
-         (asking (or asking (mapcar (lambda (thread) (alist-get 'id thread))
-                                    (approve-pr-threads-asking-for-changes))))
-         (unfolded (approve-feedback--unfolded-p entries))
-         (bubble (approve-feedback--bubble entries asking))
-         (margin (propertize " " 'display
-                             `((margin right-margin)
-                               ,(propertize bubble
-                                            'help-echo (approve-feedback--bubble-help
-                                                        entries unfolded)
-                                            'mouse-face 'highlight
-                                            'keymap approve-feedback-bubble-map)))))
-    (overlay-put overlay 'approve-feedback-width (string-width bubble))
-    (if (overlay-get overlay 'approve-feedback-top)
-        (overlay-put overlay 'before-string
-                     (concat margin
-                             (approve-face (if (seq-some (lambda (entry) (eq (cdr entry) 'file))
-                                                         entries)
-                                               "  On this file"
-                                             "  Above the first line")
-                                           'approve-heading)
-                             "\n"
-                             (and unfolded (approve-feedback--threads-text entries))))
-      (overlay-put overlay 'before-string margin)
-      (overlay-put overlay 'after-string
-                   (and unfolded
-                        ;; Point at the end of the line stays there, not
-                        ;; after the threads.
-                        (concat (propertize " " 'cursor t) "\n"
-                                (string-remove-suffix
-                                 "\n" (approve-feedback--threads-text entries))))))))
+(defun approve-feedback--overlay-text (overlay)
+  "Return the threads of OVERLAY drawn, kept on it until the next draw."
+  (or (overlay-get overlay 'approve-feedback-text)
+      (overlay-put overlay 'approve-feedback-text
+                   (approve-feedback--threads-text
+                    (overlay-get overlay 'approve-feedback-entries)))))
+
+(defun approve-feedback--carried-entries (carried)
+  "Return the entries of the threads of CARRIED, overlays of folded-away lines."
+  (mapcan (lambda (overlay) (copy-sequence (overlay-get overlay 'approve-feedback-entries)))
+          carried))
+
+(defun approve-feedback--paint (overlay)
+  "Give OVERLAY its bubble, and its threads unless folded; return its width.
+That is the bubble's width.  OVERLAY holds the threads of a line,
+or the bubble of the threads the buffer's own folds hide, on the
+line that shows the fold (a helper, `approve-feedback-extra').  The
+bubble is in the right margin; a line's threads follow it, a string
+after its text, so the line numbers of the lines after them stay
+theirs.  The threads above the first line have a heading of their
+own, with their bubble.
+
+How the buffer's folds hide the line is in `approve-feedback-fold',
+as `approve-feedback--fold-state' says (decision D51).  A
+folded-away line shows nothing: its bubble counts in the one of the
+line that shows the fold, which has the overlays of such lines in
+`approve-feedback-carried'.  Where a fold starts at the end of the
+line, its threads go after the fold, where the screen line ends."
+  (let* ((state (overlay-get overlay 'approve-feedback-fold))
+         (entries (overlay-get overlay 'approve-feedback-entries))
+         (carried (overlay-get overlay 'approve-feedback-carried))
+         (unfolded (and entries (approve-feedback--unfolded-p entries))))
+    (if (eq (car state) 'hidden)
+        (progn (overlay-put overlay 'before-string nil)
+               (overlay-put overlay 'after-string nil)
+               0)
+      (let* ((bubble (approve-feedback--bubble
+                      (append entries (approve-feedback--carried-entries carried))
+                      approve-feedback--asking))
+             (margin (propertize " " 'display
+                                 `((margin right-margin)
+                                   ,(propertize bubble
+                                                'help-echo (approve-feedback--bubble-help
+                                                            entries unfolded carried)
+                                                'mouse-face 'highlight
+                                                'keymap approve-feedback-bubble-map))))
+             (text (and unfolded (approve-feedback--overlay-text overlay))))
+        (if (overlay-get overlay 'approve-feedback-top)
+            (overlay-put overlay 'before-string
+                         (concat margin
+                                 (approve-face (if (seq-some (lambda (entry) (eq (cdr entry) 'file))
+                                                             entries)
+                                                   "  On this file"
+                                                 "  Above the first line")
+                                               'approve-heading)
+                                 "\n" text))
+          (overlay-put overlay 'before-string margin)
+          (let ((after (and text
+                            ;; Point at the end of the line stays there, not
+                            ;; after the threads.
+                            (concat (propertize " " 'cursor t) "\n"
+                                    (string-remove-suffix "\n" text)))))
+            (if (and after (eq (car state) 'cut))
+                ;; The box covers the newline the fold ends at, so the
+                ;; screen lines it starts take no line number: they
+                ;; start at that newline, the folded line's.
+                (let* ((end (cdr state))
+                       (newline (< end (point-max)))
+                       (box (make-overlay end (if newline (1+ end) end))))
+                  (overlay-put box 'approve-feedback t)
+                  (overlay-put box 'approve-feedback-extra t)
+                  (overlay-put box 'display-line-numbers-disable t)
+                  (overlay-put box (if newline 'before-string 'after-string)
+                               (approve-feedback--under-line-numbers after))
+                  (overlay-put overlay 'approve-feedback-fold (cons 'cut box))
+                  (overlay-put overlay 'after-string nil))
+              (when (eq (car state) 'cut)
+                ;; Without threads to show, where the fold ends is moot.
+                (overlay-put overlay 'approve-feedback-fold (list 'cut)))
+              (overlay-put overlay 'after-string after))))
+        (string-width bubble)))))
+
+;;; The buffer's own folds
+
+(defun approve-feedback--line-number-blank ()
+  "Return a blank as wide as the line numbers here, or nil without them.
+That is the width the selected window, or another showing the
+buffer, gives them, with the two columns that pad them."
+  (when (bound-and-true-p display-line-numbers)
+    (let ((columns (if-let* ((window (get-buffer-window nil t)))
+                       (with-selected-window window (line-number-display-width))
+                     (max (or (bound-and-true-p display-line-numbers-width) 0)
+                          (length (number-to-string (line-number-at-pos (point-max) t)))))))
+      (propertize (make-string (+ columns 2) ?\s) 'face 'line-number))))
+
+(defun approve-feedback--under-line-numbers (string)
+  "Return STRING with the line numbers' blank before each screen line it starts.
+Those take no line number (`display-line-numbers-disable'), which
+takes the room of the numbers away: the blank gives it back, so the
+threads line up with the text."
+  (if-let* ((blank (approve-feedback--line-number-blank)))
+      (let ((string (copy-sequence string))
+            (pos 0))
+        (while (< pos (length string))
+          (let ((next (next-single-property-change pos 'wrap-prefix string (length string)))
+                (old (get-text-property pos 'wrap-prefix string)))
+            (put-text-property pos next 'wrap-prefix (if old (concat blank old) blank) string)
+            (setq pos next)))
+        (put-text-property 0 (length string) 'line-prefix blank string)
+        string)
+    string))
+(defun approve-feedback--bol (position)
+  "Return where the line at POSITION starts."
+  (save-excursion (goto-char position) (pos-bol)))
+
+(defun approve-feedback--fold-line (position)
+  "Return where the line that shows the fold hiding POSITION starts.
+The fold starts on that line, at its end most often, or right after
+it."
+  (save-excursion
+    (goto-char position)
+    (let ((line nil))
+      (while (not line)
+        (while (and (> (point) (point-min)) (invisible-p (1- (point))))
+          (goto-char (previous-single-char-property-change (point) 'invisible)))
+        (when (and (bolp) (> (point) (point-min)))
+          (backward-char))
+        (goto-char (pos-bol))
+        (when (or (= (point) (point-min)) (not (invisible-p (point))))
+          (setq line (point))))
+      line)))
+
+(defun approve-feedback--screen-line-end (position)
+  "Return where the screen line ends that goes on at POSITION, invisible.
+That is the end of the line where the invisible text from POSITION
+ends, unless more starts there."
+  (save-excursion
+    (goto-char position)
+    (while (and (< (point) (point-max)) (invisible-p (point)))
+      (goto-char (next-single-char-property-change (point) 'invisible))
+      (unless (invisible-p (point))
+        (goto-char (pos-eol))))
+    (point)))
+
+(defun approve-feedback--fold-state (overlay)
+  "Return how the buffer's own folds hide the line of OVERLAY's threads.
+Nil when they don't.  (hidden . LINE) when they hide the line: LINE
+is where the line that shows the fold starts, whose bubble counts
+its threads.  (cut . END) when a fold starts at the line's end: END
+is where the screen line ends, after the fold, where its threads go.
+Folds are text made invisible (`invisible-p'), by hideshow, outline
+or any other."
+  (let ((start (overlay-start overlay))
+        (end (overlay-end overlay)))
+    (cond
+     ((or (null start) (overlay-get overlay 'approve-feedback-top)) nil)
+     ((invisible-p start) (cons 'hidden (approve-feedback--fold-line start)))
+     ((and (< end (point-max)) (invisible-p end))
+      (cons 'cut (approve-feedback--screen-line-end end))))))
+
+(defun approve-feedback--folds-changed-p ()
+  "Return non-nil if the buffer's own folds hide other threads than when painted."
+  (save-restriction
+    (widen)
+    (seq-some (lambda (overlay)
+                (let ((now (approve-feedback--fold-state overlay))
+                      (then (overlay-get overlay 'approve-feedback-fold)))
+                  (or (not (eq (car now) (car then)))
+                      (and (overlayp (cdr then))
+                           (not (eql (cdr now)
+                                     (and (overlay-start (cdr then))
+                                          (if (eq (car now) 'hidden)
+                                              (approve-feedback--bol (overlay-start (cdr then)))
+                                            (overlay-start (cdr then))))))))))
+              approve-feedback--drawn)))
+
+(defun approve-feedback--paint-all ()
+  "Paint the threads of every line, as the buffer's own folds show them now.
+A line they hide shows neither bubble nor threads: the line that
+shows the fold counts them in its bubble, with its own threads, and
+when it has none, a helper overlay has the bubble (decision D51).
+The right margin is as wide as the widest bubble.  With no threads
+drawn, it does nothing."
+  (when approve-feedback--drawn
+    (approve-feedback--paint-drawn)))
+
+(defun approve-feedback--paint-drawn ()
+  "Paint the threads drawn, as `approve-feedback--paint-all' says."
+  (save-excursion
+    (save-restriction
+      (widen)
+      (remove-overlays (point-min) (point-max) 'approve-feedback-extra t)
+      (let ((visible nil)
+            (helpers nil)
+            (width 3))
+        (dolist (overlay approve-feedback--drawn)
+          (let ((state (approve-feedback--fold-state overlay)))
+            (overlay-put overlay 'approve-feedback-fold state)
+            (overlay-put overlay 'approve-feedback-carried nil)
+            (unless (or (eq (car state) 'hidden)
+                        (null (overlay-start overlay))
+                        (overlay-get overlay 'approve-feedback-top))
+              (push (cons (approve-feedback--bol (overlay-start overlay)) overlay) visible))))
+        (dolist (overlay approve-feedback--drawn)
+          (pcase (overlay-get overlay 'approve-feedback-fold)
+            (`(hidden . ,line)
+             (let ((carrier (or (cdr (assoc line visible))
+                                (let ((helper (make-overlay line line)))
+                                  (overlay-put helper 'approve-feedback t)
+                                  (overlay-put helper 'approve-feedback-extra t)
+                                  (push (cons line helper) visible)
+                                  (push helper helpers)
+                                  helper))))
+               (overlay-put carrier 'approve-feedback-carried
+                            (append (overlay-get carrier 'approve-feedback-carried)
+                                    (list overlay)))
+               (overlay-put overlay 'approve-feedback-fold (cons 'hidden carrier))))))
+        (dolist (overlay (append approve-feedback--drawn helpers))
+          (setq width (max width (approve-feedback--paint overlay))))
+        (approve-feedback--set-margin width)))))
+
+(defun approve-feedback--follow-folds ()
+  "Paint the threads again when the buffer's own folds changed what they hide.
+It is on `post-command-hook' while the mode is on: a fold key, a
+click on a fold or a search that opens one."
+  (when approve-feedback--drawn
+    (with-demoted-errors "Approve: %S"
+      (when (approve-feedback--folds-changed-p)
+        (approve-feedback--paint-all)))))
+
+(defun approve-feedback--reveal (position)
+  "Open the buffer's own folds that hide POSITION, as isearch opens them.
+Those are overlays that say how in `isearch-open-invisible':
+hideshow's, outline's and most others'."
+  (save-excursion
+    (goto-char position)
+    (dolist (overlay (overlays-at position))
+      (when-let* (((invisible-p (overlay-get overlay 'invisible)))
+                  (open (overlay-get overlay 'isearch-open-invisible)))
+        (funcall open overlay)))))
+
+(defun approve-feedback--reveal-carried (overlay)
+  "Open the folds that hide the lines whose threads OVERLAY's bubble counts."
+  (dolist (carried (overlay-get overlay 'approve-feedback-carried))
+    (when-let* ((start (overlay-start carried)))
+      (approve-feedback--reveal start)))
+  (approve-feedback--paint-all))
 
 (defun approve-feedback--set-margin (width)
   "Make the right margin WIDTH columns wide, or give it its own width back if nil.
@@ -905,11 +1144,8 @@ threads (decision D46)."
 
 (defun approve-feedback--overlays ()
   "Return the overlays of the threads here, in order."
-  (save-restriction
-    (widen)
-    (sort (seq-filter (lambda (overlay) (overlay-get overlay 'approve-feedback-entries))
-                      (overlays-in (point-min) (point-max)))
-          (lambda (a b) (< (overlay-start a) (overlay-start b))))))
+  (sort (seq-filter #'overlay-start approve-feedback--drawn)
+        (lambda (a b) (< (overlay-start a) (overlay-start b)))))
 
 (defun approve-feedback--draw (lines)
   "Show LINES, as `approve-feedback--place' gives them, under their lines.
@@ -918,22 +1154,24 @@ Nil takes the threads and the margin away."
     (save-restriction
       (widen)
       (remove-overlays (point-min) (point-max) 'approve-feedback t)
-      (let ((asking (and lines (mapcar (lambda (thread) (alist-get 'id thread))
-                                       (approve-pr-threads-asking-for-changes))))
-            (width nil))
-        (pcase-dolist (`(,line . ,entries) lines)
-          (goto-char (point-min))
-          (when (or (zerop line) (zerop (forward-line (1- line))))
-            (let ((overlay (if (zerop line)
-                               (make-overlay (point-min) (point-min))
-                             (make-overlay (line-beginning-position) (line-end-position)
-                                           nil t t))))
-              (overlay-put overlay 'approve-feedback t)
-              (overlay-put overlay 'approve-feedback-entries entries)
-              (overlay-put overlay 'approve-feedback-top (zerop line))
-              (approve-feedback--paint overlay asking)
-              (setq width (max (or width 3) (overlay-get overlay 'approve-feedback-width))))))
-        (approve-feedback--set-margin width)))))
+      (setq approve-feedback--drawn nil
+            approve-feedback--asking (and lines (mapcar (lambda (thread) (alist-get 'id thread))
+                                                        (approve-pr-threads-asking-for-changes))))
+      (pcase-dolist (`(,line . ,entries) lines)
+        (goto-char (point-min))
+        (when (or (zerop line) (zerop (forward-line (1- line))))
+          (let ((overlay (if (zerop line)
+                             (make-overlay (point-min) (point-min))
+                           (make-overlay (line-beginning-position) (line-end-position)
+                                         nil t t))))
+            (overlay-put overlay 'approve-feedback t)
+            (overlay-put overlay 'approve-feedback-entries entries)
+            (overlay-put overlay 'approve-feedback-top (zerop line))
+            (push overlay approve-feedback--drawn))))
+      (setq approve-feedback--drawn (nreverse approve-feedback--drawn))
+      (if approve-feedback--drawn
+          (approve-feedback--paint-all)
+        (approve-feedback--set-margin nil)))))
 
 (defun approve-feedback--decorate ()
   "Draw the threads under their lines again, by the latest maps.
@@ -1171,118 +1409,181 @@ the threads above it."
       (or (seq-find (lambda (overlay) (not (overlay-get overlay 'approve-feedback-top))) overlays)
           (car overlays)))))
 
+(defun approve-feedback--carrier-at (position)
+  "Return the helper with the bubble of hidden threads on POSITION's line, or nil.
+It is on a line without threads of its own, which shows a fold
+that hides lines with threads (decision D51)."
+  (save-excursion
+    (goto-char position)
+    (seq-find (lambda (overlay) (and (overlay-get overlay 'approve-feedback-extra)
+                                     (overlay-get overlay 'approve-feedback-carried)))
+              (overlays-in (pos-bol) (pos-eol)))))
+
 (defun approve-feedback--toggle (overlay &optional show)
   "Unfold the threads of OVERLAY if folded, else fold them.
 With SHOW `show', unfold them either way; with `hide', fold them."
-  (let* ((entries (overlay-get overlay 'approve-feedback-entries))
-         (ids (mapcar (lambda (entry) (alist-get 'id (car entry))) entries))
-         (show (pcase show
-                 ('show t)
-                 ('hide nil)
-                 (_ (not (approve-feedback--unfolded-p entries))))))
+  (approve-feedback--show-threads
+   (list overlay)
+   (pcase show
+     ('show t)
+     ('hide nil)
+     (_ (not (approve-feedback--unfolded-p (overlay-get overlay 'approve-feedback-entries)))))))
+
+(defun approve-feedback--show-threads (overlays show)
+  "Unfold the threads of OVERLAYS if SHOW, else fold them, and paint them anew."
+  (let ((ids (mapcan (lambda (overlay)
+                       (mapcar (lambda (entry) (alist-get 'id (car entry)))
+                               (overlay-get overlay 'approve-feedback-entries)))
+                     overlays)))
     (setq approve-feedback--shown (if show
                                       (seq-union ids approve-feedback--shown)
                                     (seq-difference approve-feedback--shown ids)))
-    (approve-feedback--paint overlay)))
+    (approve-feedback--paint-all)))
+
+(defun approve-feedback--toggle-or-reveal (overlay)
+  "Fold or unfold the threads of OVERLAY, or open the folds of those it counts.
+OVERLAY is a line's, or the helper with the bubble of the threads
+the buffer's own folds hide (decision D51)."
+  (if (overlay-get overlay 'approve-feedback-entries)
+      (approve-feedback--toggle overlay)
+    (approve-feedback--reveal-carried overlay)))
 
 (defun approve-feedback-toggle-threads ()
   "Fold the threads of the line at point, or unfold them.
 A folded line keeps its bubble in the right margin.  On the first
-line, the threads above it when the line has none of its own."
+line, the threads above it when the line has none of its own.  On
+a line that shows a fold of the buffer's own, and has no threads,
+unfold the code that hides threads (decision D51)."
   (interactive)
-  (approve-feedback--toggle (approve-feedback--toggle-preflight)))
+  (approve-feedback--toggle-or-reveal (approve-feedback--toggle-preflight)))
 
 (defun approve-feedback-mouse-toggle-threads (event)
-  "Fold the threads of the line whose bubble was clicked, EVENT, or unfold them."
+  "Fold the threads of the line whose bubble was clicked, EVENT, or unfold them.
+A bubble on a fold that hides threads unfolds the code (decision D51)."
   (interactive "e")
   (let ((position (event-start event)))
     (with-current-buffer (window-buffer (posn-window position))
-      (when-let* ((overlay (approve-feedback--overlay-at (posn-point position))))
-        (approve-feedback--toggle overlay)))))
+      (when-let* ((overlay (or (approve-feedback--overlay-at (posn-point position))
+                               (approve-feedback--carrier-at (posn-point position)))))
+        (approve-feedback--toggle-or-reveal overlay)))))
 
 (defun approve-feedback-toggle-all-threads ()
   "Unfold every thread of the file, or fold them all when none is folded."
   (interactive)
-  (let* ((overlays (approve-feedback--toggle-all-preflight))
-         (show (if (seq-some (lambda (overlay)
-                               (not (approve-feedback--unfolded-p
-                                     (overlay-get overlay 'approve-feedback-entries))))
-                             overlays)
-                   'show
-                 'hide)))
-    (dolist (overlay overlays)
-      (approve-feedback--toggle overlay show))))
+  (let ((overlays (approve-feedback--toggle-all-preflight)))
+    (approve-feedback--show-threads
+     overlays
+     (seq-some (lambda (overlay)
+                 (not (approve-feedback--unfolded-p
+                       (overlay-get overlay 'approve-feedback-entries))))
+               overlays))))
 
 (defun approve-feedback-fold-threads (action)
   "Fold or unfold threads for a folding ACTION, as the fold keys do.
 ACTION is `:toggle', `:open' or `:close' for the threads of the
 line at point, `:open-all' or `:close-all' for every thread of the
-file.  Return non-nil when there were threads to act on; nil when
-the line, or the file, has none, or the mode is off."
+file.  The threads of a line are its innermost fold (decision D51):
+`:open' leaves them be when they are unfolded already, and `:close'
+when they are folded.  Return non-nil when it folded or unfolded
+threads; nil when the line, or the file, has none, when they are as
+ACTION wants them, or when the mode is off."
   (when approve-feedback-mode
     (if (memq action '(:open-all :close-all))
         (when-let* ((overlays (approve-feedback--overlays)))
-          (dolist (overlay overlays)
-            (approve-feedback--toggle overlay (if (eq action :open-all) 'show 'hide)))
+          (approve-feedback--show-threads overlays (eq action :open-all))
           t)
       (when-let* ((overlay (approve-feedback--overlay-at (point))))
-        (approve-feedback--toggle overlay (pcase action
-                                            (:toggle nil)
-                                            (:close 'hide)
-                                            (_ 'show)))
-        t))))
+        (let* ((unfolded (approve-feedback--unfolded-p
+                          (overlay-get overlay 'approve-feedback-entries)))
+               (show (pcase action
+                       (:toggle (not unfolded))
+                       (:open t)
+                       (:close nil))))
+          (unless (eq (not show) (not unfolded))
+            (approve-feedback--show-threads (list overlay) show)
+            t))))))
 
-(defun approve-feedback--key-elsewhere ()
+(defun approve-feedback--key-elsewhere (&optional quiet)
   "Run what the keys of the current command run when the mode is off.
 That is the buffer's own folding, under evil's z keys: hideshow's,
-outline's, the user's own.  Return non-nil when there is such a
-command."
-  (let ((command (let ((approve-feedback-mode nil))
-                   (key-binding (this-command-keys-vector) t))))
+outline's, the user's own.  Only keys of the mode's run something
+else: \\[execute-extended-command] doesn't.  Return non-nil when there is such a
+command.  With QUIET, an error it signals is dropped: the threads
+were folded, which is what the key was for."
+  (let* ((keys (this-command-keys-vector))
+         (command (and (eq (key-binding keys t) this-command)
+                       (let ((approve-feedback-mode nil))
+                         (key-binding keys t)))))
     (when (and command (commandp command)
                (not (eq command this-command)))
-      (call-interactively command)
+      (if quiet
+          (ignore-errors (call-interactively command))
+        (call-interactively command))
       t)))
 
-(defun approve-feedback--fold (action what)
-  "Do the folding ACTION on threads, else, or also, what the key does elsewhere.
-ACTION is as `approve-feedback-fold-threads' takes it.  A line's
-fold passes the key on when the line has no threads; a fold of
-every thread passes it on too, as vim's zR and zM open and close
-every fold.  WHAT names what is missing in the echo area when
-nothing was done."
+(defun approve-feedback--fold (action what &optional also)
+  "Do the folding ACTION on threads, else what the key does without the mode.
+ACTION is as `approve-feedback-fold-threads' takes it.  The key is
+passed on when there was nothing to do to the threads: the line, or
+the file, has none, or they are as ACTION wants them.  With ALSO, it
+is passed on either way, as zO and zC fold the code too.  WHAT says
+where, in the echo area, when nothing was done."
   (let* ((done (approve-feedback-fold-threads action))
-         (passed (and (or (not done) (memq action '(:open-all :close-all)))
-                      (approve-feedback--key-elsewhere))))
+         (passed (and (or also (not done))
+                      (approve-feedback--key-elsewhere done))))
     (unless (or done passed)
-      (message "No threads %s" what))))
+      (message "%s" (if (and (memq action '(:open :close)) (approve-feedback--overlay-at (point)))
+                        (format "Threads %s already %s" what
+                                (if (eq action :open) "unfolded" "folded"))
+                      (format "No threads %s" what))))))
 
 (defun approve-feedback-toggle-fold ()
   "Fold or unfold the threads of the line at point, else what the key folds.
 On a line without threads, the key does what it does without the
-feedback mode: evil's za folds code as the buffer does (decision D50)."
+feedback mode: evil's za folds code as the buffer does (decisions
+D50 and D51)."
   (interactive)
   (approve-feedback--fold :toggle "on this line"))
 
 (defun approve-feedback-open-fold ()
-  "Unfold the threads of the line at point, else what the key unfolds."
+  "Unfold the threads of the line at point, else what the key unfolds.
+The threads are the line's innermost fold: when they are unfolded
+already, or the line has none, the key does what it does without the
+mode, as evil's zo unfolds code (decision D51)."
   (interactive)
   (approve-feedback--fold :open "on this line"))
 
 (defun approve-feedback-close-fold ()
-  "Fold the threads of the line at point, else what the key folds."
+  "Fold the threads of the line at point, else what the key folds.
+The threads are the line's innermost fold: when they are folded
+already, or the line has none, the key does what it does without the
+mode, as evil's zc folds code (decision D51)."
   (interactive)
   (approve-feedback--fold :close "on this line"))
 
+(defun approve-feedback-open-fold-recursively ()
+  "Unfold the threads of the line at point, and what the key unfolds.
+As vim's zO unfolds every fold at point: the code's too (decision D51)."
+  (interactive)
+  (approve-feedback--fold :open "on this line" t))
+
+(defun approve-feedback-close-fold-recursively ()
+  "Fold the threads of the line at point, and what the key folds.
+As vim's zC folds every fold at point: the code's too (decision D51)."
+  (interactive)
+  (approve-feedback--fold :close "on this line" t))
+
 (defun approve-feedback-open-all-folds ()
-  "Unfold every thread of the file, and what the key unfolds without the mode.
-As vim's zR unfolds every fold: the buffer's own too (decision D50)."
+  "Unfold every thread of the file, leaving the code's folds be.
+In a file without threads, the key does what it does without the
+mode, as evil's zR unfolds code (decision D51)."
   (interactive)
   (approve-feedback--fold :open-all "in this file"))
 
 (defun approve-feedback-close-all-folds ()
-  "Fold every thread of the file, and what the key folds without the mode.
-As vim's zM folds every fold: the buffer's own too (decision D50)."
+  "Fold every thread of the file, leaving the code's folds be.
+In a file without threads, the key does what it does without the
+mode, as evil's zM folds code (decision D51)."
   (interactive)
   (approve-feedback--fold :close-all "in this file"))
 
@@ -1302,9 +1603,11 @@ first line: line 0."
     (line-number-at-pos nil t)))
 
 (defun approve-feedback--goto (overlay)
-  "Move to the line of OVERLAY's threads, and unfold them."
-  (approve-feedback--toggle overlay 'show)
-  (goto-char (overlay-start overlay)))
+  "Move to the line of OVERLAY's threads, and unfold them.
+The buffer's own folds that hide the line open (decision D51)."
+  (goto-char (overlay-start overlay))
+  (approve-feedback--reveal (point))
+  (approve-feedback--toggle overlay 'show))
 
 (defun approve-feedback-next-thread ()
   "Move to the next line with an unresolved thread, and unfold its threads.
@@ -1618,10 +1921,13 @@ the buffer's text as it is now."
 
 (defun approve-feedback--move (place)
   "Move point to PLACE, as `approve-feedback--place-of' gives it.
-Its threads unfold, and the echo area says its note."
-  (when-let* ((overlay (plist-get place :overlay)))
-    (approve-feedback--toggle overlay 'show))
+The buffer's own folds that hide it open, its threads unfold, and
+the echo area says its note."
   (approve-feedback--goto-line (plist-get place :line))
+  (approve-feedback--reveal (point))
+  (if-let* ((overlay (plist-get place :overlay)))
+      (approve-feedback--toggle overlay 'show)
+    (approve-feedback--paint-all))
   (dolist (window (get-buffer-window-list nil nil t))
     (set-window-point window (point)))
   (when-let* ((note (plist-get place :note)))
@@ -1933,9 +2239,12 @@ Such as \"#1234 Add retry logic to the GraphQL client · 1/2 · ↑1\"."
 
 (defun approve-feedback--toggle-preflight ()
   "Return the overlay of the threads `approve-feedback-toggle-threads' folds.
-Signal a `user-error' when the line has none."
+That is the line's, or the helper with the bubble of the threads
+the buffer's own folds hide, whose folds it opens.  Signal a
+`user-error' when the line has neither."
   (approve-feedback--check)
   (or (approve-feedback--overlay-at (point))
+      (approve-feedback--carrier-at (point))
       (user-error "No threads on this line")))
 
 (put 'approve-feedback-toggle-threads 'approve-preflight #'approve-feedback--toggle-preflight)

@@ -825,13 +825,18 @@ in =approve-clone.el=.
    ├─ D23's check (focus, timer) ──▶ ↻ in the mode line: updated on GitHub
    │      [user] C-c ' g or the dispatch ──▶ F17 ──▶ every buffer of the PR redrawn
    │
-   ├─ [user] C-c ' TAB · C-c ' T, evil za zo zc · zR zM, or mouse-1 on a bubble ──▶
-   │      unfold / fold the line's threads, or all; za on a line without threads,
-   │      and zR zM always, also do what they do without the mode (fold code)
+   ├─ [user] C-c ' TAB · C-c ' T, evil za zo zc zO zC · zR zM, or mouse-1 on a bubble ──▶
+   │      unfold / fold the line's threads, or all; the threads are the line's
+   │      innermost fold: zo zc where they are so already, za zo zc on a line
+   │      without, and zO zC always, also fold the code as without the mode
+   │
+   ├─ the buffer's own folds change (hideshow, outline) ──▶ a hidden line's threads go;
+   │      the line that shows the fold counts them in its bubble (mouse-1, TAB: open it);
+   │      a line whose end starts a fold has its threads after the fold's marker
    │
    ├─ [user] C-c ' n / p (evil ]t [t) ──▶ the next / previous unresolved thread,
-   │      unfolded; past the last in this file, the next of the PR's files, visited in the clone;
-   │      past the last file, the first again
+   │      unfolded, the folds that hide it opened; past the last in this file, the next
+   │      of the PR's files, visited in the clone; past the last file, the first again
    │
    └─ [user] r R e k + on the line's threads, c s on the line or region
           │
@@ -854,7 +859,13 @@ in =approve-clone.el=.
   =M-x approve-feedback-dispatch= and mouse-1 on the mode-line item open
   the dispatch.  In evil's normal state, =]t= and =[t= go to the next and
   previous thread, as in Approve's buffers, and the fold keys fold
-  threads, passing on to the buffer's own folding where there are none.
+  threads as the innermost fold of their line, passing on to the
+  buffer's own folding where there are none, or they are folded or
+  unfolded already; =zR= and =zM= fold every thread and nothing else
+  ([[file:decisions.org::*D51 Threads fold inside the buffer's own folds][D51]]).
+- The buffer's own folds hide the threads of the lines they hide; the
+  line that shows a fold counts them in its bubble, and going to a
+  thread opens the folds that hide it, as isearch does ([[file:decisions.org::*D51 Threads fold inside the buffer's own folds][D51]]).
 - Every thread starts folded, its line's bubble in the right margin
   ([[file:decisions.org::*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]), so code keeps its shape while it is edited and nothing
   sits in its way.  Point never enters a thread: the commands act on the

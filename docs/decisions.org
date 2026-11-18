@@ -737,7 +737,8 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 
 ** D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line
 - Status :: accepted (2026-11-18, by the author, after trying the mode
-  on the scratch repository's #4; supersedes [[*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]'s keys and lighter)
+  on the scratch repository's #4; supersedes [[*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]'s keys and lighter).
+  Its fold keys are superseded by [[*D51 Threads fold inside the buffer's own folds][D51]] (2026-11-18).
 - Found :: Without a key, the threads stayed folded for anyone who
   hadn't bound the map: the bubbles were there, and nothing at hand
   unfolded them.  The author's mode line is doom-modeline, which shows
@@ -784,6 +785,66 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   at a glance whether the file has feedback, in any mode line, and the
   tooltip holds the rest without taking room.
 
+** D51 Threads fold inside the buffer's own folds
+- Status :: accepted (2026-11-18, by the author, after testing the fold
+  keys with hideshow in a clone of the scratch repository; supersedes
+  [[*D50 The feedback mode: a prefix key, evil's fold keys, and a bubble in the mode line][D50]]'s fold keys).  The author chose the nesting, the bubble on
+  a fold, =zM= / =zR= for threads alone, and that =]t= leaves what it
+  unfolds unfolded.
+- Found :: Tried in a Python file whose functions hideshow folds:
+  - =]t= to a thread in a folded function unfolded the thread, but left
+    the function folded: point ended on the fold's marker, and nothing
+    showed.
+  - An unfolded thread on the last line of a folded block showed under
+    the fold's first line, which the line numbers called the last
+    line's.  One under a fold's first line pushed the fold's marker
+    ("6 lines…") to the end of its box.
+  - A folded block gave no sign of the threads it hid: their bubbles
+    were hidden with their lines.
+  - On a line with threads, =zc= and =zo= never reached the code's fold:
+    a second =zc= did nothing, silently.
+  - =zR= and =zM= also unfolded and folded every block of the file,
+    and without a folding mode, evil then said to enable one.  =M-x=
+    of a fold command on a line without threads ran =M-x= again.
+- Decision ::
+  - The buffer's own folds are text made invisible (=invisible-p=), by
+    hideshow, outline or any other.  A line they hide shows neither its
+    bubble nor its threads.  The line that shows the fold, where the
+    fold starts or right before it, counts their threads in its bubble,
+    with its own; one without threads gets a bubble of its own, whose
+    tooltip says where they are ("2 threads in the folded code, on
+    lines 55, 60"), and mouse-1 or =TAB= on it opens the fold.
+  - A line whose end a fold hides shows its unfolded threads after the
+    fold, where its screen line ends.  Their screen lines take no line
+    number, the room of the numbers left blank.
+  - Going to a thread (=]t= =[t=, =n= =p=, =f= from the PR buffer) opens
+    the folds that hide it, as isearch does (=isearch-open-invisible=).
+  - The mode paints its threads again after a command that changed what
+    the folds hide (=post-command-hook=); it compares where they hide
+    and nothing else, so typing doesn't repaint.
+  - A line's threads are its innermost fold.  =za= folds or unfolds
+    them.  =zo= unfolds them, and =zc= folds them; when they are
+    already as the key wants them, or the line has none, the key does
+    what it does without the mode, so a second =zc= folds the code.
+    =zO= and =zC= do both at once, as vim's fold every fold at point.
+    The key passed on only matters when nothing was done to the
+    threads: when they were, its error is dropped.  Only the mode's
+    keys are passed on, never =M-x=.
+  - =zR= and =zM= unfold and fold every thread of the file, and leave
+    the code's folds alone; =zr= and =zm= are left to the buffer's own
+    folding, which the mode doesn't bind.  In a file without threads,
+    =zR= and =zM= do what they do without the mode.
+  - =]t= and =[t= leave the threads they unfold unfolded.
+- Why :: Folds nest in vim: =zc= closes the innermost fold at point, then
+  the next, and =zo= opens them the other way.  Threads under a line
+  are the innermost thing there, so the keys reach the code after them,
+  never instead of them.  A fold that hides feedback should say so, as
+  a closed fold in an IDE keeps its gutter marks; the bubble is where
+  the eye already looks.  Threads drawn after the text they belong to
+  can't stay under a line that isn't shown, and a jump that lands in a
+  fold must open it, or it lands nowhere.  Separate keys for every
+  thread (=zR= =zM=) and every fold of code (=zr= =zm=) let the user
+  fold the code and keep the feedback open, or the other way.
 * Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)

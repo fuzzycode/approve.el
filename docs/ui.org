@@ -846,11 +846,30 @@ lines with those lines (=┊ removed:=):
   the threads of the line at point, and ask which one when there are
   several.
 - =C-c ' T= unfolds or folds every thread; evil's =zR= / =zM= unfold or fold
-  them, and the buffer's own folds too.  On a line without threads, =za=,
-  =zo= and =zc= fold code as they do without the mode.  =C-c ' n= / =C-c ' p=
-  (evil =]t= / =[t=) go to the next or previous unresolved thread and unfold
-  it; past the last one of the file, the next of the PR's files opens in
-  the clone, and past the last file, the first again.
+  them, and leave the code's folds to =zr= / =zm= ([[file:decisions.org::*D51 Threads fold inside the buffer's own folds][D51]]).  A line's threads
+  are its innermost fold: =za= folds or unfolds them, =zo= and =zc= unfold
+  and fold them, and fold the code as they do without the mode when the
+  threads are already so, or the line has none; =zO= and =zC= do both.
+  =C-c ' n= / =C-c ' p= (evil =]t= / =[t=) go to the next or previous
+  unresolved thread and unfold it, opening the folds that hide it; past
+  the last one of the file, the next of the PR's files opens in the
+  clone, and past the last file, the first again.
+- The buffer's own folds (hideshow's, outline's) hide the threads of
+  the lines they hide.  The line that shows a fold counts them in its
+  bubble; its tooltip says where they are, and mouse-1 or =C-c ' TAB= opens
+  the fold.  A line whose end starts a fold has its threads after the
+  fold's marker:
+  #+begin_example
+   53
+   54 def steep(tea: Tea, cups: int = 1) -> float:[6 lines…]                          💬3
+          ╭─ @bob · 2 days ago ─────────────────────────────────────────
+          │ Is a pot of one cup a pot?
+          ╰──────────────────────────────────────────────────────
+   61
+  #+end_example
+  Line 54's bubble counts its thread and the two the fold hides (lines
+  55 and 60): "1 thread · 2 more threads in the folded code, on lines
+  55, 60".
 - Threads on the whole file sit above the first line:
   #+begin_example
         On this file                                                                          💬1
@@ -1149,7 +1168,8 @@ item open the dispatch.  The map's keys are Approve's letters:
 |--------------------------------------------+---------------+----------------------------|
 | Dispatch                                   | =?=           | any                        |
 | Fold / unfold the line's threads           | =TAB=         | a line with threads        |
-| (also mouse-1 on its bubble in the margin) |               |                            |
+| (also mouse-1 on its bubble in the margin; |               | or a fold that hides some  |
+| on a fold's, it opens the fold)            |               |                            |
 | Fold / unfold every thread                 | =T=           | any                        |
 | Next / previous unresolved thread          | =n= =p=       | any (on to the PR's files) |
 | Comment, suggest                           | =c= =s=       | line, region               |
@@ -1163,14 +1183,17 @@ item open the dispatch.  The map's keys are Approve's letters:
 | Submit review, discard it                  | =S= =X=       | any                        |
 
 In evil's normal state, the mode's own keys go before those of other
-minor modes:
-| Command                                     | Evil normal           |
-|---------------------------------------------+-----------------------|
-| Next / previous unresolved thread           | =]t= =[t=             |
-| Fold / unfold the line's threads; elsewhere | =za=, =zo= =zO=,      |
-| what the key does without the mode          | =zc= =zC=             |
-| Unfold / fold every thread, and every other | =zR= =zr= / =zM= =zm= |
-| fold as the key does without the mode       |                       |
+minor modes.  A line's threads are its innermost fold ([[file:decisions.org::*D51 Threads fold inside the buffer's own folds][D51]]):
+| Command                                         | Evil normal |
+|-------------------------------------------------+-------------|
+| Next / previous unresolved thread               | =]t= =[t=   |
+| Fold / unfold the line's threads                | =za=        |
+| Unfold / fold the line's threads; when they are | =zo= =zc=   |
+| already, or there are none, the code            |             |
+| Unfold / fold the line's threads and the code   | =zO= =zC=   |
+| Unfold / fold every thread, not the code        | =zR= =zM=   |
+=zr= and =zm= are left to the buffer's own folding.  Outside a line with
+threads, the fold keys do what they do without the mode.
 
 * Faces
 All in =approve-faces.el=, group =approve-faces=.  Main ones and what they

@@ -47,9 +47,9 @@
 ;; Input buffers start in insert state, to write at once.
 ;;
 ;; In a file's buffer in a clone, the feedback mode binds ]t and [t,
-;; and the fold keys za, zo, zc, zR and zM, which fold its threads and
-;; pass on to the buffer's own folds (`approve-evil-setup-feedback',
-;; decision D50).
+;; and the fold keys za, zo, zO, zc, zC, zR and zM, which fold its
+;; threads as the innermost fold of their line and pass on to the
+;; buffer's own folds (`approve-evil-setup-feedback', decision D51).
 ;;
 ;; The modes require this file once evil is loaded; nothing here
 ;; requires evil.
@@ -193,18 +193,19 @@ zp folds every list but the one at point, as in a PR buffer.")
     ("[t" . approve-feedback-previous-thread)
     ("za" . approve-feedback-toggle-fold)
     ("zo" . approve-feedback-open-fold)
-    ("zO" . approve-feedback-open-fold)
+    ("zO" . approve-feedback-open-fold-recursively)
     ("zc" . approve-feedback-close-fold)
-    ("zC" . approve-feedback-close-fold)
+    ("zC" . approve-feedback-close-fold-recursively)
     ("zR" . approve-feedback-open-all-folds)
-    ("zr" . approve-feedback-open-all-folds)
-    ("zM" . approve-feedback-close-all-folds)
-    ("zm" . approve-feedback-close-all-folds))
+    ("zM" . approve-feedback-close-all-folds))
   "Keys of `approve-feedback-mode' in evil's normal state: (KEY . COMMAND).
 The next and previous unresolved thread, as in Approve's buffers,
-and the fold keys: on a line with threads they fold those, elsewhere
-they do what they do without the mode, and zR and zM fold every
-thread and do that too (decision D50).  The other commands are under
+and the fold keys (decision D51).  A line's threads are its
+innermost fold: za, zo and zc fold or unfold them, and do what they
+do without the mode when the line has none, or when they are as the
+key wants them; zO and zC do both.  zR and zM unfold and fold every
+thread of the file, and leave the code's folds to zr and zm, which
+the mode doesn't bind.  The other commands are under
 `approve-feedback-prefix-key'.")
 
 (defun approve-evil-setup-feedback ()

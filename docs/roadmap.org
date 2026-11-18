@@ -433,6 +433,21 @@ Mockups: a file's buffer with its threads (written with F21).
       lighter, which doom-modeline hides, gave way to an item in
       =global-mode-string=: the speech bubble and the file's threads, =↻=
       and =…=, the rest in its tooltip.
+- [X] Folding, tested at the author's request with hideshow in a clone
+      of the scratch repository (2026-11-18, [[file:decisions.org::*D51 Threads fold inside the buffer's own folds][D51]], superseding D50's
+      fold keys).  Found: =]t= into a folded function landed on the
+      fold's marker; a thread on a folded block's last line showed
+      under its first; a fold hid its threads without a sign; a second
+      =zc= on a line with threads did nothing.  Now the buffer's own
+      folds (invisible text) hide the threads of their lines, and the
+      line that shows a fold counts them in its bubble (mouse-1 and
+      =TAB= open it); a fold's first line has its threads after the
+      fold's marker, without line numbers; going to a thread opens its
+      folds (=isearch-open-invisible=), and the threads are painted
+      again after a command that changed the folds.  A line's threads
+      are its innermost fold (=za= =zo= =zc=, =zO= =zC= both), =zR= =zM=
+      fold every thread alone, =zr= =zm= are left to the code, and only
+      the mode's keys are passed on.
 - Done when :: on a branch with a PR, with commits not pushed and edits
   not saved, the user reads the threads in the buffers they edit,
   replies, resolves and comments from there, and the browser shows the

@@ -25,13 +25,14 @@
 <main>
 <h1>Review feedback in your clone</h1>
 <p class="lead">A pull request's threads in your own buffers of its files, on a branch with the PR checked out
-(Phase 7, F21, F22, D45, D46, D50). The buffer stays yours: its mode, hooks and keys, but a prefix key and evil's fold keys. Approve adds overlays and
+(Phase 7, F21, F22, D45, D46, D50, D51). The buffer stays yours: its mode, hooks and keys, but a prefix key and evil's fold keys. Approve adds overlays and
 an item in the mode line, and never changes the text.
 <span class="hint-click">Click a line with a bubble to unfold its threads, like <code>C-c ' TAB</code> or evil's <code>za</code>.</span></p>
 
 <ul class="toc">
   <li><a href="#buffer">A file's buffer, as it opens</a></li>
   <li><a href="#unfolded">A line's threads, unfolded</a></li>
+  <li><a href="#folds">Threads in folded code</a></li>
   <li><a href="#file-threads">Threads on the whole file</a></li>
   <li><a href="#lighter">The mode line</a></li>
   <li><a href="#dispatch">Feedback dispatch</a></li>
@@ -161,6 +162,40 @@ commit; one on removed lines with those lines.</p>
 </section>
 
 <!-- ================================================================== -->
+<section class="shot" id="folds">
+<h2>Threads in folded code <span class="ref">hideshow · outline · evil zc zo zO zC · D51</span></h2>
+<p>The buffer's own folds hide the threads of the lines they hide. The line that shows a fold counts them in its
+bubble, and its tooltip says where they are; mouse-1 or <code>C-c ' TAB</code> on it opens the fold. A line whose end
+starts a fold has its unfolded threads after the fold's marker. Here hideshow folds two functions; line 36 has a
+thread of its own, unfolded.</p>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<p>  <span class="ln">35</span></p>
+<p class="cur"><span class="mg er" title="1 thread · 6 more threads in the folded code, on lines 40, 41, 42, 44, 45, 47 · mouse-1: fold"><i data-i="comment">💬</i>6</span>  <span class="ln">36</span> (<span class="kw">cl-defun</span> <span class="fn">approve-api-graphql</span> (query variables<span class="d">[11 lines…]</span></p>
+<p>          <span class="d">╭─</span> <span class="u">@erin</span> <span class="d">· 1 hour ago ─────────────────────────────────────────────</span></p>
+<p>          <span class="d">│</span> The docstring should say it takes a host now.</p>
+<p>          <span class="d">╰─────────────────────────────────────────────────────────────────</span></p>
+<p>  <span class="ln">48</span></p>
+<p><span class="mg bubble" title="2 threads in the folded code, on lines 50, 53 · mouse-1: unfold the code"><i data-i="comment">💬</i>2</span>  <span class="ln">49</span> (<span class="kw">defun</span> <span class="fn">approve-api--retries</span> ()<span class="d">[5 lines…]</span></p>
+<p>  <span class="ln">55</span></p>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">approve-api.el</span>   42%  L36  <span class="pi">ELisp/l</span>  <span class="er"><i data-i="comment">💬</i>9</span></div>
+</div>
+<div class="echo"></div>
+</div>
+<ul>
+  <li>Evil's fold keys take a line's threads as its innermost fold: <code>zc</code> on line 36 folds its thread,
+  and a second <code>zc</code> the function; <code>zo</code> goes the other way. <code>zO</code> and
+  <code>zC</code> do both at once. <code>za</code> folds or unfolds the threads alone.</li>
+  <li><code>zR</code>/<code>zM</code> unfold and fold every thread, and leave the code's folds alone;
+  <code>zr</code>/<code>zm</code> are the buffer's own, which fold the code and leave the threads.</li>
+  <li><code>]t</code>/<code>[t</code> (<code>C-c ' n</code>/<code>p</code>) open the folds that hide the thread
+  they go to, as isearch does.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
 <section class="shot" id="file-threads">
 <h2>Threads on the whole file <span class="ref">above the first line</span></h2>
 <div class="emacs">
@@ -247,7 +282,7 @@ to compare"; a merged or closed PR, taken by the command after asking, says so o
 
 <!-- ================================================================== -->
 <section class="shot" id="keys">
-<h2>Keys <span class="ref">approve-feedback-prefix-key · evil's fold keys · D50</span></h2>
+<h2>Keys <span class="ref">approve-feedback-prefix-key · evil's fold keys · D50 · D51</span></h2>
 <p>The mode's commands are in <code>approve-feedback-command-map</code>, under <code>approve-feedback-prefix-key</code>:
 <code>C-c '</code> by default, in Emacs and in evil's states. Set another key, or nil, and bind the map under a leader
 too if you like:</p>
@@ -264,8 +299,9 @@ too if you like:</p>
   <li><code>RET</code> the PR buffer at this line (else the line's first thread, else the file) · <code>P</code> pick another PR · <code>g</code> refresh ·
   <code>o</code> browser · <code>S</code> <code>X</code> submit, discard</li>
   <li>Evil's normal state, the mode's own keys: <code>]t</code>/<code>[t</code> next/previous unresolved thread;
-  <code>za</code> <code>zo</code> <code>zc</code> fold the line's threads, and fold code as usual on a line without;
-  <code>zR</code>/<code>zM</code> unfold/fold every thread, and every other fold too.</li>
+  <code>za</code> <code>zo</code> <code>zc</code> fold the line's threads as its innermost fold, then the code
+  as usual, and <code>zO</code> <code>zC</code> both at once;
+  <code>zR</code>/<code>zM</code> unfold/fold every thread, and leave the code's folds to <code>zr</code>/<code>zm</code>.</li>
   <li>In the PR buffer and the file view, <code>f</code> (evil: <code>gF</code>) opens the line, thread or file at point
   in your clone, with that PR's threads (picked for the branch, as <code>P</code> would); <code>F</code> and <code>gf</code>
   still open Approve's file view.</li>

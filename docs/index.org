@@ -194,6 +194,14 @@ task only needs the files it touches.
   buffer's own folding, and the mode line shows a speech bubble and the
   file's threads through =global-mode-string=, which doom-modeline shows
   too.
+- Folding was tested with hideshow, at the author's request, the same
+  day ([[file:decisions.org::*D51 Threads fold inside the buffer's own folds][D51]], superseding D50's fold keys).  The buffer's own folds
+  hide the threads of the lines they hide, and the line that shows a
+  fold counts them in its bubble; a fold's first line has its threads
+  after the fold's marker; going to a thread opens its folds, as isearch
+  does.  A line's threads are its innermost fold: =zc= folds them, then
+  the code, =zo= the other way, =zO= =zC= both; =zR= =zM= fold threads
+  alone, and =zr= =zm= are left to the code.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

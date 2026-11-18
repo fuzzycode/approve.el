@@ -483,11 +483,14 @@ life   [label="while the buffer lives:\l\
   HEAD moves (a commit, a checkout, a pull) → the branch's PR again (F22):\l\
       the same: the clone's state again · another: its threads · none: overlays go\l\
   D23's check (focus, timer) → ↻ in the mode line; [user] C-c ' g → F17\l\
-  [user] C-c ' TAB · T, evil za · zR zM, mouse-1 on a bubble → unfold / fold\l\
-      the line, or all; without threads, za folds code as usual\l\
+  [user] C-c ' TAB · T, evil za zo zc zO zC · zR zM, mouse-1 on a bubble → unfold / fold\l\
+      the line, or all; the line's innermost fold: zo zc where the threads are so\l\
+      already, or without threads, and zO zC always, fold code as usual (D51)\l\
+  the buffer's own folds change → a hidden line's threads go; the line that shows\l\
+      the fold counts them in its bubble; a fold's first line's threads follow it\l\
   [user] C-c ' n / p (evil ]t / [t) → the next / previous unresolved\l\
-      thread, unfolded; past the file's last, the PR's next file, in the clone;\l\
-      past the last file, the first again\l" @note];
+      thread, unfolded, its folds opened; past the file's last, the PR's next file,\l\
+      in the clone; past the last file, the first again\l" @note];
 show -> life [style=dashed];
 
 subgraph cluster_act { label="actions (Phase 7's later tasks)";
