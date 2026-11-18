@@ -1262,7 +1262,8 @@ Each one names the spike or phase that will answer it ([[file:roadmap.org][roadm
   =private-user-images.githubusercontent.com= URLs that expire after a few
   minutes) load reliably?  → [[file:roadmap.org::*SP5 Images in bodyHTML][SP5]]: public images do; private ones are
   still to check on a private repository.
-- Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 8.
+- Q5 :: User manual: a texinfo manual (like Magit) or org → README?  → Phase 8,
+  decided with the author when the documentation is written, on =main=.
 - Q6 :: Should the dashboard show unread state from notifications?  → Phase 8.
 - Q7 :: What the eldoc echo lines show for users and reactions, given the
   store holds no email and no reactor names.

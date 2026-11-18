@@ -465,7 +465,16 @@ Implements F19.  Mockups: notifications, the mode-line count.
       mouse-3 asks again.  Tests with a fake search and timers run by
       hand.  [[file:ui.org::*Mode-line count (Phase 8)][Mockup]].
 - [ ] Performance pass on the large fixture and on real huge PRs.
-- [ ] User manual ([[file:decisions.org::*Open questions][Q5]]), README with screenshots, customization docs.
+- [ ] Move the work to =main=: merge =feature/revamp= (added 2026-11-17, at
+      the author's request).  The README and the user's documentation
+      are written after it, on =main=.
+- [ ] README and the user's documentation, written together with the
+      author once the work is on =main= (2026-11-17, the author's
+      choice): the README (what Approve is, installing it from GitHub
+      as [[file:decisions.org::*D49 Released from GitHub first; MELPA once there is interest][D49]] says, the token, first steps, screenshots), the user
+      manual (its form, texinfo or org, is [[file:decisions.org::*Open questions][Q5]], decided then) and the
+      options.  The author writes; agents help, and check what the
+      docs say against the code.
 - [ ] Release from GitHub, not MELPA ([[file:decisions.org::*D49 Released from GitHub first; MELPA once there is interest][D49]]; changed 2026-11-17 at the
       author's request): a tagged version, installed from the repository
       with =package-vc-install= (its =:lisp-dir= is =lisp=), =use-package=

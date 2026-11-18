@@ -173,7 +173,9 @@ task only needs the files it touches.
   minutes, with the pull requests in its tooltip.
 - Also decided that day ([[file:decisions.org::*D49 Released from GitHub first; MELPA once there is interest][D49]]): the release is from GitHub, a tagged
   version installed from the repository; MELPA waits until Approve has
-  been used in the wild and there is interest.
+  been used in the wild and there is interest.  The author writes the
+  README and the user's documentation, with an agent's help, once the
+  work has moved from =feature/revamp= to =main= (both Phase 8 tasks).
 - Next step: between the buffers, the next task of
   [[file:roadmap.org::*Phase 7 — Review feedback in your clone][Phase 7]]: =f= (evil =gF=) in the PR buffer opens the line in the
   clone, =RET= in the map the PR buffer at this line, and =n= / =p= go on
