@@ -311,7 +311,8 @@ Each of HINTS is (COMMAND LABEL), or nil to skip; see
 is nil.
 
 Example:
-  (approve-render-hints \='(approve-reply \"reply\") \='(approve-resolve \"resolve\"))
+  (approve-render-hints \='(approve-reply \"reply\")
+                        \='(approve-resolve \"resolve\"))
   => \"r reply · R resolve\" in a PR buffer, without evil"
   (when approve-show-hints
     (approve-render-key-hints hints)))

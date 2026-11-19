@@ -35,6 +35,8 @@ cover: install
 		-f buttercup-run-discover $(CURDIR)/tests
 
 # Byte-compile with warnings as errors, then package-lint and checkdoc.
+# Checkdoc's guess at the voice of a doc string is off, as from Emacs
+# 31.1, so every Emacs in CI checks the same way.
 lint: install
 	$(BATCH) --eval "(setq byte-compile-error-on-warn t)" \
 		-f batch-byte-compile $(SRCS)
@@ -45,6 +47,7 @@ lint: install
 		-f package-lint-batch-and-exit $(SRCS)
 	$(BATCH) --eval "(require 'checkdoc)" \
 		--eval "(let* ((failed nil) \
+		               (checkdoc-verb-check-experimental-flag nil) \
 		               (default checkdoc-create-error-function) \
 		               (checkdoc-create-error-function \
 		                (lambda (&rest args) (setq failed t) (apply default args)))) \
