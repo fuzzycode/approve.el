@@ -589,7 +589,9 @@ Mockups: PR buffer — split layout.
       light of the feedback: the key from the file list to the diff (=RET=
       opens the file whole now), where the diff buffer shows, viewed marks
       in the file list, whether the overview follows the diff, evil's way
-      back (=^= is a motion there), what the diff buffer holds.  Then D05,
+      back (=^= is a motion there), what the diff buffer holds, and whether
+      the overview has a file list at all (D05's single buffer no longer
+      shows one by default).  Then D05,
       F18 and the split mockup (ui.org, pr.html) say what was decided.
 - [ ] Split layout and =L= (F18).  Code that works on a PR buffer already
       reads and writes through the shared store and session

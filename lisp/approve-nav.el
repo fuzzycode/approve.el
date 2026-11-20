@@ -355,9 +355,14 @@ See `approve-next-new-comment'."
   (approve-nav-goto-section 'approve-commits-section t))
 
 (defun approve-jump-files ()
-  "Move to the list of changed files."
+  "Move to the changed files: their list, else the diff.
+The list is there only when `approve-pr-sections-hook' has
+`approve-insert-files-section', which it hasn't by default."
   (interactive)
-  (approve-nav-goto-section 'approve-files-section t))
+  (approve-nav-goto-section (if (approve-nav--top-section 'approve-files-section)
+                                'approve-files-section
+                              'approve-diff-section)
+                            t))
 
 (defun approve-jump-pending-review ()
   "Move to the viewer's pending review."

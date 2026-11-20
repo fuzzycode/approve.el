@@ -140,6 +140,7 @@ The threads of parser.go are drawn once its diff is expanded."
   (describe "v (approve-toggle-viewed)"
     (it "marks the file at point in the file list viewed, then not viewed"
       (test-commands--with-pr
+        (approve-test-show-file-list)
         (setq test-commands--answer
               (lambda (request)
                 `((,(if (string-match-p "unmark" (plist-get request :name))

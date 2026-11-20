@@ -80,6 +80,8 @@ ICON is non-nil when the loading icon follows the line."
     (approve-test-with-fixture "medium"
       (setq pr (approve-test-open-pr "medium"))
       (with-current-buffer pr
+        ;; A file's marks are on its diff heading and its row in the list.
+        (approve-test-show-file-list)
         (magit-section-show (approve-test-find-section 'approve-file-section
                                                        test-actions--path)))))
   (after-all

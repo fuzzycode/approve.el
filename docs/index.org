@@ -207,6 +207,10 @@ task only needs the files it touches.
   file and annotated with its comments and state.  =j j= in the PR
   buffer shows the thread in the diff; =C-c ' j= in a file of a clone
   opens it at its line in the clone.
+- Also asked for by the author the same day ([[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]], amended): the
+  file list is no longer in the PR buffer by default, and may be
+  removed for good later.  =approve-add-section-hook= puts
+  =approve-insert-files-section= back; =j f= goes to the diff without it.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

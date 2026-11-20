@@ -115,12 +115,22 @@
       (expect (approve-model-meta :viewer) :to-equal "vera-example")
       (dolist (type '(approve-header-section approve-pending-review-section
                       approve-description-section approve-checks-section
-                      approve-commits-section approve-files-section))
+                      approve-commits-section approve-conversation-section
+                      approve-diff-section))
         (expect (approve-test-find-section type) :to-be-truthy))
       (expect (approve-test-section-text (approve-test-find-section 'approve-header-section))
               :to-match "\\`Author      @alice-example")
-      (expect (length (oref (approve-test-find-section 'approve-files-section) children))
+      (expect (length (oref (approve-test-find-section 'approve-diff-section) children))
               :to-equal 30)))
+
+  (it "shows the file list only when the sections hook has it (D05, amended)"
+    (test-pr--with-medium
+      (expect (approve-test-find-section 'approve-files-section) :to-be nil)
+      (approve-test-show-file-list)
+      (expect (length (oref (approve-test-find-section 'approve-files-section) children))
+              :to-equal 30)
+      (expect (oref (approve-test-find-section 'approve-files-section) end)
+              :to-equal (oref (approve-test-find-section 'approve-diff-section) start))))
 
   (it "puts the number, title and state in the header line"
     (test-pr--with-medium
@@ -181,8 +191,8 @@
                 (expect text :to-match "Could not load the pull request\\.\n  Bad Gateway\n")
                 (expect text :to-match "g to retry")
                 ;; The sections that loaded are not drawn.
-                (expect text :not :to-match "Files changed")
-                (expect (approve-test-find-section 'approve-files-section) :to-be nil))
+                (expect text :not :to-match "^Diff")
+                (expect (approve-test-find-section 'approve-diff-section) :to-be nil))
               (expect (substring-no-properties approve-pr--header-line) :to-equal " #202")
               (expect 'message :to-have-been-called-with
                       "Approve: could not load %s: %s" "acme-example/rocket#202" "Bad Gateway"))
@@ -236,6 +246,7 @@
 
   (it "keeps point on the same section, line and column"
     (test-pr--with-medium
+      (approve-test-show-file-list)
       (test-pr--goto-text "internal/parser/lexer.go")
       (forward-char 5)
       (let ((column (current-column)))
@@ -289,11 +300,11 @@
 
   (it "detaches the markers of the sections it erases"
     (test-pr--with-medium
-      (let ((old (approve-test-find-section 'approve-files-section)))
+      (let ((old (approve-test-find-section 'approve-diff-section)))
         (approve-pr-redraw)
         (expect (marker-buffer (oref old start)) :to-be nil)
         (expect (marker-buffer (oref old end)) :to-be nil)
-        (expect (marker-buffer (oref (approve-test-find-section 'approve-files-section) start))
+        (expect (marker-buffer (oref (approve-test-find-section 'approve-diff-section) start))
                 :to-be (current-buffer)))))
 
   (it "starts with checks and commits collapsed and the rest expanded"
@@ -302,7 +313,7 @@
       (expect (oref (approve-test-find-section 'approve-commits-section) hidden) :to-be t)
       (expect (oref (approve-test-find-section 'approve-description-section) hidden)
               :to-be nil)
-      (expect (oref (approve-test-find-section 'approve-files-section) hidden) :to-be nil))))
+      (expect (oref (approve-test-find-section 'approve-diff-section) hidden) :to-be nil))))
 
 (describe "Refreshing"
   (it "loads again, keeping the text until the data arrives"

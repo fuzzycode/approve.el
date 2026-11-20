@@ -34,7 +34,9 @@
     (let ((approve-use-nerd-icons nil))
       (approve-icon-clear-cache)
       (approve-test-with-fixture "medium"
-        (setq test-sections--buffer (approve-test-open-pr "medium")))))
+        (setq test-sections--buffer (approve-test-open-pr "medium"))
+        (with-current-buffer test-sections--buffer
+          (approve-test-show-file-list)))))
   (after-all
     (kill-buffer test-sections--buffer)
     (approve-icon-clear-cache))

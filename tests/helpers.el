@@ -152,6 +152,14 @@ until every query has settled and redraw.  Kill the buffer after."
   "Return the text of SECTION without properties."
   (buffer-substring-no-properties (oref section start) (oref section end)))
 
+(defun approve-test-show-file-list ()
+  "Show the file list in the current PR buffer, before the diff, and redraw.
+It is not in `approve-pr-sections-hook' by default (decision D05,
+amended); this adds it to the buffer's own value, as a user could."
+  (approve-add-section-hook 'approve-pr-sections-hook #'approve-insert-files-section
+                            #'approve-insert-diff-section nil t)
+  (approve-pr-redraw))
+
 (defun approve-test-fail-queries (transport names)
   "Return TRANSPORT, except that requests for NAMES fail with HTTP 502.
 NAMES are GraphQL query files or REST resources."

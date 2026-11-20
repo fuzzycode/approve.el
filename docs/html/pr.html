@@ -130,18 +130,6 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <p></p>
 
 <div class="s">
-<p class="hd"><span class="tog"></span> <span class="h">Files changed</span> (12)  <span class="ok">+340</span> <span class="er">−56</span>                                     <span class="wa">1 unresolved file thread</span></p>
-<div class="sb">
-<p>    lisp/approve-api.el            <span class="ok">+120</span>  <span class="er">−30</span>  <span class="ok">██████████</span><span class="er">▒▒▒</span></p>
-<p>    lisp/approve-model.el           <span class="ok">+40</span>  <span class="er">−10</span>  <span class="ok">███</span><span class="er">▒</span></p>
-<p>    lisp/approve-graphql.el         <span class="ok">+12</span>   <span class="er">−2</span>  <span class="ok">█</span>               <i data-i="comment">💬</i> 1</p>
-<p>    tests/test-approve-api.el      <span class="ok">+160</span>   <span class="er">−0</span>  <span class="ok">█████████████</span></p>
-<p>    <span class="d">…  8 more</span></p>
-</div>
-</div>
-<p></p>
-
-<div class="s">
 <p class="hd"><span class="tog"></span> <span class="h">Diff</span> (12)                               4/12 viewed <span class="d">·</span> <span class="wa">4 unresolved threads</span> <span class="d">·</span> <span class="wa">1 new comment</span></p>
 <div class="sb">
 
@@ -242,14 +230,16 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <ul>
   <li>Reviewer marks: <span class="ok"><i data-i="approved">✓</i></span> approved, <span class="er"><i data-i="changes-requested">✗</i></span> changes requested, <i data-i="commented">💬</i> commented, <i data-i="requested">○</i> requested.</li>
   <li><b>Your pending review</b> only appears when one exists; its heading counts the comments, replies included.</li>
-  <li>File list: each file's counts, a diffstat bar and its threads on the whole file (the diff's “On this file”); its
-    heading sums the unresolved ones. Which files are viewed is in the diff.</li>
+  <li>The file list is not shown by default, for now (D05, amended); <code>approve-add-section-hook</code> puts
+    <code>approve-insert-files-section</code> back, before the diff. It gives each file's counts, a diffstat bar and its
+    threads on the whole file (the diff's “On this file”); its heading sums the unresolved ones. Which files are viewed
+    is in the diff. <code>j f</code> goes to it, or to the diff when it isn't shown.</li>
   <li>Diff file headings: the viewed mark (<i data-i="viewed">✓</i> viewed, dim; <i data-i="unviewed">·</i> not viewed;
     <span class="wa"><i data-i="dismissed">↻</i></span> viewed but changed since, GitHub's <code>DISMISSED</code>; the Diff heading counts
     them), an icon of the change (<span class="ok"><i data-i="file-added">+</i></span> added,
     <span class="m"><i data-i="file-modified">~</i></span> modified, <span class="er"><i data-i="file-deleted">−</i></span> deleted,
     <span class="pi"><i data-i="file-renamed">→</i></span> renamed, <span class="pi"><i data-i="file-copied">⧉</i></span> copied,
-    <span class="m"><i data-i="file-changed">⚙</i></span> mode changed), then the path; the size is in the file list. At the right edge, lined up, the threads on its lines
+    <span class="m"><i data-i="file-changed">⚙</i></span> mode changed), then the path; the size is in the file list, when it is shown. At the right edge, lined up, the threads on its lines
     (outdated ones too); the Diff heading sums the unresolved ones. A moved file reads
     <code>internal/engine/{queue.go → scheduler.go}</code>, as in git's diffstat; a path too long for its room loses whole
     directories in the middle (<code>internal/…/page.tmpl</code>).</li>
@@ -365,7 +355,7 @@ section, unless it is the pull request itself or the token (below); huge and bin
 <p>  <span class="m"><i data-i="loading">⟳</i> Loading…</span></p>
 <p><span class="tog"></span> <span class="h">Conversation</span></p>
 <p>  <span class="m"><i data-i="loading">⟳</i> Loading…</span></p>
-<p><span class="tog"></span> <span class="h">Files changed</span></p>
+<p><span class="tog"></span> <span class="h">Diff</span></p>
 <p>  <span class="er"><i data-i="error">✗</i> Could not load files: HTTP 502 Bad Gateway ·</span> <span class="k">g</span> <span class="er">to retry</span></p>
 <p></p>
 <p><span class="tog"></span> <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">lisp/huge-generated.json</span></p>

@@ -78,7 +78,6 @@
     approve-insert-checks-section
     approve-insert-commits-section
     approve-insert-conversation-section
-    approve-insert-files-section
     approve-insert-diff-section)
   "Functions that insert the sections of a pull request buffer.
 Each is called with no arguments, at point, in the PR buffer, and
@@ -87,7 +86,15 @@ approve-sections.el and the files it names.  Change it with
 `approve-add-section-hook', for example to drop the commits:
 
   (remove-hook \\='approve-pr-sections-hook
-               #\\='approve-insert-commits-section)"
+               #\\='approve-insert-commits-section)
+
+The list of changed files, with their sizes and the threads on
+whole files, is not shown by default (decision D05, amended).  This
+puts it back, before the diff:
+
+  (approve-add-section-hook \\='approve-pr-sections-hook
+                            #\\='approve-insert-files-section
+                            #\\='approve-insert-diff-section)"
   :type 'hook
   :group 'approve)
 

@@ -363,7 +363,7 @@ buffer, which the file list opens at a file (its key is chosen with F18).
  ├── approve-conversation-section
  │   └── approve-issue-comment-section * | approve-review-section *
  │       | approve-event-section *     (value: node id of the first item of a run)
- ├── approve-files-section           file list with stats
+ ├── approve-files-section           file list with stats; not shown by default (D05)
  │   └── approve-file-entry-section * (value: path)
  └── approve-diff-section
      └── approve-file-section *      (value: path)        collapsed; body inserted lazily

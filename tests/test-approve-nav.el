@@ -146,6 +146,14 @@
       (approve-jump-pending-review)
       (expect (car (test-nav--section-at-point)) :to-be 'approve-pending-review-section)))
 
+  (it "goes to the files: the diff, or their list when the buffer shows it"
+    (test-nav--with-medium
+      (approve-jump-files)
+      (expect (car (test-nav--section-at-point)) :to-be 'approve-diff-section)
+      (approve-test-show-file-list)
+      (approve-jump-files)
+      (expect (car (test-nav--section-at-point)) :to-be 'approve-files-section)))
+
   (it "goes to a file's diff by name"
     (test-nav--with-medium
       (approve-jump-file "pkg/api/types.go")
@@ -296,7 +304,7 @@
         (expect (funcall folded)
                 :to-equal '(approve-pending-review-section approve-description-section
                             approve-checks-section approve-commits-section
-                            approve-conversation-section approve-files-section))
+                            approve-conversation-section))
         (expect (oref (approve-test-find-section 'approve-file-section "pkg/api/types.go") hidden)
                 :to-be nil)
         (expect (oref (approve-test-find-section 'approve-file-section "README.md") hidden)
@@ -318,6 +326,7 @@
 (describe "approve-visit"
   (it "opens a file whole, from the file list and from its heading in the diff"
     (test-nav--with-medium
+      (approve-test-show-file-list)
       (spy-on 'approve-file-show)
       (test-nav--goto "internal/parser/lexer.go")
       (approve-visit)

@@ -311,12 +311,22 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   caching come for free; flexible per user.
 
 ** D05 One PR buffer by default; split layout optional
-- Status :: accepted (2026-11-08)
+- Status :: accepted (2026-11-08); amended 2026-11-18
 - Decision :: By default, one PR buffer holds the overview, conversation,
   commits, checks, the file list and the diff.  Diff bodies are collapsed and
   inserted lazily.  =approve-layout= set to =split= moves the diff into a
   linked diff buffer, leaving the file list in the overview.  Both layouts are
   just different section hooks over the same store.
+- Amended (2026-11-18, by the author) :: The file list is not in the
+  buffer by default, for now: =approve-insert-files-section= stays, and
+  =approve-add-section-hook= puts it back before the diff.  The diff's
+  headings already list the files, which are viewed and their threads;
+  what the list alone shows, each file's size and a count of the
+  threads on whole files, is then not in the buffer.  It may be
+  removed for good later.
+  =j f= goes to the list when the buffer shows it, else to the diff.
+  The split layout (Phase 11) decides then what its overview links to
+  the diff buffer from.
 - Why :: One buffer is simplest to navigate and search.  The split layout
   mirrors GitHub's tabs and Magit's status/diff split, and keeps huge PRs fast.
   Making it a hook choice costs almost nothing.

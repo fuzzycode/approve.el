@@ -132,15 +132,8 @@ Notes:
   are; before your first review nothing is.  =j n= and =j N= go to the
   next and previous new comment, here or in the diff's threads.
 
-** Bottom: files and diff
+** Bottom: the diff
 #+begin_example
- ▾ Files changed (12)  +340 −56                                 1 unresolved file thread
-     lisp/approve-api.el            +120  −30  ██████████▒▒▒
-     lisp/approve-model.el           +40  −10  ███▒
-     lisp/approve-graphql.el         +12   −2  █               💬 1
-     tests/test-approve-api.el      +160   −0  █████████████
-     …
-
  ▾ Diff (12)                         4/12 viewed · 4 unresolved threads · 1 new comment
    ▾ ✓ ~ lisp/approve-api.el                                                 1 new  💬 2
      ▾ @@ -40,7 +40,12 @@ (cl-defun approve-api-graphql (query variables
@@ -169,18 +162,14 @@ Notes:
 #+end_example
 
 Notes:
-- The file list gives each file's size: its counts and a diffstat bar
-  scaled to the largest file (=approve-diffstat-width=), and its threads on
-  the whole file (the diff's "On this file"); its heading sums the
-  unresolved ones.  =RET= on a file opens it whole ([[*File view][File view]]), as on its
-  heading in the diff; =j /= and =]u= jump to a file's diff.
-- Diff file headings say which files are viewed, the file list doesn't:
+- Diff file headings say which files are viewed:
   ✓ viewed (dim), · not viewed, ↻ viewed but changed since (GitHub's
   =DISMISSED=, highlighted); =v= toggles it, and the Diff heading counts
   the viewed files.  Then an icon of the change (the =file-*= icons: added,
   modified, deleted, renamed, copied, mode changed), in the =approve-file-*=
   faces; eldoc says it in words.  Then the path; the size is in the file
-  list.  At the right edge, the threads on its lines, outdated ones too
+  list, when it is shown.  At the right edge, the threads on its lines,
+  outdated ones too
   (unresolved, or all of them dim when all are resolved), lined up; the
   Diff heading sums the unresolved ones.  A moved file is written as git's
   diffstat writes it, =internal/engine/{queue.go → scheduler.go}=; a path
@@ -228,6 +217,26 @@ Notes:
   A file's heading counts its new comments before its threads, and the
   Diff heading sums them.  =j n= and =j N= go to the next and previous one,
   expanding the file and unfolding the line they are under.
+
+** The file list, not shown by default
+#+begin_example
+ ▾ Files changed (12)  +340 −56                                 1 unresolved file thread
+     lisp/approve-api.el            +120  −30  ██████████▒▒▒
+     lisp/approve-model.el           +40  −10  ███▒
+     lisp/approve-graphql.el         +12   −2  █               💬 1
+     tests/test-approve-api.el      +160   −0  █████████████
+     …
+#+end_example
+
+The file list is not in the buffer by default, for now, and may go for
+good ([[file:decisions.org::*D05 One PR buffer by default; split layout optional][D05]], amended).  =approve-add-section-hook= puts
+=approve-insert-files-section= back, before the diff.  It gives each
+file's size: its counts and a diffstat bar scaled to the largest file
+(=approve-diffstat-width=), and its threads on the whole file (the diff's
+"On this file"); its heading sums the unresolved ones.  It doesn't say
+which files are viewed: the diff's headings do.  =RET= on a file opens it
+whole ([[*File view][File view]]), as on its heading in the diff; =j /= and =]u= jump to a
+file's diff, =j f= to the list (to the diff when the list isn't shown).
 
 ** Threads: suggestions, file-level, outdated
 #+begin_example
@@ -288,8 +297,8 @@ exploration, with mockups and open questions, is in [[file:html/split.html][html
 Shown in the PR buffer and the diff buffer; it stays visible while scrolling.
 It names the PR; counts are in the sections (viewed files and unresolved
 threads on lines on Diff, unresolved threads on whole files on Files
-changed, pending comments on Your pending review, checks on Status and
-Checks).
+changed when the file list is shown, pending comments on Your pending
+review, checks on Status and Checks).
 
 #+begin_example
  #1234 Add retry logic to the GraphQL client                       ● Open  ◌ Draft
@@ -318,7 +327,7 @@ title has loaded.  The fourth counts the suggestions waiting in the batch
    ⟳ Loading…
  ▾ Conversation
    ⟳ Loading…
- ▾ Files changed
+ ▾ Diff
    ✗ Could not load files: HTTP 502 Bad Gateway · g to retry
 
  ▾ · ~ lisp/huge-generated.json
@@ -634,6 +643,9 @@ what they will do ("Mark ready for review", "Reopen pull request",
 
 =n= and =N= are dimmed when nothing is new since your last review, or you
 haven't reviewed the pull request yet.
+
+=f= goes to the file list when the buffer shows it ([[*The file list, not shown by default][The file list]]), else
+to the diff.
 
 =j j= picks any thread of the pull request with completion
 ([[file:decisions.org::*D52 A picker of the pull request's threads][D52]]), grouped by file: the file at point first, then the diff's
