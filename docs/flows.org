@@ -965,6 +965,24 @@ branch checked out.  Code lives in =approve-clone.el=.
      shows another of its PRs, this one is picked for it, as with P
 
 
+ [user] U in the dispatch of the PR buffer, a file view or a clone's buffer
+        │   (M-x approve-fetch-pull-request; no key of its own)
+        ▼
+     the clones of approve-clone-directories whose remotes name the base
+     repository, one for each git directory (worktrees share it)
+        │
+        ▼
+     ◇ any? ◇──no──▶ echo area: "No clone of fuzzycode/test-approve in
+        │ yes          approve-clone-directories: nothing fetched"
+        ▼
+     in each, through Magit, in the background (D53):
+     git fetch REMOTE +refs/pull/15/head:refs/pullreqs/15   ("Fetching #15 into …")
+        │
+        ▼
+     "Fetched #15 into ~/src/test-approve, as refs/pullreqs/15", or git's error
+     for each clone it could not fetch into; the clone's buffers of the PR
+     compare their clone with GitHub's head again (F21)
+
  [user] RET in the map, in a file's buffer
         │
         ▼
@@ -981,6 +999,9 @@ branch checked out.  Code lives in =approve-clone.el=.
 The PR buffer and the clone's buffers share one store, so going between
 them loads nothing.  =f= and =gF= join the dispatch (=?=) of the PR buffer
 and the file view; without a clone they say why and offer the file view.
+=U= joins those dispatches and the feedback mode's: it is the one command
+that changes a clone, and only by a fetch into a ref of its own, so no
+branch moves ([[file:decisions.org::*D53 A pull request is fetched into its clones on the user's command][D53]]).
 The file opens where =approve-feedback-display-action= says: in the
 window of the PR buffer by default, as the file view does.  =RET= on a
 line that isn't in the diff but has threads (an outdated one, one on

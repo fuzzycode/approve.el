@@ -69,13 +69,17 @@
 ;;   request's lines open in: among the clones of its repositories, one
 ;;   whose branch pushes to its head branch, else one that tracks it,
 ;;   read when several are as good and kept for the session.
+;; - `approve-clone-fetch-pull-request' fetches a pull request's head
+;;   into every clone of its repository, as refs/pullreqs/NUMBER, so
+;;   its commits are found there (decision D53).
 ;;
 ;; Layer rules: this is the operations layer, and only the clone
-;; modules touch a clone.  It reads clones through Magit and never
-;; changes them; what it asks GitHub stays out of the store.  Its two
-;; commands, showing a commit and picking a branch's pull request, are
-;; the clone's own.  The core never requires it: approve.el does, and
-;; puts its functions on the hooks the core offers.
+;; modules touch a clone.  It reads clones through Magit, and changes
+;; one only by a fetch the user asked for (D36, D53); what it asks
+;; GitHub stays out of the store.  Its two commands, showing a commit
+;; and picking a branch's pull request, are the clone's own.  The core
+;; never requires it: approve.el does, and puts its functions on the
+;; hooks the core offers.
 
 ;;; Code:
 
@@ -85,6 +89,7 @@
 (require 'parse-time)
 (require 'magit-git)
 (require 'magit-diff)
+(require 'magit-process)
 (require 'magit-repos)
 (require 'approve-api)
 (require 'approve-log)
@@ -689,8 +694,9 @@ never acted on (decision D45).  Two git calls at most."
 CLONE is a top directory; PATH is relative to it.  The text is as
 git has it, carriage returns included, as GitHub's API gives it
 \(decision D45).  It is \"\" when the commit has no such file, and nil
-when the clone hasn't the commit: GitHub has it, and Approve never
-fetches into a clone.  One git call, two when the file is missing."
+when the clone hasn't the commit: GitHub has it, and Approve fetches
+into a clone only when told to (D53).  One git call, two when the
+file is missing."
   (let ((default-directory clone)
         (coding-system-for-read 'utf-8-unix))
     (when (approve-clone--oid-p oid)
@@ -791,6 +797,102 @@ branch checked out."
              (worktree (plist-get (cdr (assoc choice choices)) :worktree)))
         (puthash key worktree approve-clone--worktrees)
         worktree)))))
+
+;;; Fetching a pull request
+
+(defun approve-clone-pull-request-ref (number)
+  "Return the ref the head of pull request NUMBER is fetched into.
+That is refs/pullreqs/NUMBER, where Forge keeps pull requests too
+\(decision D53)."
+  (format "refs/pullreqs/%s" number))
+
+(defun approve-clone-repository-remotes (repository)
+  "Return the clones of REPOSITORY with their remote for it.
+REPOSITORY is (:host :owner :repo); the value is ((CLONE . REMOTE)
+...).  The clones are those of `approve-clone-repository-clones', in
+its order, one for each git directory: the worktrees of a clone
+share its commits and refs.  REMOTE is the first of the clone's
+remotes that names REPOSITORY."
+  (let ((seen nil) (found nil))
+    (dolist (clone (approve-clone-repository-clones (list repository)))
+      (let ((common (file-truename (approve-clone--common-dir clone))))
+        (unless (member common seen)
+          (push common seen)
+          (when-let* ((remote (seq-find
+                               (lambda (remote)
+                                 (approve-clone-same-repository-p
+                                  (approve-clone-repository (cdr remote)) repository))
+                               (approve-clone-remotes clone))))
+            (push (cons clone (car remote)) found)))))
+    (nreverse found)))
+
+(defun approve-clone--fetch (clone remote refspec callback)
+  "Fetch REFSPEC from REMOTE into CLONE through Magit, then call CALLBACK.
+CALLBACK is called with nil when git succeeded, else with git's
+error, a string.  Magit runs git as its own fetch does: it asks for
+credentials, logs to its process buffer, and refreshes the clone's
+Magit buffers after.  No buffer is saved first: a fetch changes no
+file."
+  (condition-case-unless-debug err
+      (let ((process (with-temp-buffer
+                       (setq default-directory clone)
+                       (let ((magit-save-repository-buffers nil))
+                         (run-hooks 'magit-credential-hook)
+                         (magit-run-git-async "fetch" remote refspec)))))
+        (set-process-sentinel
+         process
+         (lambda (process event)
+           (unwind-protect
+               (magit-process-sentinel process event)
+             (when (memq (process-status process) '(exit signal))
+               (funcall callback
+                        (unless (zerop (process-exit-status process))
+                          (or (magit-process-error-summary (process-buffer process)
+                                                           (process-get process 'section))
+                              (string-trim event))))))))
+        process)
+    (error (funcall callback (error-message-string err))
+           nil)))
+
+(defun approve-clone-fetch-pull-request (repository number &optional callback)
+  "Fetch pull request NUMBER of REPOSITORY into the user's clones of it.
+REPOSITORY is the base repository, (:host :owner :repo).  GitHub's
+ref of the pull request's head, refs/pull/NUMBER/head, is fetched
+into `approve-clone-pull-request-ref', forced, as the head may have
+been rebased.  Every commit of the pull request is then in the
+clone, a fork's and a deleted branch's too; no branch changes
+\(decision D53).  It is fetched into each clone of
+`approve-clone-repository-remotes', from its remote for REPOSITORY,
+through Magit, in the background.
+
+Return the clones it is fetched into; nil, and nothing is run, when
+there is none.  CALLBACK is called once every fetch has ended, with
+\((CLONE . ERROR) ...) in the order of the clones, ERROR nil where git
+succeeded, else git's message.  It runs in the buffer current now,
+and not at all when it was killed.
+
+Example:
+  (approve-clone-fetch-pull-request
+   \='(:host \"github.com\" :owner \"magit\" :repo \"magit\") 5000
+   (lambda (results) (message \"%S\" results)))"
+  (let* ((remotes (approve-clone-repository-remotes repository))
+         (clones (mapcar #'car remotes))
+         (refspec (format "+refs/pull/%s/head:%s"
+                          number (approve-clone-pull-request-ref number)))
+         (buffer (current-buffer))
+         (pending (length remotes))
+         (results nil))
+    (pcase-dolist (`(,clone . ,remote) remotes)
+      (approve-clone--fetch
+       clone remote refspec
+       (lambda (failure)
+         (push (cons clone failure) results)
+         (when (and (zerop (cl-decf pending)) callback (buffer-live-p buffer))
+           (with-current-buffer buffer
+             (condition-case-unless-debug err
+                 (funcall callback (mapcar (lambda (clone) (assoc clone results)) clones))
+               (error (approve-log-condition "After fetching a pull request" err))))))))
+    clones))
 
 (provide 'approve-clone)
 

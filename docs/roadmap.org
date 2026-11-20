@@ -457,6 +457,16 @@ Mockups: a file's buffer with its threads (written with F21).
       outdated); category =approve-thread=.  It opens in the diff, or
       at its line in the clone, through =approve-goto-thread-function=;
       in evil it is a jump.
+- [X] Fetching a pull request into the clones, at the author's request
+      (2026-11-20, [[file:decisions.org::*D53 A pull request is fetched into its clones on the user's command][D53]]): =approve-fetch-pull-request=, =U= in the
+      dispatches of the PR buffer, the file view and the feedback mode,
+      with no key of its own.  GitHub's =refs/pull/N/head= goes into
+      =refs/pullreqs/N= (Forge's ref) of every clone with a remote for
+      the base repository, once a git directory, through Magit in the
+      background; no branch moves.  Without a clone the echo area says
+      so and nothing happens.  The clone's buffers of the PR compare
+      their clone again once it is in.  Tested against a bare
+      repository behind GitHub's URLs (git's =insteadOf=).
 - Done when :: on a branch with a PR, with commits not pushed and edits
   not saved, the user reads the threads in the buffers they edit,
   replies, resolves and comments from there, and the browser shows the

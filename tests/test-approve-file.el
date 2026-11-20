@@ -555,8 +555,10 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
         (walk (get 'approve-file-dispatch 'transient--layout))
         (collect approve-file-mode-map))
       (dolist (suffix suffixes)
+        ;; U, the fetch into the clones, is in the dispatch alone (D53).
         (expect (lookup-key approve-file-mode-map (kbd (plist-get suffix :key)))
-                :to-be (plist-get suffix :command)))
+                :to-be (unless (eq (plist-get suffix :command) 'approve-fetch-pull-request)
+                         (plist-get suffix :command))))
       (expect (seq-difference (delete-dups bound)
                               (cons 'approve-file-dispatch
                                     (mapcar (lambda (suffix) (plist-get suffix :command))

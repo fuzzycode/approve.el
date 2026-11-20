@@ -260,10 +260,11 @@ clone</a>.</p>
 </section>
 
 <section class="shot" id="F22">
-<h2>F22 Find a buffer's PR, and a PR's clone <span class="ref">P · f (evil: gF) · D45 · Phase 7</span></h2>
+<h2>F22 Find a buffer's PR, and a PR's clone <span class="ref">P · f (evil: gF) · U · D45 · D53 · Phase 7</span></h2>
 <p>A branch, not a clone, has the PR: the head repository's ref finds it, a fork's too. A clone is found by its
 remotes among <code>approve-clone-directories</code>; one <code>git for-each-ref</code> then says which worktree has
-the branch.</p>
+the branch. <code>U</code> in a dispatch fetches the PR's commits into its clones, as
+<code>refs/pullreqs/N</code>; no branch moves.</p>
 <div class="flow">
 <!-- svg F22 -->
 </div>

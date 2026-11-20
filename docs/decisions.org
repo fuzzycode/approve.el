@@ -299,6 +299,11 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   commit message) are passed by.  As the answers are kept for the
   session, =M-x approve-feedback-mode= asks GitHub again when none of
   the branch's pull requests is open: one may have been opened since.
+- Amended (2026-11-20, by the author) :: "Approve never fetches into
+  the clone" stays true of everything it does by itself.  A fetch the
+  user asks for, =approve-fetch-pull-request= ([[*D53 A pull request is fetched into its clones on the user's command][D53]]), brings a pull
+  request's commits into its clones, as D36 allows; the clone's state
+  "missing" is then gone.
 
 * UI
 ** D04 Buffers are magit-section trees built from section hooks
@@ -908,7 +913,56 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   does.  Completion is what Emacs users already filter with, and
   groups and annotations show the shape of the review in any
   completion UI, vertico's or the default.  A thread opens where the
-  user works: in the clone, the code to change is right there.* Data and network
+  user works: in the clone, the code to change is right there.
+
+** D53 A pull request is fetched into its clones on the user's command
+- Status :: accepted (2026-11-20, by the author, who asked for it; he
+  chose GitHub's ref into =refs/pullreqs/=, every clone, no key, and a
+  message when there is no clone)
+- Decision ::
+  - =approve-fetch-pull-request= fetches a pull request's commits into
+    the user's clones, so that they are found there: =RET= on a commit
+    shows it in Magit ([[*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]), and the feedback mode compares the clone
+    with GitHub's head and reads GitHub's text from it ([[*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]).
+  - What: GitHub's ref of the head on the base repository,
+    =refs/pull/N/head=, into =refs/pullreqs/N=, forced:
+    =git fetch REMOTE +refs/pull/N/head:refs/pullreqs/N=.  GitHub has it
+    for every pull request, a fork's and one whose branch is deleted
+    too, and the ref keeps the commits from git's garbage collection.
+    =refs/pullreqs/= is where Forge fetches pull requests, so the two
+    agree.  No branch changes, local or remote-tracking.
+  - Where: every clone of =approve-clone-directories= with a remote that
+    names the base repository (D45's matching of remotes), once for
+    each git directory, as a clone's worktrees share it; from the first
+    such remote.  A clone with only the fork as a remote has no such
+    remote, and is passed by.
+  - How: in the background, through Magit's processes, as
+    =magit-git-fetch= runs git: credentials asked for, git's output in
+    Magit's process buffer (=$=), the clone's Magit buffers refreshed
+    after.  No buffer is saved first: a fetch changes no file.  The echo
+    area says "Fetching #N into ~/src/x...", then "Fetched #N into
+    ~/src/x, as refs/pullreqs/N", or git's error for each clone it
+    could not fetch into.  The feedback mode's buffers of the pull
+    request then compare their clone with GitHub's head again.
+  - Without a clone of the repository, the echo area says so ("No clone
+    of OWNER/NAME in approve-clone-directories: nothing fetched"), and
+    nothing else happens: no error, no beep.
+  - No key: =M-x=, and =U= in the dispatches of the PR buffer, the file
+    view and the feedback mode.  The command is in =approve-feedback.el=,
+    which arranges the clone's commands in the core's buffers; the git
+    part is in =approve-clone.el= ([[*D36 No clone needed; a local clone adds to it][D36]]).
+  - Approve still fetches nothing by itself (D45, amended): a fetch is
+    a command the user gives, as D36 allows.
+- Why :: Without a pull request's commits in the clone, =RET= on a commit
+  went to the browser and the feedback mode said "fetch to compare".
+  Fetching by hand needs the pull request's ref, which few remember,
+  and a fork's branch has no remote in the clone.  GitHub's ref works
+  for every pull request through the remote the clone has, and a ref
+  of its own leaves the user's branches alone.  Every clone gets the
+  commits, since D37 asks every clone for a commit and a buffer's
+  clone may be any of them.
+
+* Data and network
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
 - Decision :: All network calls go through =approve-api.el=, which wraps

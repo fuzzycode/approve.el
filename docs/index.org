@@ -217,6 +217,13 @@ task only needs the files it touches.
   narrowest window that shows them, drawn again when its width changes;
   short of room, the title gives way first.  A new column, =changes=,
   says the lines a pull request adds and removes (=+340 −56=).
+- Also asked for by the author that day ([[file:decisions.org::*D53 A pull request is fetched into its clones on the user's command][D53]]; D45, amended): a
+  pull request is fetched into its clones on the user's command,
+  =approve-fetch-pull-request=, =U= in the dispatches.  GitHub's
+  =refs/pull/N/head= goes into =refs/pullreqs/N= of every clone of the
+  base repository, through Magit, so its commits are found there;
+  without a clone the echo area says so and nothing happens.  Approve
+  still fetches nothing by itself.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

@@ -762,4 +762,124 @@ nowhere.  The clone \"three\", elsewhere, has nothing to do with them."
                test-clone--pr-base)
               :to-be nil))))
 
+(defconst test-clone--pr-head-ref "refs/pull/7/head"
+  "GitHub's ref of the head of the pull request the fake GitHub has.")
+
+(defvar test-clone--pr-sha nil
+  "The head of pull request #7 on the fake GitHub.")
+
+(defmacro test-clone--with-github (&rest body)
+  "Run BODY with clones of them/project fetching from a fake GitHub.
+The fake GitHub is a bare repository outside `approve-clone-directories',
+with pull request #7 as `test-clone--pr-head-ref' at
+`test-clone--pr-sha'.  Clone \"one\" has it as origin, and a worktree
+\"tree\" that is listed as a clone too; clone \"two\" has a fork as
+origin and it as upstream.  Their remotes name GitHub's URLs, which
+git's insteadOf turns into the bare repository's path."
+  (declare (indent 0) (debug t))
+  `(test-clone--with-clones
+     (let* ((process-environment (append '("GIT_CONFIG_NOSYSTEM=1" "GIT_CONFIG_GLOBAL=/dev/null")
+                                         process-environment))
+            (approve-api-host nil)
+            (inhibit-message t)
+            (github (make-temp-file "approve-github-" t))
+            (work (expand-file-name "work" github))
+            (bare (expand-file-name "project.git" github))
+            (one (test-clone--dir "one"))
+            (two (test-clone--dir "two"))
+            (tree (test-clone--dir "tree"))
+            (test-clone--pr-sha (test-clone--make work "The pull request")))
+       (unwind-protect
+           (progn
+             (test-clone--git github "init" "-q" "--bare" bare)
+             (test-clone--git work "push" "-q" bare (concat "HEAD:" test-clone--pr-head-ref))
+             (pcase-dolist (`(,clone ,remote ,url)
+                            `((,one "origin" "git@github.com:them/project.git")
+                              (,two "origin" "git@github.com:me/project.git")
+                              (,two "upstream" "https://github.com/them/project")))
+               (test-clone--git clone "remote" "add" remote url)
+               (test-clone--git clone "config" (format "url.%s.insteadOf" bare) url))
+             (test-clone--git one "worktree" "add" "-q" "--detach" tree)
+             ,@body)
+         ;; Magit's process buffers of the clones.
+         (dolist (buffer (buffer-list))
+           (when (string-prefix-p (file-truename test-clone--root)
+                                  (file-truename (buffer-local-value 'default-directory buffer)))
+             (kill-buffer buffer)))
+         (delete-directory github t)))))
+
+(defun test-clone--fetch (number)
+  "Fetch pull request NUMBER of them/project; return the results."
+  (let* ((none (make-symbol "none"))
+         (results none))
+    (approve-clone-fetch-pull-request test-clone--pr-base number
+                                      (lambda (answer) (setq results answer)))
+    (approve-test-wait-for (lambda () (not (eq results none))) 30)
+    results))
+
+(describe "approve-clone-repository-remotes"
+  (it "gives each clone of the repository once, with its remote for it"
+    (test-clone--with-github
+      (expect (sort (approve-clone-repository-remotes test-clone--pr-base)
+                    (lambda (a b) (string< (car a) (car b))))
+              :to-equal (list (cons one "origin") (cons two "upstream")))
+      (expect (approve-clone-repository-remotes '(:host "github.com" :owner "you" :repo "x"))
+              :to-be nil))))
+
+(describe "approve-clone-fetch-pull-request"
+  (it "fetches GitHub's ref of the head into refs/pullreqs, once a git directory"
+    (test-clone--with-github
+      (spy-on 'magit-run-git-async :and-call-through)
+      (let ((results (test-clone--fetch 7)))
+        (expect (sort (mapcar #'car results) #'string<) :to-equal (list one two))
+        (expect (mapcar #'cdr results) :to-equal '(nil nil))
+        (expect 'magit-run-git-async :to-have-been-called-times 2)
+        (expect (sort (spy-calls-all-args 'magit-run-git-async)
+                      (lambda (a b) (string< (cadr a) (cadr b))))
+                :to-equal '(("fetch" "origin" "+refs/pull/7/head:refs/pullreqs/7")
+                            ("fetch" "upstream" "+refs/pull/7/head:refs/pullreqs/7")))
+        (dolist (clone (list one two tree))
+          (expect (test-clone--git clone "rev-parse" "refs/pullreqs/7")
+                  :to-equal test-clone--pr-sha))
+        ;; Branches are left as they were.
+        (expect (test-clone--git two "for-each-ref" "--format=%(refname)" "refs/heads"
+                                 "refs/remotes")
+                :not :to-match "pull"))))
+
+  (it "gives git's error for a clone it could not fetch into"
+    (test-clone--with-github
+      (let ((results (test-clone--fetch 8)))
+        (expect (length results) :to-equal 2)
+        (dolist (result results)
+          (expect (cdr result) :to-match "refs/pull/8/head")))))
+
+  (it "runs nothing and calls nothing without a clone of the repository"
+    (test-clone--with-clones
+      (spy-on 'magit-run-git-async)
+      (let ((called nil))
+        (expect (approve-clone-fetch-pull-request
+                 '(:host "github.com" :owner "them" :repo "project") 7
+                 (lambda (_results) (setq called t)))
+                :to-be nil)
+        (expect 'magit-run-git-async :not :to-have-been-called)
+        (expect called :to-be nil))))
+
+  (it "answers in the buffer that asked, and not once it is killed"
+    (test-clone--with-github
+      (let ((buffer (generate-new-buffer " *asker*"))
+            (asked-in nil))
+        (with-current-buffer buffer
+          (approve-clone-fetch-pull-request test-clone--pr-base 7
+                                            (lambda (_results) (setq asked-in (current-buffer)))))
+        (approve-test-wait-for (lambda () asked-in) 30)
+        (expect asked-in :to-be buffer)
+        (setq asked-in nil)
+        (spy-on 'magit-process-sentinel :and-call-through)
+        (with-current-buffer buffer
+          (approve-clone-fetch-pull-request test-clone--pr-base 7
+                                            (lambda (_results) (setq asked-in t))))
+        (kill-buffer buffer)
+        (approve-test-wait-for (lambda () (>= (spy-calls-count 'magit-process-sentinel) 2)) 30)
+        (expect asked-in :to-be nil)))))
+
 ;;; test-approve-clone.el ends here

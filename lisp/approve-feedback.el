@@ -106,6 +106,10 @@
 ;;   (`approve-feedback-visit-pr') shows the PR buffer at the line at
 ;;   point.  n and p go on to the pull request's next file with an
 ;;   unresolved thread, in the clone.
+;; - `approve-fetch-pull-request', U in the dispatches of the PR
+;;   buffer, the file view and the mode, fetches the pull request's
+;;   commits into every clone of its repository (D53), or says there
+;;   is none; the mode's buffers then compare the clone again.
 ;;
 ;; Layer rules: a module for a local clone (D36), which the core never
 ;; requires; approve.el does.  It spans the layers above the clone's
@@ -2197,6 +2201,69 @@ window; \\<approve-pr-mode-map>\\[approve-feedback-visit-file] there comes back.
 (keymap-set approve-pr-mode-map "f" #'approve-feedback-visit-file)
 (keymap-set approve-file-mode-map "f" #'approve-feedback-visit-file)
 
+;;; Fetching the pull request into the clones
+
+(defun approve-feedback--clone-names (clones)
+  "Return CLONES, top directories, in words: \"~/a\", \"~/a and ~/b\"."
+  (let ((names (mapcar (lambda (clone)
+                         (directory-file-name (abbreviate-file-name clone)))
+                       clones)))
+    (if (cdr names)
+        (concat (string-join (butlast names) ", ") " and " (car (last names)))
+      (car names))))
+
+(defun approve-feedback--fetched-pull-request (number results)
+  "Say how pull request NUMBER was fetched; RESULTS are ((CLONE . ERROR) ...).
+The clone's buffers in the feedback mode of the pull request then
+compare their clone with GitHub's head again: it may have the head
+now."
+  (let* ((done (mapcar #'car (seq-remove #'cdr results)))
+         (failed (seq-filter #'cdr results))
+         (fetched (and done (format "Fetched #%s into %s, as %s"
+                                    number (approve-feedback--clone-names done)
+                                    (approve-clone-pull-request-ref number))))
+         (errors (mapconcat (lambda (result)
+                              (format "%s: %s" (approve-feedback--clone-names
+                                                (list (car result)))
+                                      (cdr result)))
+                            failed "; ")))
+    (message "%s" (cond ((null failed) fetched)
+                        ((null done) (format "Could not fetch #%s into %s" number errors))
+                        (t (format "%s; not into %s" fetched errors))))
+    (when done
+      (dolist (buffer (approve-feedback--buffers (approve-model-owner-buffer)))
+        (with-current-buffer buffer
+          (setq approve-feedback--clone-state nil)
+          (approve-feedback-redraw))))))
+
+;;;###autoload
+(defun approve-fetch-pull-request ()
+  "Fetch the pull request's commits into your clones of its repository.
+GitHub's ref of its head is fetched into refs/pullreqs/NUMBER, where
+Forge keeps it too, in the background through Magit: in every clone
+of `approve-clone-directories' with a remote for the pull request's
+repository, once for the worktrees of one clone (decision D53).  No
+branch changes.  Its commits are then found there: \\<approve-pr-mode-map>\\[approve-visit] on one
+shows it in Magit, and the feedback mode compares the clone with
+GitHub's head.  Without a clone, it says so and does nothing.
+Return the clones fetched into."
+  (interactive)
+  (let* ((number (or (approve-model-meta :number)
+                     (user-error "Not in an Approve pull request buffer")))
+         (repository (list :host (approve-model-meta :host)
+                           :owner (approve-model-meta :owner)
+                           :repo (approve-model-meta :repo)))
+         (clones (approve-clone-fetch-pull-request
+                  repository number
+                  (lambda (results)
+                    (approve-feedback--fetched-pull-request number results)))))
+    (if clones
+        (message "Fetching #%s into %s..." number (approve-feedback--clone-names clones))
+      (message "No clone of %s/%s in %s: nothing fetched"
+               (plist-get repository :owner) (plist-get repository :repo)
+               'approve-clone-directories))
+    clones))
+
 ;;; The global mode
 
 (defvar approve-feedback-global-mode)
@@ -2326,6 +2393,7 @@ same key."
     ("RET" "The PR buffer, at this line" approve-feedback-visit-pr
      :inapt-if (lambda () (approve-action-why-not 'approve-feedback-visit-pr)))
     ("P" "Pick another pull request" approve-clone-pick-pull-request)
+    ("U" "Fetch into your clones" approve-fetch-pull-request)
     ("g" "Refresh" approve-feedback-refresh)
     ("o" "Open in browser" approve-browse)
     ("S" "Submit review…" approve-submit-review
@@ -2347,13 +2415,18 @@ same key."
   (approve-action-why-not 'approve-feedback-visit-file))
 
 ;; The dispatches of the PR buffer and the file view list f, as their
-;; buffers bind it (decisions D06 and D46).
+;; buffers bind it (decisions D06 and D46), and U, which has no key
+;; of its own (D53).
 (transient-append-suffix 'approve-dispatch "O"
   '("f" "Your file (clone)" approve-feedback-visit-file
     :inapt-if approve-feedback--visit-file-inapt-p))
+(transient-append-suffix 'approve-dispatch "f"
+  '("U" "Fetch into your clones" approve-fetch-pull-request))
 (transient-append-suffix 'approve-file-dispatch "y"
   '("f" "Your file (clone)" approve-feedback-visit-file
     :inapt-if approve-feedback--visit-file-inapt-p))
+(transient-append-suffix 'approve-file-dispatch "f"
+  '("U" "Fetch into your clones" approve-fetch-pull-request))
 
 (defun approve-feedback-unload-function ()
   "Stop following the focus, as `unload-feature' unloads this file.

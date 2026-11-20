@@ -551,6 +551,15 @@ subgraph cluster_f { label="f — a PR's line in your clone (evil: gF)";
   count -> several [label=" several"]; count -> there [label=" one"]; several -> there;
   there -> nofile [@no]; nofile -> f15 [label=" y"]; there -> visit [@yes];
 }
+subgraph cluster_U { label="U — fetch the PR into your clones (D53)";
+  U      [label="[user] U in the dispatch of the PR buffer,\na file view or a clone's buffer\n(M-x approve-fetch-pull-request)" @user];
+  bases  [label="the clones of approve-clone-directories\nwhose remotes name the base repository,\none for each git directory"];
+  any    [label="any?" @dec];
+  noclone [label="\"No clone of fuzzycode/test-approve in\napprove-clone-directories: nothing fetched\"" @note];
+  fetch  [label="in each, through Magit, in the background:\ngit fetch REMOTE +refs/pull/15/head:refs/pullreqs/15"];
+  fetched [label="\"Fetched #15 into ~/src/test-approve,\nas refs/pullreqs/15\", or git's error;\nthe clone's buffers compare it again (F21)" @ok];
+  U -> bases -> any; any -> noclone [@no]; any -> fetch [@yes]; fetch -> fetched;
+}
 subgraph cluster_ret { label="RET in the map — back to the PR buffer";
   ret    [label="[user] RET in the map,\nin a file's buffer" @user];
   prbuf  [label="the PR buffer\n(opened if need be, on the same store)"];

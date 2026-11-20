@@ -866,8 +866,10 @@ The buffer the input was for is current after."
       (map-keymap (lambda (_event binding) (push binding bound))
                   approve-feedback-command-map)
       (dolist (suffix suffixes)
+        ;; U, the fetch into the clones, is in the dispatch alone (D53).
         (expect (keymap-lookup approve-feedback-command-map (plist-get suffix :key))
-                :to-be (plist-get suffix :command)))
+                :to-be (unless (eq (plist-get suffix :command) 'approve-fetch-pull-request)
+                         (plist-get suffix :command))))
       (expect (seq-difference (delete-dups bound)
                               (cons 'approve-feedback-dispatch
                                     (mapcar (lambda (suffix) (plist-get suffix :command))
@@ -1327,6 +1329,62 @@ The buffer the input was for is current after."
             :to-equal '("gF" . approve-feedback-visit-file))
     (expect (assoc "gF" approve-evil-file-bindings)
             :to-equal '("gF" . approve-feedback-visit-file))))
+
+(defun test-feedback--messages ()
+  "Return what `message', a spy, said, in order."
+  (mapcar (lambda (args) (apply #'format-message args)) (spy-calls-all-args 'message)))
+
+(describe "approve-fetch-pull-request"
+  (it "fetches into the clones of the base repository, then compares them again"
+    (test-feedback--with-one
+      (approve-feedback-mode 1)
+      (test-feedback--wait)
+      (let ((compared (spy-calls-count 'approve-clone-state))
+            (callback nil))
+        (spy-on 'approve-clone-fetch-pull-request
+                :and-call-fake (lambda (_repository _number done)
+                                 (setq callback done)
+                                 '("/src/rocket/" "/work/rocket/")))
+        (spy-on 'message)
+        ;; From the clone's buffer, which shares the PR buffer's store.
+        (expect (approve-fetch-pull-request) :to-equal '("/src/rocket/" "/work/rocket/"))
+        (expect (butlast (spy-calls-args-for 'approve-clone-fetch-pull-request 0))
+                :to-equal '((:host "github.com" :owner "acme-example" :repo "rocket") 202))
+        (expect (test-feedback--messages)
+                :to-equal '("Fetching #202 into /src/rocket and /work/rocket..."))
+        (funcall callback '(("/src/rocket/")
+                            ("/work/rocket/" . "couldn't find remote ref refs/pull/202/head")))
+        (expect (car (last (test-feedback--messages)))
+                :to-equal (concat "Fetched #202 into /src/rocket, as refs/pullreqs/202; "
+                                  "not into /work/rocket: couldn't find remote ref refs/pull/202/head"))
+        ;; The clone may have GitHub's head now.
+        (expect (spy-calls-count 'approve-clone-state) :to-equal (1+ compared))
+        (funcall callback '(("/src/rocket/" . "Could not resolve host: github.com")))
+        (expect (car (last (test-feedback--messages)))
+                :to-equal "Could not fetch #202 into /src/rocket: Could not resolve host: github.com")
+        (expect (spy-calls-count 'approve-clone-state) :to-equal (1+ compared)))))
+
+  (it "says so where there is no clone, and fetches nothing"
+    (approve-test-with-fixture "medium"
+      (let ((pr (approve-test-open-pr "medium")))
+        (unwind-protect
+            (progn
+              (spy-on 'approve-clone-fetch-pull-request :and-return-value nil)
+              (spy-on 'message)
+              (with-current-buffer pr
+                (expect (approve-fetch-pull-request) :to-be nil))
+              (expect (test-feedback--messages)
+                      :to-equal '("No clone of acme-example/rocket in approve-clone-directories: nothing fetched")))
+          (kill-buffer pr))))
+    (with-temp-buffer
+      (expect (approve-fetch-pull-request) :to-throw 'user-error)))
+
+  (it "is U in the dispatches, with no key of its own"
+    (dolist (prefix '(approve-dispatch approve-file-dispatch approve-feedback-dispatch))
+      (expect (plist-get (cdr (transient-get-suffix prefix "U")) :command)
+              :to-be 'approve-fetch-pull-request))
+    (dolist (map (list approve-pr-mode-map approve-file-mode-map approve-feedback-command-map))
+      (expect (where-is-internal 'approve-fetch-pull-request map) :to-be nil))))
 
 (describe "RET in the feedback mode's map"
   (it "shows the PR buffer at the line, else its thread, else the file"

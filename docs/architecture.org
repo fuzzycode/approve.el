@@ -130,14 +130,16 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | for the session; the file's major mode without its hooks; fringe marks, the     |       |
 |                            | diff's lines (=approve-line=), the threads as overlays; follows its PR buffer   |       |
 | =approve-notifications.el= | Notifications buffer                                                            |     8 |
-| =approve-clone.el=         | A local clone (D36, D37, D45): the user's clones (=approve-clone-directories=), |  2, 7 |
-|                            | the one with a commit, shown in Magit; remotes read from the config; a buffer's |       |
-|                            | branch and its place on GitHub (kept a session for each clone and branch); a    |       |
-|                            | branch's PRs, the one shown and picking another; the clone's state; a file's    |       |
-|                            | text at a commit; a PR's worktree                                               |       |
+| =approve-clone.el=         | A local clone (D36, D37, D45, D53): the user's clones                           |  2, 7 |
+|                            | (=approve-clone-directories=), the one with a commit, shown in Magit; remotes   |       |
+|                            | read from the config; a buffer's branch and its place on GitHub (kept a session |       |
+|                            | for each clone and branch); a branch's PRs, the one shown and picking another;  |       |
+|                            | the clone's state; a file's text at a commit; a PR's worktree; a PR fetched     |       |
+|                            | into its clones (=refs/pullreqs/N=)                                             |       |
 | =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads in the buffers of its clone, what is at |     7 |
 |                            | point there, the actions on them (the core's commands in its map), its          |       |
 |                            | dispatch; ways to and from the PR buffer (=f= there, =RET= and =n= =p= here);   |       |
+|                            | =approve-fetch-pull-request= (=U= in the dispatches);                           |       |
 |                            | =approve-feedback-global-mode=                                                  |       |
 | =approve-lines.el=         | GitHub's lines in a clone's buffer (D45): a map from a diff of GitHub's text    |     7 |
 |                            | and the buffer's, in an asynchronous process, made again after edits on idle    |       |

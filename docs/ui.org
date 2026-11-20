@@ -565,6 +565,7 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
                                                       m Merge / close…      T Fold all threads
                                                                             O Fold all but this
                                                                             f Your file (clone)
+                                                                            U Fetch into your clones
 #+end_example
 
 Suffixes that don't apply to the context, or that the viewer may not use
@@ -575,12 +576,13 @@ do: "Fold all threads", or "Unfold all threads" once they are folded; =#=
 "Lock conversation", or "Unlock conversation" once it is locked; =x=
 "Commit the batch (2)" while there is one; =b= "Take out of batch" on a
 suggestion in it.  =#= has
-no key in the buffer: it is seldom used.
+no key in the buffer: it is seldom used.  Nor has =U=, the fetch into
+your clones, at the author's choice ([[file:decisions.org::*D53 A pull request is fetched into its clones on the user's command][D53]]).
 
 The mockup is the whole menu; the menu lists only the commands that exist.
 Today that is Review without =V=, and Buffer without =L= and =!=; =f=
-comes with the clone's module (approve-feedback.el, D36), which adds it
-here and to the file view's dispatch;
+and =U= come with the clone's module (approve-feedback.el, D36), which
+adds them here and to the file view's dispatch;
 the rest join with the phases that add their commands ([[file:roadmap.org][roadmap]]).
 
 In a file view, =?= opens its own dispatch (=approve-file-dispatch=), with
@@ -595,6 +597,7 @@ the file and its version in the heading:
   [t Previous unresolved thread                         o Open in browser
   RET Go to the diff                                    y Copy path:line / URL
                                                         f Your file (clone)
+                                                        U Fetch into your clones
                                                         q Back
 #+end_example
 
@@ -947,7 +950,7 @@ mouse-1 opens the dispatch.  The header line is left alone:
 Its tooltip: the PR and its state, the branch and which of its open PRs
 it is (=P= in the map picks another), how the clone stands to GitHub's
 head (commits not pushed, not pulled, both, or GitHub's head missing:
-fetch to compare), and the counts:
+fetch to compare, =U= in the dispatch), and the counts:
 #+begin_example
  fuzzycode/approve#1234  Add retry logic to the GraphQL client · open
  feature/retry into main · 1 of 2 open pull requests of this branch
@@ -965,11 +968,11 @@ Every command of the map, dimmed where its preflight says it can't run
  Threads on this line        Comment                    Pull request
   TAB Fold or unfold          c Comment                  RET The PR buffer, at this line
   T   Fold or unfold all      s Suggest a change         P   Pick another pull request
-  n   Next unresolved         C On the pull request       g   Refresh
-  p   Previous unresolved                                o   Open in browser
-  j   Jump to a thread…                                  S   Submit review…
-  r   Reply                                              X   Discard pending review
-  R   Resolve
+  n   Next unresolved         C On the pull request      U   Fetch into your clones
+  p   Previous unresolved                                g   Refresh
+  j   Jump to a thread…                                  o   Open in browser
+  r   Reply                                              S   Submit review…
+  R   Resolve                                            X   Discard pending review
   e   Edit
   k   Delete
   +   React
@@ -998,6 +1001,9 @@ And what the echo area says on the way:
  #14 is merged: show its threads anyway? (y or n)
  Line 41 was edited here; GitHub takes comments only on its own lines
  Line 12 isn't in the pull request's diff; GitHub takes no comment there
+ Fetching #15 into ~/src/test-approve...
+ Fetched #15 into ~/src/test-approve, as refs/pullreqs/15
+ No clone of fuzzycode/test-approve in approve-clone-directories: nothing fetched
 #+end_example
 
 * Notifications (later)
@@ -1139,6 +1145,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 |                               |               |                       | (a metadata row: edit it) |
 | Whole file at point           | =F=           | =gf=                  | file, line, thread        |
 | Your file at point (a clone)  | =f=           | =gF=                  | file, line, thread        |
+| Fetch the PR into your clones | via =?= (=U=) | via =?= (=U=)         | any (D53)                 |
 | Next / previous change        | =n= =p=       | =]c= =[c=             | file view                 |
 | Other version (base / head)   | =b=           | =gb=                  | file view                 |
 | Open in browser               | =o=           | =go=                  | any (thing or PR)         |

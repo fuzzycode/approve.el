@@ -21,7 +21,7 @@
 (defconst test-menus--thread "PRRT_kwDO85-qIzFQYiTYBM"
   "A published, unresolved thread on line 15 of parser.go.")
 
-(defconst test-menus--dispatch-only '(approve-toggle-lock)
+(defconst test-menus--dispatch-only '(approve-toggle-lock approve-fetch-pull-request)
   "The commands with a key in the dispatch menu alone, none in the buffer.")
 
 (defmacro test-menus--with-medium (&rest body)
