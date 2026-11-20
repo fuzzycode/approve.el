@@ -225,6 +225,15 @@ view (`approve-pr-update-header-line')."
               (approve-face "None" 'approve-dim)
             value)))
 
+(defun approve-sections--meta-list (items separator)
+  "Return ITEMS, strings, joined by SEPARATOR as a metadata row's value.
+The value wraps between items so that the row ends by
+`approve-render-width'; each next line starts under the first item."
+  (approve-render-wrap items (- (approve-render-width) approve-sections--meta-width)
+                       separator
+                       (approve-render-decoration
+                        (make-string approve-sections--meta-width ?\s))))
+
 (defun approve-sections--review-mark (state)
   "Return the icon of a reviewer whose latest review is in STATE."
   (pcase state
@@ -244,7 +253,8 @@ view (`approve-pr-update-header-line')."
       (approve-render-user reviewer))))
 
 (defun approve-sections--reviewers ()
-  "Return the reviewers row's value: who reviewed, then who is asked."
+  "Return the reviewers row's value: who reviewed, then who is asked.
+It wraps when they don't fit on one line (`approve-sections--meta-list')."
   (let-alist (approve-pr-fields '(latestOpinionatedReviews reviewRequests))
     (let* ((reviewed (mapcar (lambda (review)
                                (let-alist review
@@ -261,7 +271,7 @@ view (`approve-pr-update-header-line')."
                                               (approve-sections--reviewer
                                                .requestedReviewer)))))
                                 .reviewRequests))))
-      (string-join (append reviewed asked) "   "))))
+      (approve-sections--meta-list (append reviewed asked) "   "))))
 
 (defun approve-sections--label (label)
   "Return LABEL as a coloured box."
@@ -353,16 +363,19 @@ they don't fail the pull request, and GitHub counts them apart."
     ('branch (approve-sections--branches))
     ('opened (approve-sections--dates))
     ('reviewers (approve-sections--reviewers))
-    ('assignees (mapconcat #'approve-render-user (approve-pr-field 'assignees) "  "))
-    ('labels (mapconcat #'approve-sections--label (approve-pr-field 'labels) " "))
+    ('assignees (approve-sections--meta-list
+                 (mapcar #'approve-render-user (approve-pr-field 'assignees)) "  "))
+    ('labels (approve-sections--meta-list
+              (mapcar #'approve-sections--label (approve-pr-field 'labels)) " "))
     ('milestone (when-let* ((milestone (approve-pr-field 'milestone)))
                   (let-alist milestone
                     (approve-thing (approve-face .title 'default)
                                    (list :kind 'milestone :title .title :due .dueOn
                                          :progress .progressPercentage :state .state
                                          :description .description :url .url)))))
-    ('issues (mapconcat #'approve-sections--ref
-                        (approve-pr-field 'closingIssuesReferences) "   "))
+    ('issues (approve-sections--meta-list
+              (mapcar #'approve-sections--ref (approve-pr-field 'closingIssuesReferences))
+              "   "))
     ('status (approve-sections--status))))
 
 (defun approve-sections--insert-meta-row (row)

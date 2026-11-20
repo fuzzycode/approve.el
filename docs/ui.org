@@ -78,6 +78,15 @@ Notes:
   keys and eldoc (label descriptions, user names): =RET= on Labels,
   Assignees, Reviewers or Milestone changes it, as =l a A M= do anywhere,
   and =o= opens the label, person or milestone at point.
+- Reviewers, Assignees, Labels and Issues that don't fit on one line wrap
+  between items: each next line starts under the first item.  A row ends
+  by =approve-page-width=, or by the window's width when it is narrower,
+  as it is when the buffer is drawn (a resized window shows it as it was
+  until the next redraw).
+  #+begin_example
+   Reviewers   ✓ @bob   ✗ @carol   ○ @dave   ○ @erin   ○ @frank
+               ○ @fuzzycode/core
+  #+end_example
 - Reviewer marks: ✓ approved, ✗ changes requested, 💬 commented, ○ requested
   but not reviewed yet.
 - "Your pending review" appears only when one exists.  It lists the pending

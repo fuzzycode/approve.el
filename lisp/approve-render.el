@@ -183,6 +183,42 @@ in LEFT; at least one space stays between them.  Either may be nil."
                                                         (string-width right)))))
               right))))
 
+(defun approve-render-width ()
+  "Return the column at which rows of the current buffer should end.
+That is `approve-page-width', or less when a window that shows the
+buffer is narrower: the narrowest one.  It is the width when the
+buffer is drawn; a window resized later shows the rows as they are
+until the next redraw."
+  (apply #'min approve-page-width
+         (mapcar #'window-max-chars-per-line
+                 (get-buffer-window-list (current-buffer) nil t))))
+
+(defun approve-render-wrap (items width &optional separator indent)
+  "Return ITEMS joined by SEPARATOR, in lines at most WIDTH columns wide.
+ITEMS are strings; a line breaks between them, never inside one, so
+an item wider than WIDTH has a line of its own.  SEPARATOR defaults
+to a space.  Each line after the first starts with INDENT, a string,
+which does not count in WIDTH.
+
+Example:
+  (approve-render-wrap \='(\"@bob\" \"@carol\" \"@dave\") 12 \"  \" \"> \")
+  => \"@bob  @carol\\n> @dave\""
+  (let* ((separator (or separator " "))
+         (gap (string-width separator))
+         (lines nil) (line nil) (column 0))
+    (dolist (item items)
+      (let ((size (string-width item)))
+        (cond ((null line)
+               (setq line item column size))
+              ((<= (+ column gap size) width)
+               (setq line (concat line separator item)
+                     column (+ column gap size)))
+              (t (push line lines)
+                 (setq line item column size)))))
+    (when line
+      (push line lines))
+    (mapconcat #'identity (nreverse lines) (concat "\n" indent))))
+
 (defun approve-render-join (parts &optional separator)
   "Return the non-empty strings of PARTS joined by SEPARATOR.
 SEPARATOR defaults to a dim \" · \"."

@@ -95,6 +95,36 @@
                 :to-equal "  body\n")
         (expect (magit-section-at 1) :to-be child)))))
 
+(describe "approve-render-wrap"
+  (it "joins items on one line when they fit"
+    (expect (approve-render-wrap '("@bob" "@carol") 20 "  " "> ")
+            :to-equal "@bob  @carol"))
+
+  (it "breaks between items, never inside one, and indents the next lines"
+    (expect (approve-render-wrap '("@bob" "@carol" "@dave" "@erin") 12 "  " "> ")
+            :to-equal "@bob  @carol\n> @dave  @erin"))
+
+  (it "gives an item wider than a line a line of its own"
+    (expect (approve-render-wrap '("@a" "@a-very-long-login" "@b") 8)
+            :to-equal "@a\n@a-very-long-login\n@b"))
+
+  (it "returns an empty string for no items"
+    (expect (approve-render-wrap nil 10) :to-equal "")))
+
+(describe "approve-render-width"
+  (it "is the page width when no window shows the buffer"
+    (with-temp-buffer
+      (let ((approve-page-width 90))
+        (expect (approve-render-width) :to-equal 90))))
+
+  (it "is the width of a narrower window that shows the buffer"
+    (with-temp-buffer
+      (let ((approve-page-width 1000))
+        (save-window-excursion
+          (switch-to-buffer (current-buffer))
+          (expect (approve-render-width)
+                  :to-equal (window-max-chars-per-line)))))))
+
 (describe "People"
   (it "are written @login, carrying who they are"
     (let ((text (approve-render-user '((__typename . "User") (id . "U_1")

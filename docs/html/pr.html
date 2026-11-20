@@ -229,6 +229,9 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 
 <ul>
   <li>Reviewer marks: <span class="ok"><i data-i="approved">✓</i></span> approved, <span class="er"><i data-i="changes-requested">✗</i></span> changes requested, <i data-i="commented">💬</i> commented, <i data-i="requested">○</i> requested.</li>
+  <li>Reviewers, Assignees, Labels and Issues that don't fit on one line wrap between items, each next line under the
+    first item. A row ends by <code>approve-page-width</code>, or by the window's width when it is narrower, as it is
+    when the buffer is drawn.</li>
   <li><b>Your pending review</b> only appears when one exists; its heading counts the comments, replies included.</li>
   <li>The file list is not shown by default, for now (D05, amended); <code>approve-add-section-hook</code> puts
     <code>approve-insert-files-section</code> back, before the diff. It gives each file's counts, a diffstat bar and its

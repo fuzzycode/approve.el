@@ -77,6 +77,50 @@
       (expect (test-sections--text 'approve-meta-section 'reviewers)
               :to-equal "Reviewers   ✓ @bob-example   ✗ @carol-example   ○ @dave-example   ○ @acme-example/core\n"))
 
+    (it "wraps reviewers that don't fit, the next lines under the first one"
+      (cl-letf (((symbol-function 'approve-pr-fields)
+                 (lambda (_fields)
+                   `((latestOpinionatedReviews
+                      ,@(mapcar (lambda (login)
+                                  `((state . "APPROVED") (author (login . ,login))))
+                                '("ann" "bob" "cid")))
+                     (reviewRequests
+                      ,@(mapcar (lambda (login)
+                                  `((requestedReviewer (__typename . "User")
+                                                       (login . ,login))))
+                                '("dan" "eve")))))))
+        (let* ((approve-use-nerd-icons nil)
+               (approve-page-width 40)
+               (row (with-temp-buffer
+                      (approve-sections--meta-row "Reviewers"
+                                                  (approve-sections--reviewers)))))
+          (expect (substring-no-properties row)
+                  :to-equal (concat "Reviewers   ✓ @ann   ✓ @bob   ✓ @cid\n"
+                                    "            ○ @dan   ○ @eve"))
+          ;; Copying leaves the indentation out.
+          (expect (approve-render-strip-decorations row)
+                  :to-equal "Reviewers   ✓ @ann   ✓ @bob   ✓ @cid\n○ @dan   ○ @eve"))))
+
+    (it "wraps labels, assignees and issues the same way"
+      (cl-letf (((symbol-function 'approve-pr-field)
+                 (lambda (field)
+                   (pcase field
+                     ('labels (mapcar (lambda (name) `((name . ,name) (color . "ededed")))
+                                      '("bug" "parser" "performance" "lexer")))
+                     ('assignees (mapcar (lambda (login) `((login . ,login)))
+                                         '("alice-example" "bob-example" "carol-example")))
+                     ('closingIssuesReferences
+                      '(((number . 1) (title . "Slow")) ((number . 2) (title . "Wrong"))
+                        ((number . 3) (title . "Crashes"))))))))
+        (let ((approve-page-width 40))
+          (with-temp-buffer
+            (expect (substring-no-properties (approve-sections--meta-value 'labels))
+                    :to-equal " bug   parser   performance \n             lexer ")
+            (expect (substring-no-properties (approve-sections--meta-value 'assignees))
+                    :to-equal "@alice-example  @bob-example\n            @carol-example")
+            (expect (substring-no-properties (approve-sections--meta-value 'issues))
+                    :to-equal "#1 Slow   #2 Wrong\n            #3 Crashes")))))
+
     (it "shows assignees, labels, milestone, closing issues and status"
       (expect (test-sections--text 'approve-meta-section 'assignees)
               :to-equal "Assignees   @alice-example\n")
