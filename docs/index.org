@@ -211,6 +211,12 @@ task only needs the files it touches.
   file list is no longer in the PR buffer by default, and may be
   removed for good later.  =approve-add-section-hook= puts
   =approve-insert-files-section= back; =j f= goes to the diff without it.
+- Asked for by the author on 2026-11-20 ([[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]], amended): the lists
+  of pull requests cut less.  Each column is as wide as its longest text
+  in the dashboard's lists, which line up, and the rows fit the
+  narrowest window that shows them, drawn again when its width changes;
+  short of room, the title gives way first.  A new column, =changes=,
+  says the lines a pull request adds and removes (=+340 −56=).
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

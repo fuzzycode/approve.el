@@ -497,7 +497,7 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   GitHub keeps the old review's state.
 
 ** D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision
-- Status :: accepted (2026-11-15, by the author)
+- Status :: accepted (2026-11-15, by the author); amended 2026-11-20
 - Decision ::
   - The dashboard and the search draw their pull requests with one
     renderer, =approve-list.el=, a row per pull request, from GitHub's
@@ -512,6 +512,24 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     default).
   - The review column is GitHub's =reviewDecision= alone: ✓ approved,
     ✗ changes requested, ○ review required, · none.  No "commented".
+- Amended (2026-11-20, by the author) :: Too much was cut: the rows
+  ended at =approve-page-width= whatever the window, the repository and
+  the author at their widths.
+  - Each column is as wide as its longest text in the lists of the
+    buffer, laid out together so they line up (=approve-list-layout=),
+    and the rows end where their text does.  The title line and the
+    headings of the dashboard end there too.
+  - The rows fit the narrowest window that shows the buffer, wider or
+    narrower than =approve-page-width= (which is used when no window
+    shows it).  When room is short, the columns of nil width (the
+    title) are cut first, down to 10 columns, then the others down to
+    their width in =approve-list-columns=; icons never.  The dashboard
+    is drawn again when its window's width changes (no request).
+  - A new column, =changes=, on by default before the age: the lines a
+    pull request adds and removes, =+340 −56= in the diffstat faces,
+    each number aligned on the right with those of the other rows, so
+    a small pull request is told from a large one at a glance.  GitHub's
+    search already sends them (=PullRequestSummaryFields=).
 - Why :: Search finds pull requests in every state, and GitHub's own
   lists start each row with its state; the mockup's ◌ in the review
   column marked drafts only.  A column list, like =approve-metadata-rows=

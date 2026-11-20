@@ -34,13 +34,15 @@
 ;;   Approve — pull requests                      @bjornlarsson · 10:42 · g refresh
 ;;
 ;;   ▾ Needs my review (3)
-;;     ● #1234  Add retry logic to the GraphQL client  fuzzycode/approve  @alice  2h  ◐  ✗
+;;     ● #1234  Add retry logic to the GraphQL client  fuzzycode/approve  @alice  +340 −56  2h  ◐  ✗
 ;;   ▸ Recently opened (10)
 ;;
 ;; - A list is a GitHub search (a string, or a function that returns
 ;;   one), or the pull requests opened in this Emacs session
 ;;   (`approve-pr-recent'), each of them asked for anew.  approve-list.el
-;;   draws the rows.
+;;   draws the rows, laid out together for every list so their columns
+;;   line up, in the narrowest window that shows the dashboard; it is
+;;   drawn again when that window's width changes.
 ;; - `approve-dashboard' shows the buffer and loads every list again; g
 ;;   (`approve-dashboard-refresh') does the same, G
 ;;   (`approve-dashboard-refresh-section') loads the list at point.  A
@@ -159,6 +161,10 @@ STATE is a plist:
 
 (defvar-local approve-dashboard--redraw-timer nil
   "Timer of the scheduled redraw, or nil.")
+
+(defvar-local approve-dashboard--window-width nil
+  "The width of the windows the dashboard was last drawn for, or nil.
+It is `approve-render-window-width' then; its rows fit it.")
 
 (defun approve-dashboard--state (title)
   "Return the state of the list TITLE, a plist, or nil."
@@ -283,8 +289,9 @@ The answer to an earlier request for the list is dropped."
 (defclass approve-dashboard-more-section (magit-section) ()
   "The line that says how many more pull requests a search finds.")
 
-(defun approve-dashboard--title-line ()
-  "Return the title line: what the buffer is, who the viewer is, and when."
+(defun approve-dashboard--title-line (width)
+  "Return the title line: what the buffer is, who the viewer is, and when.
+Its right part ends at column WIDTH."
   (approve-render-justify
    (approve-face "Approve — pull requests" 'approve-title)
    (approve-render-join
@@ -292,7 +299,8 @@ The answer to an earlier request for the list is dropped."
           (and approve-dashboard--refreshed
                (approve-face (format-time-string "%H:%M" approve-dashboard--refreshed)
                              'approve-dim))
-          (approve-render-hints '(approve-dashboard-refresh "refresh"))))))
+          (approve-render-hints '(approve-dashboard-refresh "refresh"))))
+   width))
 
 (defun approve-dashboard--search-thing (spec state)
   "Return the thing of the search of SPEC, whose list has STATE, or nil."
@@ -313,8 +321,18 @@ It carries THING, the list's search, which `approve-browse' opens."
                      "\n")
              thing))))
 
-(defun approve-dashboard--insert-list (spec)
-  "Insert the list of SPEC, an entry of `approve-dashboard-sections'."
+(defun approve-dashboard--rows (spec)
+  "Return the pull requests the list of SPEC shows, in order.
+None before its first answer, or when its last request failed."
+  (let ((state (approve-dashboard--state (plist-get spec :title))))
+    (and (plist-get state :loaded)
+         (not (plist-get state :error))
+         (plist-get state :prs))))
+
+(defun approve-dashboard--insert-list (spec layout width)
+  "Insert the list of SPEC, an entry of `approve-dashboard-sections'.
+Its rows are laid out by LAYOUT, from `approve-list-layout'; what
+its heading has on the right ends at column WIDTH."
   (let* ((title (plist-get spec :title))
          (state (approve-dashboard--state title))
          (prs (plist-get state :prs))
@@ -326,7 +344,8 @@ It carries THING, the list's search, which `approve-browse' opens."
                       title (and shown total)
                       (and shown (plist-get state :loading)
                            (concat (approve-icon 'loading 'approve-loading) " "
-                                   (approve-face "loading…" 'approve-loading))))))
+                                   (approve-face "loading…" 'approve-loading)))
+                      width)))
         (magit-insert-heading (if thing (approve-thing heading thing) heading)))
       (cond
        ((plist-get state :error)
@@ -338,20 +357,28 @@ It carries THING, the list's search, which `approve-browse' opens."
        (t
         (approve-list-insert prs (if (plist-get spec :recent)
                                      "None opened in this session."
-                                   "No pull requests."))
+                                   "No pull requests.")
+                             layout)
         (when (and total (> total (length prs)))
           (approve-dashboard--insert-more (- total (length prs)) thing)))))))
 
 (defun approve-dashboard--insert ()
-  "Insert the dashboard: its title line, then its lists or a token error."
-  (insert (approve-dashboard--title-line) "\n\n")
-  (if approve-dashboard--fatal
-      (approve-render-insert-fatal "Could not use the GitHub token."
-                                   (approve-api-error-message approve-dashboard--fatal)
-                                   (approve-pr-token-hint)
-                                   'approve-dashboard-refresh)
-    (dolist (spec approve-dashboard-sections)
-      (approve-dashboard--insert-list spec))))
+  "Insert the dashboard: its title line, then its lists or a token error.
+The rows of every list are laid out together, so their columns line
+up, in the narrowest window that shows the dashboard; what is on the
+right of the title line and the headings ends where the rows do."
+  (let* ((prs (seq-mapcat #'approve-dashboard--rows approve-dashboard-sections))
+         (layout (approve-list-layout prs))
+         (width (if prs (approve-list-layout-width layout) (approve-render-width))))
+    (setq approve-dashboard--window-width (approve-render-window-width))
+    (insert (approve-dashboard--title-line width) "\n\n")
+    (if approve-dashboard--fatal
+        (approve-render-insert-fatal "Could not use the GitHub token."
+                                     (approve-api-error-message approve-dashboard--fatal)
+                                     (approve-pr-token-hint)
+                                     'approve-dashboard-refresh)
+      (dolist (spec approve-dashboard-sections)
+        (approve-dashboard--insert-list spec layout width)))))
 
 (defun approve-dashboard--cancel-redraw ()
   "Cancel the scheduled redraw of the current buffer."
@@ -378,6 +405,14 @@ Answers that arrive before then share that one redraw."
     (setq approve-dashboard--redraw-timer
           (run-at-time approve-pr-redraw-delay nil
                        #'approve-dashboard--redraw-now (current-buffer)))))
+
+(defun approve-dashboard--window-resized (_window)
+  "Redraw the dashboard when the windows that show it are no longer as wide.
+Its rows fit the narrowest one.  It is in the dashboard's
+`window-size-change-functions', which also run when a window starts
+showing it."
+  (unless (eql approve-dashboard--window-width (approve-render-window-width))
+    (approve-dashboard--schedule-redraw)))
 
 ;;; Commands
 
@@ -498,6 +533,7 @@ Its lists come from `approve-dashboard-sections';
   (add-function :filter-return (local 'filter-buffer-substring-function)
                 #'approve-render-strip-decorations '((depth . 90)))
   (add-hook 'kill-buffer-hook #'approve-dashboard--cancel-redraw nil t)
+  (add-hook 'window-size-change-functions #'approve-dashboard--window-resized nil t)
   (approve-eldoc-setup)
   ;; Evil's bindings load with the first buffer that may need them
   ;; (decision D17); evil sets this buffer's keymaps up after this.
@@ -518,9 +554,11 @@ a row opens its pull request.  Return the buffer."
   (let ((buffer (get-buffer-create approve-dashboard-buffer-name)))
     (with-current-buffer buffer
       (unless (derived-mode-p 'approve-dashboard-mode)
-        (approve-dashboard-mode))
-      (approve-dashboard-refresh))
+        (approve-dashboard-mode)))
+    ;; Shown first, so that its rows fit the window from the start.
     (pop-to-buffer-same-window buffer)
+    (with-current-buffer buffer
+      (approve-dashboard-refresh))
     buffer))
 
 (provide 'approve-dashboard)

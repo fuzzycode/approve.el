@@ -57,8 +57,10 @@
 Counts, states and key hints on the right of headings line up
 there, as do the statistics of the diff's files and the header
 line's state.  It leaves room right of `approve-fill-column', which
-fills text, for the indentation of threads and their hints.  For a
-narrow frame or a side-by-side window:
+fills text, for the indentation of threads and their hints.  The
+lists of pull requests fit the window instead, and their lines end
+where their rows do (`approve-list-columns').  For a narrow frame
+or a side-by-side window:
 
   (setq approve-page-width 88)"
   :type 'natnum
@@ -183,15 +185,21 @@ in LEFT; at least one space stays between them.  Either may be nil."
                                                         (string-width right)))))
               right))))
 
+(defun approve-render-window-width ()
+  "Return how many columns the windows that show the current buffer have.
+That is the narrowest one's, or `approve-page-width' when no window
+shows the buffer."
+  (if-let* ((windows (get-buffer-window-list (current-buffer) nil t)))
+      (apply #'min (mapcar #'window-max-chars-per-line windows))
+    approve-page-width))
+
 (defun approve-render-width ()
   "Return the column at which rows of the current buffer should end.
 That is `approve-page-width', or less when a window that shows the
 buffer is narrower: the narrowest one.  It is the width when the
 buffer is drawn; a window resized later shows the rows as they are
 until the next redraw."
-  (apply #'min approve-page-width
-         (mapcar #'window-max-chars-per-line
-                 (get-buffer-window-list (current-buffer) nil t))))
+  (min approve-page-width (approve-render-window-width)))
 
 (defun approve-render-wrap (items width &optional separator indent)
   "Return ITEMS joined by SEPARATOR, in lines at most WIDTH columns wide.

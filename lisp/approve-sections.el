@@ -130,10 +130,11 @@ COUNT is a number or nil: \"Commits (4)\"."
   (concat (approve-face title 'approve-heading)
           (and count (approve-face (format " (%s)" count) 'approve-count))))
 
-(defun approve-sections-heading (title &optional count right)
+(defun approve-sections-heading (title &optional count right width)
   "Return a section heading: TITLE, COUNT in parentheses, RIGHT aligned.
-COUNT is a number or nil; RIGHT a string or nil."
-  (approve-render-justify (approve-sections-title title count) right))
+COUNT is a number or nil; RIGHT a string or nil, which ends at
+column WIDTH, `approve-page-width' by default."
+  (approve-render-justify (approve-sections-title title count) right width))
 
 (defconst approve-sections-indentation (approve-render-decoration "  ")
   "The indentation of a body line, for lines that insert it themselves.")

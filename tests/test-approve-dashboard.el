@@ -237,12 +237,48 @@ No pull request was opened before; the dashboard is killed after."
       (test-dashboard--open)
       (let ((text (buffer-substring-no-properties (point-min) (point-max))))
         (expect text :to-match "\\`Approve — pull requests +@me-example · [0-9][0-9]:[0-9][0-9] · g refresh\n\n")
-        (expect text :to-match "^Needs my review (2)\n  ● #1234 +Add retry logic to the GraphQL client")
-        (expect text :to-match "^  ● #88 +Fix crash when opening empty files")
+        (expect text :to-match "^Needs my review (2)\n  ● #1234 +Add retry logic")
+        (expect text :to-match "^  ● #88 +Fix crash when")
         (expect text :to-match "^My pull requests (0)\n  No pull requests\\.\n")
         (expect text :to-match "^Recently opened (0)\n  None opened in this session\\.\n"))
       (expect major-mode :to-be 'approve-dashboard-mode)
       (expect (buffer-name) :to-equal "*approve-dashboard*")))
+
+  (it "lines up the columns of every list, with the lines each pull request changes"
+    (setcdr (assoc "is:pr is:open author:@me" test-dashboard--searches)
+            (list 1 (test-dashboard--pr 7 'title "Docs" 'additions 12013 'deletions 2
+                                        'repository '((nameWithOwner . "acme/a-longer-name")))))
+    (test-dashboard--with test-dashboard--two
+      (test-dashboard--open)
+      (let ((first (progn (test-dashboard--goto "#1234")
+                          (buffer-substring-no-properties (pos-bol) (pos-eol))))
+            (other (progn (test-dashboard--goto "#7")
+                          (buffer-substring-no-properties (pos-bol) (pos-eol)))))
+        (expect (string-search "@alice" first) :to-be (string-search "@alice" other))
+        (expect first :to-match "@alice    \\+340 −56  2h")
+        (expect other :to-match "@alice  \\+12013  −2  2h"))))
+
+  (it "fits its rows to the narrowest window, and draws them again when it changes"
+    (test-dashboard--with test-dashboard--two
+      (save-window-excursion
+        (delete-other-windows)
+        (test-dashboard--open)
+        (expect (memq #'approve-dashboard--window-resized window-size-change-functions)
+                :to-be-truthy)
+        (test-dashboard--goto "#1234")
+        (expect (string-width (buffer-substring-no-properties (pos-bol) (pos-eol)))
+                :to-be (window-max-chars-per-line))
+        ;; Redisplay calls it in a session; batch has none.
+        (split-window-right)
+        (approve-dashboard--window-resized (selected-window))
+        (test-dashboard--settle)
+        (expect (buffer-string) :to-match "#1234  Add retry…  fuzzycode/approve")
+        (delete-other-windows)
+        (approve-dashboard--window-resized (selected-window))
+        (test-dashboard--settle)
+        (test-dashboard--goto "#1234")
+        (expect (string-width (buffer-substring-no-properties (pos-bol) (pos-eol)))
+                :to-be (window-max-chars-per-line)))))
 
   (it "sends each search with is:pr and its limit, calling a filter function then"
     (let ((org "acme"))

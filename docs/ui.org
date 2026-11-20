@@ -24,7 +24,9 @@ Design rules for every buffer:
   hints, the diff's file statistics, the header line's state) ends at
   =approve-page-width=, default 110: right of the filled text and the
   indentation of threads.  Narrow frames or side-by-side windows can set it
-  lower, such as 88.  Mockups show intent, so theirs is closer to 80.
+  lower, such as 88.  Mockups show intent, so theirs is closer to 80.  The
+  lists of pull requests are the exception: they fit the window and their
+  text, and what is on their right ends where their rows do ([[*Dashboard][Dashboard]]).
 - People are written =@login=, as GitHub writes mentions ([[file:decisions.org::*D33 People are written as @login][D33]]); their names
   are in eldoc.  A commit's author whose e-mail GitHub links to no account
   is the name Git wrote, without an =@=.
@@ -374,27 +376,37 @@ approve-v2, and "Recently opened" lists the pull requests opened in this
 Emacs session ([[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]]).
 
 #+begin_example
- Approve — pull requests                                        @bjornlarsson · 10:42 · g refresh
+ Approve — pull requests                                                @bjornlarsson · 10:42 · g refresh
 
  ▾ Needs my review (3)
-   ● #1234   Add retry logic to the GraphQL client   fuzzycode/approve  @alice           2h  ◐  ✗
-   ● #88     Fix crash when opening empty files      org/editor         @erin            1d  ✓  ○
-   ◌ #87     New theme                               org/editor         @frank           3d  ·  ·
+   ● #1234  Add retry logic to the GraphQL client  fuzzycode/approve  @alice          +340  −56  2h  ◐  ✗
+   ● #88    Fix crash when opening empty files     org/editor         @erin            +12   −3  1d  ✓  ○
+   ◌ #87    New theme                              org/editor         @frank         +1204 −880  3d  ·  ·
  ▾ My pull requests (2)
-   ● #1230   Normalize GraphQL connections           fuzzycode/approve  @bjornlarsson    5h  ✓  ✓
-   ● #1229   Docs: architecture                      fuzzycode/approve  @bjornlarsson    1d  ✗  ·
+   ● #1230  Normalize GraphQL connections          fuzzycode/approve  @bjornlarsson    +88 −120  5h  ✓  ✓
+   ● #1229  Docs: architecture                     fuzzycode/approve  @bjornlarsson    +45   −2  1d  ✗  ·
  ▸ Involved (5)
  ▸ Recently opened (10)
 #+end_example
 
 The rows are =approve-list.el='s, shared with the search ([[file:decisions.org::*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]).
 Columns: state (● open, ◌ draft, ⮌ merged, ⊘ closed), number, title (a
-draft's dim), repository, author, updated (=5m 2h 3d 2w 4mo 1y=), checks of
-the last commit (✓ ✗ ◐ ·), GitHub's review decision (✓ approved, ✗
-changes requested, ○ review required, · none).  =approve-list-columns=
-says which columns, in what order and how wide; the title takes what's
-left up to =approve-page-width=.  Whether an unread mark joins them waits
-for notifications ([[file:decisions.org::*Open questions][Q6]]).
+draft's dim), repository, author, changes (the lines it adds and removes,
+in the diff's colours, each aligned on the right, so a large pull request
+stands out), updated (=5m 2h 3d 2w 4mo 1y=), checks of the last commit (✓
+✗ ◐ ·), GitHub's review decision (✓ approved, ✗ changes requested, ○ review
+required, · none).  =approve-list-columns= says which columns, in what
+order and how wide when room is short.  Whether an unread mark joins them
+waits for notifications ([[file:decisions.org::*Open questions][Q6]]).
+
+Each column is as wide as its longest text in all the lists, so they line
+up, and nothing is cut while the window has room: the rows end where their
+text does, and the title line and the headings end there too.  The rows
+fit the narrowest window that shows the dashboard (=approve-page-width=
+when none does), and are drawn again when its width changes.  In a
+narrower window the title is cut first ("…"), down to 10 columns; then the
+repository and the author, down to their widths in =approve-list-columns=.
+Icons are never cut.
 
 The title line names the viewer and when the lists were loaded.
 =M-x approve-dashboard= loads every list again each time it shows the
@@ -407,7 +419,7 @@ finds; when a list shows fewer, its last line says how many more:
 
 #+begin_example
  ▾ Needs my review (23)
-   ● #1234   Add retry logic to the GraphQL client   fuzzycode/approve  @alice           2h  ◐  ✗
+   ● #1234  Add retry logic to the GraphQL client  fuzzycode/approve  @alice          +340  −56  2h  ◐  ✗
    …
    … 3 more · o show them on GitHub
 #+end_example
@@ -475,11 +487,11 @@ dashboard opens the filter transient.  Results use the dashboard's list
 renderer in one section.
 
 #+begin_example
- Search: is:pr author:@erin repo:org/editor                                 12 results · s refine
+ Search: is:pr author:@erin repo:org/editor                        12 results · s refine
 
-   ● #88     Fix crash when opening empty files      org/editor         @erin            1d  ✓  ○
-   ⮌ #80     Remove legacy renderer                  org/editor         @erin            6d  ✓  ✓
-   ⊘ #79     Try a second renderer                   org/editor         @erin            2w  ✗  ✗
+   ● #88  Fix crash when opening empty files    org/editor  @erin    +12    −3  1d  ✓  ○
+   ⮌ #80  Remove legacy renderer                org/editor  @erin    +40 −1310  6d  ✓  ✓
+   ⊘ #79  Try a second renderer                 org/editor  @erin   +875    −9  2w  ✗  ✗
      …
    ▸ Load 20 more
 #+end_example
