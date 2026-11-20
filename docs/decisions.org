@@ -955,9 +955,10 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
     agree.  No branch changes, local or remote-tracking.
   - Where: every clone of =approve-clone-directories= with a remote that
     names the base repository (D45's matching of remotes), once for
-    each git directory, as a clone's worktrees share it; from the first
-    such remote.  A clone with only the fork as a remote has no such
-    remote, and is passed by.
+    each git directory, as a clone's worktrees share it: in the clone
+    itself when it is listed, else in the first of its worktrees; from
+    the first such remote.  A clone with only the fork as a remote has
+    no such remote, and is passed by.
   - How: in the background, through Magit's processes, as
     =magit-git-fetch= runs git: credentials asked for, git's output in
     Magit's process buffer (=$=), the clone's Magit buffers refreshed

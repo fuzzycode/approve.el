@@ -824,7 +824,17 @@ git's insteadOf turns into the bare repository's path."
                     (lambda (a b) (string< (car a) (car b))))
               :to-equal (list (cons one "origin") (cons two "upstream")))
       (expect (approve-clone-repository-remotes '(:host "github.com" :owner "you" :repo "x"))
-              :to-be nil))))
+              :to-be nil)))
+
+  (it "gives the clone rather than its worktree, whichever is listed first"
+    (test-clone--with-github
+      ;; Magit lists a directory's clones in the file system's order.
+      (spy-on 'approve-clone-list :and-return-value (list tree two one))
+      (expect (approve-clone-repository-remotes test-clone--pr-base)
+              :to-equal (list (cons one "origin") (cons two "upstream")))
+      (spy-on 'approve-clone-list :and-return-value (list two tree))
+      (expect (approve-clone-repository-remotes test-clone--pr-base)
+              :to-equal (list (cons two "upstream") (cons tree "origin"))))))
 
 (describe "approve-clone-fetch-pull-request"
   (it "fetches GitHub's ref of the head into refs/pullreqs, once a git directory"

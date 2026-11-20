@@ -811,20 +811,29 @@ That is refs/pullreqs/NUMBER, where Forge keeps pull requests too
 REPOSITORY is (:host :owner :repo); the value is ((CLONE . REMOTE)
 ...).  The clones are those of `approve-clone-repository-clones', in
 its order, one for each git directory: the worktrees of a clone
-share its commits and refs.  REMOTE is the first of the clone's
-remotes that names REPOSITORY."
-  (let ((seen nil) (found nil))
+share its commits and refs.  Of a clone and its worktrees, the clone
+itself is given when it is listed, whatever the order the file
+system lists them in; else the first of its worktrees.  REMOTE is the
+first of the clone's remotes that names REPOSITORY."
+  (let ((groups nil))
     (dolist (clone (approve-clone-repository-clones (list repository)))
-      (let ((common (file-truename (approve-clone--common-dir clone))))
-        (unless (member common seen)
-          (push common seen)
-          (when-let* ((remote (seq-find
-                               (lambda (remote)
-                                 (approve-clone-same-repository-p
-                                  (approve-clone-repository (cdr remote)) repository))
-                               (approve-clone-remotes clone))))
-            (push (cons clone (car remote)) found)))))
-    (nreverse found)))
+      (let* ((common (approve-clone--common-dir clone))
+             (group (assoc (file-truename common) groups)))
+        (cond
+         ((not group) (push (cons (file-truename common) clone) groups))
+         ;; The clone itself, whose git directory is the shared one.
+         ((equal (approve-clone--git-dir clone) common) (setcdr group clone)))))
+    (delq nil
+          (mapcar (lambda (group)
+                    (when-let* ((clone (cdr group))
+                                (remote (seq-find
+                                         (lambda (remote)
+                                           (approve-clone-same-repository-p
+                                            (approve-clone-repository (cdr remote))
+                                            repository))
+                                         (approve-clone-remotes clone))))
+                      (cons clone (car remote))))
+                  (nreverse groups)))))
 
 (defun approve-clone--fetch (clone remote refspec callback)
   "Fetch REFSPEC from REMOTE into CLONE through Magit, then call CALLBACK.
