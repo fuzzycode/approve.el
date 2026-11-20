@@ -104,7 +104,12 @@
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (cond ((derived-mode-p 'approve-pr-mode) (approve-pr-redraw))
-            ((derived-mode-p 'approve-dashboard-mode) (approve-dashboard-redraw)))))
+            ((derived-mode-p 'approve-dashboard-mode) (approve-dashboard-redraw)))
+      ;; Evil keeps the keymaps a buffer had: give it the new ones.
+      (when (and (derived-mode-p 'approve-pr-mode 'approve-dashboard-mode 'approve-file-mode)
+                 (bound-and-true-p evil-local-mode)
+                 (fboundp 'evil-normalize-keymaps))
+        (evil-normalize-keymaps))))
   (message "Approve loaded from %s; fixture PRs replay, other URLs go to GitHub" root))
 
 ;;; load.el ends here
