@@ -489,6 +489,16 @@
                       '("z M" "z m" "z R" "z r"))
               :to-equal '(approve-dashboard-fold-lists approve-dashboard-fold-lists
                           approve-dashboard-unfold-lists approve-dashboard-unfold-lists))
+      ;; o and O open a line, which a read-only buffer has no use for:
+      ;; they are Emacs's o and O, and go and zp do the same.
+      (dolist (map (list approve-pr-mode-map approve-dashboard-mode-map))
+        (expect (mapcar (lambda (key)
+                          (nth 3 (seq-find (lambda (b) (and (eq (nth 1 b) map)
+                                                            (equal (nth 2 b) key)))
+                                           bound)))
+                        '("o" "g o" "O" "z p"))
+                :to-equal '(approve-browse approve-browse
+                            approve-fold-others approve-fold-others)))
       ;; No key may be an evil motion, search, visual selection or yank,
       ;; nor start with one.  An operator (c d) may be a key of its own,
       ;; as change and delete have nothing to do in a read-only buffer

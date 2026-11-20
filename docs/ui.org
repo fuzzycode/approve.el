@@ -431,7 +431,7 @@ folds every list, or unfolds them all when they are folded, and =O= every
 list but the one at point; a folded list stays folded when the dashboard
 loads again.  Evil folds as in vim: =za=, =zo= and =zc= the list at point
 (from its rows too), =zM= (or =zm=) every list, =zR= (or =zr=) unfolds
-them all, and =zp= folds the others.  =?= opens the dashboard's dispatch:
+them all, and =O= or =zp= folds the others.  =?= opens the dashboard's dispatch:
 
 #+begin_example
  Approve  Dashboard
@@ -584,6 +584,15 @@ Today that is Review without =V=, and Buffer without =L= and =!=; =f=
 and =U= come with the clone's module (approve-feedback.el, D36), which
 adds them here and to the file view's dispatch;
 the rest join with the phases that add their commands ([[file:roadmap.org][roadmap]]).
+
+The mockups show Emacs's keys.  In evil's normal and visual states each
+dispatch shows normal state's keys, those of the buffer it opens from
+([[file:decisions.org::*D17 Evil is supported, never required][D17]], [[*Keys][Keys]]): here =x= Toggle viewed, =a= Commit suggestion, =A= Add
+to batch, =i= Edit, =D= Delete, =gr= Refresh, =gf= Whole file, =gF= Your
+file, =gy= Copy, =J= Jump, =gm= Merge, and =@= Assignees, =W= Request
+reviewers, =P= Draft / ready, whose letters normal state gives to other
+commands.  In the file view's, =]c= =[c= move between changes and =gb=
+shows the other version.
 
 In a file view, =?= opens its own dispatch (=approve-file-dispatch=), with
 the file and its version in the heading:
@@ -1126,59 +1135,64 @@ Keys are a draft to check in Phases 1–2.  Principles:
   moving down from a collapsed heading stops in its hidden body and Magit
   puts point back at the heading's end.  Visual
   line selection (=V=) picks a range to comment on.  =?= opens dispatch, as in
-  evil-collection's Magit.
+  evil-collection's Magit.  =o= and =O= open a line, which a read-only
+  buffer has no use for, so they are Emacs's =o= and =O= in normal state too.
 - Every command is also in the dispatch transient, so a missing key is never
   a missing feature.
+- The dispatch shows the keys of the buffer it opens from: in evil's normal
+  and visual states, normal state's ([[file:decisions.org::*D17 Evil is supported, never required][D17]]).  A key in the menu does the
+  same in the buffer; a command the menu alone reaches keeps its letter,
+  unless normal state gives that letter to another command.
 
-| Command                       | Emacs         | Evil normal           | Context                   |
-|-------------------------------+---------------+-----------------------+---------------------------|
-| Dispatch                      | =?=           | =?=                   | any                       |
-| Refresh (=C-u=: clear caches) | =g=           | =gr=                  | any                       |
-| Refresh list at point         | =G=           | =gR=                  | dashboard list            |
-| Bury / back                   | =q=           | =q=                   | any                       |
-| Toggle section                | =TAB=         | =TAB= =za=            | section                   |
-| Unfold / fold section         | via =TAB=     | =zo= / =zc=           | section                   |
-| Fold all but this             | =O=           | =zp=                  | any                       |
-| Fold / unfold every thread    | =T=           | =zM= =zm= / =zR= =zr= | any (dashboard: lists)    |
-| Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k= | any                       |
-| Visit thing at point          | =RET=         | =RET=                 | file, line, link, commit… |
-|                               |               |                       | (a metadata row: edit it) |
-| Whole file at point           | =F=           | =gf=                  | file, line, thread        |
-| Your file at point (a clone)  | =f=           | =gF=                  | file, line, thread        |
-| Fetch the PR into your clones | via =?= (=U=) | via =?= (=U=)         | any (D53)                 |
-| Next / previous change        | =n= =p=       | =]c= =[c=             | file view                 |
-| Other version (base / head)   | =b=           | =gb=                  | file view                 |
-| Open in browser               | =o=           | =go=                  | any (thing or PR)         |
-| Copy URL / sha / value        | =y=           | =gy=                  | any                       |
-| Comment at point (DWIM)       | =c=           | =c=                   | line, region, file, PR    |
-| Suggest change                | =s=           | =s=                   | line, region (new side)   |
-| Commit suggestion (or batch)  | =x=           | =a=                   | suggestion; any (batch)   |
-| Add to batch / take out       | =b= (=C-u=:   | =A=                   | suggestion                |
-|                               | empty it)     |                       |                           |
-| Reply / quote                 | =r=           | =r=                   | thread, comment; a line   |
-|                               |               |                       | with threads (file view)  |
-| Resolve / unresolve           | =R=           | =R=                   | thread; ditto             |
-| Edit at point                 | =e=           | =i=                   | own comment, description; |
-|                               |               |                       | ditto                     |
-| Delete at point               | =k=           | =D=                   | own comment; ditto        |
-| React                         | =+=           | =+=                   | comment, description;     |
-|                               |               |                       | ditto                     |
-| Hide / unhide a comment       | =H=           | via =?=               | comment, review           |
-| Toggle viewed                 | =v=           | =x=                   | file                      |
-| Submit review…                | =S=           | =S=                   | any                       |
-| Discard pending review        | =X=           | =X=                   | any                       |
-| Conversation comment          | =C=           | =C=                   | any                       |
-| Jump…                         | =j=           | =J=                   | any                       |
-| Next / previous unviewed file | =]u= =[u=     | =]u= =[u=             | any                       |
-| Next / previous thread        | =]t= =[t=     | =]t= =[t=             | any                       |
-| Next / previous new comment   | =j n= =j N=   | =J n= =J N=           | any                       |
-| Review range…                 | =V=           | =gV=                  | any                       |
-| Merge / state…                | =m=           | =gm=                  | any                       |
-| Metadata (title… milestone)   | =t d l a A M= | via =?=               | any                       |
-| Draft / ready, subscription   | =D= =w=       | via =?=               | any                       |
-| Lock / unlock conversation    | via =?= (=#=) | via =?= (=#=)         | any                       |
-| Layout single/split           | =L=           | =gL=                  | any                       |
-| Show details (eldoc buffer)   | =K=           | =K=                   | any                       |
+| Command                       | Emacs         | Evil normal             | Context                   |
+|-------------------------------+---------------+-------------------------+---------------------------|
+| Dispatch                      | =?=           | =?=                     | any                       |
+| Refresh (=C-u=: clear caches) | =g=           | =gr=                    | any                       |
+| Refresh list at point         | =G=           | =gR=                    | dashboard list            |
+| Bury / back                   | =q=           | =q=                     | any                       |
+| Toggle section                | =TAB=         | =TAB= =za=              | section                   |
+| Unfold / fold section         | via =TAB=     | =zo= / =zc=             | section                   |
+| Fold all but this             | =O=           | =O= =zp=                | any                       |
+| Fold / unfold every thread    | =T=           | =zM= =zm= / =zR= =zr=   | any (dashboard: lists)    |
+| Next / previous section       | =n= =p=       | =gj= =gk= =C-j= =C-k=   | any                       |
+| Visit thing at point          | =RET=         | =RET=                   | file, line, link, commit… |
+|                               |               |                         | (a metadata row: edit it) |
+| Whole file at point           | =F=           | =gf=                    | file, line, thread        |
+| Your file at point (a clone)  | =f=           | =gF=                    | file, line, thread        |
+| Fetch the PR into your clones | via =?= (=U=) | via =?= (=U=)           | any (D53)                 |
+| Next / previous change        | =n= =p=       | =]c= =[c=               | file view                 |
+| Other version (base / head)   | =b=           | =gb=                    | file view                 |
+| Open in browser               | =o=           | =o= =go=                | any (thing or PR)         |
+| Copy URL / sha / value        | =y=           | =gy=                    | any                       |
+| Comment at point (DWIM)       | =c=           | =c=                     | line, region, file, PR    |
+| Suggest change                | =s=           | =s=                     | line, region (new side)   |
+| Commit suggestion (or batch)  | =x=           | =a=                     | suggestion; any (batch)   |
+| Add to batch / take out       | =b= (=C-u=:   | =A=                     | suggestion                |
+|                               | empty it)     |                         |                           |
+| Reply / quote                 | =r=           | =r=                     | thread, comment; a line   |
+|                               |               |                         | with threads (file view)  |
+| Resolve / unresolve           | =R=           | =R=                     | thread; ditto             |
+| Edit at point                 | =e=           | =i=                     | own comment, description; |
+|                               |               |                         | ditto                     |
+| Delete at point               | =k=           | =D=                     | own comment; ditto        |
+| React                         | =+=           | =+=                     | comment, description;     |
+|                               |               |                         | ditto                     |
+| Hide / unhide a comment       | =H=           | via =?=                 | comment, review           |
+| Toggle viewed                 | =v=           | =x=                     | file                      |
+| Submit review…                | =S=           | =S=                     | any                       |
+| Discard pending review        | =X=           | =X=                     | any                       |
+| Conversation comment          | =C=           | =C=                     | any                       |
+| Jump…                         | =j=           | =J=                     | any                       |
+| Next / previous unviewed file | =]u= =[u=     | =]u= =[u=               | any                       |
+| Next / previous thread        | =]t= =[t=     | =]t= =[t=               | any                       |
+| Next / previous new comment   | =j n= =j N=   | =J n= =J N=             | any                       |
+| Review range…                 | =V=           | =gV=                    | any                       |
+| Merge / state…                | =m=           | =gm=                    | any                       |
+| Metadata (title… milestone)   | =t d l a A M= | via =?= (=t d l @ W M=) | any                       |
+| Draft / ready, subscription   | =D= =w=       | via =?= (=P= =w=)       | any                       |
+| Lock / unlock conversation    | via =?= (=#=) | via =?= (=#=)           | any                       |
+| Layout single/split           | =L=           | =gL=                    | any                       |
+| Show details (eldoc buffer)   | =K=           | =K=                     | any                       |
 
 Toggling a section (=approve-section-toggle=, also what =RET= does where there
 is nothing to visit) folds the section at point, except inside the diff: on a
@@ -1196,7 +1210,7 @@ folds one line.  Evil users fold all with =zM= (or =zm=) and unfold all with
 =zR= (or =zr=), as in vim; =zo= and =zc= unfold and fold what =TAB=
 toggles.  In the dashboard, the same keys fold its lists.
 
-=O= (=approve-fold-others=, =zp= in evil) folds every section but the one
+=O= (=approve-fold-others=, also =zp= in evil) folds every section but the one
 at point, which unfolds:
 the top-level sections (pending review, description, checks, commits,
 conversation, files, diff), and in the diff every file but the one at

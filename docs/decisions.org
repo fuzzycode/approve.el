@@ -390,6 +390,28 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Amended (2026-11-08) :: package-lint rejects =with-eval-after-load= in a
   package, so =approve-pr-mode= requires =approve-evil= when evil is loaded
   (=featurep=), before evil sets the buffer's keymaps up.  The rest stands.
+- Amended (2026-11-20) :: The dispatch menus showed Emacs's keys in evil's
+  states, so =v= or =o= worked in the menu and not in the buffer, and four
+  letters meant two commands: =x= toggled viewed in the buffer and
+  committed a suggestion in the menu, and =a=, =A= and =D= were the same
+  (suggestion, batch and delete, against assignees, reviewers and draft).
+  - In evil's normal and visual states the dispatches show normal state's
+    keys (=x= viewed, =i= edit, =gr= refresh, =J= jump), so a key the menu
+    shows does the same in the buffer.  Each dispatch takes its keys as it
+    opens, from the state of the buffer it opens from
+    (=approve-menus--set-keys=), so an Emacs-state buffer shows Emacs's.
+    =approve-evil.el= has the keys: a command's first key in its buffer's
+    table, as evil-collection gives =magit-dispatch= its own.
+  - A command only the menu reaches keeps its letter (=t d l M w # H T U=)
+    unless normal state gives that letter to another command: assignees,
+    reviewers and draft are =@=, =W= and =P=.
+  - =o= and =O= open a line, which does nothing in a read-only buffer,
+    like the editing keys the PR's commands already took (=c s r x i a A=).
+    Normal state binds them as Emacs does: open in the browser, fold all
+    but this.  =go= and =zp= stay.  =v= stays evil's visual selection,
+    which picks the lines to comment on.
+  - The author chose this over two others: binding =o= and =O= alone, and
+    keeping the menus' letters with the buffer's key next to them.
 - Why :: The author uses evil; many users don't.  Visual line selection is how
   evil users pick a range of lines to comment on.
 

@@ -38,6 +38,14 @@
 ;; buffer (c s r R x D C S X i a A) are free in a read-only buffer, so the
 ;; commands that change the pull request take them; in visual state,
 ;; c s r C act on the selection, and ? opens the dispatch menu on it.
+;; So are o and O, which open a line: they are Emacs's o and O there,
+;; open in the browser and fold all but this (go and zp too).
+;;
+;; The dispatch menus show these keys in evil's normal and visual
+;; states (`approve-evil-menu-keys'): what a menu shows works in the
+;; buffer too, and a letter means the same command in both.  The
+;; commands a menu alone reaches keep their letters, but for those
+;; that normal state gives to another command (decision D17).
 ;;
 ;; j, k and the arrow keys move by screen line, as magit's own motions do
 ;; (`line-move-visual'): moving by logical line from a collapsed
@@ -76,12 +84,14 @@
     ("za" . approve-section-toggle)
     ("zo" . approve-section-show)
     ("zc" . approve-section-hide)
+    ("O" . approve-fold-others)
     ("zp" . approve-fold-others)
     ("zM" . approve-fold-threads)
     ("zm" . approve-fold-threads)
     ("zR" . approve-unfold-threads)
     ("zr" . approve-unfold-threads)
     ("gr" . approve-pr-refresh)
+    ("o" . approve-browse)
     ("go" . approve-browse)
     ("gy" . approve-copy)
     ("J" . approve-jump)
@@ -112,7 +122,8 @@
     ("gF" . approve-feedback-visit-file)
     ("?" . approve-dispatch)
     ("q" . quit-window))
-  "Keys of `approve-pr-mode' in evil's normal state: (KEY . COMMAND).")
+  "Keys of `approve-pr-mode' in evil's normal state: (KEY . COMMAND).
+The first key of a command is the one its dispatch menu shows.")
 
 (defconst approve-evil-visual-bindings
   '(("c" . approve-comment)
@@ -137,6 +148,7 @@ selection for the command picked in it.")
     ("gb" . approve-file-toggle-version)
     ("gF" . approve-feedback-visit-file)
     ("gr" . approve-file-refresh)
+    ("o" . approve-browse)
     ("go" . approve-browse)
     ("gy" . approve-copy)
     ("x" . approve-toggle-viewed)
@@ -166,6 +178,7 @@ a motion, so gb shows the other version.")
     ("zc" . approve-section-hide)
     ("zO" . approve-section-show)
     ("zC" . approve-section-hide)
+    ("O" . approve-fold-others)
     ("zp" . approve-fold-others)
     ("zM" . approve-dashboard-fold-lists)
     ("zm" . approve-dashboard-fold-lists)
@@ -173,6 +186,7 @@ a motion, so gb shows the other version.")
     ("zr" . approve-dashboard-unfold-lists)
     ("gr" . approve-dashboard-refresh)
     ("gR" . approve-dashboard-refresh-section)
+    ("o" . approve-browse)
     ("go" . approve-browse)
     ("gy" . approve-copy)
     ("K" . approve-show-details)
@@ -187,7 +201,39 @@ The PR buffer's keys for the same commands; G, which refreshes the
 list at point in Emacs, is evil's motion, so gR does it.  The z keys
 fold as in vim: za, zo and zc the list at point (zO and zC too, as
 lists hold no folds), zM and zm every list; zR and zr unfold them.
-zp folds every list but the one at point, as in a PR buffer.")
+O and zp fold every list but the one at point, as in a PR buffer.")
+
+(defconst approve-evil-menus
+  '((approve-dispatch approve-evil-pr-bindings
+                      (approve-set-assignees . "@")
+                      (approve-request-reviewers . "W")
+                      (approve-toggle-draft . "P"))
+    (approve-file-dispatch approve-evil-file-bindings)
+    (approve-dashboard-dispatch approve-evil-dashboard-bindings))
+  "The dispatch menus' keys in evil's states: (PREFIX BINDINGS . KEYS).
+In the transient PREFIX, a command has its first key in the variable
+BINDINGS, the buffer's keys in normal state.  KEYS, an alist of
+\(COMMAND . KEY), gives other keys to commands the menu alone reaches,
+whose letters normal state gives to other commands: a, A and D are
+committing a suggestion, the batch and deleting there, so assignees,
+reviewers and draft are @, W and P in evil's dispatch.")
+
+(defun approve-evil-menu-keys (prefix)
+  "Return the keys of the transient PREFIX in the current buffer.
+They are an alist of (COMMAND . KEY), from `approve-evil-menus', when
+the buffer is in evil's normal or visual state, and nil in another
+state or without evil.  A command not in it keeps the key PREFIX
+gives it.  The dispatch menus take these keys as they open
+\(`approve-menus--set-keys'), so the keys they show run the same
+commands in the buffer."
+  (when-let* (((bound-and-true-p evil-local-mode))
+              ((memq (bound-and-true-p evil-state) '(normal visual)))
+              (menu (assq prefix approve-evil-menus)))
+    (let ((keys (copy-sequence (cddr menu))))
+      (pcase-dolist (`(,key . ,command) (symbol-value (cadr menu)))
+        (unless (assq command keys)
+          (push (cons command key) keys)))
+      keys)))
 
 (defconst approve-evil-feedback-bindings
   '(("]t" . approve-feedback-next-thread)

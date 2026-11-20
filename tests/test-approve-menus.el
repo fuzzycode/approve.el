@@ -175,4 +175,104 @@ The diff of `test-menus--path' is expanded first, for its threads."
       (approve-session-put :threads 'folded)
       (expect (approve-menus--threads-description) :to-equal "Unfold all threads"))))
 
+;;; Evil's keys
+
+(defvar evil-local-mode)
+(defvar evil-state)
+
+(defconst test-menus--evil-menus
+  '((approve-dispatch . approve-evil-pr-bindings)
+    (approve-file-dispatch . approve-evil-file-bindings)
+    (approve-dashboard-dispatch . approve-evil-dashboard-bindings))
+  "The dispatch menus, each with its buffer's keys in evil's normal state.")
+
+(defun test-menus--load-evil ()
+  "Load approve-evil.el without evil, its bindings going nowhere."
+  (cl-letf (((symbol-function 'evil-define-key*) #'ignore)
+            ((symbol-function 'evil-set-initial-state) #'ignore)
+            ((symbol-function 'evil-add-command-properties) #'ignore))
+    (load "approve-evil" nil t)))
+
+(defmacro test-menus--in-evil-state (state &rest body)
+  "Run BODY in a buffer in evil's STATE, then give the menus their own keys."
+  (declare (indent 1) (debug t))
+  `(unwind-protect
+       (with-temp-buffer
+         (setq-local evil-local-mode t)
+         (setq-local evil-state ,state)
+         ,@body)
+     (with-temp-buffer
+       (dolist (menu test-menus--evil-menus)
+         (approve-menus--set-keys (car menu))))))
+
+(defun test-menus--key (prefix command)
+  "Return the key of COMMAND in the transient PREFIX, as `kbd' reads it."
+  (key-description (kbd (plist-get (seq-find (lambda (suffix)
+                                               (eq (plist-get suffix :command) command))
+                                             (test-menus--suffixes prefix))
+                                   :key))))
+
+(describe "The dispatch menus in evil's states"
+  (before-all (test-menus--load-evil))
+
+  (it "show normal state's keys, so a key runs the same command in the buffer"
+    (test-menus--in-evil-state 'normal
+      (dolist (menu test-menus--evil-menus)
+        (approve-menus--set-keys (car menu))
+        (let* ((suffixes (test-menus--suffixes (car menu)))
+               (keys (mapcar (lambda (suffix) (key-description (kbd (plist-get suffix :key))))
+                             suffixes)))
+          ;; One command per key, and no key starts another.
+          (expect (length (delete-dups (copy-sequence keys))) :to-equal (length keys))
+          (dolist (key keys)
+            (expect (seq-find (lambda (other) (string-prefix-p (concat key " ") other)) keys)
+                    :to-be nil))
+          ;; In the buffer, the key runs the command, or none of
+          ;; Approve's: the menu alone reaches it.
+          (dolist (suffix suffixes)
+            (let ((bound (cdr (seq-find (lambda (binding)
+                                          (equal (key-description (kbd (car binding)))
+                                                 (key-description (kbd (plist-get suffix :key)))))
+                                        (symbol-value (cdr menu))))))
+              (expect (cons (plist-get suffix :key) (or bound (plist-get suffix :command)))
+                      :to-equal (cons (plist-get suffix :key) (plist-get suffix :command)))))))))
+
+  (it "give the PR buffer's dispatch the keys of its table, and new ones where they clash"
+    (test-menus--in-evil-state 'normal
+      (approve-menus--set-keys 'approve-dispatch)
+      (expect (mapcar (lambda (command) (test-menus--key 'approve-dispatch command))
+                      '(approve-toggle-viewed approve-commit-suggestion approve-batch-suggestion
+                        approve-edit approve-delete approve-browse approve-fold-others
+                        approve-pr-refresh approve-jump approve-visit-file approve-merge
+                        approve-set-assignees approve-request-reviewers approve-toggle-draft
+                        approve-comment approve-toggle-lock))
+              :to-equal '("x" "a" "A" "i" "D" "o" "O" "g r" "J" "g f" "g m"
+                          "@" "W" "P" "c" "#"))
+      (approve-menus--set-keys 'approve-file-dispatch)
+      (expect (mapcar (lambda (command) (test-menus--key 'approve-file-dispatch command))
+                      '(approve-file-next-change approve-file-previous-change
+                        approve-toggle-viewed approve-file-toggle-version approve-browse))
+              :to-equal '("] c" "[ c" "x" "g b" "o"))))
+
+  (it "open with the keys of the buffer's state, and their own outside evil's"
+    (spy-on 'transient-setup)
+    (test-menus--in-evil-state 'visual
+      (call-interactively #'approve-dispatch)
+      (expect 'transient-setup :to-have-been-called-with 'approve-dispatch)
+      (expect (test-menus--key 'approve-dispatch 'approve-toggle-viewed) :to-equal "x")
+      (setq-local evil-state 'emacs)
+      (call-interactively #'approve-dispatch)
+      (expect (test-menus--key 'approve-dispatch 'approve-toggle-viewed) :to-equal "v")
+      (setq-local evil-state 'normal)
+      (call-interactively #'approve-dashboard-dispatch)
+      (expect (test-menus--key 'approve-dashboard-dispatch 'approve-dashboard-refresh)
+              :to-equal "g r"))
+    ;; Without evil, the keys the menus define.
+    (expect (mapcar (lambda (command) (test-menus--key 'approve-dispatch command))
+                    '(approve-toggle-viewed approve-commit-suggestion approve-set-assignees
+                      approve-pr-refresh))
+            :to-equal '("v" "x" "a" "g"))
+    (expect (test-menus--key 'approve-dashboard-dispatch 'approve-dashboard-refresh)
+            :to-equal "g")))
+
 ;;; test-approve-menus.el ends here

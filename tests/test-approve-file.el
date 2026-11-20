@@ -578,6 +578,8 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
                          (normal "[ c" approve-file-previous-change)
                          (normal "] t" approve-file-next-thread)
                          (normal "g b" approve-file-toggle-version)
+                         (normal "o" approve-browse)
+                         (normal "g o" approve-browse)
                          (normal "x" approve-toggle-viewed)
                          (normal "r" approve-reply)
                          (normal "i" approve-edit)

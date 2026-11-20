@@ -176,11 +176,17 @@ at once); <code>b</code> adds it to the batch, which <code>x</code> then commits
 
 <!-- ================================================================== -->
 <section class="shot" id="dispatch">
-<h2>Dispatch menu <span class="ref">? · D06</span></h2>
+<h2>Dispatch menu <span class="ref">? · D06 · D17</span></h2>
 <p>Every command, grouped. Point is on a file heading, so thread commands are dimmed (inapt) instead of hidden,
 and the menu never jumps around. A command is dimmed exactly where it would refuse to run (D06). The menu lists only
 the commands that exist: Review range, Layout and Doctor join it with their phases, and Your file (clone) and Fetch
 into your clones with the clone's module.</p>
+<p>These are Emacs's keys. In evil's normal and visual states the menu shows normal state's keys, so a key in the menu
+does the same in the buffer (D17): <code>x</code> Toggle viewed, <code>a</code>/<code>A</code> Commit suggestion and
+Add to batch, <code>i</code> Edit, <code>D</code> Delete, <code>gr</code> Refresh, <code>gf</code> Whole file,
+<code>gF</code> Your file, <code>gy</code> Copy, <code>J</code> Jump, <code>gm</code> Merge; Assignees, Request
+reviewers and Draft / ready, whose letters normal state gives to other commands, are <code>@</code>, <code>W</code>
+and <code>P</code>.</p>
 <div class="emacs">
 <div class="win stack">
 <div class="win">

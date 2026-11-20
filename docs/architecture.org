@@ -121,7 +121,7 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | queue, update the branch, close or reopen, delete the branch                    |       |
 | =approve-menus.el=         | Transients: jump (1), submit and dispatch (2), merge (5); metadata, range       |  1–10 |
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
-|                            | loaded)                                                                         |       |
+|                            | loaded), and the dispatch menus' keys in those states (D17)                     |       |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |
 | =approve-dashboard.el=     | Dashboard buffer from =approve-dashboard-sections= (D39): searches and the PRs  |     3 |
 |                            | opened in the session, a refresh of one list, its title line                    |       |

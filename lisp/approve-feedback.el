@@ -2416,16 +2416,17 @@ same key."
 
 ;; The dispatches of the PR buffer and the file view list f, as their
 ;; buffers bind it (decisions D06 and D46), and U, which has no key
-;; of its own (D53).
-(transient-append-suffix 'approve-dispatch "O"
+;; of its own (D53).  They go after commands, not keys: in evil's
+;; states the dispatches have other keys (`approve-menus--set-keys').
+(transient-append-suffix 'approve-dispatch 'approve-fold-others
   '("f" "Your file (clone)" approve-feedback-visit-file
     :inapt-if approve-feedback--visit-file-inapt-p))
-(transient-append-suffix 'approve-dispatch "f"
+(transient-append-suffix 'approve-dispatch 'approve-feedback-visit-file
   '("U" "Fetch into your clones" approve-fetch-pull-request))
-(transient-append-suffix 'approve-file-dispatch "y"
+(transient-append-suffix 'approve-file-dispatch 'approve-copy
   '("f" "Your file (clone)" approve-feedback-visit-file
     :inapt-if approve-feedback--visit-file-inapt-p))
-(transient-append-suffix 'approve-file-dispatch "f"
+(transient-append-suffix 'approve-file-dispatch 'approve-feedback-visit-file
   '("U" "Fetch into your clones" approve-fetch-pull-request))
 
 (defun approve-feedback-unload-function ()

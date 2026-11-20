@@ -48,7 +48,10 @@
 ;; Every command bound in a PR buffer, or in the dashboard, is
 ;; reachable from its dispatch, with the key it has there; a few that
 ;; are seldom used have a key in the dispatch alone (# locks the
-;; conversation).
+;; conversation).  In evil's normal and visual states the dispatches
+;; show normal state's keys (x toggles viewed, gr refreshes), which
+;; approve-evil.el gives them as they open (`approve-menus--set-keys',
+;; decision D17).
 ;;
 ;; Suffixes that do not apply are shown dimmed, so a menu never
 ;; changes shape.  A command that changes the PR says itself whether
@@ -74,6 +77,36 @@
 (require 'approve-dashboard)
 (require 'approve-file)
 (require 'approve-faces)
+
+(declare-function approve-evil-menu-keys "approve-evil" (prefix))
+
+(defun approve-menus--suffix-key (prefix command)
+  "Return the key of COMMAND in the transient PREFIX, or nil if it isn't there."
+  (when-let* ((suffix (ignore-errors (transient-get-suffix prefix command))))
+    ;; (CLASS . PLIST) as from transient 0.8, (LEVEL CLASS PLIST) before.
+    (plist-get (if (keywordp (cadr suffix)) (cdr suffix) (nth 2 suffix)) :key)))
+
+(defun approve-menus--set-keys (prefix)
+  "Give the suffixes of the transient PREFIX the keys of the current buffer.
+In evil's normal and visual states, a command has the key that runs
+it in the buffer (`approve-evil-menu-keys', decision D17): what the
+menu shows works in the buffer too, and a letter means the same
+command in both.  In other states and without evil, it has the key
+PREFIX gives it, which is kept in PREFIX's `approve-menus-own-keys'
+property before it changes.  The dispatch menus call this as they
+open, so they follow the state of the buffer they open from."
+  (let ((keys (and (featurep 'approve-evil) (approve-evil-menu-keys prefix)))
+        (own (get prefix 'approve-menus-own-keys)))
+    (pcase-dolist (`(,command . ,_) keys)
+      (unless (assq command own)
+        (when-let* ((key (approve-menus--suffix-key prefix command)))
+          (push (cons command key) own))))
+    (put prefix 'approve-menus-own-keys own)
+    (pcase-dolist (`(,command . ,key) own)
+      (let ((wanted (or (alist-get command keys) key))
+            (current (approve-menus--suffix-key prefix command)))
+        (when (and current (not (equal current wanted)))
+          (transient-suffix-put prefix command :key wanted))))))
 
 (defun approve-menus--no-pending-review-p ()
   "Return non-nil if the viewer has no pending review."
@@ -283,7 +316,8 @@ squash asks for the commit message first, starting as GitHub's; with
 ;;;###autoload (autoload 'approve-dispatch "approve-menus" nil t)
 (transient-define-prefix approve-dispatch ()
   "Show the commands of the pull request buffer (decision D06).
-Those that can't run at point, or that you may not use, are dimmed."
+Those that can't run at point, or that you may not use, are dimmed.
+In evil's normal and visual states, the keys are normal state's."
   [:description approve-menus--dispatch-heading
    ["Review"
     ("c" "Comment at point" approve-comment
@@ -348,7 +382,10 @@ Those that can't run at point, or that you may not use, are dimmed."
     ("j" "Jump…" approve-jump)
     ("K" "Details (eldoc)" approve-show-details)
     ("T" approve-toggle-threads :description approve-menus--threads-description)
-    ("O" "Fold all but this" approve-fold-others)]])
+    ("O" "Fold all but this" approve-fold-others)]]
+  (interactive)
+  (approve-menus--set-keys 'approve-dispatch)
+  (transient-setup 'approve-dispatch))
 
 (keymap-set approve-pr-mode-map "?" #'approve-dispatch)
 
@@ -371,7 +408,8 @@ Those that can't run at point, or that you may not use, are dimmed."
   "Show the commands of the file view (decision D06).
 Those that can't run at point are dimmed.  The commands of threads
 act on those of the line at point, and ask which when there are
-several (decision D43, amended)."
+several (decision D43, amended).  In evil's normal and visual states,
+the keys are normal state's."
   [:description approve-menus--file-heading
    ["Move"
     ("n" "Next change" approve-file-next-change)
@@ -404,7 +442,10 @@ several (decision D43, amended)."
     ("g" "Refresh" approve-file-refresh)
     ("o" "Open in browser" approve-browse)
     ("y" "Copy path:line / URL" approve-copy)
-    ("q" "Back" quit-window)]])
+    ("q" "Back" quit-window)]]
+  (interactive)
+  (approve-menus--set-keys 'approve-file-dispatch)
+  (transient-setup 'approve-file-dispatch))
 
 (keymap-set approve-file-mode-map "?" #'approve-file-dispatch)
 
@@ -413,7 +454,8 @@ several (decision D43, amended)."
 ;;;###autoload (autoload 'approve-dashboard-dispatch "approve-menus" nil t)
 (transient-define-prefix approve-dashboard-dispatch ()
   "Show the commands of the dashboard (decision D06).
-Those that can't run at point are dimmed."
+Those that can't run at point are dimmed.  In evil's normal and
+visual states, the keys are normal state's."
   [:description (lambda () (concat (propertize "Approve" 'face 'transient-heading) "  "
                                    (propertize "Dashboard" 'face 'approve-title)))
    ["Pull request"
@@ -429,9 +471,16 @@ Those that can't run at point are dimmed."
      :description (lambda () (if (approve-dashboard-lists-folded-p)
                                  "Unfold all lists"
                                "Fold all lists")))
-    ("O" "Fold other lists" approve-fold-others)]])
+    ("O" "Fold other lists" approve-fold-others)]]
+  (interactive)
+  (approve-menus--set-keys 'approve-dashboard-dispatch)
+  (transient-setup 'approve-dashboard-dispatch))
 
 (keymap-set approve-dashboard-mode-map "?" #'approve-dashboard-dispatch)
+
+;; Defined anew, as by a reload, the dispatches have their own keys.
+(dolist (prefix '(approve-dispatch approve-file-dispatch approve-dashboard-dispatch))
+  (put prefix 'approve-menus-own-keys nil))
 
 (provide 'approve-menus)
 
