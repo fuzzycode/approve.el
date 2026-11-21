@@ -751,7 +751,7 @@ Example:
 ;;; Benchmarks
 
 (defconst approve-dev-speed-budgets
-  '((redraw-medium . 30) (expand-file . 30) (redraw-large . 100)
+  '((redraw-medium . 30) (expand-file . 30) (redraw-large . 100) (redraw-huge . 400)
     (lines-busy . 10) (lines-map . 50))
   "Speed budgets in milliseconds (docs/architecture.org, \"Speed\").")
 
@@ -782,6 +782,31 @@ Garbage collection is included, as a user would feel it."
     (dotimes (_ runs)
       (funcall function))
     (/ (* 1000 (- (float-time) start)) runs)))
+
+(defconst approve-dev--huge-files 4200
+  "How many files the huge PR of the benchmark has.")
+
+(defun approve-dev--grow-files (buffer count)
+  "Give the PR in BUFFER COUNT files, copies of its own in new directories.
+Its files are repeated in order, the Nth time under \"copyN/\", with
+their patches, but past the 3000th: GitHub's REST list of files
+stops there.  The large PR becomes a huge one this way, as a fixture
+of thousands of files would be too large to keep."
+  (with-current-buffer buffer
+    (let* ((files (alist-get 'files (approve-model--raw (approve-model-root-ref))))
+           (nodes (approve-model-nodes files))
+           (table (approve-model-extra :patches))
+           (grown nil))
+      (dotimes (i count)
+        (let* ((file (nth (% i (length nodes)) nodes))
+               (path (format "copy%d/%s" (/ i (length nodes)) (alist-get 'path file)))
+               (entry (gethash (alist-get 'path file) table)))
+          (push (cons (cons 'path path) (assq-delete-all 'path (copy-alist file))) grown)
+          (when (and entry (< i 3000))
+            (puthash path (cons (cons 'filename path)
+                                (assq-delete-all 'filename (copy-alist entry)))
+                     table))))
+      (setcdr (assq 'nodes files) (nreverse grown)))))
 
 (defun approve-dev--synthetic-patch (lines)
   "Return a patch of about LINES lines in hunks of 50, and thread lines.
@@ -905,14 +930,16 @@ edited (`approve-lines-update'), and how long until the map arrives."
   "Measure Approve against its speed budgets with the fixtures.
 Each case is timed RUNS times (default 10) after a warm-up:
 redrawing the medium PR with the diff collapsed, expanding a
-500-line file with 5 threads, redrawing the large PR, and comparing
-a 200 000-line buffer with GitHub's text after an edit (Emacs busy,
-and the map).  Return an alist of (CASE MILLISECONDS BUDGET), and
-show it."
+500-line file with 5 threads, redrawing the large PR and a huge one
+of 4 200 files (`approve-dev--grow-files'), and comparing a 200
+000-line buffer with GitHub's text after an edit (Emacs busy, and
+the map).  Return an alist of (CASE MILLISECONDS BUDGET), and show
+it."
   (interactive)
   (let* ((runs (or runs 10))
          (medium (approve-dev--open-fixture "medium"))
          (large (approve-dev--open-fixture "large"))
+         (huge (approve-dev--open-fixture "large"))
          (results
           (unwind-protect
               (list (list 'redraw-medium
@@ -921,6 +948,11 @@ show it."
                     (list 'redraw-large
                           (with-current-buffer large
                             (approve-dev--time runs #'approve-pr-redraw)))
+                    (list 'redraw-huge
+                          (progn
+                            (approve-dev--grow-files huge approve-dev--huge-files)
+                            (with-current-buffer huge
+                              (approve-dev--time runs #'approve-pr-redraw))))
                     (list 'expand-file
                           (progn
                             (approve-dev--prepare-expand medium)
@@ -930,7 +962,8 @@ show it."
                                 (setq total (+ total (approve-dev--expand-once medium))))
                               (/ (* 1000 total) runs)))))
             (kill-buffer medium)
-            (kill-buffer large)))
+            (kill-buffer large)
+            (kill-buffer huge)))
          (lines (approve-dev--time-lines runs)))
     (setq results (append results (list (list 'lines-busy (nth 0 lines))
                                         (list 'lines-map (nth 1 lines)))))

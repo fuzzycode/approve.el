@@ -691,17 +691,19 @@ new since the viewer's last review; each file's heading counts its own."
           (let ((start (point)))
             (insert (or (approve-sections-state 'files "the files") ""))
             (approve-sections-insert-body start))
-        (dolist (file files)
-          (let ((path (alist-get 'path file)))
-            (magit-insert-section (approve-file-section path t)
-              (magit-insert-heading
-                approve-sections-indentation
-                (approve-diff--file-heading file (approve-diff-file-entry path)
-                                           (gethash path counts) width
-                                           (member path asking)
-                                           (gethash path new-counts)))
-              (magit-insert-section-body
-                (approve-diff--insert-file-body file))))))
+        (approve-sections-insert-each
+         files
+         (lambda (file)
+           (let ((path (alist-get 'path file)))
+             (magit-insert-section (approve-file-section path t)
+               (magit-insert-heading
+                 approve-sections-indentation
+                 (approve-diff--file-heading file (approve-diff-file-entry path)
+                                            (gethash path counts) width
+                                            (member path asking)
+                                            (gethash path new-counts)))
+               (approve-sections-lazy-body
+                 (approve-diff--insert-file-body file)))))))
       (insert "\n"))))
 
 ;;; Ranges of lines

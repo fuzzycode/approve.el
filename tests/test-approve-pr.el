@@ -288,6 +288,17 @@
       (expect (oref (approve-test-find-section 'approve-commits-section) hidden)
               :to-be nil)))
 
+  (it "keeps the folding of a section that was gone for a while"
+    (test-pr--with-medium
+      (magit-section-show (approve-test-find-section 'approve-commits-section))
+      (let ((approve-pr-sections-hook (remove 'approve-insert-commits-section
+                                              approve-pr-sections-hook)))
+        (approve-pr-redraw)
+        (approve-pr-redraw))
+      (approve-pr-redraw)
+      (expect (oref (approve-test-find-section 'approve-commits-section) hidden)
+              :to-be nil)))
+
   (it "hides the body of every collapsed section, when opened and after a redraw"
     (test-pr--with-medium
       (expect (test-pr--shown-but-collapsed) :to-be nil)

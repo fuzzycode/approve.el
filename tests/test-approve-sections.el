@@ -444,4 +444,40 @@ MORE alternates field names and values, as in `list'."
               (kill-buffer buffer)
               (approve-icon-clear-cache))))))))
 
+(describe "approve-sections-insert-each"
+  (it "inserts sections after their siblings, with markers, drawn bodies included"
+    (with-temp-buffer
+      (let ((inhibit-read-only t))
+        (magit-insert-section (approve-root-section)
+          (magit-insert-section (first)
+            (insert "first\n"))
+          (approve-sections-insert-each
+           '(1 2 3)
+           (lambda (n)
+             ;; The third starts folded; the others draw their body at once.
+             (magit-insert-section (item n (= n 3))
+               (magit-insert-heading (format "item %d\n" n))
+               (approve-sections-lazy-body
+                 (let ((start (point)))
+                   (magit-insert-section (child n)
+                     (insert (format "child %d\n" n)))
+                   (approve-sections-insert-body start)))))))
+        (let ((items (cdr (oref magit-root-section children))))
+          (expect (mapcar (lambda (section) (oref section value))
+                          (oref magit-root-section children))
+                  :to-equal '(nil 1 2 3))
+          (dolist (section items)
+            (expect (markerp (oref section start)) :to-be t)
+            (expect (markerp (oref section content)) :to-be t)
+            (expect (markerp (oref section end)) :to-be t)
+            (expect (magit-section-at (oref section start)) :to-be section))
+          (expect (buffer-string)
+                  :to-equal "first\nitem 1\n  child 1\nitem 2\n  child 2\nitem 3\n")
+          (magit-section-show (nth 2 items))
+          (magit-section-hide (nth 0 items))
+          (expect (buffer-string)
+                  :to-equal "first\nitem 1\n  child 1\nitem 2\n  child 2\nitem 3\n  child 3\n")
+          (expect (magit-section-at (oref (nth 2 items) start)) :to-be (nth 2 items))
+          (expect (oref (car (oref (nth 2 items) children)) value) :to-be 3))))))
+
 ;;; test-approve-sections.el ends here

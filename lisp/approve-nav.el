@@ -683,9 +683,7 @@ The choice holds for lines drawn later too: it is the session's
 :threads, which the diff reads, and no line keeps a folding of its
 own."
   (approve-session-put :threads state)
-  (setq magit-section-visibility-cache
-        (seq-remove (lambda (entry) (memq (car (caar entry)) approve-nav--thread-folds))
-                    magit-section-visibility-cache))
+  (approve-forget-visibility (lambda (ident) (memq (caar ident) approve-nav--thread-folds)))
   ;; Point in a thread about to be folded goes to its line.
   (when (eq state 'folded)
     (let ((section (magit-current-section)))

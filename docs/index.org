@@ -224,6 +224,14 @@ task only needs the files it touches.
   base repository, through Magit, so its commits are found there;
   without a clone the echo area says so and nothing happens.  Approve
   still fetches nothing by itself.
+- Found by the author on 2026-11-21 ([[file:decisions.org::*D13 Full redraw, point restored by section ident][D13]], amended): a pull
+  request of 4 202 files (+66 789 −36 521) made the PR buffer unusable.
+  A redraw took 1.1 s, against 14 ms at 300 files, as Magit's way of
+  keeping sections grows with their square, and the buffer redraws on
+  each page that arrives and after each action.  Approve now keeps the
+  sections' folding in a hash table of its own, detaches markers newest
+  first and gives long lists their markers once all are inserted: such
+  a redraw takes 0.14 s (=redraw-huge= in =approve-dev-benchmark=).
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

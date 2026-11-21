@@ -533,6 +533,39 @@ The value is a list of (TYPE . HIDDEN), in buffer order."
                                                   (line-end-position)))))
                 :to-equal "metrics.Inc(\"step_16\")")))))
 
+(describe "The diff's files, however many"
+  :var (buffer)
+  (before-each
+    (approve-test-with-fixture "medium"
+      (setq buffer (approve-test-open-pr "medium"))))
+  (after-each
+    (kill-buffer buffer))
+
+  (it "are in the PR's order, each section where its heading is"
+    (with-current-buffer buffer
+      ;; An expanded file's body is drawn at once, among the others.
+      (magit-section-show (test-diff--file-section "internal/parser/parser.go"))
+      (approve-pr-redraw)
+      (let ((files (oref (approve-test-find-section 'approve-diff-section) children)))
+        (expect (mapcar (lambda (section) (oref section value)) files)
+                :to-equal (mapcar (lambda (file) (alist-get 'path file)) (approve-pr-files)))
+        (dolist (section files)
+          (expect (magit-section-at (oref section start)) :to-be section)
+          (expect (magit-section-at (1- (oref section content))) :to-be section)))))
+
+  (it "stay where they are when one before them unfolds"
+    (with-current-buffer buffer
+      (let* ((files (oref (approve-test-find-section 'approve-diff-section) children))
+             (last (car (last files)))
+             (heading (buffer-substring-no-properties (oref last start)
+                                                      (oref last content))))
+        (magit-section-show (test-diff--file-section "internal/parser/parser.go"))
+        (expect (buffer-substring-no-properties (oref last start) (oref last content))
+                :to-equal heading)
+        (magit-section-show last)
+        (expect (magit-section-at (1- (oref last end))) :not :to-be nil)
+        (expect (approve-test-section-text last) :to-match "Binary file not shown")))))
+
 (describe "The diff of the large PR"
   (it "says when GitHub sent no patch because the file is too large"
     (approve-test-with-fixture "large"

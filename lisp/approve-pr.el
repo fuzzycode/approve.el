@@ -482,27 +482,77 @@ Return the new point."
   "Detach the markers of the sections about to be erased.
 A marker stays in its buffer until it is garbage-collected, and
 every insertion moves each one, so a redraw would otherwise pay for
-the markers of earlier redraws."
+the markers of earlier redraws.  They go newest first, near enough:
+Emacs looks for a marker from the buffer's newest one, so going
+oldest first would walk them all for each one."
+  (when magit-root-section
+    (let ((markers nil))
+      (magit-map-sections
+       (lambda (section)
+         (dolist (marker (list (oref section start) (oref section content)
+                               (oref section end)))
+           (when (markerp marker)
+             (push marker markers))))
+       magit-root-section)
+      (dolist (marker markers)
+        (set-marker marker nil)))))
+
+(defvar-local approve-pr--visibility nil
+  "Whether each section drawn in the buffer so far was collapsed.
+A hash table from a section's ident (`magit-section-ident') to
+`hide' or `show'.  Each redraw first records the sections it is about
+to erase, so a section drawn again, or later, is as the user left it
+\(decision D13).  It stands in for Magit's cache
+\(`magit-section-visibility-cache'), a list that took longer to
+search than the drawing of thousands of sections took.")
+
+(defun approve-pr--remember-visibility ()
+  "Record whether each section of the buffer is collapsed.
+See `approve-pr--visibility'."
+  (unless approve-pr--visibility
+    (setq approve-pr--visibility (make-hash-table :test #'equal)))
   (when magit-root-section
     (magit-map-sections
      (lambda (section)
-       (dolist (marker (list (oref section start) (oref section content)
-                             (oref section end)))
-         (when (markerp marker)
-           (set-marker marker nil))))
+       (puthash (magit-section-ident section) (if (oref section hidden) 'hide 'show)
+                approve-pr--visibility))
      magit-root-section)))
+
+(defun approve-pr--cached-visibility (section)
+  "Return `hide' or `show' for SECTION as it was last drawn, or nil.
+It is on `magit-section-set-visibility-hook' in Approve's buffers."
+  (and approve-pr--visibility
+       (gethash (magit-section-ident section) approve-pr--visibility)))
+
+(defun approve-forget-visibility (predicate)
+  "Forget whether the sections PREDICATE accepts were collapsed.
+PREDICATE is called with a section's ident (`magit-section-ident').
+Those that are not in the buffer now are drawn next time as they
+were at first; those that are keep what they are when it is redrawn."
+  (when approve-pr--visibility
+    (let ((forgotten nil))
+      (maphash (lambda (ident _)
+                 (when (funcall predicate ident)
+                   (push ident forgotten)))
+               approve-pr--visibility)
+      (dolist (ident forgotten)
+        (remhash ident approve-pr--visibility)))))
 
 (defun approve-redraw-sections (insert)
   "Erase the current buffer and draw its sections again with INSERT.
 INSERT is called with no arguments, at point, inside the root
 section (`approve-root-section').  Point stays on the same section,
 line and column, in each window showing the buffer, and collapsed
-sections stay collapsed (decision D13).  Every Approve buffer of
-sections redraws this way: the PR buffer and the dashboard."
+sections stay collapsed (decision D13, `approve-pr--visibility').
+Every Approve buffer of sections redraws this way: the PR buffer and
+the dashboard."
   (let* ((windows (get-buffer-window-list (current-buffer) nil t))
          (positions (cons (approve-pr--position nil)
                           (mapcar #'approve-pr--position windows)))
          (inhibit-read-only t))
+    (setq-local magit-section-cache-visibility nil)
+    (setq-local magit-section-set-visibility-hook (list #'approve-pr--cached-visibility))
+    (approve-pr--remember-visibility)
     (approve-pr--detach-markers)
     (erase-buffer)
     (save-excursion

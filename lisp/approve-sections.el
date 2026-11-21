@@ -143,6 +143,57 @@ column WIDTH, `approve-page-width' by default."
   "Indent the text inserted since START by two columns."
   (approve-render-prefix start (point) "  "))
 
+(defun approve-sections--make-markers (section)
+  "Give SECTION, and the sections in it, markers where they have positions.
+They are made as Magit makes them: the start's advances over text
+inserted there, the others don't."
+  (magit-map-sections
+   (lambda (section)
+     (pcase-dolist (`(,slot . ,advance) '((start . t) (content) (end)))
+       (let ((value (slot-value section slot)))
+         (when (integerp value)
+           (setf (slot-value section slot) (copy-marker value advance))))))
+   section))
+
+(defun approve-sections-insert-each (items insert)
+  "Call INSERT with each of ITEMS to insert its section, however many.
+INSERT is called at point, inside the current section, and inserts
+sections there: one for each item, usually.  Thousands of sections
+inserted the usual way take a time that grows with their square:
+each insertion moves every marker in the buffer, a section has three,
+and each section is added at the end of its parent's list of
+children.  Here they have positions instead while they are inserted,
+and their markers and their place among their parent's children
+once all are.  So INSERT must only insert at point.  A section's
+body inserts with markers if it is drawn at once, as it may insert
+anywhere in itself: insert it with `approve-sections-lazy-body'."
+  (let* ((parent magit-insert-section--current)
+         (siblings (oref parent children))
+         (sections nil))
+    ;; A buffer-local binding, so other buffers keep their markers.
+    (unless (local-variable-p 'magit-section-inhibit-markers)
+      (setq-local magit-section-inhibit-markers nil))
+    (unwind-protect
+        (let ((magit-section-inhibit-markers t))
+          (dolist (item items)
+            (oset parent children nil)
+            (funcall insert item)
+            (dolist (section (oref parent children))
+              (push section sections))))
+      (setq sections (nreverse sections))
+      (oset parent children (append siblings sections))
+      (mapc #'approve-sections--make-markers sections))))
+
+(defmacro approve-sections-lazy-body (&rest body)
+  "Insert BODY as the current section's body, once it is expanded.
+Like `magit-insert-section-body', for the sections that
+`approve-sections-insert-each' inserts: a body drawn at once gets
+markers, as one drawn later does."
+  (declare (indent 0) (debug t))
+  `(magit-insert-section-body
+     (let ((magit-section-inhibit-markers nil))
+       ,@body)))
+
 (defun approve-sections--ref (thing)
   "Return \"#N title\" of THING, an issue or pull request, as a link."
   (let-alist thing
@@ -850,24 +901,26 @@ threads on lines, and say which files the viewer viewed."
                         (concat "  " (approve-sections-counts .additions .deletions))))
            (and files (approve-sections-unresolved counts "file")))))
       ;; Each row carries its indentation: one insertion per row, where
-      ;; indenting afterwards would insert again into a buffer of markers.
-      (dolist (file files)
-        (let-alist file
-          (magit-insert-section (approve-file-entry-section .path)
-            (insert approve-sections-indentation
-                    (approve-face (approve-render-pad (approve-render-shorten-path
-                                                       .path path-width)
-                                                      path-width)
-                                  'approve-path)
-                    "  "
-                    (approve-sections-counts .additions .deletions number-width)
-                    "  "
-                    (approve-render-pad (approve-sections--bar .additions .deletions largest)
-                                        approve-diffstat-width)
-                    "  "
-                    (approve-sections-thread-count (gethash .path counts)
-                                                   (member .path asking))
-                    "\n"))))
+      ;; indenting afterwards would insert again.
+      (approve-sections-insert-each
+       files
+       (lambda (file)
+         (let-alist file
+           (magit-insert-section (approve-file-entry-section .path)
+             (insert approve-sections-indentation
+                     (approve-face (approve-render-pad (approve-render-shorten-path
+                                                        .path path-width)
+                                                       path-width)
+                                   'approve-path)
+                     "  "
+                     (approve-sections-counts .additions .deletions number-width)
+                     "  "
+                     (approve-render-pad (approve-sections--bar .additions .deletions largest)
+                                         approve-diffstat-width)
+                     "  "
+                     (approve-sections-thread-count (gethash .path counts)
+                                                    (member .path asking))
+                     "\n")))))
       (let ((start (point)))
         (cond
          ((approve-model-truncated-p connection)

@@ -1403,6 +1403,21 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
 - Why :: Partial redraws in magit-section are hard and bug-prone.  With lazy
   diff bodies, full redraws stay cheap.  Measure in Phase 1; optimize only if
   needed.
+- Amended (2026-11-21) :: A pull request of 4 202 files made Approve
+  unusable: a redraw took 1.1 s (14 ms at 300 files), and the buffer
+  redraws on each of the ~70 pages such a PR loads in, and after each
+  action.  Three things grew with the square of the sections, all
+  Magit's way of keeping them: its visibility cache is a list, searched
+  and updated for each section; each insertion moves every marker (three
+  a section), and detaching them oldest first walked them all for each
+  one; each section was added at the end of its parent's children.  So
+  the visibility is Approve's own (=approve-pr--visibility=), a hash
+  table by section ident, recorded from the sections a redraw erases;
+  markers are detached newest first; and long lists, the diff's files
+  and the file list, are inserted with positions and get markers and
+  their place among their parent's children once all are
+  (=approve-sections-insert-each=).  A redraw of 4 200 files takes
+  0.14 s, in step with the number of files.
 
 ** D28 Diff line numbers are text that copying leaves out
 - Status :: accepted (2026-11-08, answers Q1)
