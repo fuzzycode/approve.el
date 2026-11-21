@@ -334,6 +334,10 @@ quickly and each section fills in when its data arrives.
   offers "Load diff": fetch both blobs (base and head oid) and diff them
   locally (=diff-no-select=, or =diff= on temp files).  Binary files show only a
   heading.
+- Large pull requests: REST lists 3000 files at most, so a file past those
+  has no entry, and no patch.  Its section says so and offers "Load diff"
+  the same way; for a renamed or copied one only GitHub, as the old path
+  is only in that entry.
 - =g= reruns the same plan and keeps the buffer as it is until data arrives.
   A refresh is atomic per query: a list's pages are collected and replace
   the old list together, so it never shrinks to its first page meanwhile.

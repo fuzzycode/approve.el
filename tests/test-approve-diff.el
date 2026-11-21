@@ -566,6 +566,28 @@ The value is a list of (TYPE . HIDDEN), in buffer order."
         (expect (magit-section-at (1- (oref last end))) :not :to-be nil)
         (expect (approve-test-section-text last) :to-match "Binary file not shown")))))
 
+(defun test-diff--blob-transport (replay fetched)
+  "Return a transport that answers blob queries, and others with REPLAY.
+The base version of a file is {\"a\": 1}, the head's {\"a\": 2}; FETCHED,
+a symbol, gets each blob's expression pushed onto its value."
+  (lambda (request)
+    (if (equal (plist-get request :name) "queries/blob.graphql")
+        (let* ((expression (alist-get 'expression (plist-get request :variables)))
+               (text (if (string-prefix-p (approve-pr-field 'baseRefOid) expression)
+                         "{\n  \"a\": 1\n}\n"
+                       "{\n  \"a\": 2\n}\n")))
+          (set fetched (cons expression (symbol-value fetched)))
+          (run-at-time 0 nil (plist-get request :on-success)
+                       `((data (repository (id . "R")
+                                           (object (__typename . "Blob")
+                                                   (id . "B") (text . ,text)))))
+                       nil)
+          nil)
+      (funcall replay request))))
+
+(defvar test-diff--blobs nil
+  "The blobs `test-diff--blob-transport' was asked for.")
+
 (describe "The diff of the large PR"
   (it "says when GitHub sent no patch because the file is too large"
     (approve-test-with-fixture "large"
@@ -581,23 +603,9 @@ The value is a list of (TYPE . HIDDEN), in buffer order."
 
   (it "computes such a diff from both versions of the file on RET"
     (approve-test-with-fixture "large"
-      (let* ((replay approve-api-transport)
-             (blobs nil)
-             (approve-api-transport
-              (lambda (request)
-                (if (equal (plist-get request :name) "queries/blob.graphql")
-                    (let* ((expression (alist-get 'expression (plist-get request :variables)))
-                           (text (if (string-prefix-p (approve-pr-field 'baseRefOid) expression)
-                                     "{\n  \"a\": 1\n}\n"
-                                   "{\n  \"a\": 2\n}\n")))
-                      (push expression blobs)
-                      (run-at-time 0 nil (plist-get request :on-success)
-                                   `((data (repository (id . "R")
-                                                       (object (__typename . "Blob")
-                                                               (id . "B") (text . ,text)))))
-                                   nil)
-                      nil)
-                  (funcall replay request))))
+      (setq test-diff--blobs nil)
+      (let* ((approve-api-transport (test-diff--blob-transport approve-api-transport
+                                                               'test-diff--blobs))
              (buffer (approve-test-open-pr "large")))
         (unwind-protect
             (with-current-buffer buffer
@@ -606,7 +614,7 @@ The value is a list of (TYPE . HIDDEN), in buffer order."
               (goto-char (point-min))
               (search-forward "load it anyway")
               (approve-visit)
-              (approve-test-wait-for (lambda () (= (length blobs) 2)))
+              (approve-test-wait-for (lambda () (= (length test-diff--blobs) 2)))
               (approve-test-wait-for (lambda () (not (approve-pr-loading-p
                                                       '(diff . "pkg/mike/schema_10.json")))))
               (approve-pr-redraw)
@@ -615,6 +623,53 @@ The value is a list of (TYPE . HIDDEN), in buffer order."
                 (expect (approve-test-section-text section) :to-match "@@ -1,3 \\+1,3 @@")
                 (expect (approve-test-section-text section) :to-match "-  \"a\": 1")
                 (expect (approve-test-section-text section) :to-match "\\+  \"a\": 2")))
+          (kill-buffer buffer))))))
+
+(describe "A file past the 3000 GitHub lists with their patches"
+  (it "offers to compute its diff from both versions of the file on RET"
+    (approve-test-with-fixture "large"
+      (setq test-diff--blobs nil)
+      (let* ((approve-api-transport (test-diff--blob-transport approve-api-transport
+                                                               'test-diff--blobs))
+             (buffer (approve-test-open-pr "large")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (let ((path (alist-get 'path (car (approve-pr-files)))))
+                ;; As in a pull request of more files than GitHub lists.
+                (remhash path (approve-model-extra :patches))
+                (approve-model-patch `((__typename . "PullRequest")
+                                       (id . ,(approve-model-ref-id (approve-model-root-ref)))
+                                       (changedFiles . 4202)))
+                (approve-pr-redraw)
+                (magit-section-show (approve-test-find-section 'approve-file-section path))
+                (expect (approve-test-section-text
+                         (approve-test-find-section 'approve-file-section path))
+                        :to-match (concat "Diff not listed by GitHub (3000 files at most)"
+                                          " · RET load it anyway"))
+                (goto-char (point-min))
+                (search-forward "load it anyway")
+                (approve-visit)
+                (approve-test-wait-for (lambda () (= (length test-diff--blobs) 2)))
+                (approve-test-wait-for (lambda () (not (approve-pr-loading-p (cons 'diff path)))))
+                (approve-pr-redraw)
+                (expect (approve-test-section-text
+                         (approve-test-find-section 'approve-file-section path))
+                        :to-match "\\+  \"a\": 2")))
+          (kill-buffer buffer)))))
+
+  (it "only offers GitHub for a renamed one, whose old path it doesn't say"
+    (approve-test-with-fixture "medium"
+      (let ((buffer (approve-test-open-pr "medium")))
+        (unwind-protect
+            (with-current-buffer buffer
+              (let ((path "internal/engine/scheduler.go"))
+                (remhash path (approve-model-extra :patches))
+                (approve-pr-redraw)
+                (magit-section-show (approve-test-find-section 'approve-file-section path))
+                (let ((text (approve-test-section-text
+                             (approve-test-find-section 'approve-file-section path))))
+                  (expect text :to-match "Diff not listed by GitHub · o open it on GitHub")
+                  (expect text :not :to-match "load it anyway"))))
           (kill-buffer buffer))))))
 
 ;;; test-approve-diff.el ends here

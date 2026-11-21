@@ -275,8 +275,8 @@ D36 allows a local diff of fetched blobs)."
   "Compute the patch of PATH from its blobs, for a file GitHub sent none of.
 The base is the PR's base commit (at the old path of a renamed file),
 the head its head commit.  The patch goes into the file's entry under
-:patches, then CALLBACK is called with no arguments; ERRORBACK gets
-the error of a failed fetch."
+:patches, made for a file past those GitHub lists, then CALLBACK is
+called with no arguments; ERRORBACK gets the error of a failed fetch."
   (let* ((entry (gethash path (approve-model-extra :patches)))
          (old-path (or (alist-get 'previous_filename entry) path))
          (base (approve-pr-field 'baseRefOid))

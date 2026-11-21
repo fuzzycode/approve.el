@@ -232,6 +232,10 @@ task only needs the files it touches.
   sections' folding in a hash table of its own, detaches markers newest
   first and gives long lists their markers once all are inserted: such
   a redraw takes 0.14 s (=redraw-huge= in =approve-dev-benchmark=).
+  Redraws wait longer while the pages of a buffer slow to draw arrive.
+  GitHub's REST list of files stops at 3000, with the patches: a file
+  past it says so, and =RET= computes its diff from both versions, as
+  for a file too large for GitHub to send.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

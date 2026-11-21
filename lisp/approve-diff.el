@@ -607,6 +607,31 @@ HIDE collapses it at first; NOTE is dim text on the right."
                                 (and note (approve-face note 'approve-dim))))
       (approve-diff--insert-threads threads 2))))
 
+(defconst approve-diff--listed-files 3000
+  "How many files GitHub's REST list of a pull request's files has at most.
+That list has the patches; past it, a file has none.")
+
+(defun approve-diff--not-sent (file entry)
+  "Return the line that says GitHub sent no diff of FILE, and what to do.
+FILE is from GraphQL, ENTRY its REST entry, or nil for a file past
+the ones GitHub lists (`approve-diff--listed-files').  The diff can be
+computed from both versions of the file, RET on the line, but for a
+file renamed or copied from a path only the entry would say."
+  (let* ((path (alist-get 'path file))
+         (moved (and (null entry)
+                     (member (alist-get 'changeType file) '("RENAMED" "COPIED"))))
+         (why (cond (entry "Diff not shown by GitHub (too large)")
+                    ((> (or (approve-pr-field 'changedFiles) 0) approve-diff--listed-files)
+                     (format "Diff not listed by GitHub (%d files at most)"
+                             approve-diff--listed-files))
+                    (t "Diff not listed by GitHub")))
+         (hints (approve-render-hints (and (not moved) '(approve-visit "load it anyway"))
+                                      '(approve-browse "open it on GitHub")))
+         (text (concat (approve-face why 'approve-empty)
+                       (if hints (concat (approve-face " · " 'approve-dim) hints) ""))))
+    (concat (if moved text (approve-thing text (list :kind 'load-diff :path path)))
+            "\n")))
+
 (defun approve-diff--insert-file-body (file)
   "Insert the body of the diff of FILE: threads on it, hunks, outdated."
   (let* ((path (alist-get 'path file))
@@ -627,28 +652,19 @@ HIDE collapses it at first; NOTE is dim text on the right."
           (approve-diff--insert-hunk path hunk width index fontified))))
      ((approve-pr-error 'patches)
       (insert (approve-render-failure "the diff" (approve-pr-error 'patches))))
-     ((null entry)
-      (insert (if (approve-pr-loading-p 'patches)
-                  (approve-render-loading)
-                (approve-render-empty "Diff not available."))))
-     ((approve-diff--binary-p file entry)
+     ((and (null entry) (approve-pr-loading-p 'patches))
+      (insert (approve-render-loading)))
+     ((and entry (approve-diff--binary-p file entry))
       (insert (approve-render-empty "Binary file not shown.")))
-     ((zerop (+ (alist-get 'additions file) (alist-get 'deletions file)))
+     ((and (zerop (+ (alist-get 'additions file) (alist-get 'deletions file)))
+           (or entry (member (alist-get 'changeType file) '("RENAMED" "COPIED"))))
       (insert (approve-render-empty "File renamed without changes.")))
      ((approve-pr-loading-p (cons 'diff path))
       (insert (approve-render-loading "the diff")))
      ((approve-pr-error (cons 'diff path))
       (insert (approve-render-failure "the diff" (approve-pr-error (cons 'diff path)))))
      (t
-      (insert (approve-thing
-               (concat (approve-face "Diff not shown by GitHub (too large)" 'approve-empty)
-                       (if-let* ((hints (approve-render-hints
-                                         '(approve-visit "load it anyway")
-                                         '(approve-browse "open it on GitHub"))))
-                           (concat (approve-face " · " 'approve-dim) hints)
-                         ""))
-               (list :kind 'load-diff :path path))
-              "\n")))
+      (insert (approve-diff--not-sent file entry))))
     (approve-diff--insert-thread-group 'outdated "Outdated" (plist-get index :outdated)
                                        (not (eq (approve-session-get :threads) 'shown))
                                        "threads on lines no longer in the diff")

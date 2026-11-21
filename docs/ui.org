@@ -343,6 +343,8 @@ title has loaded.  The fourth counts the suggestions waiting in the batch
 
  ▾ · ~ lisp/huge-generated.json
      Diff not shown by GitHub (too large) · RET load it anyway
+ ▾ · ~ vendor/zz/last.go                       (a PR of more than 3000 files)
+     Diff not listed by GitHub (3000 files at most) · RET load it anyway
  ▾ · + assets/logo.png
 #+end_example
 
