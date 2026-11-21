@@ -10,6 +10,9 @@
 ;; build' ran) and redraws the open PR buffers and the dashboard, so a
 ;; fix shows at once; options left at their default take a changed default,
 ;; faces their new spec, and keymaps their new bindings, in place.
+;; A module whose source is newer than its .elc loads from the source,
+;; about four times slower: a warning names them, and `make build' then
+;; a load again compiles them.
 ;; Dependencies the Emacs lacks (often ghub and treepy) come from the
 ;; project's Cask (`make install').  It turns on `approve-dev-offline-mode' with
 ;; `approve-dev-offline-fallback': the fixture PRs open without a token,
@@ -32,7 +35,9 @@
               (directory-file-name
                (file-name-directory (or load-file-name buffer-file-name)))))
        (lisp (expand-file-name "lisp" root))
-       (elpa (expand-file-name (format ".cask/%s/elpa" emacs-version) root)))
+       (elpa (expand-file-name (format ".cask/%s/elpa" emacs-version) root))
+       ;; The modules loaded from their source, not compiled.
+       (uncompiled nil))
   (add-to-list 'load-path lisp)
   ;; Dependencies this Emacs lacks come from the project's Cask.
   (dolist (dir (and (file-directory-p elpa)
@@ -92,6 +97,11 @@
       (dolist (name order)
         (when (and (member name names)
                    (or (not (equal name "approve-evil")) (featurep 'evil)))
+          (let* ((source (expand-file-name (concat name ".el") lisp))
+                 (compiled (concat source "c")))
+            (unless (and (file-exists-p compiled)
+                         (not (file-newer-than-file-p source compiled)))
+              (push name uncompiled)))
           (load (expand-file-name name lisp) nil t))))
     (dolist (symbol defaults)
       (let ((value (eval (car (get symbol 'standard-value)) t)))
@@ -110,6 +120,12 @@
                  (bound-and-true-p evil-local-mode)
                  (fboundp 'evil-normalize-keymaps))
         (evil-normalize-keymaps))))
-  (message "Approve loaded from %s; fixture PRs replay, other URLs go to GitHub" root))
+  (message "Approve loaded from %s; fixture PRs replay, other URLs go to GitHub" root)
+  (when uncompiled
+    (display-warning
+     'approve
+     (format "%d module%s loaded uncompiled, about four times slower: %s.  Run `make build' in %s, then load dev/load.el again."
+             (length uncompiled) (if (cdr uncompiled) "s" "")
+             (mapconcat #'identity (nreverse uncompiled) ", ") root))))
 
 ;;; load.el ends here

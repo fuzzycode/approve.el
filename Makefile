@@ -6,7 +6,10 @@ EMACS ?= emacs
 SRCS = $(wildcard lisp/*.el)
 OBJS = $(SRCS:.el=.elc)
 
-BATCH = $(CASK) exec $(EMACS) -Q --batch -L lisp -L tests
+# A module required while compiling another loads from its newer file,
+# never from a .elc older than its source.
+BATCH = $(CASK) exec $(EMACS) -Q --batch -L lisp -L tests \
+	--eval "(setq load-prefer-newer t)"
 
 # package-lint needs the archive contents that cask install fetched.
 PACKAGE_INIT = (progn (require 'package) \
@@ -23,7 +26,8 @@ build: install $(OBJS)
 lisp/%.elc: lisp/%.el
 	$(BATCH) -f batch-byte-compile $<
 
-test: install
+# The tests load each module's .elc: build first, so none is stale.
+test: build
 	$(CASK) exec buttercup -L lisp -L tests -L . tests
 
 # Tests with coverage; prints a text report.
@@ -35,12 +39,21 @@ cover: install
 		-f buttercup-run-discover $(CURDIR)/tests
 
 # Byte-compile with warnings as errors, then package-lint and checkdoc.
-# Checkdoc's guess at the voice of a doc string is off, as from Emacs
-# 31.1, so every Emacs in CI checks the same way.
+# The .elc go to a temporary directory: the build's stay, so Approve
+# reloaded after a lint still runs compiled.  Checkdoc's guess at the
+# voice of a doc string is off, as from Emacs 31.1, so every Emacs in
+# CI checks the same way.
+LINT_INIT = (progn \
+  (defvar approve-lint-directory (make-temp-file \"approve-lint\" t)) \
+  (setq byte-compile-error-on-warn t) \
+  (setq byte-compile-dest-file-function \
+        (lambda (file) \
+          (expand-file-name (concat (file-name-base file) \".elc\") approve-lint-directory))) \
+  (add-hook (quote kill-emacs-hook) \
+            (lambda () (delete-directory approve-lint-directory t))))
+
 lint: install
-	$(BATCH) --eval "(setq byte-compile-error-on-warn t)" \
-		-f batch-byte-compile $(SRCS)
-	rm -f $(OBJS)
+	$(BATCH) --eval "$(LINT_INIT)" -f batch-byte-compile $(SRCS)
 	$(BATCH) --eval "$(PACKAGE_INIT)" \
 		--eval "(require 'package-lint)" \
 		--eval "(setq package-lint-main-file \"lisp/approve.el\")" \

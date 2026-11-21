@@ -54,8 +54,9 @@ predictable.
 |----------------+--------------------------------------------------------------+--------------------------------------------|
 | =make install= | =cask install=                                               | exists                                     |
 | =make build=   | byte-compile =lisp/*.el=                                     | exists                                     |
-| =make test=    | buttercup on =tests/=                                        | exists                                     |
-| =make lint=    | byte-compile with warnings as errors, package-lint, checkdoc | exists                                     |
+| =make test=    | =make build=, then buttercup on =tests/=                     | exists                                     |
+| =make lint=    | byte-compile with warnings as errors (into a temporary       | exists                                     |
+|                | directory: the build's =.elc= stay), package-lint, checkdoc  |                                            |
 | =make cover=   | tests with undercover (text report)                          | exists                                     |
 | =make clean=   | remove =.elc=                                                | exists                                     |
 | =make docs=    | rebuild the flow diagrams and =docs/html/flows.html=         | exists (needs graphviz)                    |
@@ -66,7 +67,11 @@ To try Approve in the Emacs you work in, =M-x load-file= =dev/load.el=.  It
 loads every module from =lisp/= (compiled after =make build=), takes the
 dependencies that Emacs lacks from Cask, replays the fixture PRs and sends
 other URLs to GitHub (=approve-dev-offline-fallback=).  Loading it again
-reloads everything, keymaps included, and redraws the open PR buffers.
+reloads everything, keymaps included, and redraws the open PR buffers.  A
+module whose source is newer than its =.elc= loads from the source, about
+four times slower, and a warning names it: =make build=, then load again.
+=make lint= leaves the build's =.elc= be, as it compiles elsewhere, and
+=make test= builds first, so the tests never load a stale one.
 
 The shell is fish: wrap loops in =bash -c '…'=.  Fish has no heredocs
 (=<<EOF=): write the text to a file first (a commit message: =git commit
