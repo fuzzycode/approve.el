@@ -585,7 +585,7 @@ its commits, whether it merges, and the start of its text."
 (defun approve-eldoc-describe-file (context _details)
   "Describe the changed file of CONTEXT."
   (let* ((path (plist-get context :path))
-         (file (seq-find (lambda (file) (equal (alist-get 'path file) path)) (approve-pr-files)))
+         (file (approve-pr-file path))
          (entry (when-let* ((table (approve-model-extra :patches))) (gethash path table)))
          (threads (approve-pr-list-fields 'reviewThreads '(path isResolved)))
          (mine (seq-filter (lambda (thread) (equal (alist-get 'path thread) path)) threads))

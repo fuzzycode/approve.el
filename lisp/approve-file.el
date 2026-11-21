@@ -254,7 +254,7 @@ thread, \\[approve-file-toggle-threads] folds the threads of a line, \\[approve-
 
 (defun approve-file--pr-file (path)
   "Return the changed file PATH from the store, or nil."
-  (seq-find (lambda (file) (equal (alist-get 'path file) path)) (approve-pr-files)))
+  (approve-pr-file path))
 
 (defun approve-file--name (path side)
   "Return the path of the changed file PATH in its version on SIDE.

@@ -117,8 +117,7 @@ SIDE is \"LEFT\" or \"RIGHT\", as GitHub's anchors want."
 
 (defun approve-context--file (path)
   "Return the context of the changed file PATH."
-  (let ((file (seq-find (lambda (file) (equal (alist-get 'path file) path))
-                        (approve-pr-files))))
+  (let ((file (approve-pr-file path)))
     (list :kind 'file :path path
           :viewed (alist-get 'viewerViewedState file)
           :url (approve-context-file-url path))))

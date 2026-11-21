@@ -600,6 +600,7 @@ The check list carries HAS-NEXT and CURSOR."
       (expect (approve-pr-fields '(title)) :to-be nil)
       (expect (approve-pr-list-fields 'reviewThreads '(id)) :to-be nil)
       (expect (approve-pr-files) :to-be nil)
+      (expect (approve-pr-file "lisp/a.el") :to-be nil)
       (expect (approve-pr-threads) :to-be nil)
       (expect (approve-pr-threads-for-file "lisp/a.el") :to-be nil)
       (expect (approve-pr-pending-review) :to-be nil)
@@ -628,6 +629,11 @@ The check list carries HAS-NEXT and CURSOR."
         (expect (approve-pr-files)
                 :to-equal (list (test-approve-model--file "lisp/a.el" 10)
                                 (test-approve-model--file "lisp/b.el" 4))))
+
+      (it "approve-pr-file finds one file by its path"
+        (expect (approve-pr-file "lisp/b.el")
+                :to-equal (test-approve-model--file "lisp/b.el" 4))
+        (expect (approve-pr-file "lisp/c.el") :to-be nil))
 
       (it "approve-pr-threads lists every thread, resolved"
         (let ((threads (approve-pr-threads)))

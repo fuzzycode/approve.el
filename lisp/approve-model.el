@@ -680,6 +680,15 @@ Each has `path', `additions', `deletions', `changeType' and
     (approve-model--resolve-nodes
      (approve-model-nodes (approve-model--root-field 'files)))))
 
+(defun approve-pr-file (path)
+  "Return the PR's changed file PATH, as `approve-pr-files' has it, or nil.
+Only that file is resolved, so it is cheap in a PR of thousands."
+  (approve-model--with-store
+    (when-let* ((node (seq-find (lambda (node)
+                                  (equal (alist-get 'path (approve-model--raw node)) path))
+                                (approve-model-nodes (approve-model--root-field 'files)))))
+      (car (approve-model--resolve-nodes (list node))))))
+
 (defun approve-pr-threads ()
   "Return the PR's review threads, resolved, in store order."
   (approve-model--with-store
