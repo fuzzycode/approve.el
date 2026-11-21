@@ -99,8 +99,13 @@ puts it back, before the diff:
   :group 'approve)
 
 (defcustom approve-pr-redraw-delay 0.05
-  "Seconds to wait before redrawing after data arrived.
-Data that arrives meanwhile is drawn in the same redraw."
+  "Seconds to wait before redrawing after data arrived, at least.
+Data that arrives meanwhile is drawn in the same redraw.  A buffer
+that takes longer to draw waits longer: four times as long as its
+last redraw took, so Emacs stays free while the pages of a pull
+request of thousands of files arrive.  To redraw sooner:
+
+  (setq approve-pr-redraw-delay 0.02)"
   :type 'number
   :group 'approve)
 
@@ -126,6 +131,14 @@ run.  The sections that need such data add entries.")
 
 (defvar-local approve-pr--redraw-timer nil
   "Timer of the scheduled redraw, or nil.")
+
+(defvar-local approve-pr--redraw-seconds 0
+  "Seconds the last redraw of the buffer took.")
+
+(defconst approve-pr--redraw-pause 4
+  "How many times as long as its last redraw a buffer waits for the next.
+That leaves Emacs free four fifths of the time while data arrives,
+however long the buffer takes to draw (`approve-pr-redraw-delay').")
 
 (defvar approve-pr-redraw-hook nil
   "Hook run in a PR buffer after each redraw.")
@@ -414,15 +427,17 @@ it is in."
   (setq approve-pr--redraw-timer nil))
 
 (defun approve-pr-schedule-redraw (&optional buffer)
-  "Redraw BUFFER (default: the current one) after `approve-pr-redraw-delay'.
-Calls before then share that one redraw."
+  "Redraw BUFFER (default: the current one) in a moment.
+That is after `approve-pr-redraw-delay', or longer for a buffer that
+takes long to draw.  Calls before then share that one redraw."
   (let ((buffer (or buffer (current-buffer))))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (unless (timerp approve-pr--redraw-timer)
           (setq approve-pr--redraw-timer
-                (run-at-time approve-pr-redraw-delay nil
-                             #'approve-pr--redraw-now buffer)))))))
+                (run-at-time (max approve-pr-redraw-delay
+                                  (* approve-pr--redraw-pause approve-pr--redraw-seconds))
+                             nil #'approve-pr--redraw-now buffer)))))))
 
 (defun approve-pr--redraw-now (buffer)
   "Redraw BUFFER now if it is alive; the scheduled redraw."
@@ -580,14 +595,16 @@ The buffer is erased and `approve-pr-sections-hook' is run.  Point
 stays on the same section, line and column, in each window showing
 the buffer, and collapsed sections stay collapsed (decision D13)."
   (approve-pr--cancel-redraw)
-  (approve-redraw-sections
-   (lambda ()
-     (if-let* ((fatal (approve-session-get :fatal)))
-         (approve-pr--insert-fatal fatal)
-       (magit-run-section-hook 'approve-pr-sections-hook))))
-  (approve-pr-update-header-line)
-  (approve-pr--fetch-images)
-  (run-hooks 'approve-pr-redraw-hook))
+  (let ((start (float-time)))
+    (approve-redraw-sections
+     (lambda ()
+       (if-let* ((fatal (approve-session-get :fatal)))
+           (approve-pr--insert-fatal fatal)
+         (magit-run-section-hook 'approve-pr-sections-hook))))
+    (approve-pr-update-header-line)
+    (approve-pr--fetch-images)
+    (run-hooks 'approve-pr-redraw-hook)
+    (setq approve-pr--redraw-seconds (- (float-time) start))))
 
 (defun approve-pr-token-hint ()
   "Return what to check when GitHub gets no usable token."

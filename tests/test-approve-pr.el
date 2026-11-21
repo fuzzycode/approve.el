@@ -244,6 +244,17 @@
       (approve-test-wait-for (lambda () (null approve-pr--redraw-timer)))
       (expect 'approve-pr-redraw :to-have-been-called-times 1)))
 
+  (it "waits longer after a redraw that took long, so Emacs stays free"
+    (test-pr--with-medium
+      (spy-on 'run-at-time :and-return-value 'timer)
+      (approve-pr-schedule-redraw)
+      (setq approve-pr--redraw-timer nil)
+      (setq approve-pr--redraw-seconds 0.5)
+      (approve-pr-schedule-redraw)
+      (setq approve-pr--redraw-timer nil)
+      (expect (mapcar #'car (spy-calls-all-args 'run-at-time))
+              :to-equal (list approve-pr-redraw-delay 2.0))))
+
   (it "keeps point on the same section, line and column"
     (test-pr--with-medium
       (approve-test-show-file-list)

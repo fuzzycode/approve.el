@@ -320,7 +320,7 @@ quickly and each section fills in when its data arrives.
   ├─ Q timeline ────────────────▶ conversation                  (pages)
   ├─ Q commits ──────▶ commits section
   └─ R patches ───────────────────────▶ diff bodies             (pages of 100)
-        each arrival: normalize → store → schedule redraw (coalesced ≈50 ms)
+        each arrival: normalize → store → schedule redraw (coalesced ≥50 ms)
         an error marks only its own section: "✗ … · g to retry"
         (Q core failing, or a token error from any query: the whole buffer
         shows that one error, and the echo area says it)
@@ -725,9 +725,11 @@ newest first, as Emacs looks a marker up from the newest.  Folding is
 kept in a hash table, not Magit's list (D13, amended).  Long lists (the
 files, the diff's file headings) insert their indentation with each
 line rather than indenting afterwards, and their sections get markers
-once all are inserted (=approve-sections-insert-each=).  In a clone's buffers (D45), the buffer is
-diffed against GitHub's file by an asynchronous process on temporary
-files, after edits once Emacs is idle; never through a pipe, which
+once all are inserted (=approve-sections-insert-each=).  A redraw that
+takes long makes the next one wait four times as long.  In a clone's
+buffers (D45), the buffer is diffed against GitHub's file by an
+asynchronous process on temporary files, after edits once Emacs is
+idle; never through a pipe, which
 blocks Emacs for seconds on a large file.  The buffer is written as
 Emacs holds it (=no-conversion=, which is UTF-8): encoding it as UTF-8
 takes 54 ms at 14 MB, writing it 4 ms.  It is written once for all the

@@ -1417,7 +1417,10 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   and the file list, are inserted with positions and get markers and
   their place among their parent's children once all are
   (=approve-sections-insert-each=).  A redraw of 4 200 files takes
-  0.14 s, in step with the number of files.
+  0.14 s, in step with the number of files.  Redraws still coalesce:
+  the next one waits 50 ms (=approve-pr-redraw-delay=), or four times
+  as long as the last one took when that is longer, so Emacs stays
+  free while the pages of a large PR arrive.
 
 ** D28 Diff line numbers are text that copying leaves out
 - Status :: accepted (2026-11-08, answers Q1)
