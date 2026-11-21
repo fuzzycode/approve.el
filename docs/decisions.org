@@ -985,7 +985,74 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   commits, since D37 asks every clone for a commit and a buffer's
   clone may be any of them.
 
-* Data and network
+** D54 Filters on the diff, registered by the user, toggled from a menu
+- Status :: accepted (2026-11-21, by the author, who asked for it; he
+  chose filters registered as a key, a description and a function
+  that returns the predicate, "and" or "or" switched in the menu with
+  the first one an option, filters kept per buffer across =g=, and =
+  as the key)
+- Decision ::
+  - =approve-filters= lists the filters, each =(KEY DESCRIPTION
+    FUNCTION)=; =approve-filter-register= adds one or replaces a key's.
+    The filter menu (~=~, =approve-filter-menu=, in Emacs and evil's
+    normal state; evil's ~=~ operator does nothing in a read-only
+    buffer) has a toggle for each, which keeps the menu open, then
+    =&= (combine, =[and|or]=) and =DEL= (clear all).  A filter that is
+    on says so after its description, as an option shows its value:
+    =(path ~ _test)=, or =(on)=.  The dispatch lists it too, saying how
+    many files pass while a filter is on.
+  - FUNCTION is called in the PR buffer when the filter is turned on.
+    It may ask for something and wait for data, and returns the
+    predicate on a changed file (=path=, =changeType=, =additions=,
+    =deletions=, =viewerViewedState=), or =(:predicate P :label L)=,
+    =L= saying what it keeps in a few words.  If it signals (a
+    =user-error=, =C-g= while it waits) the filter stays off.  The
+    predicate runs in the PR buffer at each redraw: quick, and never
+    the network.  One that signals lets the files pass, so the diff
+    still draws, and its error is logged once.
+  - Built in: =r= "Path matching regexp…" (=read-regexp=; case
+    matters when it has an upper-case letter, as in =occur=), =o= "I am
+    a code owner", =t= "My team is a code owner".
+  - With several on, a file passes them all (=and=) or one of them
+    (=or=); =approve-filter-combine= says which a buffer starts with
+    (=and=), =&= switches.
+  - Per PR buffer: the session's =:filters= and =:filter-combine=, kept
+    across =g=, gone with the buffer.
+  - The diff draws only the files that pass, and so does the file list
+    when it is shown.  The heading says how many of all they are,
+    =Diff (5 of 12)=, and names the filters on its right, =filter: path
+    ~ _test and owned by @alice=, before its counts, which count those
+    files (viewed, unresolved threads, new comments).  None passing:
+    "No file passes the filter · = change it".  =]u= =[u= =]t= =[t= =j n=
+    walk the files drawn; =j /= and =j j= offer those files and their
+    threads, and the count of =j n= is theirs; going to a file a filter
+    hides says so ("The filter of the diff hides go.mod; = changes
+    it").  A clone's buffer, which has no diff, ignores the filters.
+  - Code owners are read from the CODEOWNERS file of the pull request's
+    base branch, the first of =.github/CODEOWNERS=, =CODEOWNERS= and
+    =docs/CODEOWNERS=, as GitHub does; one query asks for the three
+    (=approve-codeowners.el= reads it).  Its patterns are gitignore's
+    as GitHub's documentation describes them (no =!= nor =[ ]=; =dir/*=
+    is the files right in =dir=; case-sensitive); the last that matches
+    wins, and one without owners leaves its files without any.  "I am"
+    is =@viewer= among the owners; "my team" is one of the teams of
+    the organization that owns the repository that the viewer is in,
+    or one of their ancestors, as =@org/slug=.  Owners compare
+    ignoring case.  E-mail owners never match: Approve doesn't know the
+    viewer's addresses.
+  - The CODEOWNERS file and the viewer's teams are repository metadata
+    ([[*D24 Repository metadata is fetched lazily and cached per session][D24]], amended): fetched when such a filter is turned on, waited
+    for, kept for the session, the file once for each base branch.  A
+    branch without one, or a viewer in no team, says so and the filter
+    stays off.
+- Why :: A big pull request is read a slice at a time: the files one
+  owns, a directory, the tests.  GitHub has no API that says who owns a
+  file, so Approve reads CODEOWNERS as GitHub does.  Filters the user
+  writes cover what Approve can't guess (generated files, a team's
+  conventions), and a function that returns the predicate lets one ask
+  for a value, or fetch data, once, when it is turned on, and the
+  redraws stay quick.  Keeping them for the buffer, across =g=, follows
+  =T=.
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
 - Decision :: All network calls go through =approve-api.el=, which wraps
@@ -1099,6 +1166,12 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   before it can ask anything waits for it (=approve-metadata-wait=),
   saying so in the echo area; =C-g= stops the waiting, and the fetch goes
   on and is kept.
+- Amended (2026-11-21) :: The filters of the diff by code owner
+  ([[*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]) need two more: the CODEOWNERS file of the pull request's
+  base branch, read once for each branch (one query asks for the three
+  places GitHub looks), and the teams of the owning organization that
+  the viewer is in, with their ancestors.  Fetched when such a filter
+  is turned on, and waited for, as for a picker.
 - Why :: approve-v2 fetched them with every PR load, which made the main query
   slow and big.
 

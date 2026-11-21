@@ -1,0 +1,36 @@
+${include:fragments/team.graphql}
+
+# Repository metadata (D24, D54): the teams of the organization that owns
+# the repository that $login, the viewer, is a member of, for the filter of
+# the diff by the code owners.  A child team's member counts as one of its
+# ancestors' too, so they come along.  Sent only when owner.graphql says
+# Organization; 100 per page.
+query ViewerTeams($owner: String!, $login: String!, $after: String) {
+  organization(login: $owner) {
+    __typename
+    id
+    teams(first: 100, after: $after, userLogins: [$login],
+          orderBy: {field: NAME, direction: ASC}) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ...TeamFields
+        ancestors(first: 20) {
+          nodes {
+            __typename
+            id
+            combinedSlug
+          }
+        }
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

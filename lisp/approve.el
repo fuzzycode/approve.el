@@ -59,6 +59,7 @@
 (require 'approve-file)
 (require 'approve-context)
 (require 'approve-nav)
+(require 'approve-filter)
 (require 'approve-menus)
 (require 'approve-eldoc)
 (require 'approve-actions)

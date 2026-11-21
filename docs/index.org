@@ -236,6 +236,16 @@ task only needs the files it touches.
   GitHub's REST list of files stops at 3000, with the patches: a file
   past it says so, and =RET= computes its diff from both versions, as
   for a file too large for GitHub to send.
+- Asked for by the author the same day ([[file:decisions.org::*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]): filters on the diff.
+  =approve-filters= lists them, =(KEY DESCRIPTION FUNCTION)=, and the
+  filter menu (~=~, =approve-filter.el=) turns them on and off; =&=
+  combines them by "and" or "or", =approve-filter-combine= first, and
+  they hold across =g=.  The diff and the file list draw the files that
+  pass, the heading reads =Diff (5 of 12)= and names them, and the
+  jumps follow.  Built in: a regexp on the path, "I am a code owner"
+  and "My team is a code owner", read from the CODEOWNERS of the base
+  branch as GitHub reads it (=approve-codeowners.el=) and the teams the
+  viewer is in, both repository metadata (D24, amended).
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

@@ -47,6 +47,8 @@ the buffer-local store ([[file:../docs/decisions.org::*D10 Normalized, buffer-lo
   | =milestones.graphql=        | the open milestones by due date, pages of 100             |
   | =owner.graphql=             | whether an Organization or a User owns it (=$owner=)      |
   | =teams.graphql=             | an organization's teams by name, pages of 100 (=$owner=)  |
+  | =viewer-teams.graphql=      | the teams =$login= is in, with their ancestors (D54)      |
+  | =codeowners.graphql=        | CODEOWNERS on a branch, in the three places GitHub looks  |
   | =recent-refs.graphql=       | the 100 issues and PRs updated last (=$search=)           |
 - =mutations/= :: one mutation per file, named after GitHub's mutation in
   kebab case (=resolve-review-thread.graphql=); =approve-mutations.el= has

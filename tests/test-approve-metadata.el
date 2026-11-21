@@ -64,6 +64,25 @@ A request with no answer fails with HTTP 502.")
   "Return the query names of REQUESTS, oldest first."
   (reverse (mapcar (lambda (request) (plist-get request :name)) requests)))
 
+(defun test-metadata--codeowners (request)
+  "Answer REQUEST for CODEOWNERS: on main in .github/ and docs/, none elsewhere."
+  (let ((main (string-prefix-p "main:" (alist-get 'github (plist-get request :variables)))))
+    `((data (repository
+             (__typename . "Repository") (id . "R_1")
+             (github . ,(and main '((__typename . "Blob") (id . "B_1")
+                                    (text . "* @acme-example/core\n*.js @acme-example/web\n")
+                                    (isTruncated . :json-false))))
+             (root)
+             (docs . ,(and main '((__typename . "Blob") (id . "B_2")
+                                  (text . "* @someone-else\n")
+                                  (isTruncated . :json-false)))))))))
+
+(defun test-metadata--load-pr (branch)
+  "Load a pull request into BRANCH as the current buffer's."
+  (approve-model-load `((__typename . "PullRequest") (id . "PR_1") (number . 1)
+                        (baseRefName . ,branch))
+                      t))
+
 (defmacro test-metadata--with-repo (&rest body)
   "Run BODY in a buffer of the repository acme-example/rocket, faked."
   (declare (indent 0))
@@ -103,6 +122,14 @@ A request with no answer fails with HTTP 502.")
                  '(organization teams)
                  '(((__typename . "Team") (id . "T_1") (name . "Core") (slug . "core")
                     (combinedSlug . "acme-example/core")))))
+            ("queries/metadata/viewer-teams.graphql"
+             . ,(test-metadata--page
+                 '(organization teams)
+                 '(((__typename . "Team") (id . "T_2") (name . "Web") (slug . "web")
+                    (combinedSlug . "acme-example/web")
+                    (ancestors (nodes ((__typename . "Team") (id . "T_3")
+                                       (combinedSlug . "acme-example/eng"))))))))
+            ("queries/metadata/codeowners.graphql" . test-metadata--codeowners)
             ("queries/metadata/recent-refs.graphql"
              . ,(lambda (_)
                   '((data (search (nodes ((__typename . "Issue") (id . "I_1") (number . 12)
@@ -177,6 +204,65 @@ A request with no answer fails with HTTP 502.")
         (approve-metadata-fetch 'teams)
         (expect (test-metadata--names test-metadata--sent)
                 :to-equal '("queries/metadata/owner.graphql")))))
+
+  (it "fetches the teams the viewer is in, with their ancestors (D54)"
+    (test-metadata--with-repo
+      (approve-model-set-meta :viewer "alice-example")
+      (approve-metadata-fetch 'viewer-teams)
+      (approve-test-wait-for (lambda () (approve-metadata 'viewer-teams)))
+      (let ((team (car (approve-metadata 'viewer-teams))))
+        (expect (alist-get 'combinedSlug team) :to-equal "acme-example/web")
+        (expect (let-alist team (alist-get 'combinedSlug (car .ancestors.nodes)))
+                :to-equal "acme-example/eng"))
+      (expect (test-metadata--names test-metadata--sent)
+              :to-equal '("queries/metadata/owner.graphql"
+                          "queries/metadata/viewer-teams.graphql"))
+      (expect (plist-get (car test-metadata--sent) :variables)
+              :to-equal '((owner . "acme-example") (login . "alice-example")))
+      ;; The teams of the organization are another list.
+      (expect (approve-metadata 'teams) :to-be nil)))
+
+  (it "needs to know the viewer for the viewer's teams"
+    (test-metadata--with-repo
+      (expect (approve-metadata-fetch 'viewer-teams) :to-throw 'error)
+      (expect (approve-metadata-wait 'viewer-teams) :to-throw 'user-error)
+      (expect test-metadata--sent :to-be nil)))
+
+  (it "fetches the CODEOWNERS of the base branch, the first where GitHub looks (D54)"
+    (test-metadata--with-repo
+      (test-metadata--load-pr "main")
+      (approve-metadata-fetch 'codeowners)
+      (approve-test-wait-for (lambda () (approve-metadata 'codeowners)))
+      (let ((codeowners (approve-metadata 'codeowners)))
+        ;; docs/CODEOWNERS is there too, but .github/'s comes first.
+        (expect (plist-get codeowners :path) :to-equal ".github/CODEOWNERS")
+        (expect (plist-get codeowners :branch) :to-equal "main")
+        (expect (approve-codeowners-owners (plist-get codeowners :rules) "web/app.js")
+                :to-equal '("@acme-example/web")))
+      (expect (plist-get (car test-metadata--sent) :variables)
+              :to-equal '((owner . "acme-example") (name . "rocket")
+                          (github . "main:.github/CODEOWNERS")
+                          (root . "main:CODEOWNERS")
+                          (docs . "main:docs/CODEOWNERS")))))
+
+  (it "keeps the CODEOWNERS of each base branch, and none when a branch has none"
+    (test-metadata--with-repo
+      (test-metadata--load-pr "release")
+      (let ((codeowners 'none))
+        (approve-metadata-fetch 'codeowners
+                                :callback (lambda (fetched) (setq codeowners fetched)))
+        (approve-test-wait-for (lambda () (not (eq codeowners 'none))))
+        (expect codeowners :to-be nil))
+      (test-metadata--load-pr "main")
+      (expect (approve-metadata 'codeowners) :to-be nil)
+      (approve-metadata-fetch 'codeowners)
+      (expect (length test-metadata--sent) :to-equal 2)))
+
+  (it "needs the pull request's base branch for its CODEOWNERS"
+    (test-metadata--with-repo
+      (expect (approve-metadata-fetch 'codeowners) :to-throw 'error)
+      (expect (approve-metadata-wait 'codeowners) :to-throw 'user-error)
+      (expect test-metadata--sent :to-be nil)))
 
   (it "fetches the issues and pull requests of the repository updated last"
     (test-metadata--with-repo

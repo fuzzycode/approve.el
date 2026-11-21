@@ -42,6 +42,8 @@
 ;;                               body, or discarding it (flow F09)
 ;;   m  `approve-merge'          merge, auto-merge, the merge queue, the
 ;;                               branch, close or reopen (flow F13)
+;;   =  `approve-filter-menu'    the diff's filters, on and off, and how
+;;                               they combine (decision D54)
 ;;
 ;; The dispatch lists the commands that exist, no more: a new command
 ;; joins it, and any other menu it fits, in the change that adds it.
@@ -76,6 +78,7 @@
 (require 'approve-eldoc)
 (require 'approve-dashboard)
 (require 'approve-file)
+(require 'approve-filter)
 (require 'approve-faces)
 
 (declare-function approve-evil-menu-keys "approve-evil" (prefix))
@@ -276,6 +279,81 @@ squash asks for the commit message first, starting as GitHub's; with
 (keymap-set approve-pr-mode-map "m" #'approve-merge)
 (put 'approve-merge 'approve-preflight #'approve-action-context)
 
+;;; Filter (=)
+
+(defun approve-menus--filter-heading ()
+  "Return the heading of the filter menu: how many files the diff shows."
+  (concat (propertize "Filter the diff" 'face 'transient-heading) "  "
+          (propertize (if (approve-model-root-ref) (approve-filter-summary) "")
+                      'face 'approve-dim)))
+
+(defun approve-menus--filter-description (entry)
+  "Return the description of ENTRY of `approve-filters' in the filter menu.
+A filter that is on says so after it, with what it keeps, as an
+option says its value."
+  (let ((filter (approve-filter-get (car entry))))
+    (concat (nth 1 entry)
+            (if filter
+                (concat " " (propertize (format "(%s)" (or (plist-get filter :label) "on"))
+                                        'face 'transient-value))
+              ""))))
+
+(defun approve-menus--filter-command (key)
+  "Return the command that turns the filter on KEY on or off.
+It is made anew each time the menu is drawn, as `approve-filters'
+can change at any time, and is for the filter menu alone."
+  (let ((command (intern (format "approve-filter-toggle-%s" key))))
+    (defalias command
+      (lambda ()
+        (interactive)
+        (approve-filter-toggle key))
+      (format "Turn the diff's filter on %s on or off (`approve-filters')." key))
+    (put command 'completion-predicate #'ignore)
+    command))
+
+(defun approve-menus--filter-suffixes (_children)
+  "Return the suffixes of the filter menu: one for each of `approve-filters'.
+They keep the menu open, so several can be turned on in a row."
+  (transient-parse-suffixes
+   'approve-filter-menu
+   (mapcar (lambda (entry)
+             (list (car entry) (approve-menus--filter-description entry)
+                   (approve-menus--filter-command (car entry))
+                   :transient t))
+           approve-filters)))
+
+(defun approve-menus--combine-description ()
+  "Return the description of `approve-filter-toggle-combine': and or or."
+  (let ((any (and (approve-model-root-ref) (eq (approve-filter-combination) 'or))))
+    (concat "Combine "
+            (propertize "[" 'face 'transient-inactive-value)
+            (propertize "and" 'face (if any 'transient-inactive-value 'transient-value))
+            (propertize "|" 'face 'transient-inactive-value)
+            (propertize "or" 'face (if any 'transient-value 'transient-inactive-value))
+            (propertize "]" 'face 'transient-inactive-value))))
+
+;;;###autoload (autoload 'approve-filter-menu "approve-menus" nil t)
+(transient-define-prefix approve-filter-menu ()
+  "Filter the diff: show only the files that pass the filters on (D54).
+The filters are those of `approve-filters'; a key turns one on or
+off, and the menu stays open.  With several on, a file passes them
+all, or one of them (&).  The diff's heading says how many files
+pass, and the filters hold across \\<approve-pr-mode-map>\\[approve-pr-refresh]."
+  :refresh-suffixes t
+  [:description approve-menus--filter-heading
+   ["Filters" :class transient-column :setup-children approve-menus--filter-suffixes]
+   ["Combine"
+    ("&" approve-filter-toggle-combine :description approve-menus--combine-description
+     :transient t)
+    ("DEL" "Clear all filters" approve-filter-clear :transient t
+     :inapt-if-not approve-sections-filtered-p)]]
+  (interactive)
+  (unless (derived-mode-p 'approve-pr-mode)
+    (user-error "Not in an Approve pull request buffer"))
+  (transient-setup 'approve-filter-menu))
+
+(keymap-set approve-pr-mode-map "=" #'approve-filter-menu)
+
 ;;; Dispatch (?)
 
 (defun approve-menus--dispatch-heading ()
@@ -293,6 +371,13 @@ squash asks for the commit message first, starting as GitHub's; with
   (if (eq (approve-session-get :threads) 'folded)
       "Unfold all threads"
     "Fold all threads"))
+
+(defun approve-menus--filter-menu-description ()
+  "Return the description of `approve-filter-menu': how many files pass."
+  (if (and (approve-model-root-ref) (approve-sections-filtered-p))
+      (concat "Filter the diff… "
+              (propertize (format "(%s)" (approve-filter-summary)) 'face 'approve-dim))
+    "Filter the diff…"))
 
 (defun approve-menus--lock-description ()
   "Return the description of `approve-toggle-lock': what it will do."
@@ -380,6 +465,7 @@ In evil's normal and visual states, the keys are normal state's."
     ("o" "Open in browser" approve-browse)
     ("y" "Copy URL / sha" approve-copy)
     ("j" "Jump…" approve-jump)
+    ("=" approve-filter-menu :description approve-menus--filter-menu-description)
     ("K" "Details (eldoc)" approve-show-details)
     ("T" approve-toggle-threads :description approve-menus--threads-description)
     ("O" "Fold all but this" approve-fold-others)]]

@@ -55,6 +55,7 @@
 (require 'approve-icons)
 (require 'approve-html)
 (require 'approve-render)
+(require 'approve-log)
 (require 'approve-pr)
 
 ;;; Options
@@ -863,6 +864,105 @@ as \"file\", goes before \"thread\"."
   "Return how many of FILES the viewer marked as viewed."
   (seq-count (lambda (file) (equal (alist-get 'viewerViewedState file) "VIEWED")) files))
 
+;;; The diff's filters
+
+;; The filters that are on are the session's :filters, which
+;; approve-filter.el turns on and off (decision D54); this file only
+;; reads them, for the diff and the file list.
+
+(defvar approve-sections--failed-filters (make-hash-table :test #'eq :weakness 'key)
+  "The predicates of filters that signalled, logged once each.")
+
+(defun approve-sections--passes-p (filter file)
+  "Return non-nil if FILE passes FILTER, a plist of the session's :filters.
+A predicate that signals lets the file pass, so the diff still
+draws; its error is logged once."
+  (let ((predicate (plist-get filter :predicate)))
+    (condition-case-unless-debug err
+        (funcall predicate file)
+      (error
+       (unless (gethash predicate approve-sections--failed-filters)
+         (puthash predicate t approve-sections--failed-filters)
+         (approve-log-condition (format "The diff's filter %s" (plist-get filter :key)) err))
+       t))))
+
+(defun approve-sections-filtered-p ()
+  "Return non-nil if a filter of the diff is on."
+  (and (approve-session-get :filters) t))
+
+(defun approve-sections-filter-files (files)
+  "Return the FILES that pass the diff's filters that are on, in order.
+Each is an alist of `approve-pr-files'.  With no filter on, FILES
+themselves.  A file passes every filter, or one of them when the
+session's :filter-combine is `or'."
+  (if-let* ((filters (approve-session-get :filters)))
+      (let ((any (eq (approve-session-get :filter-combine) 'or)))
+        (seq-filter (lambda (file)
+                      (if any
+                          (seq-some (lambda (filter) (approve-sections--passes-p filter file))
+                                    filters)
+                        (seq-every-p (lambda (filter) (approve-sections--passes-p filter file))
+                                     filters)))
+                    files))
+    files))
+
+(defun approve-sections-path-table (files)
+  "Return a hash table of the paths of FILES, such as those that pass a filter."
+  (let ((table (make-hash-table :test #'equal)))
+    (dolist (file files)
+      (puthash (alist-get 'path file) t table))
+    table))
+
+(defun approve-sections-filter-name (filter)
+  "Return what FILTER keeps, in a few words: its label, else its description.
+The description's trailing ellipsis goes."
+  (or (plist-get filter :label)
+      (string-remove-suffix "…" (string-remove-suffix "..." (plist-get filter :description)))))
+
+(defun approve-sections-filter-note ()
+  "Return the note of a heading that the diff's filters are on, or nil.
+Such as \"filter: path ~ _test and owned by @alice\"."
+  (when-let* ((filters (approve-session-get :filters)))
+    (concat (approve-face "filter: " 'approve-dim)
+            (mapconcat (lambda (filter)
+                         (approve-face (approve-sections-filter-name filter) 'approve-filter))
+                       filters
+                       (approve-face (if (eq (approve-session-get :filter-combine) 'or)
+                                         " or "
+                                       " and ")
+                                     'approve-dim)))))
+
+(defun approve-sections-filter-count (shown files total)
+  "Return the count of a heading of FILES, SHOWN of them passing the filters.
+TOTAL is how many files the pull request changes, or nil for the
+length of FILES.  With no filter on, the total alone; else \"5 of
+12\"."
+  (let ((total (or total (length files))))
+    (if (approve-sections-filtered-p)
+        (format "%d of %d" (length shown) total)
+      total)))
+
+(defun approve-sections--shown-counts (counts paths)
+  "Return COUNTS, from `approve-sections-thread-counts', of PATHS alone.
+PATHS is a table from `approve-sections-path-table', or nil for
+every path."
+  (if (null paths)
+      counts
+    (let ((table (make-hash-table :test #'equal)))
+      (maphash (lambda (path count)
+                 (when (gethash path paths)
+                   (puthash path count table)))
+               counts)
+      table)))
+
+(defun approve-sections-no-file-passes ()
+  "Return the line that says no file passes the diff's filters, and what to do."
+  (concat (approve-face "No file passes the filter" 'approve-empty)
+          (if-let* ((hints (approve-render-hints '(approve-filter-menu "change it"))))
+              (concat (approve-face " · " 'approve-dim) hints)
+            "")
+          "\n"))
+
 (defun approve-sections-thread-count (counts &optional asking)
   "Return the thread mark of a file from COUNTS, (UNRESOLVED . TOTAL).
 It is the unresolved count, or the total, dim, when all are resolved;
@@ -879,10 +979,14 @@ that still stand, and the mark is red
 (defun approve-insert-files-section ()
   "Insert the list of changed files with their size and threads.
 The threads are those on a whole file; the diff's headings count the
-threads on lines, and say which files the viewer viewed."
+threads on lines, and say which files the viewer viewed.  With a
+filter of the diff on, the list has only the files that pass it, and
+its heading says how many of all they are (decision D54)."
   (let* ((connection (approve-pr-field 'files))
-         (files (approve-pr-files))
-         (counts (approve-sections-thread-counts 'file))
+         (all (approve-pr-files))
+         (files (approve-sections-filter-files all))
+         (paths (and (approve-sections-filtered-p) (approve-sections-path-table files)))
+         (counts (approve-sections--shown-counts (approve-sections-thread-counts 'file) paths))
          (asking (approve-sections-asking-paths 'file))
          (largest (apply #'max 0 (mapcar (lambda (file)
                                            (+ (alist-get 'additions file)
@@ -896,10 +1000,23 @@ threads on lines, and say which files the viewer viewed."
       (let-alist (approve-pr-fields '(changedFiles additions deletions))
         (magit-insert-heading
           (approve-render-justify
-           (concat (approve-sections-title "Files changed" .changedFiles)
+           (concat (approve-sections-title
+                    "Files changed"
+                    (and .changedFiles
+                         (approve-sections-filter-count files all .changedFiles)))
                    (and .changedFiles
-                        (concat "  " (approve-sections-counts .additions .deletions))))
-           (and files (approve-sections-unresolved counts "file")))))
+                        (concat "  " (if paths
+                                         (approve-sections-counts
+                                          (apply #'+ (mapcar (lambda (file)
+                                                               (alist-get 'additions file))
+                                                             files))
+                                          (apply #'+ (mapcar (lambda (file)
+                                                               (alist-get 'deletions file))
+                                                             files)))
+                                       (approve-sections-counts .additions .deletions)))))
+           (and all (approve-render-join
+                     (list (approve-sections-filter-note)
+                           (approve-sections-unresolved counts "file")))))))
       ;; Each row carries its indentation: one insertion per row, where
       ;; indenting afterwards would insert again.
       (approve-sections-insert-each
@@ -931,7 +1048,9 @@ threads on lines, and say which files the viewer viewed."
                   "\n"))
          ((null files)
           (insert (or (approve-sections-state 'files "the files")
-                      (approve-render-empty "No files changed.")))))
+                      (if all
+                          (approve-sections-no-file-passes)
+                        (approve-render-empty "No files changed."))))))
         (approve-sections-insert-body start))
       (insert "\n"))))
 

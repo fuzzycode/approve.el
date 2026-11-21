@@ -1,0 +1,41 @@
+# Repository metadata (D24, D54): the CODEOWNERS file of a branch, for the
+# filters of the diff by code owner.  GitHub reads the first of
+# .github/CODEOWNERS, CODEOWNERS and docs/CODEOWNERS on the pull request's
+# base branch; $github, $root and $docs are those three as "BRANCH:PATH".
+# A file that isn't there is null.
+query Codeowners($owner: String!, $name: String!, $github: String!, $root: String!,
+                 $docs: String!) {
+  repository(owner: $owner, name: $name) {
+    __typename
+    id
+    github: object(expression: $github) {
+      __typename
+      ... on Blob {
+        id
+        text
+        isTruncated
+      }
+    }
+    root: object(expression: $root) {
+      __typename
+      ... on Blob {
+        id
+        text
+        isTruncated
+      }
+    }
+    docs: object(expression: $docs) {
+      __typename
+      ... on Blob {
+        id
+        text
+        isTruncated
+      }
+    }
+  }
+  rateLimit {
+    cost
+    remaining
+    resetAt
+  }
+}

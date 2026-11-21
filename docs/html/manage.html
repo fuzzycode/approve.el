@@ -36,6 +36,7 @@ eldoc.</p>
   <li><a href="#range">Re-review: review range</a></li>
   <li><a href="#file">Whole-file view</a></li>
   <li><a href="#jump">Jump menu</a></li>
+  <li><a href="#filter">Filter the diff</a></li>
   <li><a href="#threads">Thread picker</a></li>
   <li><a href="#eldoc">Eldoc: echo area</a></li>
   <li><a href="#eldoc-buffer">Eldoc: the eldoc buffer</a></li>
@@ -297,6 +298,45 @@ shows the other version.</p>
 <p> <span class="k">j</span> Thread…  <span class="m">(every thread of the PR, grouped by file)</span></p>
 </div>
 </div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="filter">
+<h2>Filter the diff <span class="ref">= (evil: =) · D54</span></h2>
+<p>A key for each filter of <code>approve-filters</code>: it turns the filter on or off, and the menu stays open for
+the next. A filter that is on says what it keeps after its description. <code>&amp;</code> switches between the files
+that pass every filter and those that pass one; <code>DEL</code> turns them all off.</p>
+<div class="emacs">
+<div class="win stack">
+<div class="win">
+<div class="buf short">
+<p class="hd"><span class="tog"></span> <span class="h">Diff</span> (6 of 30)     <span class="d">filter:</span> <span class="ro">path ~ _test</span> <span class="d">and</span> <span class="ro">owned by @alice</span> <span class="d">·</span> 1/6 viewed <span class="d">·</span> <span class="wa">2 unresolved threads</span></p>
+<p class="cur">  ▸ <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">internal/config/config_test.go</span></p>
+<p>  ▸ <span class="d"><i data-i="unviewed">·</i></span> <span class="m"><i data-i="file-modified">~</i></span> <span class="fh">internal/engine/engine_test.go</span>                                               <i data-i="comment">💬</i> 1</p>
+<p>  …</p>
+</div>
+<div class="ml off"> <span class="b">*approve: acme/rocket#202*</span>   58%  L210     Approve-PR</div>
+</div>
+<div class="tr">
+<p><span class="kh">Filter the diff</span>  <span class="d">6 of 30 files</span></p>
+<p><span class="kh">Filters</span>                                        <span class="kh">Combine</span></p>
+<p> <span class="k">r</span> Path matching regexp… <span class="ro">(path ~ _test)</span>         <span class="k">&amp;</span> Combine <span class="d">[</span><span class="ro">and</span><span class="d">|or]</span></p>
+<p> <span class="k">o</span> I am a code owner <span class="ro">(owned by @alice)</span>          <span class="k">DEL</span> Clear all filters</p>
+<p> <span class="k">t</span> My team is a code owner</p>
+</div>
+</div>
+<div class="echo">Diff: 6 of 30 files</div>
+</div>
+<ul>
+  <li>A filter is <code>(KEY DESCRIPTION FUNCTION)</code>. FUNCTION runs when the filter is turned on: it may ask (the
+  regexp) or wait for data (the CODEOWNERS file of the base branch, the teams you are in) and returns the predicate
+  on a changed file. <code>approve-filter-register</code> adds one.</li>
+  <li>The diff and the file list draw only the files that pass; the heading counts them of all, names the filters,
+  and counts the viewed files, unresolved threads and new comments of those files alone. With none passing:
+  <span class="d">No file passes the filter ·</span> <span class="k">=</span> <span class="d">change it</span>.</li>
+  <li><code>]u</code> <code>]t</code> <code>j n</code> go through the files shown; <code>j /</code> and <code>j j</code> offer them
+  and their threads. The filters stay on across <code>g</code>, until turned off or the buffer is killed.</li>
+</ul>
 </section>
 
 <!-- ================================================================== -->

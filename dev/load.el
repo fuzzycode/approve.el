@@ -24,10 +24,10 @@
 
 (defvar approve-dev-load-order
   '(approve-log approve-graphql approve-api approve-api-paging approve-api-queue
-    approve-api-url approve-model approve-session approve-queries approve-metadata approve-clone approve-lines
+    approve-api-url approve-model approve-session approve-queries approve-codeowners approve-metadata approve-clone approve-lines
     approve-faces approve-icons approve-html approve-render approve-pr approve-changes approve-thread
     approve-sections approve-conversation approve-diff approve-context approve-nav
-    approve-eldoc approve-input approve-mutations approve-actions approve-review approve-commands
+    approve-eldoc approve-input approve-filter approve-mutations approve-actions approve-review approve-commands
     approve-suggestions approve-manage approve-merge approve-list approve-dashboard approve-menus approve-feedback approve approve-dev)
   "Modules in the order they are reloaded; others follow, by name.")
 

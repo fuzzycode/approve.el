@@ -21,6 +21,7 @@ callbacks it was given.
  │ Buffers                       │ Input                                    │
  │  approve-pr.el (PR + diff)    │  approve-input.el (gfm input, completion,│
  │  approve-changes.el           │  preview, drafts)                        │
+ │  approve-filter.el            │                                          │
  │  approve-dashboard.el         │                                          │
  │  approve-search.el            │                                          │
  │  approve-file.el              │                                          │
@@ -33,7 +34,7 @@ callbacks it was given.
  │  approve-eldoc.el                                                        │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Model                    approve-model.el · approve-session.el ·         │
- │                          approve-context.el                              │
+ │                          approve-context.el · approve-codeowners.el      │
  │   normalized store, selectors, list edits, session, context at point     │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ Operations               approve-queries.el · approve-mutations.el ·     │
@@ -85,7 +86,8 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | viewer, markdown preview                                                        |       |
 | =approve-metadata.el=      | Repository metadata fetched once per session (D24): mentionable and assignable  |   2–4 |
 |                            | users, labels, open milestones, the owner's teams, recent issues and PRs,       |       |
-|                            | emoji; =approve-metadata-wait= for commands that need a list first              |       |
+|                            | emoji, the viewer's teams and the base branch's CODEOWNERS (D54);               |       |
+|                            | =approve-metadata-wait= for commands that need a list first                     |       |
 | =approve-mutations.el=     | All mutations ([[*API map][API map]]): patch the store, make the list edits (D35)             |   2–5 |
 | =approve-faces.el=         | Every face, inheriting from magit/built-in                                      |     1 |
 | =approve-icons.el=         | =approve-icon=: semantic name → nerd-icons or Unicode                           |     1 |
@@ -101,6 +103,11 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 | =approve-changes.el=       | Change detection (D23): the check, comparing it with the store, the header      |     2 |
 |                            | line's notice, checks on selection and focus, polling, also for buffers that    |       |
 |                            | share a PR buffer's store, and a hook for them                                  |       |
+| =approve-filter.el=        | The diff's filters (D54): =approve-filters=, turning them on and off in the     |     8 |
+|                            | session, how they combine, the built-in ones (a regexp on the path, the code    |       |
+|                            | owners: the viewer, the viewer's teams)                                         |       |
+| =approve-codeowners.el=    | A CODEOWNERS file read as GitHub reads it: its patterns as regexps, the owners  |     8 |
+|                            | of a path (the last pattern that matches)                                       |       |
 | =approve-nav.el=           | Read-only commands: visit (=RET=), browse (=o=), copy (=y=), jumps, next        |     1 |
 |                            | unviewed file and unresolved thread, the thread picker (=j j=, D52)             |       |
 | =approve-eldoc.el=         | Eldoc: one-line =:echo= from the store, full details for the eldoc buffer,      |     1 |
@@ -119,7 +126,8 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 | =approve-merge.el=         | The merge menu's commands (F13, D42): what stands in the way of a merge, the    |     5 |
 |                            | title line, merge by a method with GitHub's message, auto-merge, the merge      |       |
 |                            | queue, update the branch, close or reopen, delete the branch                    |       |
-| =approve-menus.el=         | Transients: jump (1), submit and dispatch (2), merge (5); metadata, range       |  1–10 |
+| =approve-menus.el=         | Transients: jump (1), submit and dispatch (2), merge (5), filter (8); metadata, |  1–10 |
+|                            | range                                                                           |       |
 | =approve-evil.el=          | Evil normal- and visual-state bindings (required by the modes when evil is      |     1 |
 |                            | loaded), and the dispatch menus' keys in those states (D17)                     |       |
 | =approve-list.el=          | Shared PR-list rendering for the dashboard and search                           |     3 |
@@ -177,6 +185,8 @@ The store from approve-v2 (D10), with a few additions.
  │   :changes   what differs on GitHub, from the last check (D23)        │
  │   :checking :checked   a check is out · when the last one was sent    │
  │   :suggestions  the batch of suggestions, each (COMMENT-ID . INDEX)   │
+ │   :filters   the diff's filters that are on, :filter-combine and|or   │
+ │              (D54)                                                    │
  └───────────────────────────────────────────────────────────────────────┘
 #+end_example
 
@@ -209,9 +219,11 @@ The store from approve-v2 (D10), with a few additions.
   type and id, for the Emacs session.  They are shared by every Approve
   buffer; =C-u g= clears them.
 - Repository metadata (D24: mentionable and assignable users, labels, open
-  milestones, the owner's teams, the issues and PRs updated last, emoji)
-  lives in =approve-metadata.el='s global cache, keyed by API
-  host, repository and kind (emoji by host only), for the Emacs session.
+  milestones, the owner's teams, the issues and PRs updated last, emoji,
+  and for the filters of D54 the viewer's teams and the base branch's
+  CODEOWNERS, read into rules) lives in =approve-metadata.el='s global
+  cache, keyed by API host, repository and kind (emoji by host only,
+  CODEOWNERS by branch too), for the Emacs session.
   It never enters the store; =C-u g= clears it.
 - The texts of files the file view fetched live in =approve-file.el='s
   global cache, keyed by host, repository, commit and path, for the Emacs
@@ -246,6 +258,8 @@ schema on 2026-11-08.
 | Viewer (dashboard)     | =viewer { login name }=, for the dashboard's title line                                                      |
 | Repo metadata (lazy)   | =repository.labels / assignableUsers / mentionableUsers / milestones(states: OPEN)=                          |
 | Teams (lazy)           | =repositoryOwner(login)=, then =organization(login).teams= when it is an Organization                        |
+| Viewer's teams (lazy)  | =organization(login).teams(userLogins: [viewer])= with their =ancestors=, for the filters (D54)              |
+| CODEOWNERS (lazy)      | =repository { github: object("BRANCH:.github/CODEOWNERS") root: … docs: … }=, the base branch (D54)          |
 | Recent refs (lazy)     | =search(type: ISSUE, query: "repo:o/r sort:updated-desc", first: 100)=, for =#123= completion               |
 | Emoji (lazy)           | REST =GET /emojis= (name → image URL; the glyph is in a Unicode emoji's URL)                                 |
 | Change detection       | =pullRequest { headRefOid commitCount: commits { totalCount } title state isDraft lastEditedAt=              |

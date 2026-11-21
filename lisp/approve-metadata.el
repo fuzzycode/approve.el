@@ -40,6 +40,13 @@
 ;;   teams              the teams of the organization that owns the
 ;;                      repository, by name, as TeamFields alists; nil
 ;;                      when a user owns it
+;;   viewer-teams       the teams of that organization the viewer is
+;;                      in, by name, as TeamFields alists with their
+;;                      ancestors; nil when a user owns it
+;;   codeowners         the CODEOWNERS file of the pull request's base
+;;                      branch, as a plist (:path :branch :rules), its
+;;                      rules from `approve-codeowners-parse'; nil when
+;;                      the branch has none.  One for each branch.
 ;;   refs               the 100 issues and pull requests updated last,
 ;;                      as alists of __typename, id, number, title,
 ;;                      state (and isDraft for pull requests)
@@ -72,6 +79,7 @@
 (require 'subr-x)
 (require 'approve-api)
 (require 'approve-api-paging)
+(require 'approve-codeowners)
 (require 'approve-log)
 (require 'approve-model)
 (require 'approve-queries)
@@ -93,6 +101,8 @@ first pages hold most of those one looks for.  To fetch more:
     (labels . "the labels")
     (milestones . "the open milestones")
     (teams . "the teams")
+    (viewer-teams . "your teams")
+    (codeowners . "the code owners")
     (refs . "the issues and pull requests updated last")
     (emoji . "GitHub's emoji"))
   "The kinds of metadata `approve-metadata-fetch' knows, and what they are.")
@@ -114,11 +124,18 @@ Fetches on their way still finish and keep what they get."
   (or (approve-query-host) approve-api-host "api.github.com"))
 
 (defun approve-metadata--key (kind)
-  "Return the cache key of KIND for the current buffer's repository."
-  (if (eq kind 'emoji)
-      (list (approve-metadata--host) kind)
-    (list (approve-metadata--host) (approve-model-meta :owner)
-          (approve-model-meta :repo) kind)))
+  "Return the cache key of KIND for the current buffer's repository.
+The code owners are those of the pull request's base branch."
+  (pcase kind
+    ('emoji (list (approve-metadata--host) kind))
+    ('codeowners (list (approve-metadata--host) (approve-model-meta :owner)
+                       (approve-model-meta :repo) kind (approve-metadata--branch)))
+    (_ (list (approve-metadata--host) (approve-model-meta :owner)
+             (approve-model-meta :repo) kind))))
+
+(defun approve-metadata--branch ()
+  "Return the base branch of the current buffer's pull request, or nil."
+  (and (approve-model-root-ref) (approve-pr-field 'baseRefName)))
 
 (defun approve-metadata (kind)
   "Return the metadata KIND of the current buffer's repository, or nil.
@@ -179,20 +196,51 @@ fetched.  ERRORBACK is called with the error of a page that fails."
      :callback (lambda () (funcall callback nodes))
      :errorback errorback)))
 
-(defun approve-metadata--teams (owner host callback errorback)
+(defun approve-metadata--teams (owner host callback errorback &optional login)
   "Fetch the teams of OWNER, on HOST, when it is an organization.
 Call CALLBACK with them, or with nil when OWNER is a user, who has
-no teams; ERRORBACK with the error."
+no teams; ERRORBACK with the error.  With LOGIN, only the teams that
+LOGIN is a member of, each with its ancestors."
   (approve-api-graphql
    "queries/metadata/owner.graphql" `((owner . ,owner))
    :buffer (approve-metadata--buffer) :host host :progress nil
    :callback (lambda (data)
                (if (equal (let-alist data .repositoryOwner.__typename) "Organization")
                    (approve-metadata--pages
-                    "queries/metadata/teams.graphql" `((owner . ,owner))
+                    (if login
+                        "queries/metadata/viewer-teams.graphql"
+                      "queries/metadata/teams.graphql")
+                    `((owner . ,owner) ,@(and login `((login . ,login))))
                     :path '(organization teams) :host host
                     :callback callback :errorback errorback)
                  (funcall callback nil)))
+   :errorback errorback))
+
+(defconst approve-metadata--codeowners-paths
+  '((github . ".github/CODEOWNERS") (root . "CODEOWNERS") (docs . "docs/CODEOWNERS"))
+  "Where GitHub looks for CODEOWNERS, in its order: (ALIAS . PATH).
+ALIAS is the query's name for the file and its variable.")
+
+(defun approve-metadata--codeowners (owner repo branch host callback errorback)
+  "Fetch the CODEOWNERS file of BRANCH in OWNER/REPO, on HOST.
+Call CALLBACK with (:path :branch :rules) for the first file of
+`approve-metadata--codeowners-paths' that BRANCH has, or nil when
+it has none; ERRORBACK with the error."
+  (approve-api-graphql
+   "queries/metadata/codeowners.graphql"
+   `((owner . ,owner) (name . ,repo)
+     ,@(mapcar (lambda (entry) (cons (car entry) (format "%s:%s" branch (cdr entry))))
+               approve-metadata--codeowners-paths))
+   :buffer (approve-metadata--buffer) :host host :progress nil
+   :callback (lambda (data)
+               (funcall
+                callback
+                (seq-some (lambda (entry)
+                            (when-let* ((text (alist-get 'text (alist-get (car entry)
+                                                                         (alist-get 'repository data)))))
+                              (list :path (cdr entry) :branch branch
+                                    :rules (approve-codeowners-parse text))))
+                          approve-metadata--codeowners-paths)))
    :errorback errorback))
 
 (defun approve-metadata--request (kind callback errorback)
@@ -210,6 +258,12 @@ CALLBACK is called with the metadata, ERRORBACK with the error."
                                :callback callback :errorback errorback))
      ((eq kind 'teams)
       (approve-metadata--teams owner host callback errorback))
+     ((eq kind 'viewer-teams)
+      (approve-metadata--teams owner host callback errorback
+                               (approve-model-meta :viewer)))
+     ((eq kind 'codeowners)
+      (approve-metadata--codeowners owner repo (approve-metadata--branch) host
+                                    callback errorback))
      ((eq kind 'refs)
       (approve-api-graphql
        "queries/metadata/recent-refs.graphql"
@@ -250,6 +304,8 @@ Example:
    \\='emoji :callback (lambda (emoji) (message \"%d\" (length emoji))))"
   (unless (assq kind approve-metadata-kinds)
     (error "Unknown metadata: %s" kind))
+  (when-let* ((missing (approve-metadata--missing kind)))
+    (error "Can't fetch %s without %s" kind missing))
   (let* ((key (approve-metadata--key kind))
          (none (make-symbol "none"))
          (value (gethash key approve-metadata--cache none))
@@ -278,10 +334,21 @@ Example:
 Example: \"the labels of acme/rocket\"."
   (let ((what (or (alist-get kind approve-metadata-kinds)
                   (error "Unknown metadata: %s" kind))))
-    (if (eq kind 'emoji)
-        what
-      (format "%s of %s/%s" what (approve-model-meta :owner)
-              (approve-model-meta :repo)))))
+    (pcase kind
+      ('emoji what)
+      ('viewer-teams (format "%s in %s" what (approve-model-meta :owner)))
+      ('codeowners (format "%s of %s/%s on %s" what (approve-model-meta :owner)
+                           (approve-model-meta :repo) (approve-metadata--branch)))
+      (_ (format "%s of %s/%s" what (approve-model-meta :owner)
+                 (approve-model-meta :repo))))))
+
+(defun approve-metadata--missing (kind)
+  "Return what the current buffer lacks to fetch KIND, or nil.
+The code owners need the pull request's base branch, the viewer's
+teams the viewer, which the pull request's first query brings."
+  (pcase kind
+    ('codeowners (and (null (approve-metadata--branch)) "the pull request's base branch"))
+    ('viewer-teams (and (null (approve-model-meta :viewer)) "who you are"))))
 
 (defun approve-metadata-wait (kind)
   "Return the metadata KIND of the current buffer's repository.
@@ -297,6 +364,8 @@ Example:
           (approve-metadata-wait \\='labels))"
   (unless (or (eq kind 'emoji) (approve-model-meta :owner))
     (user-error "No repository here"))
+  (when (approve-metadata--missing kind)
+    (user-error "Wait until the pull request has loaded"))
   (let* ((what (approve-metadata--what kind))
          (none (make-symbol "none"))
          (value (gethash (approve-metadata--key kind) approve-metadata--cache none))

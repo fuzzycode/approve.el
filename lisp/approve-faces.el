@@ -327,6 +327,12 @@ It is what changed since the buffer was loaded, as `approve-new' is
 what changed since the viewer's last review (decision D23)."
   :group 'approve-faces)
 
+(defface approve-filter
+  '((t :inherit magit-section-heading-selection))
+  "Face of the diff's filters that are on, named in its heading.
+Such as \"owned by @alice\" in \"filter: owned by @alice\" (decision D54)."
+  :group 'approve-faces)
+
 ;;; Threads and the conversation
 
 (defface approve-thread-border

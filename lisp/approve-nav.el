@@ -49,7 +49,9 @@
 ;; the viewer's last review (decision D44), and `approve-jump-thread'
 ;; (j j), which picks any thread of the pull request with completion,
 ;; grouped by file (decision D52).  Moving into a file's diff,
-;; a thread or a comment expands what hides it.  This file binds its keys in `approve-pr-mode-map',
+;; a thread or a comment expands what hides it.  The jumps go through
+;; the files the diff draws: those its filters hide (decision D54) are
+;; skipped, and not offered by j / and j j.  This file binds its keys in `approve-pr-mode-map',
 ;; and RET, o and y in `approve-file-mode-map' too.
 ;; The dashboard binds RET, o, y, TAB and O to the same commands: on a
 ;; row of a list, RET opens its pull request and TAB folds the list.
@@ -118,13 +120,30 @@ Signal a `user-error' when the buffer has no such section."
     (oref diff children)))
 
 (defun approve-nav-goto-file (path)
-  "Move to the diff of PATH and expand it.  Return its section."
+  "Move to the diff of PATH and expand it.  Return its section.
+Signal a `user-error' when the diff doesn't show PATH, as when its
+filters hide it (decision D54)."
   (let ((section (or (seq-find (lambda (section) (equal (oref section value) path))
                                (approve-nav--file-sections))
-                     (user-error "No diff of %s here" path))))
+                     (if (and (approve-sections-filtered-p) (approve-pr-file path))
+                         (user-error "The filter of the diff hides %s; %s changes it"
+                                     path (or (approve-render-key 'approve-filter-menu)
+                                              "M-x approve-filter-menu"))
+                       (user-error "No diff of %s here" path)))))
     (approve-nav--goto section)
     (magit-section-show section)
     section))
+
+(defun approve-nav--shown-paths ()
+  "Return a table of the paths the diff shows, or nil when no filter is on.
+The files the diff's filters hide (decision D54) are skipped by the
+jumps of the PR buffer."
+  (and (approve-sections-filtered-p)
+       (approve-sections-path-table (approve-sections-filter-files (approve-pr-files)))))
+
+(defun approve-nav--shown-p (path shown)
+  "Return non-nil if PATH is in SHOWN, from `approve-nav--shown-paths'."
+  (or (null shown) (gethash path shown)))
 
 (defun approve-nav--find-in (section predicate)
   "Return the first section in SECTION's subtree that PREDICATE accepts."
@@ -302,11 +321,15 @@ again when the mark isn't there."
 (defun approve-nav-new-count ()
   "Return how many comments are new since the viewer's last review.
 They are the entries of the conversation and the comments in threads
-that `approve-next-new-comment' stops at."
+that `approve-next-new-comment' stops at: those in files the diff's
+filters hide don't count."
   (if-let* ((since (approve-pr-last-review-time)))
       (+ (seq-count (lambda (run) (approve-conversation-new-p run since))
                     (approve-conversation-items))
-         (length (approve-pr-new-comments)))
+         (let ((shown (approve-nav--shown-paths)))
+           (seq-count (lambda (comment)
+                        (approve-nav--shown-p (alist-get 'path comment) shown))
+                      (approve-pr-new-comments))))
     0))
 
 (defun approve-nav--goto-new (forward)
@@ -370,11 +393,13 @@ The list is there only when `approve-pr-sections-hook' has
   (approve-nav-goto-section 'approve-pending-review-section t))
 
 (defun approve-jump-file (path)
-  "Move to the diff of the changed file PATH, read with completion."
+  "Move to the diff of the changed file PATH, read with completion.
+The files the diff's filters hide are not offered."
   (interactive
    (list (approve-input-with-submit-key
            (completing-read "File: " (mapcar (lambda (file) (alist-get 'path file))
-                                             (approve-pr-files))
+                                             (approve-sections-filter-files
+                                              (approve-pr-files)))
                             nil t))))
   (approve-nav-goto-file path))
 
@@ -444,8 +469,12 @@ order.  In a file, the threads that are neither resolved nor
 outdated come first, then those, dimmed; each part by line.  LABEL
 is the path, the lines and the first comment's author and words:
 \"src/a.go:13–14  @bob: Why a map?\"; NOTES what follows it
-\(`approve-nav--thread-notes')."
-  (let* ((threads (approve-pr-threads))
+\(`approve-nav--thread-notes').  In the PR buffer, the threads of the
+files the diff's filters hide are left out (decision D54)."
+  (let* ((shown (and (derived-mode-p 'approve-pr-mode) (approve-nav--shown-paths)))
+         (threads (seq-filter (lambda (thread)
+                                (approve-nav--shown-p (alist-get 'path thread) shown))
+                              (approve-pr-threads)))
          (asking (mapcar (lambda (thread) (alist-get 'id thread))
                          (approve-pr-threads-asking-for-changes)))
          (since (approve-pr-last-review-time))
@@ -464,7 +493,7 @@ is the path, the lines and the first comment's author and words:
                            (approve-nav--rank< (rank a) (rank b))))))
          (lines (mapcar (lambda (thread) (or (approve-nav--thread-lines thread) "file"))
                         sorted))
-         (width (apply #'max (mapcar #'string-width lines)))
+         (width (apply #'max 0 (mapcar #'string-width lines)))
          (seen (make-hash-table :test #'equal)))
     (cl-mapcar
      (lambda (thread lines)
@@ -491,6 +520,12 @@ has loaded, or when it has no threads."
     (user-error "Wait until the pull request has loaded"))
   (unless (approve-pr-list-fields 'reviewThreads '(id))
     (user-error "No threads in this pull request"))
+  (when-let* (((derived-mode-p 'approve-pr-mode))
+              (shown (approve-nav--shown-paths))
+              ((not (seq-some (lambda (thread)
+                                (approve-nav--shown-p (alist-get 'path thread) shown))
+                              (approve-pr-list-fields 'reviewThreads '(path))))))
+    (user-error "The filter of the diff hides every thread"))
   (or (ignore-errors (plist-get (approve-context-at-point) :path))
       (when-let* (((derived-mode-p 'approve-pr-mode))
                   (section (approve-nav--current-file)))

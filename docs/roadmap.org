@@ -530,6 +530,16 @@ Implements F19.  Mockups: notifications, the mode-line count.
       mouse-3 asks again.  Tests with a fake search and timers run by
       hand.  [[file:ui.org::*Mode-line count (Phase 8)][Mockup]].
 - [ ] Performance pass on the large fixture and on real huge PRs.
+- [X] Filters on the diff ([[file:decisions.org::*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]), added and done (2026-11-21) at the
+      author's request: =approve-filters= lists them as =(KEY
+      DESCRIPTION FUNCTION)=, the filter menu (~=~) turns them on and
+      off, =&= combines them by "and" or "or" (=approve-filter-combine=
+      first), and they hold across =g=.  The diff and the file list draw
+      the files that pass, the heading says =Diff (5 of 12)= and names
+      them, and the jumps follow.  Built in: a regexp on the path, "I am
+      a code owner" and "My team is a code owner", from the CODEOWNERS
+      of the base branch (=approve-codeowners.el=) and the viewer's
+      teams, repository metadata.  [[file:ui.org::*Filter (~=~)][Mockup]].
 - [ ] Move the work to =main=: merge =feature/revamp= (added 2026-11-17, at
       the author's request).  The README and the user's documentation
       are written after it, on =main=.
@@ -709,12 +719,8 @@ Not planned yet.  Each needs a decision before it enters a phase.
 - A "review queue" mode: walk unviewed files one by one, full-screen, with
   =v= advancing to the next.
 - Avatars (shr images, cached) next to authors, behind a defcustom.
-- Filters on the file list and the diff, toggled from a transient and shown
-  in the section headings ("12 of 30 files · filter: code owner"), so a big
-  PR can be read a slice at a time.  Examples: files where I am a code owner
-  (CODEOWNERS fetched through the API and matched against me and my teams,
-  D36), by extension or glob (=*.cpp=/=*.h=), files with threads (or
-  unresolved ones), unviewed or changed since viewed, added/deleted, large,
-  generated.  Navigation (=]u=, =]t=) and the counts follow the filter.
-  Open questions: whether filters combine, and whether they are remembered
-  per repository.
+- Filters on the file list and the diff: moved to [[*Phase 8 — Notifications, polish, release][Phase 8]] and done
+  (2026-11-21, [[file:decisions.org::*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]), with a regexp on the path and the code
+  owners built in; the other examples (files with threads, unviewed,
+  added or deleted, large, generated) are filters a user can register.
+  Not done: remembering filters per repository.

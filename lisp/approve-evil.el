@@ -39,7 +39,9 @@
 ;; commands that change the pull request take them; in visual state,
 ;; c s r C act on the selection, and ? opens the dispatch menu on it.
 ;; So are o and O, which open a line: they are Emacs's o and O there,
-;; open in the browser and fold all but this (go and zp too).
+;; open in the browser and fold all but this (go and zp too).  And =,
+;; the operator that indents, opens the filter menu as in Emacs
+;; (decision D54).
 ;;
 ;; The dispatch menus show these keys in evil's normal and visual
 ;; states (`approve-evil-menu-keys'): what a menu shows works in the
@@ -95,6 +97,7 @@
     ("go" . approve-browse)
     ("gy" . approve-copy)
     ("J" . approve-jump)
+    ("=" . approve-filter-menu)
     ("K" . approve-show-details)
     ("gj" . magit-section-forward)
     ("gk" . magit-section-backward)

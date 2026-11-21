@@ -228,6 +228,9 @@ Notes:
   A file's heading counts its new comments before its threads, and the
   Diff heading sums them.  =j n= and =j N= go to the next and previous one,
   expanding the file and unfolding the line they are under.
+- ~=~ filters the diff: it then draws only the files that pass, and its
+  heading reads =Diff (6 of 30)= and names the filters, its counts
+  those of the files shown ([[*Filter (~=~)][Filter]], [[file:decisions.org::*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]).
 
 ** The file list, not shown by default
 #+begin_example
@@ -561,10 +564,11 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
   b Add to batch             k Delete at point        a Assignees           o Open in browser
   v Toggle viewed            + React                  A Request reviewers   y Copy URL / sha
   S Submit review…           H Hide / unhide          M Milestone           j Jump…
-  X Discard pending review   C Conversation comment   D Draft / ready       L Layout
-  V Review range…                                     w Subscription        ! Doctor
-                                                      # Lock conversation   K Details (eldoc)
-                                                      m Merge / close…      T Fold all threads
+  X Discard pending review   C Conversation comment   D Draft / ready       = Filter the diff…
+  V Review range…                                     w Subscription        L Layout
+                                                      # Lock conversation   ! Doctor
+                                                      m Merge / close…      K Details (eldoc)
+                                                                            T Fold all threads
                                                                             O Fold all but this
                                                                             f Your file (clone)
                                                                             U Fetch into your clones
@@ -577,7 +581,8 @@ run: the menu asks the command's preflight ([[file:decisions.org::*D06 Menus are
 do: "Fold all threads", or "Unfold all threads" once they are folded; =#=
 "Lock conversation", or "Unlock conversation" once it is locked; =x=
 "Commit the batch (2)" while there is one; =b= "Take out of batch" on a
-suggestion in it.  =#= has
+suggestion in it; ~=~ "Filter the diff… (5 of 12 files)" while a filter
+is on.  =#= has
 no key in the buffer: it is seldom used.  Nor has =U=, the fetch into
 your clones, at the author's choice ([[file:decisions.org::*D53 A pull request is fetched into its clones on the user's command][D53]]).
 
@@ -700,6 +705,48 @@ to its file.  As vertico shows it:
 #+end_example
 The thread opens in the diff; =C-c ' j= in a file of your clone opens it
 there, at its line ([[*A file's buffer in your clone (feedback mode)][feedback mode]]).
+
+** Filter (~=~)
+#+begin_example
+ Filter the diff  6 of 30 files
+ Filters                                        Combine
+  r Path matching regexp… (path ~ _test)         & Combine [and|or]
+  o I am a code owner (owned by @alice)          DEL Clear all filters
+  t My team is a code owner
+#+end_example
+
+The diff then draws only the files that pass, and the file list too
+when it is shown ([[file:decisions.org::*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]):
+#+begin_example
+ ▾ Diff (6 of 30)     filter: path ~ _test and owned by @alice · 1/6 viewed · 2 unresolved threads
+   ▸ · ~ internal/config/config_test.go
+   ▸ · ~ internal/engine/engine_test.go                                               💬 1
+   …
+
+ ▾ Diff (0 of 30)                                                      filter: owned by @alice
+     No file passes the filter · = change it
+#+end_example
+
+- One key for each filter of =approve-filters=, =(KEY DESCRIPTION
+  FUNCTION)=: it turns the filter on or off, and the menu stays open
+  for the next one.  A filter that is on says so after its
+  description, as an option shows its value: what it keeps, or =(on)=.
+  =approve-filter-register= adds a filter.
+- Turning one on may ask (=r= reads a regexp; case matters when it has
+  an upper-case letter) or wait for data, the echo area saying so (=o=
+  and =t= read the CODEOWNERS file of the base branch, =t= the teams
+  you are in); =C-g=, or what it can't find ("acme/rocket has no
+  CODEOWNERS on main", "You are in no team of acme"), leaves it off.
+- =&= switches between the files that pass every filter (=and=) and
+  those that pass one (=or=); =approve-filter-combine= says which comes
+  first.  =DEL= turns them all off, dimmed while none is on.
+- The heading counts the files that pass of all the pull request
+  changes, names the filters in =approve-filter=, joined by =and= or
+  =or=, and counts the viewed files, unresolved threads and new
+  comments of those files alone.  =]u= =[u= =]t= =[t= =j n= go through
+  them, =j /= and =j j= offer them and their threads; a file a filter
+  hides says so.  The filters stay on across =g=, until turned off or
+  the buffer is killed.
 
 ** Review range (=V=)
 #+begin_example
@@ -1185,6 +1232,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Discard pending review        | =X=           | =X=                     | any                       |
 | Conversation comment          | =C=           | =C=                     | any                       |
 | Jump…                         | =j=           | =J=                     | any                       |
+| Filter the diff…              | ~=~           | ~=~                     | any                       |
 | Next / previous unviewed file | =]u= =[u=     | =]u= =[u=               | any                       |
 | Next / previous thread        | =]t= =[t=     | =]t= =[t=               | any                       |
 | Next / previous new comment   | =j n= =j N=   | =J n= =J N=             | any                       |
@@ -1296,6 +1344,7 @@ inherit:
 | =approve-resolved= / =approve-outdated=          | =shadow= / =warning=                         | Thread states             |
 | =approve-new= / =approve-dismissed=              | =warning=                                    | New since your review     |
 | =approve-updated=                                | =approve-new=                                | Changed on GitHub (D23)   |
+| =approve-filter=                                 | =magit-section-heading-selection=            | Filters on (D54)          |
 | =approve-diff-added/removed/context=             | =magit-diff-added/removed/context=           | Diff lines                |
 | =approve-diff-hunk-heading=                      | =magit-diff-hunk-heading=                    | =@@= lines                |
 | =approve-diff-bubble=                            | =default=                                    | Thread bubbles on lines   |

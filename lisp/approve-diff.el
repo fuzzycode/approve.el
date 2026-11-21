@@ -57,6 +57,9 @@
 ;;   `approve-diff-refine-hunk' is non-nil.
 ;; - The Diff heading and each file's count the comments in threads new
 ;;   since the viewer's last review (`approve-pr-new-comments', D44).
+;; - With filters on (the session's :filters, approve-filter.el,
+;;   decision D54), only the files that pass are drawn; the heading
+;;   says "Diff (5 of 12)", names the filters and counts those files.
 ;;
 ;; Layer rules: this is the renderer layer.  It reads the store through
 ;; selectors and inserts text; it never changes the store or calls the
@@ -674,11 +677,18 @@ file renamed or copied from a path only the entry would say."
   "Insert the diff: every changed file, collapsed, its body drawn when expanded.
 The heading says how many files the viewer has viewed, how many
 threads on lines are unresolved and how many comments in threads are
-new since the viewer's last review; each file's heading counts its own."
-  (let* ((files (approve-pr-files))
-         (counts (approve-sections-thread-counts 'line))
+new since the viewer's last review; each file's heading counts its own.
+With a filter on, only the files that pass it are drawn, and the
+heading says how many of all they are and names the filters; its
+counts are of those files (decision D54)."
+  (let* ((all (approve-pr-files))
+         (files (approve-sections-filter-files all))
+         (paths (and (approve-sections-filtered-p) (approve-sections-path-table files)))
+         (counts (approve-sections--shown-counts (approve-sections-thread-counts 'line) paths))
          (asking (approve-sections-asking-paths 'line))
-         (new (approve-pr-new-comments))
+         (new (seq-filter (lambda (comment)
+                            (or (null paths) (gethash (alist-get 'path comment) paths)))
+                          (approve-pr-new-comments)))
          (new-counts (let ((table (make-hash-table :test #'equal)))
                        (dolist (comment new)
                          (let ((path (alist-get 'path comment)))
@@ -692,21 +702,31 @@ new since the viewer's last review; each file's heading counts its own."
     (magit-insert-section (approve-diff-section)
       (magit-insert-heading
         (approve-sections-heading
-         "Diff" (and files (or (approve-pr-field 'changedFiles) (length files)))
+         "Diff" (and all (approve-sections-filter-count
+                          files all (or (approve-pr-field 'changedFiles) (length all))))
          (approve-render-join
           (list (and (approve-pr-loading-p 'patches)
                      (approve-face "loading the patches…" 'approve-loading))
+                (and all (approve-sections-filter-note))
                 (and files
                      (format "%d/%d viewed" (approve-sections-viewed-count files)
-                             (or (approve-pr-field 'changedFiles) (length files))))
+                             (if paths
+                                 (length files)
+                               (or (approve-pr-field 'changedFiles) (length files)))))
                 (and files (approve-sections-unresolved counts))
                 (and new (approve-face (format "%d new comment%s" (length new)
                                                (if (cdr new) "s" ""))
                                        'approve-new))))))
-      (if (null files)
-          (let ((start (point)))
-            (insert (or (approve-sections-state 'files "the files") ""))
-            (approve-sections-insert-body start))
+      (cond
+       ((null all)
+        (let ((start (point)))
+          (insert (or (approve-sections-state 'files "the files") ""))
+          (approve-sections-insert-body start)))
+       ((null files)
+        (let ((start (point)))
+          (insert (approve-sections-no-file-passes))
+          (approve-sections-insert-body start)))
+       (t
         (approve-sections-insert-each
          files
          (lambda (file)
@@ -719,7 +739,7 @@ new since the viewer's last review; each file's heading counts its own."
                                             (member path asking)
                                             (gethash path new-counts)))
                (approve-sections-lazy-body
-                 (approve-diff--insert-file-body file)))))))
+                 (approve-diff--insert-file-body file))))))))
       (insert "\n"))))
 
 ;;; Ranges of lines
