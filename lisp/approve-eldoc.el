@@ -779,6 +779,10 @@ query that would add to them (see `approve-query-details'), or nil.")
 (defvar-local approve-eldoc--wanted nil
   "The context whose details \\[approve-show-details] asked for.")
 
+(defvar approve-eldoc--shown nil
+  "The last doc Approve gave eldoc: (BUFFER CONTEXT DOC).
+It is in the eldoc buffer until another doc replaces it.")
+
 (defun approve-eldoc--identity (context)
   "Return what identifies the thing of CONTEXT, to compare contexts."
   (list (plist-get context :kind) (plist-get context :value)
@@ -808,10 +812,35 @@ query that would add to them (see `approve-query-details'), or nil.")
                   (approve-eldoc--refresh buffer)))))
 
 (defun approve-eldoc--refresh (buffer)
-  "Run eldoc again in BUFFER when it is the selected one."
-  (when (and (buffer-live-p buffer) (eq buffer (window-buffer (selected-window))))
-    (with-current-buffer buffer
-      (eldoc-print-current-symbol-info t))))
+  "Document again in BUFFER, whose details arrived.
+When BUFFER is the selected one, eldoc runs again where point is.
+Else, as when the eldoc buffer took the cursor, the doc BUFFER put
+there is described anew in place, so that no \"loading details…\"
+stays."
+  (when (buffer-live-p buffer)
+    (if (eq buffer (window-buffer (selected-window)))
+        (with-current-buffer buffer
+          (eldoc-print-current-symbol-info t))
+      (pcase-let ((`(,shown ,context ,doc) approve-eldoc--shown))
+        (when (eq shown buffer)
+          (let ((new (plist-get (with-current-buffer buffer
+                                  (approve-eldoc-describe context))
+                                :doc)))
+            (when (approve-eldoc--replace-doc doc new)
+              (setq approve-eldoc--shown (list buffer context new)))))))))
+
+(defun approve-eldoc--replace-doc (old new)
+  "Put the doc NEW where the eldoc buffer shows the doc OLD.
+Return non-nil if it showed OLD."
+  (when (and (boundp 'eldoc--doc-buffer) (buffer-live-p eldoc--doc-buffer))
+    (with-current-buffer eldoc--doc-buffer
+      (save-excursion
+        (goto-char (point-min))
+        (when (let ((case-fold-search nil)) (search-forward old nil t))
+          (let ((inhibit-read-only t))
+            (delete-region (match-beginning 0) (match-end 0))
+            (insert new))
+          t)))))
 
 (defun approve-eldoc-describe (context &optional fetch)
   "Return the description of CONTEXT: a plist with :echo and :doc.
@@ -853,6 +882,8 @@ there is nothing to say, as in a PR buffer before its PR loaded."
                   context
                   (or (approve-eldoc--buffer-visible-p)
                       (equal approve-eldoc--wanted (approve-eldoc--identity context))))))
+      (setq approve-eldoc--shown
+            (list (current-buffer) context (plist-get description :doc)))
       (funcall callback (plist-get description :doc)
                :echo (plist-get description :echo))
       t)))

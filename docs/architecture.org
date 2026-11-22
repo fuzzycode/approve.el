@@ -672,7 +672,10 @@ supplies its own parts (the ✱ of F00) and nothing else:
   shows the eldoc buffer) or while the eldoc buffer is visible.  Meanwhile
   the eldoc buffer says "⟳ loading details…"; when they arrive, eldoc runs
   again (=eldoc-print-current-symbol-info=), so it documents wherever point
-  is by then.  Each eldoc call answers synchronously, as the protocol wants.
+  is by then.  When another window is selected, as when the eldoc buffer
+  took the cursor, the doc it shows is described anew in place instead, so
+  the note never outlives the loading.  Each eldoc call answers
+  synchronously, as the protocol wants.
 - A failed detail query is cached as an error for a minute, and the eldoc
   buffer says "details unavailable (…)".  The echo line is unaffected.
 - The eldoc buffer text uses Approve's faces, and URLs are buttons: =RET=
