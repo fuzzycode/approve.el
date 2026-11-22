@@ -673,11 +673,14 @@ supplies its own parts (the ✱ of F00) and nothing else:
   the eldoc buffer says "⟳ loading details…"; when they arrive, eldoc runs
   again (=eldoc-print-current-symbol-info=), so it documents wherever point
   is by then.  When another window is selected, as when the eldoc buffer
-  took the cursor, the doc it shows is described anew in place instead, so
-  the note never outlives the loading.  Each eldoc call answers
-  synchronously, as the protocol wants.
+  took the cursor, or the eldoc buffer was closed meanwhile, the doc it
+  holds is described anew in place instead, without showing it again, so
+  the note never outlives the loading.  Details still loading for a buffer
+  killed since are asked for again: their answer went with the buffer.
+  Each eldoc call answers synchronously, as the protocol wants.
 - A failed detail query is cached as an error for a minute, and the eldoc
-  buffer says "details unavailable (…)".  The echo line is unaffected.
+  buffer says "details unavailable (…)"; so is one that can't start.  The
+  echo line is unaffected.
 - The eldoc buffer text uses Approve's faces, and URLs are buttons: =RET=
   opens them.
 - Needs eldoc 1.14 for =:echo= ([[file:decisions.org::*D25 Dependencies][D25]]).

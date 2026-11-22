@@ -31,6 +31,36 @@ FETCH as for `approve-eldoc-describe'."
   "Return the echo line of the thing at TEXT, without properties."
   (substring-no-properties (plist-get (test-eldoc--describe text offset) :echo)))
 
+(defun test-eldoc--with-doc-buffer (body)
+  "Call BODY with a function that delivers @bob-example's details.
+Point is on @bob-example and \\[approve-show-details] asked for its
+details: an eldoc buffer of its own, in no window, says they load."
+  (let ((pending nil)
+        (eldoc--doc-buffer (generate-new-buffer " *test-eldoc*")))
+    (spy-on 'approve-query-details
+            :and-call-fake (lambda (_kind _key &rest args)
+                             (setq pending (plist-get args :callback))))
+    (unwind-protect
+        (progn
+          (with-current-buffer test-eldoc--buffer
+            (goto-char (point-min))
+            (search-forward "bob-example") (goto-char (match-beginning 0))
+            (setq approve-eldoc--wanted (approve-eldoc--identity (approve-context-at-point)))
+            (approve-eldoc-function (lambda (doc &rest _)
+                                      (with-current-buffer eldoc--doc-buffer
+                                        (insert doc)))))
+          (expect (with-current-buffer eldoc--doc-buffer (buffer-string))
+                  :to-match "loading details…")
+          (funcall body
+                   (lambda ()
+                     (with-current-buffer test-eldoc--buffer
+                       (funcall pending '((login . "bob-example") (name . "Bob Example")
+                                          (bio . "Tools and coffee.")))))))
+      (with-current-buffer test-eldoc--buffer
+        (setq approve-eldoc--wanted nil))
+      (setq approve-eldoc--shown nil)
+      (kill-buffer eldoc--doc-buffer))))
+
 (describe "approve-eldoc"
   (before-all
     (setq approve-use-nerd-icons nil)
@@ -164,45 +194,38 @@ FETCH as for `approve-eldoc-describe'."
           (expect doc :to-match "In this pull request\n  approved")
           (expect doc :not :to-match "loading details"))))
 
-    (it "replace the loading note in the eldoc buffer when it took the cursor"
-      (let ((pending nil)
-            (eldoc--doc-buffer (generate-new-buffer " *test-eldoc*")))
-        (spy-on 'approve-query-details
-                :and-call-fake (lambda (_kind _key &rest args)
-                                 (setq pending (plist-get args :callback))))
-        (spy-on 'eldoc-print-current-symbol-info)
-        (unwind-protect
-            (progn
-              (with-current-buffer test-eldoc--buffer
-                (goto-char (point-min))
-                (search-forward "bob-example") (goto-char (match-beginning 0))
-                (setq approve-eldoc--wanted (approve-eldoc--identity (approve-context-at-point)))
-                (approve-eldoc-function (lambda (doc &rest _)
-                                          (with-current-buffer eldoc--doc-buffer
-                                            (insert doc)))))
-              (expect (with-current-buffer eldoc--doc-buffer (buffer-string))
-                      :to-match "loading details…")
-              (save-window-excursion
-                (switch-to-buffer eldoc--doc-buffer)
-                (with-current-buffer test-eldoc--buffer
-                  (funcall pending '((login . "bob-example") (name . "Bob Example")
-                                     (bio . "Tools and coffee."))))
-                (expect 'eldoc-print-current-symbol-info :not :to-have-been-called)
-                (let ((text (with-current-buffer eldoc--doc-buffer (buffer-string))))
-                  (expect text :to-match "Tools and coffee.")
-                  (expect text :not :to-match "loading details"))
-                ;; A doc from elsewhere since is left alone.
-                (with-current-buffer eldoc--doc-buffer
-                  (let ((inhibit-read-only t))
-                    (erase-buffer)
-                    (insert "Something else")))
-                (approve-eldoc--refresh test-eldoc--buffer)
-                (expect (with-current-buffer eldoc--doc-buffer (buffer-string))
-                        :to-equal "Something else")))
-          (with-current-buffer test-eldoc--buffer
-            (setq approve-eldoc--wanted nil))
-          (setq approve-eldoc--shown nil)
-          (kill-buffer eldoc--doc-buffer))))
+    (it "replace the loading note in place when the eldoc buffer took the cursor"
+      (spy-on 'eldoc-print-current-symbol-info)
+      (test-eldoc--with-doc-buffer
+       (lambda (arrive)
+         (save-window-excursion
+           (switch-to-buffer eldoc--doc-buffer)
+           (funcall arrive)
+           (let ((text (with-current-buffer eldoc--doc-buffer (buffer-string))))
+             (expect text :to-match "Tools and coffee.")
+             (expect text :not :to-match "loading details"))
+           ;; A doc from elsewhere since is left alone.
+           (with-current-buffer eldoc--doc-buffer
+             (let ((inhibit-read-only t))
+               (erase-buffer)
+               (insert "Something else")))
+           (approve-eldoc--refresh test-eldoc--buffer)
+           (expect (with-current-buffer eldoc--doc-buffer (buffer-string))
+                   :to-equal "Something else"))))
+      (expect 'eldoc-print-current-symbol-info :not :to-have-been-called))
+
+    (it "replace the loading note without showing the eldoc buffer again once closed"
+      (spy-on 'eldoc-print-current-symbol-info)
+      (test-eldoc--with-doc-buffer
+       (lambda (arrive)
+         (save-window-excursion
+           (switch-to-buffer test-eldoc--buffer)
+           (funcall arrive)
+           (expect (get-buffer-window eldoc--doc-buffer t) :to-be nil)
+           (let ((text (with-current-buffer eldoc--doc-buffer (buffer-string))))
+             (expect text :to-match "Tools and coffee.")
+             (expect text :not :to-match "loading details")))))
+      (expect 'eldoc-print-current-symbol-info :not :to-have-been-called))
 
     (it "remember a failure for a minute and say so"
       (spy-on 'approve-query-details
@@ -214,6 +237,28 @@ FETCH as for `approve-eldoc-describe'."
       (expect (plist-get (test-eldoc--describe "carol-example" 0 t) :doc)
               :to-match "details unavailable (Not found)")
       (expect 'approve-query-details :to-have-been-called-times 1))
+
+    (it "that cannot be asked for say why"
+      (spy-on 'approve-query-details
+              :and-call-fake (lambda (&rest _) (error "No details query for user")))
+      (let ((debug-on-error nil))
+        (expect (plist-get (test-eldoc--describe "carol-example" 0 t) :doc)
+                :to-match "details unavailable (No details query for user)")))
+
+    (it "are asked for again when the buffer that asked was killed"
+      ;; Its answer is dropped with the buffer: nothing would call back.
+      (spy-on 'approve-query-details)
+      (let ((view (generate-new-buffer " *test-eldoc-view*")))
+        (with-current-buffer view
+          (setq-local approve-model-store-buffer test-eldoc--buffer)
+          (approve-eldoc--fetch '(user . "bob-example")))
+        (expect (plist-get (test-eldoc--describe "bob-example" 0) :doc)
+                :to-match "loading details…")
+        (kill-buffer view)
+        (expect (plist-get (test-eldoc--describe "bob-example" 0) :doc)
+                :not :to-match "loading details")
+        (test-eldoc--describe "bob-example" 0 t)
+        (expect 'approve-query-details :to-have-been-called-times 2)))
 
     (it "of an outdated thread show the code it was written on"
       (spy-on 'approve-query-details

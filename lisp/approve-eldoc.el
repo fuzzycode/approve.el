@@ -57,6 +57,7 @@
 (require 'button)
 (require 'eldoc)
 (require 'approve-model)
+(require 'approve-log)
 (require 'approve-context)
 (require 'approve-queries)
 (require 'approve-faces)
@@ -71,7 +72,8 @@
 
 (defvar approve-eldoc--details (make-hash-table :test #'equal)
   "Extended details for the session, by (HOST KIND KEY).
-A value is (:data DATA), (:error MESSAGE :time TIME) or (:loading t).")
+A value is (:data DATA), (:error MESSAGE :time TIME) or (:loading t
+:buffer BUFFER), BUFFER being the one that asked for them.")
 
 (defconst approve-eldoc--error-seconds 60
   "Seconds a failed details query is remembered before it is tried again.")
@@ -87,12 +89,17 @@ A value is (:data DATA), (:error MESSAGE :time TIME) or (:loading t).")
 
 (defun approve-eldoc--cached (spec)
   "Return the cache entry of the details SPEC, or nil.
-An error older than `approve-eldoc--error-seconds' counts as absent."
+An error older than `approve-eldoc--error-seconds' counts as absent,
+and so do details still loading for a buffer killed since: their
+answer is dropped with it (`approve-api-graphql')."
   (let ((entry (gethash (approve-eldoc--key spec) approve-eldoc--details)))
-    (if (and (plist-get entry :error)
-             (> (- (float-time) (plist-get entry :time)) approve-eldoc--error-seconds))
-        nil
-      entry)))
+    (cond ((and (plist-get entry :error)
+                (> (- (float-time) (plist-get entry :time)) approve-eldoc--error-seconds))
+           nil)
+          ((and (plist-get entry :loading)
+                (not (buffer-live-p (plist-get entry :buffer))))
+           nil)
+          (t entry))))
 
 ;;; Text helpers
 
@@ -795,30 +802,38 @@ It is in the eldoc buffer until another doc replaces it.")
        (get-buffer-window eldoc--doc-buffer t)))
 
 (defun approve-eldoc--fetch (spec)
-  "Fetch the details SPEC, then document point again in this buffer."
-  (let ((key (approve-eldoc--key spec))
-        (buffer (current-buffer)))
-    (puthash key '(:loading t) approve-eldoc--details)
-    (approve-query-details
-     (car spec) (cdr spec)
-     :callback (lambda (data)
-                 (puthash key (list :data data) approve-eldoc--details)
-                 (approve-eldoc--refresh buffer))
-     :errorback (lambda (err)
-                  (puthash key (list :error (if (stringp (cadr err)) (cadr err)
-                                              (format "%s" err))
-                                     :time (float-time))
-                           approve-eldoc--details)
-                  (approve-eldoc--refresh buffer)))))
+  "Fetch the details SPEC, then document point again in this buffer.
+A query that fails at once is cached as failed, as one GitHub refused."
+  (let* ((key (approve-eldoc--key spec))
+         (buffer (current-buffer))
+         (fail (lambda (err)
+                 (puthash key (list :error (if (stringp (cadr err)) (cadr err)
+                                             (format "%s" err))
+                                    :time (float-time))
+                          approve-eldoc--details))))
+    (puthash key (list :loading t :buffer buffer) approve-eldoc--details)
+    (condition-case-unless-debug err
+        (approve-query-details
+         (car spec) (cdr spec)
+         :callback (lambda (data)
+                     (puthash key (list :data data) approve-eldoc--details)
+                     (approve-eldoc--refresh buffer))
+         :errorback (lambda (err)
+                      (funcall fail err)
+                      (approve-eldoc--refresh buffer)))
+      (error (approve-log-condition "Asking for details" err)
+             (funcall fail err)))))
 
 (defun approve-eldoc--refresh (buffer)
   "Document again in BUFFER, whose details arrived.
-When BUFFER is the selected one, eldoc runs again where point is.
-Else, as when the eldoc buffer took the cursor, the doc BUFFER put
-there is described anew in place, so that no \"loading details…\"
+When BUFFER is selected and the eldoc buffer is in a window, eldoc
+runs again where point is.  Else, as when the eldoc buffer took the
+cursor or was closed, the doc BUFFER put there is described anew in
+place, without showing it again, so that no \"loading details…\"
 stays."
   (when (buffer-live-p buffer)
-    (if (eq buffer (window-buffer (selected-window)))
+    (if (and (eq buffer (window-buffer (selected-window)))
+             (approve-eldoc--buffer-visible-p))
         (with-current-buffer buffer
           (eldoc-print-current-symbol-info t))
       (pcase-let ((`(,shown ,context ,doc) approve-eldoc--shown))
@@ -850,24 +865,22 @@ they are loading.  Return nil when nothing describes CONTEXT."
   (when-let* ((describer (alist-get (plist-get context :kind) approve-eldoc-describers)))
     (let* ((first (funcall describer context nil))
            (spec (plist-get first :details))
-           (entry (and spec (approve-eldoc--cached spec)))
-           (result (if (plist-get entry :data)
-                       (funcall describer context (plist-get entry :data))
-                     first))
-           (note nil))
-      (cond
-       ((plist-get entry :loading)
-        (setq note (concat (approve-icon 'loading 'approve-loading) " "
-                           (approve-face "loading details…" 'approve-loading))))
-       ((plist-get entry :error)
-        (setq note (approve-face (format "details unavailable (%s)" (plist-get entry :error))
-                                 'approve-dim)))
-       ((and spec (null entry) fetch)
+           (entry (and spec (approve-eldoc--cached spec))))
+      (when (and spec (null entry) fetch)
         (approve-eldoc--fetch spec)
-        (setq note (concat (approve-icon 'loading 'approve-loading) " "
-                           (approve-face "loading details…" 'approve-loading)))))
-      (list :echo (plist-get result :echo)
-            :doc (concat (plist-get result :doc) (and note (concat "\n" note "\n")))))))
+        (setq entry (approve-eldoc--cached spec)))
+      (let ((result (if (plist-get entry :data)
+                        (funcall describer context (plist-get entry :data))
+                      first))
+            (note (cond
+                   ((plist-get entry :loading)
+                    (concat (approve-icon 'loading 'approve-loading) " "
+                            (approve-face "loading details…" 'approve-loading)))
+                   ((plist-get entry :error)
+                    (approve-face (format "details unavailable (%s)" (plist-get entry :error))
+                                  'approve-dim)))))
+        (list :echo (plist-get result :echo)
+              :doc (concat (plist-get result :doc) (and note (concat "\n" note "\n"))))))))
 
 (defun approve-eldoc-function (callback &rest _)
   "Document the thing at point for eldoc, calling CALLBACK.
