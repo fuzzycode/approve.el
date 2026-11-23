@@ -572,7 +572,10 @@ the dashboard."
     (erase-buffer)
     (save-excursion
       (magit-insert-section (approve-root-section)
-        (funcall insert))
+        ;; The page's width is the windows' as the buffer is drawn,
+        ;; asked once rather than for each of thousands of files.
+        (approve-render-with-width
+          (funcall insert)))
       ;; Inserting only records which sections are collapsed; this hides
       ;; their bodies, as `magit-refresh-buffer' does.
       (magit-section-show magit-root-section))
@@ -667,7 +670,7 @@ this for a change that shows only there."
                        (and loaded (mapcar #'funcall approve-pr-header-line-functions))))
                (notes (approve-render-join notes))
                (number (format "#%s " (approve-model-meta :number)))
-               (room (- approve-page-width (string-width number) (string-width badge)
+               (room (- (approve-render-width) (string-width number) (string-width badge)
                         (if (string-empty-p notes) 0 (+ 3 (string-width notes)))
                         3))
                (title (approve-render-truncate (or (and loaded (approve-pr-field 'title)) "")

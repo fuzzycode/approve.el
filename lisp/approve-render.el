@@ -52,18 +52,25 @@
 
 ;;; Options
 
-(defcustom approve-page-width 110
-  "Column at which right-aligned text in Approve buffers ends.
+(defcustom approve-page-width nil
+  "Column at which right-aligned text in Approve buffers ends, or nil.
 Counts, states and key hints on the right of headings line up
-there, as do the statistics of the diff's files and the header
-line's state.  It leaves room right of `approve-fill-column', which
-fills text, for the indentation of threads and their hints.  The
-lists of pull requests fit the window instead, and their lines end
-where their rows do (`approve-list-columns').  For a narrow frame
-or a side-by-side window:
+there, as do the speech bubbles of the diff and the file view and
+the header line's state.  Nil, the default, is the right edge of
+the window: the page is as wide as the window, so a long diff line
+leaves its bubble room, and it follows each window as it is resized
+\(decision D55).  What is cut or wrapped to fit, such as the paths
+of the diff and the metadata rows, fits the narrowest window that
+shows the buffer when it is drawn.
 
-  (setq approve-page-width 88)"
-  :type 'natnum
+A number caps the page, for a wide frame where the window's edge
+would be far from the text; a window narrower when the buffer is
+drawn still ends it.  Text is filled to `approve-fill-column'
+either way.  The lists of pull requests fit the window and their
+text, and their lines end where their rows do (`approve-list-columns').
+
+  (setq approve-page-width 110)"
+  :type '(choice (const :tag "The window's right edge" nil) natnum)
   :group 'approve)
 
 (defcustom approve-show-hints t
@@ -170,36 +177,71 @@ four columns, for lists.  A time to come is \"now\"; no time is \"\"."
 
 ;;; Layout
 
+(defvar approve-render--width nil
+  "The page width of the drawing in progress, as (BUFFER . WIDTH), or nil.
+`approve-render-with-width' binds it, so `approve-render-width'
+asks the windows once a drawing rather than once a line.")
+
+(defmacro approve-render-with-width (&rest body)
+  "Run BODY with the current buffer's page width measured once.
+The calls of `approve-render-width' in BODY for that buffer return
+it; a buffer drawn in thousands of lines asks its windows only once."
+  (declare (indent 0) (debug t))
+  `(let ((approve-render--width (cons (current-buffer) (approve-render-width))))
+     ,@body))
+
+(defun approve-render-align-to (columns &optional width)
+  "Return the `:align-to' position of text COLUMNS wide ending the page.
+The page ends at column WIDTH when it is given.  Else, with
+`approve-page-width' nil, it ends at the right edge of the window
+the text shows in, which it follows as the window is resized, less
+one column: a terminal, or a window without a right fringe, keeps
+the last one for the mark of a continued line.  With a number, the
+page ends at `approve-render-width' (decision D55)."
+  (cond (width (max 0 (- width columns)))
+        (approve-page-width (max 0 (- (approve-render-width) columns)))
+        (t `(- right ,(1+ columns)))))
+
 (defun approve-render-justify (left right &optional width)
-  "Return LEFT and RIGHT on one line, RIGHT ending at column WIDTH.
-WIDTH defaults to `approve-page-width'.  The gap is a space that
-stretches (`:align-to'), so RIGHT lines up even after a larger font
-in LEFT; at least one space stays between them.  Either may be nil."
+  "Return LEFT and RIGHT on one line, RIGHT ending the page.
+The page ends at column WIDTH when it is given, else where
+`approve-render-align-to' says: the window's right edge by default.
+The gap is a space that stretches (`:align-to'), so RIGHT lines up
+even after a larger font in LEFT; at least one space stays between
+them.  Either may be nil."
   (let* ((left (or left ""))
          (right (or right "")))
     (if (string-empty-p right)
         left
       (concat left " "
               (propertize " " 'display
-                          `(space :align-to ,(max 0 (- (or width approve-page-width)
-                                                        (string-width right)))))
+                          `(space :align-to ,(approve-render-align-to (string-width right)
+                                                                      width)))
               right))))
 
 (defun approve-render-window-width ()
   "Return how many columns the windows that show the current buffer have.
-That is the narrowest one's, or `approve-page-width' when no window
-shows the buffer."
+That is the narrowest one's.  When no window shows the buffer, it
+is `approve-page-width', or the selected window's when that is nil:
+the buffer is most likely about to show there."
   (if-let* ((windows (get-buffer-window-list (current-buffer) nil t)))
       (apply #'min (mapcar #'window-max-chars-per-line windows))
-    approve-page-width))
+    (or approve-page-width
+        (window-max-chars-per-line (if (window-minibuffer-p)
+                                       (frame-first-window)
+                                     (selected-window))))))
 
 (defun approve-render-width ()
   "Return the column at which rows of the current buffer should end.
-That is `approve-page-width', or less when a window that shows the
-buffer is narrower: the narrowest one.  It is the width when the
-buffer is drawn; a window resized later shows the rows as they are
+That is the width of the narrowest window that shows the buffer
+\(`approve-render-window-width'), or `approve-page-width' when that
+is a number and less.  It is the width when the buffer is drawn; a
+window resized later shows what was cut or wrapped to fit as it is
 until the next redraw."
-  (min approve-page-width (approve-render-window-width)))
+  (if (eq (car approve-render--width) (current-buffer))
+      (cdr approve-render--width)
+    (let ((window (approve-render-window-width)))
+      (if approve-page-width (min approve-page-width window) window))))
 
 (defun approve-render-wrap (items width &optional separator indent)
   "Return ITEMS joined by SEPARATOR, in lines at most WIDTH columns wide.

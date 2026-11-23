@@ -230,8 +230,8 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
 <ul>
   <li>Reviewer marks: <span class="ok"><i data-i="approved">✓</i></span> approved, <span class="er"><i data-i="changes-requested">✗</i></span> changes requested, <i data-i="commented">💬</i> commented, <i data-i="requested">○</i> requested.</li>
   <li>Reviewers, Assignees, Labels and Issues that don't fit on one line wrap between items, each next line under the
-    first item. A row ends by <code>approve-page-width</code>, or by the window's width when it is narrower, as it is
-    when the buffer is drawn.</li>
+    first item. A row ends by the narrowest window that shows the buffer (or <code>approve-page-width</code> when it is
+    set and less), as it is when the buffer is drawn.</li>
   <li><b>Your pending review</b> only appears when one exists; its heading counts the comments, replies included.</li>
   <li>The file list is not shown by default, for now (D05, amended); <code>approve-add-section-hook</code> puts
     <code>approve-insert-files-section</code> back, before the diff. It gives each file's counts, a diffstat bar and its
@@ -247,7 +247,8 @@ everything in the eldoc buffer (<a href="manage.html#eldoc-buffer">mockup</a>).<
     <code>internal/engine/{queue.go → scheduler.go}</code>, as in git's diffstat; a path too long for its room loses whole
     directories in the middle (<code>internal/…/page.tmpl</code>).</li>
   <li>A diff line with threads has a speech bubble and their count at the right edge (dim when all are resolved), on the
-    line's background but not in its colour. The line folds its threads (click it, or <code>TAB</code> on it or in
+    line's background but not in its colour. The right edge is the window's (D55); a line too long to leave the bubble
+    room gets it on a row of its own, under it. The line folds its threads (click it, or <code>TAB</code> on it or in
     them); only the bubble stays. Lines whose threads are
     all resolved start folded, as does Outdated. <code>T</code> folds every thread in the diff, or unfolds them all (<code>zM</code> / <code>zR</code> in evil),
     and files expanded later follow. <code>O</code> (also <code>zp</code> in evil) folds every section but the one at point, and in the

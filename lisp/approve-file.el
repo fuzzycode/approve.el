@@ -481,15 +481,26 @@ amended)."
     ('shown nil)
     (_ (approve-diff-threads-folded-p threads))))
 
+(defun approve-file--line-numbers-width ()
+  "Return the columns the line numbers take on each line of the view, or 0.
+They are `display-line-numbers-mode''s: the digits of the last line,
+or `display-line-numbers-width' when it is more, and two of padding."
+  (if display-line-numbers
+      (+ 2 (max (or display-line-numbers-width 0)
+                (length (number-to-string (line-number-at-pos (point-max) t)))))
+    0))
+
 (defun approve-file--put-threads (lines)
   "Show the threads of LINES, a hash table from line to threads, under them.
 Each line gets the speech bubble of the diff at its end; its threads
 follow it unless they are folded.  Both are the before-string of an
 overlay on the line's newline, as the text is the file's own: the
 threads are rows of the line, so the line numbers of the lines
-after them stay theirs."
+after them stay theirs.  A line too long for the bubble on the page
+gets it on a row of its own, as in the diff."
   (let ((asking (mapcar (lambda (thread) (alist-get 'id thread))
                         (approve-pr-threads-asking-for-changes)))
+        (numbers (approve-file--line-numbers-width))
         (entries nil))
     (maphash (lambda (line threads) (push (cons line (cons line threads)) entries)) lines)
     (approve-file--at-lines
@@ -497,10 +508,11 @@ after them stay theirs."
      (lambda (entry)
        (let* ((threads (cdr entry))
               (end (line-end-position))
+              (column (+ numbers (save-excursion (goto-char end) (current-column))))
               (overlay (approve-file--overlay end (min (1+ end) (point-max)))))
          (overlay-put overlay 'approve-file-threads threads)
          (overlay-put overlay 'before-string
-                      (concat (approve-diff-thread-bubble threads nil asking)
+                      (concat (approve-diff-thread-bubble threads nil asking column)
                               (unless (approve-file--folded-p (car entry) threads)
                                 (concat "\n" (string-remove-suffix
                                               "\n" (approve-file--threads-text threads)))))))))))

@@ -252,7 +252,7 @@ path too long for its room loses directories in the middle
                    (list (and new (> new 0) (approve-face (format "%d new" new) 'approve-new))
                          count)
                    "  "))
-           (room (- approve-page-width
+           (room (- (approve-render-width)
                     (string-width approve-sections-indentation)
                     (string-width marks)
                     (if (string-empty-p count) 0 (+ 2 (string-width count))))))
@@ -527,20 +527,27 @@ and otherwise when they are settled (`approve-diff--settled-p')."
     ('shown nil)
     (_ (approve-diff--settled-p threads))))
 
-(defun approve-diff-thread-bubble (threads face &optional asking)
+(defun approve-diff-thread-bubble (threads face &optional asking column)
   "Return the speech bubble for THREADS, on a line whose face is FACE.
 The diff and the file view (approve-file.el) show it on a line with
 threads.
 The bubble and the number of unresolved threads (or of all, dim,
-when all are resolved) end at the page's right edge, as the counts
-of the file headings do.  It takes the line's background, not its
-colour (`approve-diff-bubble'): a bubble on a removed line is no
+when all are resolved) end at the page's right edge, the window's
+by default, as the counts of the file headings do
+\(`approve-render-align-to').  It takes the line's background, not
+its colour (`approve-diff-bubble'): a bubble on a removed line is no
 more alarming than one on an added line.  An overlay string would
 else take the colour of the text under it.  It is red
 \(`approve-thread-mark-changes-requested') when one of THREADS asks
 for changes that still stand: its id is in ASKING (decision D34).
 The cursor, at the end of the line, is drawn where the bubble
-starts."
+starts.
+
+COLUMN, when given, is the column the line's text ends at.  When the
+page (`approve-render-width') has no room for the bubble after it,
+the bubble ends a row of its own under the line, which has the
+line's background, rather than run into its text or be broken where
+the window wraps it."
   (let* ((count (approve-sections-thread-count
                  (cons (seq-count (lambda (thread) (not (alist-get 'isResolved thread)))
                                   threads)
@@ -548,26 +555,35 @@ starts."
                  (seq-some (lambda (thread) (member (alist-get 'id thread) asking))
                            threads)))
          (background (approve-face-background face))
-         (bubble (concat (propertize " " 'cursor t)
-                         (propertize " " 'display
-                                     `(space :align-to ,(- approve-page-width
-                                                           (string-width count))))
-                         count)))
-    (approve-face-add (if background (approve-face-add bubble background) bubble)
-                      'approve-diff-bubble)))
+         (own-row (and column
+                       (> (+ column 1 (string-width count)) (approve-render-width))))
+         (paint (lambda (text)
+                  (approve-face-add (if background (approve-face-add text background) text)
+                                    'approve-diff-bubble))))
+    (concat (funcall paint (propertize " " 'cursor t))
+            ;; The line's own face, so its row reaches the window's edge
+            ;; as the line's newline would make it.
+            (and own-row (propertize "\n" 'face face))
+            (funcall paint (concat (propertize " " 'display
+                                               `(space :align-to ,(approve-render-align-to
+                                                                   (string-width count))))
+                                   count)))))
 
 (defun approve-diff--insert-bubble (threads &optional asking)
   "Show the bubble of THREADS on the line just inserted, before its newline.
 ASKING is as for `approve-diff-thread-bubble'.  The bubble is an overlay's
 before-string, not text: moving up and down never puts point in it,
 copying leaves it out, and it goes with the line when the buffer is
-redrawn (the overlay evaporates)."
+redrawn (the overlay evaporates).  A line too long for it on the
+page gets it on a row of its own."
   (let* ((newline (1- (point)))
          (overlay (make-overlay newline (point) nil t)))
     (overlay-put overlay 'evaporate t)
     (overlay-put overlay 'approve-bubble t)
     (overlay-put overlay 'before-string
-                 (approve-diff-thread-bubble threads (get-text-property newline 'face) asking))))
+                 (approve-diff-thread-bubble threads (get-text-property newline 'face) asking
+                                             (save-excursion (goto-char newline)
+                                                             (current-column))))))
 
 (defun approve-diff--insert-hunk (path hunk width index &optional fontified)
   "Insert HUNK of PATH: its header, lines, and the threads under lines.

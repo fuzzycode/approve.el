@@ -540,6 +540,14 @@ Implements F19.  Mockups: notifications, the mode-line count.
       a code owner" and "My team is a code owner", from the CODEOWNERS
       of the base branch (=approve-codeowners.el=) and the viewer's
       teams, repository metadata.  [[file:ui.org::*Filter (~=~)][Mockup]].
+- [X] The page as wide as the window ([[file:decisions.org::*D55 The page is as wide as the window][D55]]), added and done (2026-11-23)
+      at the author's request: a diff line of 120 columns ran into its
+      speech bubble at the page's 110.  What is on the right of a line
+      ends one column short of the window's edge and follows it as it is
+      resized; what is cut to fit takes the narrowest window's width
+      when drawn; =approve-page-width= is nil by default and caps the
+      page when set.  A line that leaves its bubble no room gets it on a
+      row of its own, in the diff and the file view.
 - [ ] Move the work to =main=: merge =feature/revamp= (added 2026-11-17, at
       the author's request).  The README and the user's documentation
       are written after it, on =main=.

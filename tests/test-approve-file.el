@@ -217,7 +217,17 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
         (expect (sorted (approve-file--thread-index threads hunks nil))
                 :to-equal '(((3 "T1") (4 "T3")) 3))
         (expect (sorted (approve-file--thread-index threads hunks t))
-                :to-equal '(((3 "T3") (4 "T2")) 3))))))
+                :to-equal '(((3 "T3") (4 "T2")) 3)))))
+
+  (it "counts the columns its line numbers take, for a bubble's room"
+    (with-temp-buffer
+      (insert (make-string 150 ?\n))
+      (expect (approve-file--line-numbers-width) :to-be 0)
+      (display-line-numbers-mode 1)
+      ;; The digits of the last line, 151, and two of padding.
+      (expect (approve-file--line-numbers-width) :to-be 5)
+      (setq-local display-line-numbers-width 5)
+      (expect (approve-file--line-numbers-width) :to-be 7))))
 
 ;;; The view
 

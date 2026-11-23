@@ -246,6 +246,11 @@ task only needs the files it touches.
   and "My team is a code owner", read from the CODEOWNERS of the base
   branch as GitHub reads it (=approve-codeowners.el=) and the teams the
   viewer is in, both repository metadata (D24, amended).
+- Asked for by the author on 2026-11-23 ([[file:decisions.org::*D55 The page is as wide as the window][D55]]): a wider page.  What is
+  on the right of a line ends one column short of the window's edge and
+  follows it as it is resized; =approve-page-width= is nil by default
+  and caps the page when set.  A diff or file view line that leaves its
+  speech bubble no room gets it on a row of its own.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

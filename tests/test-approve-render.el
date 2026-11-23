@@ -117,13 +117,59 @@
       (let ((approve-page-width 90))
         (expect (approve-render-width) :to-equal 90))))
 
+  (it "is the selected window's width when no window shows the buffer and there is no page width"
+    (with-temp-buffer
+      (let ((approve-page-width nil))
+        (expect (approve-render-width) :to-equal (window-max-chars-per-line)))))
+
   (it "is the width of a narrower window that shows the buffer"
     (with-temp-buffer
       (let ((approve-page-width 1000))
         (save-window-excursion
           (switch-to-buffer (current-buffer))
           (expect (approve-render-width)
-                  :to-equal (window-max-chars-per-line)))))))
+                  :to-equal (window-max-chars-per-line))))))
+
+  (it "is the window's width when there is no page width"
+    (with-temp-buffer
+      (let ((approve-page-width nil))
+        (save-window-excursion
+          (switch-to-buffer (current-buffer))
+          (expect (approve-render-width)
+                  :to-equal (window-max-chars-per-line))))))
+
+  (it "asks the windows once while a buffer is drawn"
+    (with-temp-buffer
+      (let ((approve-page-width nil)
+            (asked 0))
+        (cl-letf* ((measure (symbol-function 'approve-render-window-width))
+                   ((symbol-function 'approve-render-window-width)
+                    (lambda () (cl-incf asked) (funcall measure))))
+          (approve-render-with-width
+            (dotimes (_ 3) (approve-render-width))
+            ;; Another buffer is measured on its own.
+            (with-temp-buffer (approve-render-width)))
+          (expect asked :to-be 2)
+          (approve-render-width)
+          (expect asked :to-be 3))))))
+
+(describe "approve-render-justify"
+  (it "ends the right part one column short of the window's edge, whatever its width"
+    (let* ((approve-page-width nil)
+           (line (approve-render-justify "left" "right")))
+      (expect (get-text-property 5 'display line)
+              :to-equal '(space :align-to (- right 6)))))
+
+  (it "ends it at approve-page-width when that is set"
+    (with-temp-buffer
+      (let* ((approve-page-width 90)
+             (line (approve-render-justify "left" "right")))
+        (expect (get-text-property 5 'display line) :to-equal '(space :align-to 85)))))
+
+  (it "ends it at a width given, whatever the page"
+    (let* ((approve-page-width nil)
+           (line (approve-render-justify "left" "right" 40)))
+      (expect (get-text-property 5 'display line) :to-equal '(space :align-to 35)))))
 
 (describe "People"
   (it "are written @login, carrying who they are"

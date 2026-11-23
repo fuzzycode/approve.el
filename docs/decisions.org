@@ -1532,6 +1532,53 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   files of the large fixture went from 2.1 to 6.1 ms per file, mostly the
   set-up of a mode per file.  Collapsed files cost nothing.
 
+** D55 The page is as wide as the window
+- Status :: accepted (2026-11-23, by the author, who asked for a wider
+  page and chose the window's width over a page that grows with the
+  diff, a larger default, or moving only the bubbles that collide; the
+  row of its own for a bubble that has no room came with it, for the
+  lines still longer than the window)
+- Decision ::
+  - What sits on the right of a line in the PR buffer and the file view
+    (counts and states of headings, key hints, the speech bubbles, the
+    header line's state) ends at the right edge of the window, one
+    column short of it: a terminal, or a window without a right fringe,
+    keeps the last column for the mark of a continued line.  It is a
+    stretching space to =(- right N)=, so it follows each window that
+    shows the buffer as it is resized, with no redraw.
+  - What is cut or wrapped to fit (the title in the header line, the
+    diff's paths, the checks' names and notes, the metadata rows) fits
+    the narrowest window that shows the buffer when it is drawn
+    (=approve-render-width=), as before; a resized window shows them as
+    they were until the next redraw.  A redraw asks the windows once
+    (=approve-render-with-width=), not once for each of thousands of
+    files.  When no window shows the buffer, the selected window's width
+    stands in: the buffer is most likely about to show there.
+  - =approve-page-width= is nil by default.  A number caps the page, for
+    a wide frame where the window's edge would be far from the text: the
+    page then ends at that column, or at a narrower window's edge when
+    the buffer is drawn, as the old default of 110 did.
+  - A line of the diff or the file view that leaves its bubble no room
+    on the page (where it ends, plus a space and the bubble, past
+    =approve-render-width=) gets the bubble on a row of its own under
+    it, at the right edge, with the line's face so the row has the
+    line's background.  The bubble never runs into the code, is never
+    broken where the window wraps the line, and is never cut off where
+    it truncates it.
+  - Text stays filled to =approve-fill-column= (80), and thread boxes
+    keep their width.  The lists of pull requests keep [[*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]'s rules,
+    the selected window standing in for =approve-page-width= when it is
+    nil and no window shows the list.
+- Why :: A diff line of 120 columns starts after a gutter of 9 to 13
+  (two line numbers and the marker), so it ended past the page's 110
+  columns, and its bubble, aligned to a column the line had passed,
+  sat right after the code.  A fixed width either wastes a wide window
+  or overflows a narrow one; the window is what the user sized for the
+  room they want.  The right side follows the window without a redraw,
+  which a large pull request would pay for at every resize.  A bubble
+  on a row of its own is the one place left for it when the code takes
+  the whole row; GitHub puts what is said about a line under it too.
+
 * Platform and tooling
 ** D18 Emacs 29.1 or newer
 - Status :: accepted

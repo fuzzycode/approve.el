@@ -90,11 +90,11 @@ the column's text.
 A column is as wide as its longest text in the lists of the buffer,
 so that nothing is cut when the window has room; the rows end where
 the text does.  When the narrowest window that shows the buffer (or
-`approve-page-width', when none does) has too little room, columns
-are cut, ending in \"…\" (icons are never cut).  Those of WIDTH nil,
-the title by default, give way first, down to 10 columns; the others
-then give way down to WIDTH.  The state leads the number by one
-space; other columns are two apart.
+`approve-page-width', or the selected window, when none does) has
+too little room, columns are cut, ending in \"…\" (icons are never
+cut).  Those of WIDTH nil, the title by default, give way first,
+down to 10 columns; the others then give way down to WIDTH.  The
+state leads the number by one space; other columns are two apart.
 
 For lists of one repository, without it, and with wider authors:
 

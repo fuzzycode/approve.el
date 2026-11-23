@@ -44,6 +44,12 @@ of reaching GitHub."
 
 (setq approve-api-transport #'approve-test-offline-transport)
 
+;; Batch Emacs's window is 80 columns, where the page would be by
+;; default (decision D55): lay pages out 110 wide instead, as in a
+;; roomy window, so what tests expect doesn't depend on a terminal.
+;; Tests of the default bind it to nil.
+(setq approve-page-width 110)
+
 (defconst approve-test-graphql-directory
   (expand-file-name "../graphql"
                     (file-name-directory (or load-file-name buffer-file-name)))

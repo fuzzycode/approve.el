@@ -288,6 +288,32 @@
           (expect (filter-buffer-substring (oref line start) eol) :to-equal "\t}")
           (expect (get-text-property 0 'cursor bubble) :to-be t))))
 
+    (it "puts a bubble one column short of the window's edge by default"
+      (let* ((approve-page-width nil)
+             (bubble (approve-diff-thread-bubble
+                      (list '((id . "T1") (isResolved))) nil))
+             (count (substring bubble 2)))
+        ;; It follows the window as it is resized, so a line as long
+        ;; as the window allows leaves it room (decision D55).
+        (expect (get-text-property 1 'display bubble)
+                :to-equal `(space :align-to (- right ,(1+ (string-width count)))))))
+
+    (it "gives a bubble a row of its own when the line leaves it no room on the page"
+      (with-temp-buffer
+        (let* ((approve-page-width 110)
+               (threads (list '((id . "T1") (isResolved))))
+               (short (approve-diff-thread-bubble threads 'approve-diff-added nil 100))
+               (long (approve-diff-thread-bubble threads 'approve-diff-added nil 106)))
+          (expect short :not :to-match "\n")
+          (expect (substring-no-properties long 0 2) :to-equal " \n")
+          ;; The row has the line's face, so its background reaches the
+          ;; window's edge, and the bubble ends it as on a line.
+          (expect (get-text-property 1 'face long) :to-be 'approve-diff-added)
+          (expect (equal-including-properties (substring long 2) (substring short 1))
+                  :to-be t)
+          ;; The cursor at the end of the line stays after its text.
+          (expect (get-text-property 0 'cursor long) :to-be t))))
+
     (it "gives a bubble the line's background, not its colour"
       ;; An overlay string takes the colour of the text under it, so the
       ;; bubble's own face gives it one.

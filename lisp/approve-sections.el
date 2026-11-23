@@ -134,7 +134,8 @@ COUNT is a number or nil: \"Commits (4)\"."
 (defun approve-sections-heading (title &optional count right width)
   "Return a section heading: TITLE, COUNT in parentheses, RIGHT aligned.
 COUNT is a number or nil; RIGHT a string or nil, which ends at
-column WIDTH, `approve-page-width' by default."
+column WIDTH, or at the page's right edge by default
+\(`approve-render-justify')."
   (approve-render-justify (approve-sections-title title count) right width))
 
 (defconst approve-sections-indentation (approve-render-decoration "  ")
@@ -607,12 +608,12 @@ Example:
 
 (defun approve-sections--check-columns (checks)
   "Return the widths of the columns of CHECKS: (NAME WHEN REQUIRED).
-NAME fits the longest name, up to `approve-page-width' less 60, which
+NAME fits the longest name, up to the page's width less 60, which
 leaves the notes room.  REQUIRED is 0 when no check is required."
   (list (min (apply #'max 1 (mapcar (lambda (check)
                                       (string-width (approve-sections-check-name check)))
                                     checks))
-             (max 30 (- approve-page-width 60)))
+             (max 30 (- (approve-render-width) 60)))
         (apply #'max 0 (mapcar (lambda (check)
                                  (string-width (approve-sections--check-when check)))
                                checks))
@@ -624,7 +625,8 @@ leaves the notes room.  REQUIRED is 0 when no check is required."
   "Return the line of CHECK in the expanded checks.
 COLUMNS are the widths of its columns, from
 `approve-sections--check-columns'.  Its note (the check's title or
-the status's description) fills the line up to `approve-page-width'."
+the status's description) fills the line up to the page's width
+\(`approve-render-width')."
   (pcase-let ((`(,name-width ,when-width ,required-width) columns))
     (let-alist check
       (let* ((left (concat
@@ -643,7 +645,7 @@ the status's description) fills the line up to `approve-page-width'."
                       "")))
              (note (car (split-string (or .description .title "") "\n")))
              ;; Two columns of indentation, and two between left and note.
-             (room (- approve-page-width (string-width left) 4)))
+             (room (- (approve-render-width) (string-width left) 4)))
         (approve-thing
          (string-trim-right
           (concat left
