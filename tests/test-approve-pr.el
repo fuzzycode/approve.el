@@ -289,6 +289,9 @@
   (it "waits longer after a redraw that took long, so Emacs stays free"
     (test-pr--with-medium
       (spy-on 'run-at-time :and-return-value 'timer)
+      ;; The redraw that opened the buffer took however long this machine
+      ;; needs; a quick one waits the shortest delay.
+      (setq approve-pr--redraw-seconds 0.001)
       (approve-pr-schedule-redraw)
       (setq approve-pr--redraw-timer nil)
       (setq approve-pr--redraw-seconds 0.5)
