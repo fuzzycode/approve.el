@@ -1345,6 +1345,7 @@ inherit:
 | =approve-label=                                  | (colour from GitHub, readable fg)            | Labels as boxes           |
 | =approve-state-open/closed/merged/draft=         | =success= / =error= / =magit-tag= / =shadow= | State badges              |
 | =approve-approved= / =approve-changes-requested= | =success= / =error=                          | Review marks              |
+| =approve-requested=                              | =warning=                                    | Reviewers asked, waiting  |
 | =approve-pending=                                | =warning=                                    | "Pending" label           |
 | =approve-suggestion-batched=                     | =success=                                    | "✓ in the batch"          |
 | =approve-thread-border=                          | =shadow=                                     | Thread box lines          |

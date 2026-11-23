@@ -240,8 +240,10 @@ See `approve-label-face'."
   :group 'approve-faces)
 
 (defface approve-requested
-  '((t :inherit shadow))
-  "Face of reviewers who were asked and have not reviewed yet."
+  '((t :inherit warning))
+  "Face of reviewers who were asked and have not reviewed yet.
+It colours their mark, a clock, as `approve-check-pending' colours
+checks still running: both wait for someone."
   :group 'approve-faces)
 
 (defface approve-pending
