@@ -10,6 +10,7 @@
 
 (require 'buttercup)
 (require 'approve-api-queue)
+(require 'approve-test-helpers "helpers")
 
 (defvar test-approve-api-queue--sent nil
   "Request plists the fake transport received, newest first.")
@@ -124,9 +125,9 @@
       ;; Bring the end of the pause (a minute away) forward.
       (let ((timer approve-api-queue--timer))
         (cancel-timer timer)
-        (timer-set-time timer (time-add nil 0.01))
+        (timer-set-time timer (current-time))
         (timer-activate timer))
-      (sleep-for 0.05)
+      (approve-test-wait-for (lambda () (null approve-api-queue--timer)))
       (expect (test-approve-api-queue--names) :to-equal '("m1" "m2"))))
 
   (it "clears waiting mutations, cancelling them, while the running one finishes"

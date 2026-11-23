@@ -174,6 +174,7 @@
       (expect (approve-api-error-message failed) :to-equal "Not Found")))
 
   (it "does not answer an aborted request"
+    (spy-on 'run-at-time :and-call-through)
     (let* ((transport (approve-dev-make-replay-transport
                        (list test-approve-dev--scenario)))
            answered
@@ -182,9 +183,12 @@
                                  :variables '((owner . "acme") (name . "rocket")
                                               (number . 7))
                                  :on-success (lambda (&rest _) (setq answered t))
-                                 :on-failure (lambda (&rest _) (setq answered t))))))
+                                 :on-failure (lambda (&rest _) (setq answered t)))))
+           ;; The timer that would answer.
+           (timer (spy-context-return-value (spy-calls-most-recent 'run-at-time))))
+      (expect (memq timer timer-list) :to-be-truthy)
       (funcall abort)
-      (sleep-for 0.05)
+      (expect (memq timer timer-list) :to-be nil)
       (expect answered :to-be nil))))
 
 (describe "approve-dev-make-recording-transport"

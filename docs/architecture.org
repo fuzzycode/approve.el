@@ -710,9 +710,9 @@ supplies its own parts (the ✱ of F00) and nothing else:
 - The log redacts =Authorization= headers and tokens.
 
 * Speed
-Budgets, measured with fixtures (=approve-dev-benchmark=) in Phase 1 and kept
-in CI as soft checks (=tests/test-speed.el= fails only past six times a
-budget).  Measured 2026-11-08, byte-compiled, Emacs 31.1 on an Apple M-series
+Budgets, measured with fixtures (=approve-dev-benchmark=) in Phase 1 and
+remeasured by hand after a change that may slow drawing: no test depends on
+how fast the machine is.  Measured 2026-11-08, byte-compiled, Emacs 31.1 on an Apple M-series
 laptop, mean of 20 runs after a warm-up, garbage collection included
 (remeasured 2026-11-09, after the redraw started detaching the old sections'
 markers and hiding the bodies of collapsed sections):

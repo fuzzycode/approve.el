@@ -12,6 +12,7 @@
 
 (require 'buttercup)
 (require 'approve-api)
+(require 'approve-test-helpers "helpers")
 
 ;;; Fake transport
 
@@ -329,7 +330,7 @@
           received)
       (approve-api-rest "GET" "/x" :errorback (lambda (err) (setq received err)))
       (expect received :to-be nil)
-      (sleep-for 0.02)
+      (approve-test-wait-for (lambda () received))
       (expect (car received) :to-be 'approve-api-error)
       (expect (approve-api-error-message received) :to-match "Wrong type argument")))
 
@@ -340,7 +341,7 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
           (approve-api-timeout nil)
           received)
       (approve-api-rest "GET" "/x" :errorback (lambda (err) (setq received err)))
-      (sleep-for 0.02)
+      (approve-test-wait-for (lambda () received))
       (expect (car received) :to-be 'approve-api-unauthorized)
       (expect (approve-api-error-message received) :to-match "token .* does not exist")))
 
@@ -351,7 +352,7 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
           (approve-api-timeout nil)
           received)
       (approve-api-rest "GET" "/x" :errorback (lambda (err) (setq received err)))
-      (sleep-for 0.02)
+      (approve-test-wait-for (lambda () received))
       (expect (car received) :to-be 'approve-api-unauthorized)
       (expect (approve-api-error-message received)
               :to-match "\\`Could not read the token: .*Decryption failed")))
@@ -366,7 +367,7 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
                            (error "no-such-host.invalid/443 nodename nor servname provided, or not known")))
         (let ((approve-api-transport (lambda (_) (signal (car condition) (cdr condition)))))
           (approve-api-rest "GET" "/x" :errorback (lambda (err) (push err received)))))
-      (sleep-for 0.02)
+      (approve-test-wait-for (lambda () (= (length received) 3)))
       (expect (mapcar #'car received)
               :to-equal '(approve-api-network-error approve-api-network-error
                           approve-api-network-error))
@@ -405,7 +406,7 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
         (approve-api-rest "GET" "/slow" :timeout 0.01
                           :callback (lambda (_) (setq answers (1+ answers)))
                           :errorback (lambda (err) (push err errors)))
-        (sleep-for 0.05)
+        (approve-test-wait-for (lambda () errors))
         (expect (length errors) :to-equal 1)
         (expect (car (car errors)) :to-be 'approve-api-timeout)
         (expect test-approve-api--abort-calls :to-equal 1)
@@ -418,10 +419,12 @@ See https://docs.magit.vc/ghub/Getting-Started.html")))
   (it "cancels the timer when the answer comes first"
     (test-approve-api--with-fake
       (let ((errors nil))
-        (approve-api-rest "GET" "/fast" :timeout 0.02
+        (approve-api-rest "GET" "/fast" :timeout 30
                           :errorback (lambda (err) (push err errors)))
-        (test-approve-api--succeed '((ok . t)))
-        (sleep-for 0.05)
+        (let ((timer (approve-api--request-timer (car approve-api--in-flight))))
+          (expect (memq timer timer-list) :to-be-truthy)
+          (test-approve-api--succeed '((ok . t)))
+          (expect (memq timer timer-list) :to-be nil))
         (expect errors :to-be nil)
         (expect test-approve-api--abort-calls :to-equal 0)))))
 

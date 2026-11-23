@@ -146,6 +146,11 @@ and what goes to GitHub.
   fixtures are synthetic, built by =tests/fixtures/generate.el= in the same
   format.
 - No test touches the network or the user's config (=emacs -Q= in batch).
+- No test depends on timing: a slow or busy machine passes the same specs.
+  Wait for the event with =approve-test-wait-for= (its limit only stops a
+  hung test), never =sleep-for=; check that a timer is cancelled instead of
+  waiting to see it not fire; and set or spy what a delay is computed from.
+  Speed is measured by hand with =approve-dev-benchmark=, never in a spec.
 - Development helpers (=approve-dev.el=) are not packaged.  The parts tests
   rely on (fixture files, replay, recording) have tests of their own.
 
