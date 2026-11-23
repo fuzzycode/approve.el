@@ -72,8 +72,8 @@ mapping.</p>
 <p><span class="m">Status</span>     <span class="er"><i data-i="changes-requested"></i> Changes requested</span> <span class="d">·</span> <span class="ok"><i data-i="check-success"></i> No conflicts</span></p>
 <p><span class="m">Issues</span>     <span class="ok"><i data-i="issue"></i></span> <span class="link">#1200</span> <span class="d">·</span> <span class="m">Milestone</span> <i data-i="milestone"></i> v0.3</p>
 <p></p>
-<p>  <span class="d"><i data-i="viewed"></i></span> <span class="m"><i data-i="file-modified"></i></span> lisp/approve-api.el</p>
-<p>  <span class="m"><i data-i="unviewed"></i></span> <span class="ok"><i data-i="file-added"></i></span> lisp/approve-retry.el</p>
+<p>  <span class="d"><i data-i="viewed"></i></span> <span class="wa"><i data-i="file-modified"></i></span> lisp/approve-api.el</p>
+<p>  <i data-i="unviewed"></i> <span class="ok"><i data-i="file-added"></i></span> lisp/approve-retry.el</p>
 <p>  <span class="wa"><i data-i="dismissed"></i></span> <span class="pi"><i data-i="file-renamed"></i></span> lisp/{approve-gql.el → approve-graphql.el}</p>
 <p></p>
 <p>  <i data-i="commented"></i> <span class="u">@bob</span> commented  <span class="ok"><i data-i="approved"></i></span> <span class="u">@bob</span> <span class="ok">approved</span></p>
@@ -99,10 +99,10 @@ window.approveBeforeIcons = function () {
     ["closed", "PR is closed", "er"], ["approved", "Reviewer approved", "ok"],
     ["changes-requested", "Reviewer requested changes", "er"], ["commented", "Reviewer commented", ""],
     ["requested", "Review requested, not given yet", "d"], ["viewed", "File marked viewed", "ok"],
-    ["unviewed", "File not viewed", "m"], ["dismissed", "Viewed, but changed since", "wa"],
-    ["file-added", "File added", "ok"], ["file-modified", "File modified", "m"],
+    ["unviewed", "File not viewed", ""], ["dismissed", "Viewed, but changed since", "wa"],
+    ["file-added", "File added", "ok"], ["file-modified", "File modified", "wa"],
     ["file-deleted", "File deleted", "er"], ["file-renamed", "File renamed", "pi"],
-    ["file-copied", "File copied", "pi"], ["file-changed", "File mode or type changed", "m"],
+    ["file-copied", "File copied", "pi"], ["file-changed", "File mode or type changed", "wa"],
     ["check-success", "Check passed", "ok"], ["check-failure", "Check failed", "er"],
     ["check-pending", "Check running / queued", "wa"], ["check-skipped", "Check skipped or neutral", "d"],
     ["pending-comment", "Your pending comment", "wa"],

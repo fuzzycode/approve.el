@@ -1350,6 +1350,8 @@ inherit:
 | =approve-thread-border=                          | =shadow=                                     | Thread box lines          |
 | =approve-resolved= / =approve-outdated=          | =shadow= / =warning=                         | Thread states             |
 | =approve-new= / =approve-dismissed=              | =warning=                                    | New since your review     |
+| =approve-viewed= / =approve-unviewed=            | =shadow= / =default=                         | Viewed marks of files     |
+| =approve-file-modified=                          | =diff-indicator-changed=                     | Icon of a modified file   |
 | =approve-updated=                                | =approve-new=                                | Changed on GitHub (D23)   |
 | =approve-filter=                                 | =magit-section-heading-selection=            | Filters on (D54)          |
 | =approve-diff-added/removed/context=             | =magit-diff-added/removed/context=           | Diff lines                |

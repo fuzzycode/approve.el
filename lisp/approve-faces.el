@@ -281,8 +281,10 @@ Only the label is coloured; the comment itself has no background."
   :group 'approve-faces)
 
 (defface approve-unviewed
-  '((t :inherit shadow))
-  "Face of the mark of files not viewed yet."
+  '((t :inherit default))
+  "Face of the mark of files not viewed yet.
+They still need the viewer, so the mark is not dim; viewed files'
+is (`approve-viewed')."
   :group 'approve-faces)
 
 (defface approve-dismissed
@@ -296,9 +298,10 @@ Only the label is coloured; the comment itself has no background."
   :group 'approve-faces)
 
 (defface approve-file-modified
-  '((t :inherit shadow))
+  '((t :inherit diff-indicator-changed))
   "Face of the icon of a modified file, the usual change.
-A change of mode or type uses it too."
+A change of mode or type uses it too.  It is the colour of changed
+lines in the file view (`approve-file-change-changed')."
   :group 'approve-faces)
 
 (defface approve-file-deleted
