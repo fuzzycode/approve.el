@@ -657,10 +657,12 @@ here as their global modes would."
 
 (defun approve-file--show-text (owner view text line)
   "Show TEXT in the current buffer, the version VIEW of a changed file.
-OWNER is the PR buffer whose store the view shares; VIEW is the
-plist of `approve-context-file'.  Point goes to LINE, or to the
-first change when LINE is nil, in every window that shows it."
-  (setq buffer-undo-list t)
+OWNER is the PR buffer whose store the view shares, and whose
+directory it takes; VIEW is the plist of `approve-context-file'.
+Point goes to LINE, or to the first change when LINE is nil, in every
+window that shows it."
+  (setq buffer-undo-list t
+        default-directory (buffer-local-value 'default-directory owner))
   (remove-overlays (point-min) (point-max) 'approve-file t)
   (let ((inhibit-read-only t))
     (erase-buffer)

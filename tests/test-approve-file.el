@@ -250,6 +250,13 @@ SHOWN is non-nil when the threads are drawn, not only the bubble."
           (expect (line-number-at-pos (window-point)) :to-be 15)))
       (expect (test-file--blobs) :to-equal (list (concat test-file--head ":" test-file--path)))))
 
+  (it "is in its PR buffer's directory (D56)"
+    (test-file--with-pr
+      (setq default-directory (file-name-as-directory temporary-file-directory))
+      (with-current-buffer (test-file--open "RIGHT" 15)
+        (expect default-directory
+                :to-equal (file-name-as-directory temporary-file-directory)))))
+
   (it "opens a removed line in the base, and a file at its first change"
     (test-file--with-pr
       (test-file--goto-diff-line "LEFT" 13)

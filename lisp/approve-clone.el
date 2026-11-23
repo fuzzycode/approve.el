@@ -72,6 +72,10 @@
 ;; - `approve-clone-fetch-pull-request' fetches a pull request's head
 ;;   into every clone of its repository, as refs/pullreqs/NUMBER, so
 ;;   its commits are found there (decision D53).
+;; - `approve-clone-pull-request-directory' gives a PR buffer the
+;;   clone of its repository as its directory, so the user's project
+;;   tools (project.el, a file tree, search) work on the pull request's
+;;   code (decision D56).
 ;;
 ;; Layer rules: this is the operations layer, and only the clone
 ;; modules touch a clone.  It reads clones through Magit, and changes
@@ -902,6 +906,20 @@ Example:
                  (funcall callback (mapcar (lambda (clone) (assoc clone results)) clones))
                (error (approve-log-condition "After fetching a pull request" err))))))))
     clones))
+
+;;; A pull request buffer's directory
+
+(defun approve-clone-pull-request-directory (pr)
+  "Return the clone of the repository of PR, for its PR buffer, or nil.
+PR is a plist with :host, :owner, :repo and :number; :host is
+github.com when absent.  The clone is the first of
+`approve-clone-repository-remotes': of a clone and its worktrees,
+the clone itself.  nil when the user has no clone of it.  For
+`approve-pr-directory-functions' (decision D56): it reads the
+clones' config files, without git."
+  (caar (approve-clone-repository-remotes
+         (list :host (or (plist-get pr :host) "github.com")
+               :owner (plist-get pr :owner) :repo (plist-get pr :repo)))))
 
 (provide 'approve-clone)
 

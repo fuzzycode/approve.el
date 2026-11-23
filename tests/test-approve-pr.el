@@ -94,6 +94,48 @@
       (expect (length (approve-pr-recent)) :to-be 50)
       (expect (plist-get (car (approve-pr-recent)) :number) :to-be 59))))
 
+(describe "A PR buffer's directory (D56)"
+  :var (elsewhere)
+  (before-each
+    (setq elsewhere (file-name-as-directory (make-temp-file "approve-elsewhere-" t))))
+  (after-each
+    (delete-directory elsewhere t))
+
+  (it "is the home directory, not the directory of the buffer that was current"
+    (let ((approve-pr-directory-functions nil))
+      (with-temp-buffer
+        (setq default-directory elsewhere)
+        (let ((buffer (approve-pr-setup-buffer (approve-test-pr-plist "small"))))
+          (unwind-protect
+              (expect (buffer-local-value 'default-directory buffer)
+                      :to-equal (expand-file-name "~/"))
+            (kill-buffer buffer))))))
+
+  (it "is the first directory approve-pr-directory-functions give for the PR"
+    (let* ((asked nil)
+           (approve-pr-directory-functions
+            (list (lambda (pr) (push pr asked) nil)
+                  (lambda (_pr) (directory-file-name elsewhere))
+                  (lambda (_pr) (error "Not called"))))
+           (buffer (approve-pr-setup-buffer (approve-test-pr-plist "small"))))
+      (unwind-protect
+          (progn
+            (expect (buffer-local-value 'default-directory buffer) :to-equal elsewhere)
+            (expect asked :to-equal (list (approve-test-pr-plist "small"))))
+        (kill-buffer buffer))))
+
+  (it "passes over a function that fails, and logs it"
+    (spy-on 'approve-log-condition)
+    (let* ((approve-pr-directory-functions (list (lambda (_pr) (error "Broken"))))
+           (buffer (let ((debug-on-error nil))
+                     (approve-pr-setup-buffer (approve-test-pr-plist "small")))))
+      (unwind-protect
+          (progn
+            (expect (buffer-local-value 'default-directory buffer)
+                    :to-equal (expand-file-name "~/"))
+            (expect 'approve-log-condition :to-have-been-called))
+        (kill-buffer buffer)))))
+
 (describe "Loading a PR"
   (it "draws a skeleton that says what is loading"
     (approve-test-with-fixture "medium"

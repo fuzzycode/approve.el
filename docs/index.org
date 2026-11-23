@@ -251,6 +251,12 @@ task only needs the files it touches.
   follows it as it is resized; =approve-page-width= is nil by default
   and caps the page when set.  A diff or file view line that leaves its
   speech bubble no room gets it on a row of its own.
+- Found by the author the same day ([[file:decisions.org::*D56 A buffer's directory: the pull request's clone, else home][D56]]): Approve's buffers took
+  the directory of the buffer current when they were made, so a
+  project tree showed a note's directory in the dashboard's workspace.
+  A PR buffer is now in the first clone of its repository, else the
+  home directory (=approve-pr-directory-functions=); the dashboard and
+  the log are in the home directory, a file view in its PR buffer's.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

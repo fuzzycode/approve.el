@@ -72,7 +72,15 @@
       (approve-log 'error "x")
       (with-current-buffer approve-log-buffer-name
         (expect major-mode :to-be 'approve-log-mode)
-        (expect buffer-read-only :to-be-truthy)))))
+        (expect buffer-read-only :to-be-truthy))))
+
+  (it "makes its buffer in the home directory, whatever buffer logs first"
+    (let ((approve-log-level 'error))
+      (with-temp-buffer
+        (setq default-directory (file-name-as-directory temporary-file-directory))
+        (approve-log 'error "x"))
+      (expect (buffer-local-value 'default-directory (get-buffer approve-log-buffer-name))
+              :to-equal (expand-file-name "~/")))))
 
 (describe "approve-log-redact"
   (it "redacts the secret of an Authorization header in any notation"

@@ -83,6 +83,7 @@
 (add-hook 'approve-pr-mode-hook #'approve-feedback-setup-pr-buffer)
 (add-hook 'approve-changes-hook #'approve-feedback-follow-changes)
 (add-hook 'approve-pr-clear-cache-functions #'approve-clone-clear-cache)
+(add-hook 'approve-pr-directory-functions #'approve-clone-pull-request-directory)
 
 ;;;###autoload
 (defalias 'approve-add-section-hook #'magit-add-section-hook

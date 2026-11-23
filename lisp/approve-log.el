@@ -121,9 +121,11 @@ Example:
       (length (memq approve-log-level approve-log-levels))))
 
 (defun approve-log--buffer ()
-  "Return the log buffer, creating it if needed."
+  "Return the log buffer, creating it if needed.
+It is in the home directory, as it belongs to no repository."
   (or (get-buffer approve-log-buffer-name)
-      (with-current-buffer (get-buffer-create approve-log-buffer-name)
+      (with-current-buffer (let ((default-directory (expand-file-name "~/")))
+                             (get-buffer-create approve-log-buffer-name))
         (approve-log-mode)
         (current-buffer))))
 

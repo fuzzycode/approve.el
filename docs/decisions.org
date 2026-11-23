@@ -305,6 +305,53 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   request's commits into its clones, as D36 allows; the clone's state
   "missing" is then gone.
 
+** D56 A buffer's directory: the pull request's clone, else home
+- Status :: accepted (2026-11-23, by the author, after a project tree
+  showed the wrong project in the dashboard's workspace)
+- Found :: Approve made its buffers with =get-buffer-create=, and a new
+  buffer takes the =default-directory= of the buffer current then.  The
+  dashboard and every PR buffer opened from it were in =~/notes/=, the
+  directory of a note being edited.  The author's =treemacs=, with
+  =treemacs-project-follow-mode=, asks project.el for the project and
+  falls back to =default-directory=, so in the dashboard's own
+  workspace, which has no project, the tree showed =~/notes=.  Opened
+  from a buffer in a git repository, project.el would have found that
+  repository, and the tree would show it in every workspace.  Doom's
+  treemacs starts a workspace's tree the same way.  Making the tree
+  follow only files' buffers would fix the first case, not the second:
+  the fault is the inherited directory.  Finding the clone among the
+  37 of =~/workspace= takes 6.5 ms, 5.3 ms when there is none.
+- Decision ::
+  - A new PR buffer is in the first clone of the pull request's
+    repository: the first of =approve-clone-directories= ([[*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]) whose
+    remotes name it ([[*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]), the clone itself rather than one of its
+    worktrees.  Without a clone it is in the home directory.  It is
+    never in the directory of the buffer that was current: what the
+    user's project tools find there (project.el, a file tree, search,
+    Magit) is then the pull request's code, or nothing.
+  - The core offers =approve-pr-directory-functions=, called with the
+    pull request; =approve.el= puts =approve-clone-pull-request-directory=
+    there, so the core never requires the clone module ([[*D36 No clone needed; a local clone adds to it][D36]]).  A
+    function that fails is logged and passed over.
+  - The buffers of no repository, the dashboard and the log, are in
+    the home directory; the dashboard is put back there each time it
+    is shown.  A file view is in its PR buffer's directory; input
+    buffers take the directory of the buffer they are written from.
+  - The directory is chosen when the buffer is made, before the pull
+    request is loaded, so it is the base repository's clone.  The
+    worktree that has the pull request's branch checked out would be
+    better; it is known only once the PR has loaded, and may need a
+    question when several have it ([[*D45 A branch has the PR; its threads are placed by a diff of the text (SP8)][D45]]), so it is left for later.
+  - What acts where the current buffer is acts on the clone from a PR
+    buffer: =M-x approve-clone-pick-pull-request= there picks among the
+    pull requests of the branch the clone has checked out.
+- Why :: A buffer's directory is what Emacs and the user's packages
+  read to know where it belongs.  An inherited one is a guess that is
+  most often wrong, and wrong silently, in another tool.  The clone is
+  the right answer when there is one, and the home directory claims no
+  project, as approve-api.el already makes its requests from there.
+  The clone is found from config files, without git, once a PR buffer.
+
 * UI
 ** D04 Buffers are magit-section trees built from section hooks
 - Status :: accepted (project.org)

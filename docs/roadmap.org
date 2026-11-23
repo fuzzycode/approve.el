@@ -548,6 +548,13 @@ Implements F19.  Mockups: notifications, the mode-line count.
       when drawn; =approve-page-width= is nil by default and caps the
       page when set.  A line that leaves its bubble no room gets it on a
       row of its own, in the diff and the file view.
+- [X] A buffer's directory ([[file:decisions.org::*D56 A buffer's directory: the pull request's clone, else home][D56]]), added and done (2026-11-23)
+      after the author found a project tree showing a note's directory
+      in the dashboard's workspace: Approve's buffers no longer take the
+      directory of the buffer current when they are made.  A PR buffer
+      is in the first clone of its repository, else the home directory;
+      the dashboard and the log are in the home directory, a file view
+      in its PR buffer's.
 - [ ] Move the work to =main=: merge =feature/revamp= (added 2026-11-17, at
       the author's request).  The README and the user's documentation
       are written after it, on =main=.

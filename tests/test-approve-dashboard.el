@@ -405,6 +405,23 @@ No pull request was opened before; the dashboard is killed after."
         (test-dashboard--settle)
         (expect (length (test-dashboard--searches-sent)) :to-be 4))))
 
+  (it "is in the home directory, whatever buffer it is opened from (D56)"
+    (test-dashboard--with test-dashboard--two
+      (let ((elsewhere (file-name-as-directory temporary-file-directory)))
+        (with-temp-buffer
+          (setq default-directory elsewhere)
+          (expect (buffer-local-value 'default-directory (approve-dashboard))
+                  :to-equal (expand-file-name "~/")))
+        (test-dashboard--settle)
+        ;; A dashboard made before keeps no other directory.
+        (with-current-buffer approve-dashboard-buffer-name
+          (setq default-directory elsewhere))
+        (with-temp-buffer
+          (setq default-directory elsewhere)
+          (expect (buffer-local-value 'default-directory (approve-dashboard))
+                  :to-equal (expand-file-name "~/")))
+        (test-dashboard--settle))))
+
   (it "opens a row's pull request with RET, and folds its list with TAB"
     (test-dashboard--with test-dashboard--two
       (test-dashboard--open)

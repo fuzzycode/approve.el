@@ -61,7 +61,8 @@ Rules:
 - Only the modules for a local clone touch one (its files, branch, git), and
   the core never requires them: every other module works without a clone
   (D36).  =approve.el= requires them and puts their functions on the hooks
-  the core offers, such as =approve-visit-commit-functions= (D37), and the
+  the core offers, such as =approve-visit-commit-functions= (D37) and
+  =approve-pr-directory-functions= (D56), and the
   core's buffer-local functions say what a clone's buffer holds
   (=approve-context-function=, =approve-diff-range-positions-function=).
   =approve-feedback.el= sits at the top, as it arranges the core's commands
@@ -99,7 +100,7 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 | =approve-thread.el=        | Thread and comment sections (also used in the conversation)                     |     1 |
 | =approve-context.el=       | =approve-context-at-point=: what is under point or in the region                |     1 |
 | =approve-pr.el=            | =approve-pr-mode=, URL parsing, open/refresh, layouts, redraw, point restore,   |     1 |
-|                            | header line, the PRs opened in the session                                      |       |
+|                            | header line, the PRs opened in the session, a new buffer's directory (D56)      |       |
 | =approve-changes.el=       | Change detection (D23): the check, comparing it with the store, the header      |     2 |
 |                            | line's notice, checks on selection and focus, polling, also for buffers that    |       |
 |                            | share a PR buffer's store, and a hook for them                                  |       |
@@ -143,7 +144,7 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | read from the config; a buffer's branch and its place on GitHub (kept a session |       |
 |                            | for each clone and branch); a branch's PRs, the one shown and picking another;  |       |
 |                            | the clone's state; a file's text at a commit; a PR's worktree; a PR fetched     |       |
-|                            | into its clones (=refs/pullreqs/N=)                                             |       |
+|                            | into its clones (=refs/pullreqs/N=); a PR buffer's directory, its clone (D56)   |       |
 | =approve-feedback.el=      | =approve-feedback-mode=: a PR's threads in the buffers of its clone, what is at |     7 |
 |                            | point there, the actions on them (the core's commands in its map), its          |       |
 |                            | dispatch; ways to and from the PR buffer (=f= there, =RET= and =n= =p= here);   |       |

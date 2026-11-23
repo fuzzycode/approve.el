@@ -836,6 +836,43 @@ git's insteadOf turns into the bare repository's path."
       (expect (approve-clone-repository-remotes test-clone--pr-base)
               :to-equal (list (cons two "upstream") (cons tree "origin"))))))
 
+(describe "approve-clone-pull-request-directory"
+  (it "is the clone of the pull request's repository, github.com when no host is given"
+    (test-clone--with-worktrees
+      (expect (approve-clone-pull-request-directory
+               '(:host "github.com" :owner "them" :repo "project" :number 7))
+              :to-equal two)
+      (expect (approve-clone-pull-request-directory '(:owner "Them" :repo "Project" :number 7))
+              :to-equal two)
+      (expect (approve-clone-pull-request-directory
+               '(:host "github.com" :owner "you" :repo "project" :number 7))
+              :to-be nil)))
+
+  (it "is the clone itself rather than its worktrees, listed first"
+    (test-clone--with-worktrees
+      (let ((approve-clone-directories
+             (list (cons (expand-file-name "trees" test-clone--root) 1)
+                   (cons test-clone--root 1))))
+        (expect (approve-clone-pull-request-directory
+                 '(:host "github.com" :owner "me" :repo "project" :number 7))
+                :to-equal one))))
+
+  (it "is where approve opens the pull request's buffer, else the home directory"
+    (test-clone--with-worktrees
+      (with-temp-buffer
+        (setq default-directory one)
+        (let ((buffer (approve-pr-setup-buffer
+                       '(:host "github.com" :owner "them" :repo "project" :number 7)))
+              (other (approve-pr-setup-buffer
+                      '(:host "github.com" :owner "you" :repo "project" :number 7))))
+          (unwind-protect
+              (progn
+                (expect (buffer-local-value 'default-directory buffer) :to-equal two)
+                (expect (buffer-local-value 'default-directory other)
+                        :to-equal (expand-file-name "~/")))
+            (kill-buffer buffer)
+            (kill-buffer other)))))))
+
 (describe "approve-clone-fetch-pull-request"
   (it "fetches GitHub's ref of the head into refs/pullreqs, once a git directory"
     (test-clone--with-github

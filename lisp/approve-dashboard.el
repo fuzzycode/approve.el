@@ -549,10 +549,12 @@ Its lists come from `approve-dashboard-sections';
   "Show the dashboard of pull requests, every list loaded anew (flow F01).
 The lists are those of `approve-dashboard-sections': searches on
 GitHub, and the pull requests opened in this Emacs session.  RET on
-a row opens its pull request.  Return the buffer."
+a row opens its pull request.  The buffer is in the home directory,
+as it belongs to no repository (decision D56).  Return the buffer."
   (interactive)
   (let ((buffer (get-buffer-create approve-dashboard-buffer-name)))
     (with-current-buffer buffer
+      (setq default-directory (expand-file-name "~/"))
       (unless (derived-mode-p 'approve-dashboard-mode)
         (approve-dashboard-mode)))
     ;; Shown first, so that its rows fit the window from the start.

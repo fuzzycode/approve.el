@@ -61,6 +61,7 @@
 (require 'magit-section)
 (require 'approve-api)
 (require 'approve-api-url)
+(require 'approve-log)
 (require 'approve-model)
 (require 'approve-session)
 (require 'approve-queries)
@@ -151,6 +152,13 @@ forget what the data being loaded makes stale.")
 (defvar approve-pr-clear-cache-functions (list #'approve-html-clear-cache)
   "Functions that forget session caches, run by \\[universal-argument] \\[approve-pr-refresh].")
 
+(defvar approve-pr-directory-functions nil
+  "Functions that give a new PR buffer its `default-directory'.
+Each is called with the PR, a plist with :host, :owner, :repo and
+:number, and returns a directory or nil.  The first directory is
+taken, else the home directory (`approve-pr-directory', decision
+D56).  approve.el puts the PR's clone there.")
+
 (define-derived-mode approve-pr-mode magit-section-mode "Approve"
   "Major mode of a buffer showing one GitHub pull request.
 The buffer is read-only and drawn from data loaded from GitHub;
@@ -219,14 +227,37 @@ Example:
          (eq (buffer-local-value 'major-mode buffer) 'approve-pr-mode)
          buffer)))
 
+(defun approve-pr-directory (pr)
+  "Return the `default-directory' of a new PR buffer for PR.
+PR is a plist with :host, :owner, :repo and :number.  It is the first
+directory `approve-pr-directory-functions' give, else the home
+directory: never the directory of the buffer that was current, which
+has nothing to do with the PR (decision D56).  A function that fails
+is logged and passed over."
+  (let ((default-directory (expand-file-name "~/")))
+    (file-name-as-directory
+     (expand-file-name
+      (or (run-hook-wrapped
+           'approve-pr-directory-functions
+           (lambda (function)
+             (condition-case-unless-debug err
+                 (funcall function pr)
+               (error (approve-log-condition "The directory of a PR buffer" err)
+                      nil))))
+          default-directory)))))
+
 (defun approve-pr-setup-buffer (pr)
   "Return a new PR buffer for PR, with its skeleton drawn.
-PR is a plist with :host, :owner, :repo and :number.  Nothing is
-loaded yet; see `approve-pr-load'."
-  (let ((buffer (get-buffer-create
+PR is a plist with :host, :owner, :repo and :number.  Its
+`default-directory' is the PR's clone, else the home directory
+\(`approve-pr-directory').  Nothing is loaded yet; see
+`approve-pr-load'."
+  (let ((directory (approve-pr-directory pr))
+        (buffer (get-buffer-create
                  (approve-pr-buffer-name (plist-get pr :owner) (plist-get pr :repo)
                                          (plist-get pr :number)))))
     (with-current-buffer buffer
+      (setq default-directory directory)
       (approve-pr-mode)
       (approve-model-init (list :host (or (plist-get pr :host) "github.com")
                                 :owner (plist-get pr :owner)
