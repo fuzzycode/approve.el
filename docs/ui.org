@@ -140,6 +140,12 @@ Notes:
 - =RET= on a commit, in the commits or a push, shows it in Magit's revision
   buffer from a local clone that has it (=approve-clone-directories=,
   [[file:decisions.org::*D37 Clones are found where Magit lists them; a commit opens in Magit][D37]]), else on GitHub.
+- A commit's line has its headline whole.  GitHub sends a headline of up
+  to 72 columns, the most Git's conventions allow, as it is, and cuts a
+  longer one itself (to 69 columns and …); the headline column is as wide
+  as the longest, and the author (at most 20 columns, else cut with …)
+  and date columns fit theirs.  A window too narrow for the line shows
+  its start: the headline, the author and date past the edge.
 - What came after your last review (=viewerLatestReview=) is new
   ([[file:decisions.org::*D44 What is new since your last review: other people's comments, after it][D44]]): the commits after its commit, marked =┃= and "new", and
   the comments and reviews others published after it, which say "new"
@@ -798,10 +804,10 @@ the labels added, then those removed.
 * Commits section with a range
 #+begin_example
  ▾ Commits (4)                             showing: since your last review · V change
-     a1b2c3d  Add retry option                   @alice   3 days ago     ✓
-     b2c3d4e  Fix typo                           @alice   3 days ago     ✓   ← your review
-   ┃ d4e5f6a  Handle 502 responses               @alice   1 day ago      ✗   new
-   ┃ e5f6a7b  Add tests                          @alice   5 hours ago    ◐   new
+     a1b2c3d  Add retry option      @alice  3 days ago   ✓
+     b2c3d4e  Fix typo              @alice  3 days ago   ✓   ← your review
+   ┃ d4e5f6a  Handle 502 responses  @alice  1 day ago    ✗   new
+   ┃ e5f6a7b  Add tests             @alice  5 hours ago  ◐   new
 #+end_example
 
 When a range is active, the Diff section heading says so ("Diff · since your

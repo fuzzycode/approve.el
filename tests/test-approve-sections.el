@@ -193,7 +193,39 @@
         (expect (nth 3 lines) :to-match "\\`  ┃ 71cc73d  Address review comments .* new\\'")))
 
     (it "carries each commit's oid"
-      (expect (plist-get (test-sections--thing-at "dd4ac8a") :kind) :to-be 'commit)))
+      (expect (plist-get (test-sections--thing-at "dd4ac8a") :kind) :to-be 'commit))
+
+    (it "shows a headline of 72 columns whole, the columns fitting the longest"
+      (let* ((approve-render-now approve-test-now)
+             (long (concat "fix(clone): fetch into the clone itself, "
+                           "not whichever worktree is first"))
+             (commits `(((oid . "a") (abbreviatedOid . "aaaaaaa")
+                         (messageHeadline . ,long)
+                         (author (name . "Ann Example"))
+                         (committedDate . "2026-10-04T10:00:00Z"))
+                        ((oid . "b") (abbreviatedOid . "bbbbbbb")
+                         (messageHeadline . "Fix typo")
+                         (author (user (login . "bob")))
+                         (committedDate . "2026-10-01T12:00:00Z")
+                         (statusCheckRollup (state . "SUCCESS")))))
+             (columns (approve-sections--commit-columns commits))
+             (lines (mapcar (lambda (commit)
+                              (substring-no-properties
+                               (approve-sections--commit-line commit columns nil nil)))
+                            commits)))
+        (expect (length long) :to-equal 72)
+        (expect columns :to-equal '(72 11 11))
+        (expect (nth 0 lines) :to-equal (concat "  aaaaaaa  " long "  Ann Example  2 hours ago"))
+        (expect (nth 1 lines)
+                :to-equal (concat "  bbbbbbb  " (approve-render-pad "Fix typo" 72)
+                                  "  @bob         3 days ago   "
+                                  (substring-no-properties
+                                   (approve-sections--rollup-icon "SUCCESS"))))))
+
+    (it "cuts an author longer than 20 columns"
+      (let ((columns (approve-sections--commit-columns
+                      '(((author (name . "A Very Long Example Name Indeed")))))))
+        (expect (nth 1 columns) :to-equal 20))))
 
   (describe "files"
     (it "sums the files up in the heading"

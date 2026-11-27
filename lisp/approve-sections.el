@@ -749,24 +749,51 @@ The checks themselves load when the section is first expanded."
   "Return the author of COMMIT: the GitHub account, else the Git name."
   (approve-render-git-actor (alist-get 'author commit)))
 
-(defun approve-sections--commit-line (commit reviewed new)
-  "Return the line of COMMIT; REVIEWED if the viewer reviewed it, NEW if after."
-  (let-alist commit
-    (concat (if new (approve-face "┃ " 'approve-new) "  ")
-            (approve-thing (approve-face .abbreviatedOid 'approve-hash)
-                           (list :kind 'commit :oid .oid :url .url))
-            "  "
-            (approve-render-pad (approve-render-truncate (or .messageHeadline "") 44) 46)
-            (approve-render-pad (approve-render-truncate (approve-sections--commit-author commit)
-                                                         15)
-                                16)
-            (approve-render-pad (approve-render-date .committedDate) 14)
-            (if .statusCheckRollup
-                (approve-sections--rollup-icon .statusCheckRollup.state)
-              " ")
-            (cond (reviewed (approve-face "   ← your review" 'approve-dim))
-                  (new (approve-face "   new" 'approve-new))
-                  (t "")))))
+(defconst approve-sections--commit-author-width 20
+  "The most columns the author of a commit takes in the commits.")
+
+(defun approve-sections--commit-columns (commits)
+  "Return the widths of the columns of COMMITS: (HEADLINE AUTHOR DATE).
+Each fits the longest in its column, AUTHOR up to
+`approve-sections--commit-author-width'.  HEADLINE has no limit of
+its own, so no headline is cut: GitHub sends one of up to 72
+columns, the most Git's conventions allow, whole, and cuts a
+longer one itself, to 69 columns and an ellipsis."
+  (cl-flet ((widest (lambda (column)
+                      (apply #'max 0 (mapcar (lambda (commit)
+                                               (string-width (funcall column commit)))
+                                             commits)))))
+    (list (widest (lambda (commit) (or (alist-get 'messageHeadline commit) "")))
+          (min approve-sections--commit-author-width
+               (widest #'approve-sections--commit-author))
+          (widest (lambda (commit)
+                    (approve-render-relative-time (alist-get 'committedDate commit)))))))
+
+(defun approve-sections--commit-line (commit columns reviewed new)
+  "Return the line of COMMIT; REVIEWED if the viewer reviewed it, NEW if after.
+COLUMNS are the widths of its columns, from
+`approve-sections--commit-columns'."
+  (pcase-let ((`(,headline-width ,author-width ,date-width) columns))
+    (let-alist commit
+      (string-trim-right
+       (concat (if new (approve-face "┃ " 'approve-new) "  ")
+               (approve-thing (approve-face .abbreviatedOid 'approve-hash)
+                              (list :kind 'commit :oid .oid :url .url))
+               "  "
+               (approve-render-pad (or .messageHeadline "") headline-width)
+               "  "
+               (approve-render-pad (approve-render-truncate
+                                    (approve-sections--commit-author commit) author-width)
+                                   author-width)
+               "  "
+               (approve-render-pad (approve-render-date .committedDate) date-width)
+               "  "
+               (if .statusCheckRollup
+                   (approve-sections--rollup-icon .statusCheckRollup.state)
+                 " ")
+               (cond (reviewed (approve-face "   ← your review" 'approve-dim))
+                     (new (approve-face "   new" 'approve-new))
+                     (t "")))))))
 
 (defun approve-insert-commits-section ()
   "Insert the commits, marking those after the viewer's last review."
@@ -776,7 +803,8 @@ The checks themselves load when the section is first expanded."
          (total (or (approve-model-total-count connection)
                     (let-alist (approve-pr-field 'commitCount) .totalCount)))
          (new (approve-sections--new-commits commits))
-         (reviewed (approve-sections--reviewed-oid)))
+         (reviewed (approve-sections--reviewed-oid))
+         (columns (approve-sections--commit-columns commits)))
     (magit-insert-section (approve-commits-section nil t)
       (magit-insert-heading
         (approve-sections-heading
@@ -789,7 +817,8 @@ The checks themselves load when the section is first expanded."
             (dolist (commit commits)
               (let ((oid (alist-get 'oid commit)))
                 (magit-insert-section (approve-commit-section oid)
-                  (insert (approve-sections--commit-line commit (equal oid reviewed) after)
+                  (insert (approve-sections--commit-line commit columns
+                                                         (equal oid reviewed) after)
                           "\n"))
                 (when (and reviewed (equal oid reviewed))
                   (setq after t))))
