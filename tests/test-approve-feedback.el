@@ -1446,7 +1446,21 @@ The buffer the input was for is current after."
           (expect buffer-file-name :to-equal lexer)
           (approve-test-wait-for (lambda () (null approve-feedback--destination)))
           (expect (line-number-at-pos) :to-equal 7)
-          (expect (test-feedback--threads-shown 7) :to-match "┊ removed:"))))))
+          (expect (test-feedback--threads-shown 7) :to-match "┊ removed:")))))
+
+  (it "go through the files in the diff's order"
+    (test-feedback--with-one
+      (test-feedback--start)
+      (let* ((approve-diff-orders (copy-tree approve-diff-orders))
+             (files (approve-feedback--thread-files))
+             (last-file (car (last files))))
+        (expect (length files) :to-be-greater-than 1)
+        (approve-diff-order-register 'last "The last first"
+                                     (lambda (file)
+                                       (if (equal (alist-get 'path file) last-file) 0 1)))
+        (approve-session-put :diff-order 'last)
+        (expect (approve-feedback--thread-files)
+                :to-equal (cons last-file (butlast files)))))))
 
 (describe "Picking a thread in the feedback mode"
   (it "goes to the thread's line in the clone, in this file or another"

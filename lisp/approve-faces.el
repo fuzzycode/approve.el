@@ -338,6 +338,12 @@ what changed since the viewer's last review (decision D23)."
 Such as \"owned by @alice\" in \"filter: owned by @alice\" (decision D54)."
   :group 'approve-faces)
 
+(defface approve-order
+  '((t :inherit approve-filter))
+  "Face of the diff's order, named in its heading when it isn't the default.
+Such as \"headers\" in \"order: headers\" (decision D58)."
+  :group 'approve-faces)
+
 ;;; Threads and the conversation
 
 (defface approve-thread-border

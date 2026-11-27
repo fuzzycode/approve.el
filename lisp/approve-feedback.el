@@ -136,6 +136,7 @@
 (require 'approve-pr)
 (require 'approve-changes)
 (require 'approve-thread)
+(require 'approve-sections)
 (require 'approve-diff)
 (require 'approve-file)
 (require 'approve-nav)
@@ -1657,7 +1658,8 @@ file, the last again."
       (unless (alist-get 'isResolved thread)
         (puthash (alist-get 'path thread) t unresolved)))
     (seq-filter (lambda (path) (gethash path unresolved))
-                (mapcar (lambda (file) (alist-get 'path file)) (approve-pr-files)))))
+                (mapcar (lambda (file) (alist-get 'path file))
+                        (approve-sections-order-files (approve-pr-files))))))
 
 (defun approve-feedback--other-file (forward)
   "Go to the next of the pull request's files with an unresolved thread.

@@ -394,12 +394,12 @@ The list is there only when `approve-pr-sections-hook' has
 
 (defun approve-jump-file (path)
   "Move to the diff of the changed file PATH, read with completion.
-The files the diff's filters hide are not offered."
+The files the diff's filters hide are not offered; the others come
+in the diff's order."
   (interactive
    (list (approve-input-with-submit-key
            (completing-read "File: " (mapcar (lambda (file) (alist-get 'path file))
-                                             (approve-sections-filter-files
-                                              (approve-pr-files)))
+                                             (approve-sections-diff-files))
                             nil t))))
   (approve-nav-goto-file path))
 
@@ -480,7 +480,8 @@ files the diff's filters hide are left out (decision D54)."
          (since (approve-pr-last-review-time))
          (order (delete-dups (append (and first (list first))
                                      (mapcar (lambda (file) (alist-get 'path file))
-                                             (approve-pr-files))
+                                             (approve-sections-order-files
+                                              (approve-pr-files)))
                                      (mapcar (lambda (thread) (alist-get 'path thread))
                                              threads))))
          (sorted (sort (copy-sequence threads)

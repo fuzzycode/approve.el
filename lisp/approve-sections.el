@@ -140,6 +140,63 @@ The largest file fills it."
   :type 'natnum
   :group 'approve)
 
+(defcustom approve-diff-orders
+  '((github "GitHub's order" nil)
+    (headers "Headers before their sources" approve-diff-order-headers-first))
+  "Orders of the diff's files: (NAME DESCRIPTION KEY).
+NAME, a symbol, names the order in `approve-diff-order', in the
+filter menu (\\<approve-pr-mode-map>\\[approve-filter-menu]), whose s puts the diff in the next order,
+and in the diff's heading.  DESCRIPTION says what it does.  KEY is
+nil for GitHub's order, by path, or a function of a changed file,
+an alist with `path', `changeType', `additions', `deletions' and
+`viewerViewedState', that returns its sort key: a number, a
+string, or a list of them compared element by element, numbers by
+`<' and strings by `string<'.  Files with equal keys keep GitHub's
+order.  KEY is called in the PR buffer for each file each time the
+diff draws, so it must be quick and must not call the network; one
+that signals leaves the files in GitHub's order, and its error is
+logged once.
+
+The diff, the file list, the thread picker and the next file of
+the feedback mode go in the order (decision D58).  To put the
+largest files first:
+
+  (defun my-approve-largest-first (file)
+    (- (+ (alist-get \\='additions file) (alist-get \\='deletions file))))
+  (approve-diff-order-register \\='largest \"Largest first\"
+                               #\\='my-approve-largest-first)"
+  :type '(repeat (list (symbol :tag "Name")
+                       (string :tag "Description")
+                       (choice (const :tag "GitHub's order" nil)
+                               (function :tag "Function of a file that returns its key"))))
+  :group 'approve)
+
+(defcustom approve-diff-order 'github
+  "The order of the diff's files a PR buffer starts with.
+The NAME of an order of `approve-diff-orders': `github' (by path,
+as GitHub lists them) or `headers' (a header before the sources
+of its name, `approve-diff-order-extensions').  \\<approve-pr-mode-map>\\[approve-filter-menu] s puts a
+buffer in the next order; the diff's heading names an order that
+isn't this one.  To review headers before their sources:
+
+  (setq approve-diff-order \\='headers)"
+  :type '(symbol :tag "Name of an order of `approve-diff-orders'")
+  :group 'approve)
+
+(defcustom approve-diff-order-extensions
+  '("h" "hh" "hpp" "hxx" "h++" "c" "cc" "cpp" "cxx" "c++" "m" "mm")
+  "Extensions in the order the files of one name come, for `headers'.
+In the order `headers' of `approve-diff-orders', files in one
+directory whose names differ only by these extensions come in
+their order: src/widget.h before src/widget.cpp.  Case is
+ignored; an extension not listed comes after them.  The other
+files keep their order, by path.  To have C++'s alone, with the
+template definitions after their header:
+
+  (setq approve-diff-order-extensions \\='(\"h\" \"hpp\" \"tpp\" \"cpp\"))"
+  :type '(repeat (string :tag "Extension, without its dot"))
+  :group 'approve)
+
 ;;; Section classes
 
 (defclass approve-header-section (magit-section) ()
@@ -1230,6 +1287,92 @@ every path."
             "")
           "\n"))
 
+;;; The diff's order
+
+;; The order of a PR buffer's diff is the session's :diff-order, which
+;; approve-filter.el sets, else `approve-diff-order' (decision D58);
+;; this file only reads it.  The diff and the file list draw their
+;; files in it, and the thread picker and the feedback mode go
+;; through them in it.
+
+(defvar approve-sections--failed-orders (make-hash-table :test #'eq :weakness 'key)
+  "The key functions of orders that signalled, logged once each.")
+
+(defun approve-sections-diff-order ()
+  "Return the entry of `approve-diff-orders' the diff is in, or nil.
+Its name is the session's :diff-order, else `approve-diff-order'.
+Nil when no order has that name: the diff is then in GitHub's
+order."
+  (assq (or (approve-session-get :diff-order) approve-diff-order) approve-diff-orders))
+
+(defun approve-diff-order-headers-first (file)
+  "Return the sort key of FILE that puts a header before its sources.
+It is FILE's path without its extension, then the rank of its
+extension in `approve-diff-order-extensions', ignoring case; an
+extension not there comes after those that are.  FILE is an alist
+of `approve-pr-files'."
+  ;; A regexp rather than `file-name-extension', which is three times
+  ;; slower: thousands of files are keyed at each redraw.
+  (let* ((path (alist-get 'path file))
+         (start (save-match-data
+                  (and (string-match "[^./]\\(\\.[^./]+\\)\\'" path)
+                       (match-beginning 1))))
+         (count (length approve-diff-order-extensions)))
+    (if start
+        (list (substring path 0 start)
+              (- count (length (member-ignore-case (substring path (1+ start))
+                                                   approve-diff-order-extensions))))
+      (list path count))))
+
+(defun approve-sections--key< (a b)
+  "Return non-nil if the sort key A comes before the sort key B.
+A key is a number, a string, or a list of them, compared element
+by element: numbers by `<', strings by `string<'.  A key that is
+the start of the other comes first."
+  (let ((a (if (listp a) a (list a)))
+        (b (if (listp b) b (list b)))
+        (result 'same))
+    (while (and (eq result 'same) a b)
+      (let ((x (pop a)) (y (pop b)))
+        (cond ((if (stringp x) (string< x y) (< x y)) (setq result t))
+              ((if (stringp x) (string< y x) (< y x)) (setq result nil)))))
+    (if (eq result 'same) (and b t) result)))
+
+(defun approve-sections-order-files (files)
+  "Return FILES in the diff's order (decision D58).
+Each is an alist of `approve-pr-files'.  In GitHub's order, FILES
+themselves; else a new list, sorted by the keys of the order of
+`approve-sections-diff-order', files with equal keys as they are
+in FILES.  A key function that signals, or keys that can't be
+compared, leave FILES as they are; the error is logged once."
+  (if-let* ((order (approve-sections-diff-order))
+            (key (nth 2 order)))
+      (condition-case-unless-debug err
+          (mapcar #'cdr
+                  (sort (mapcar (lambda (file) (cons (funcall key file) file)) files)
+                        (lambda (a b) (approve-sections--key< (car a) (car b)))))
+        (error
+         (unless (gethash key approve-sections--failed-orders)
+           (puthash key t approve-sections--failed-orders)
+           (approve-log-condition (format "The diff's order %s" (car order)) err))
+         files))
+    files))
+
+(defun approve-sections-diff-files ()
+  "Return the changed files the diff draws, in its order.
+Those of `approve-pr-files' that pass its filters (decision D54),
+in the buffer's order (decision D58)."
+  (approve-sections-order-files (approve-sections-filter-files (approve-pr-files))))
+
+(defun approve-sections-order-note ()
+  "Return the note of a heading that the diff is in an order of its own, or nil.
+Such as \"order: headers\": the buffer's order, when it isn't
+`approve-diff-order'."
+  (when-let* ((name (approve-session-get :diff-order))
+              ((not (eq name approve-diff-order))))
+    (concat (approve-face "order: " 'approve-dim)
+            (approve-face (symbol-name name) 'approve-order))))
+
 (defun approve-sections-thread-count (counts &optional asking)
   "Return the thread mark of a file from COUNTS, (UNRESOLVED . TOTAL).
 It is the unresolved count, or the total, dim, when all are resolved;
@@ -1248,10 +1391,11 @@ that still stand, and the mark is red
 The threads are those on a whole file; the diff's headings count the
 threads on lines, and say which files the viewer viewed.  With a
 filter of the diff on, the list has only the files that pass it, and
-its heading says how many of all they are (decision D54)."
+its heading says how many of all they are (decision D54).  The files
+are in the diff's order (decision D58)."
   (let* ((connection (approve-pr-field 'files))
          (all (approve-pr-files))
-         (files (approve-sections-filter-files all))
+         (files (approve-sections-order-files (approve-sections-filter-files all)))
          (paths (and (approve-sections-filtered-p) (approve-sections-path-table files)))
          (counts (approve-sections--shown-counts (approve-sections-thread-counts 'file) paths))
          (asking (approve-sections-asking-paths 'file))
@@ -1283,6 +1427,7 @@ its heading says how many of all they are (decision D54)."
                                        (approve-sections-counts .additions .deletions)))))
            (and all (approve-render-join
                      (list (approve-sections-filter-note)
+                           (approve-sections-order-note)
                            (approve-sections-unresolved counts "file")))))))
       ;; Each row carries its indentation: one insertion per row, where
       ;; indenting afterwards would insert again.

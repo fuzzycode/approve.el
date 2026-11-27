@@ -93,7 +93,8 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 | =approve-faces.el=         | Every face, inheriting from magit/built-in                                      |     1 |
 | =approve-icons.el=         | =approve-icon=: semantic name → nerd-icons or Unicode                           |     1 |
 | =approve-html.el=          | =bodyHTML= → text with shr and custom tag handlers                              |     1 |
-| =approve-sections.el=      | Header, metadata, pending review, description, checks, commits, files list      |     1 |
+| =approve-sections.el=      | Header, metadata, pending review, description, checks, commits, files list;     |     1 |
+|                            | the diff's filters and order applied (D54, D58: =approve-diff-orders=)          |       |
 | =approve-conversation.el=  | The conversation: comments, reviews, pushes and events, folded into runs        |     1 |
 | =approve-render.el=        | Shared renderer helpers: people, dates, reactions, hints, alignment, prefixes   |     1 |
 | =approve-diff.el=          | Patch parsing, line model, thread index, file/hunk/line sections                |     1 |
@@ -106,7 +107,8 @@ length alone: what belongs together stays together ([[file:decisions.org::*D47 F
 |                            | share a PR buffer's store, and a hook for them                                  |       |
 | =approve-filter.el=        | The diff's filters (D54): =approve-filters=, turning them on and off in the     |     8 |
 |                            | session, how they combine, the built-in ones (a regexp on the path, the code    |       |
-|                            | owners: the viewer, the viewer's teams)                                         |       |
+|                            | owners: the viewer, the viewer's teams); the order of its files (D58): setting  |       |
+|                            | it, going to the next, registering one                                          |       |
 | =approve-codeowners.el=    | A CODEOWNERS file read as GitHub reads it: its patterns as regexps, the owners  |     8 |
 |                            | of a path (the last pattern that matches)                                       |       |
 | =approve-nav.el=           | Read-only commands: visit (=RET=), browse (=o=), copy (=y=), jumps, next        |     1 |
@@ -188,6 +190,7 @@ The store from approve-v2 (D10), with a few additions.
  │   :suggestions  the batch of suggestions, each (COMMENT-ID . INDEX)   │
  │   :filters   the diff's filters that are on, :filter-combine and|or   │
  │              (D54)                                                    │
+ │   :diff-order  the order of the diff's files, by name (D58)           │
  └───────────────────────────────────────────────────────────────────────┘
 #+end_example
 

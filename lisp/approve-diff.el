@@ -696,9 +696,11 @@ threads on lines are unresolved and how many comments in threads are
 new since the viewer's last review; each file's heading counts its own.
 With a filter on, only the files that pass it are drawn, and the
 heading says how many of all they are and names the filters; its
-counts are of those files (decision D54)."
+counts are of those files (decision D54).  The files are in the
+buffer's order, which the heading names when it isn't the one a
+buffer starts with (decision D58)."
   (let* ((all (approve-pr-files))
-         (files (approve-sections-filter-files all))
+         (files (approve-sections-order-files (approve-sections-filter-files all)))
          (paths (and (approve-sections-filtered-p) (approve-sections-path-table files)))
          (counts (approve-sections--shown-counts (approve-sections-thread-counts 'line) paths))
          (asking (approve-sections-asking-paths 'line))
@@ -724,6 +726,7 @@ counts are of those files (decision D54)."
           (list (and (approve-pr-loading-p 'patches)
                      (approve-face "loading the patches…" 'approve-loading))
                 (and all (approve-sections-filter-note))
+                (and all (approve-sections-order-note))
                 (and files
                      (format "%d/%d viewed" (approve-sections-viewed-count files)
                              (if paths

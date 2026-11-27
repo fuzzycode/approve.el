@@ -1141,6 +1141,65 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   depends on its CI, so the grouping is chosen per repository, and a
   function covers what Approve can't guess.  The "…" line had done its
   work once expanded; keeping it took a line and said nothing more.
+** D58 The diff's files in an order the user picks: GitHub's, or headers first
+- Status :: accepted (2026-11-27, by the author, who asked for it to
+  review C++ top-down, a header before its source; he chose headers
+  paired with the sources of their name, the order in the filter
+  menu, one global default for now, and the thread picker and the
+  feedback mode following the order)
+- Decision ::
+  - =approve-diff-orders= lists the orders, each =(NAME DESCRIPTION
+    KEY)=; =approve-diff-order-register= adds one or replaces a name's.
+    KEY is nil for GitHub's order, by path, or a function of a changed
+    file (=path=, =changeType=, =additions=, =deletions=,
+    =viewerViewedState=) that returns its sort key: a number, a
+    string, or a list of them, compared element by element (numbers
+    by =<=, strings by =string<=).  Files with equal keys keep
+    GitHub's order.  KEY runs in the PR buffer for each file at each
+    redraw: quick, and never the network.  One that signals, or keys
+    that can't be compared, leave GitHub's order, and the error is
+    logged once.
+  - Built in: =github= and =headers=.  =headers= pairs the files of
+    one directory whose names differ only by their extension: they
+    come in the order of =approve-diff-order-extensions= (=h hh hpp
+    hxx h++=, then =c cc cpp cxx c++=, then =m mm=; case ignored, an
+    extension not listed after them), so =src/widget.h= comes before
+    =src/widget.cpp=.  Its key is the path without its extension, then
+    the extension's rank; the other files keep their order by path.
+    A header in =include/= and its source in =src/= aren't paired.
+  - =approve-diff-order= names the order a PR buffer starts with,
+    =github= by default: one for every repository, for now.  The
+    order a buffer is in is the session's =:diff-order=, kept across
+    =g=, gone with the buffer.
+  - The filter menu (~=~, [[*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]) is "Filter and sort the diff": an
+    "Order" column has =s=, =Sort [github|headers]=, the buffer's
+    order lit, which puts the diff in the next order and keeps the
+    menu open; after the last, the first.  =s= joins =&= and =DEL= as
+    the menu's own keys.  =approve-diff-order-set= picks one by name,
+    with completion.  Either says the order in the echo area: "Diff:
+    Headers before their sources".
+  - The diff draws its files in the order, after the filters, and so
+    does the file list.  A heading names an order that isn't
+    =approve-diff-order=, after the filters: =order: headers=, in
+    =approve-order=.  =]u= =[u= =]t= =[t= =j n= walk the files as
+    drawn; =j /= offers them in the order, and the thread picker ([[*D52 A picker of the pull request's threads][D52]])
+    groups the threads by file in it.  The feedback mode's next and
+    previous file ([[*D46 The feedback mode: no keys of its own, threads folded, the mode line speaks][D46]]) follow it too: it reads the session of the
+    PR buffer whose store it shares.
+  - Point stays on its file when the order changes: sections are
+    found again by their ident ([[*D13 Full redraw, point restored by section ident][D13]]).
+- Why :: GitHub lists the files by path, so =widget.cpp= comes before
+  =widget.h=, and a C++ change is read bottom-up: the code before the
+  interface it implements.  Pairing by name moves nothing else, so the
+  diff still reads as GitHub's.  A key function, like a filter's
+  predicate, covers what Approve can't guess (largest first, a
+  team's layout); keys rather than a comparison keep a redraw quick,
+  each file keyed once (8 ms more for 4 200 files with =headers=).
+  The order lives in the filter menu because both decide which files
+  the diff shows and how; one key that goes round the orders keeps it
+  apart from the filters' keys, which the user chooses.  One order for
+  the thread picker and the feedback mode keeps "the diff's order"
+  meaning one thing.
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
 - Decision :: All network calls go through =approve-api.el=, which wraps

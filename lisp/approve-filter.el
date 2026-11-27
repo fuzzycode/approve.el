@@ -1,4 +1,4 @@
-;;; approve-filter.el --- Filters of the diff -*- lexical-binding: t; -*-
+;;; approve-filter.el --- Filters and order of the diff -*- lexical-binding: t; -*-
 
 ;; Copyright (c) 2026 Björn Larsson
 
@@ -51,10 +51,20 @@
 ;;
 ;;   (approve-filter-register "c" "C++ files" #'my-cpp-filter)
 ;;
+;; The same menu puts the diff's files in an order of
+;; `approve-diff-orders' (decision D58): s goes to the next one, and
+;; `approve-diff-order-set' picks one by name.  The order is the
+;; session's :diff-order, held across g; a buffer starts in
+;; `approve-diff-order'.  Built in: GitHub's, by path, and a header
+;; before the sources of its name.
+;;
+;;   (approve-diff-order-register 'largest "Largest first" #'my-size-key)
+;;
 ;; Layer rules: this is the buffers layer.  It turns filters on and
-;; off in the session and redraws; the filters' functions may ask the
-;; user and wait for repository metadata (approve-metadata.el).  Only
-;; the renderers apply the predicates.
+;; off and sets the order in the session, and redraws; the filters'
+;; functions may ask the user and wait for repository metadata
+;; (approve-metadata.el).  Only the renderers apply the predicates
+;; and the orders' keys.
 
 ;;; Code:
 
@@ -110,8 +120,8 @@ show the files that any filter keeps:
                  (const :tag "Files that pass one of the filters" or))
   :group 'approve)
 
-(defconst approve-filter-menu-keys '("&" "DEL")
-  "The keys the filter menu keeps for itself: combine, clear.")
+(defconst approve-filter-menu-keys '("&" "DEL" "s")
+  "The keys the filter menu keeps for itself: combine, clear, sort.")
 
 (defun approve-filter-register (key description function)
   "Add a filter of the diff on KEY, saying DESCRIPTION, made by FUNCTION.
@@ -226,6 +236,66 @@ says which a buffer starts with."
   (approve-session-put :filter-combine
                        (if (eq (approve-filter-combination) 'or) 'and 'or))
   (approve-filter--changed))
+
+;;; The order of the files
+
+(defun approve-diff-order-register (name description key)
+  "Add an order of the diff's files, NAME, saying DESCRIPTION, sorted by KEY.
+It replaces the order NAME had in `approve-diff-orders', or goes
+last.  See `approve-diff-orders' for KEY.
+
+Example, the files with the most changes first:
+  (approve-diff-order-register
+   \='largest \"Largest first\"
+   (lambda (file)
+     (- (+ (alist-get \='additions file) (alist-get \='deletions file)))))"
+  (let ((entry (list name description key)))
+    (setq approve-diff-orders
+          (if (assq name approve-diff-orders)
+              (mapcar (lambda (old) (if (eq (car old) name) entry old)) approve-diff-orders)
+            (append approve-diff-orders (list entry))))
+    entry))
+
+(defun approve-diff-order-current ()
+  "Return the name of the order the diff's files are in, in this buffer."
+  (or (approve-session-get :diff-order) approve-diff-order))
+
+(defun approve-diff-order--read ()
+  "Read an order of `approve-diff-orders' with completion; return its name."
+  (let* ((current (approve-diff-order-current))
+         (candidates (mapcar (lambda (entry)
+                               (cons (format "%s  %s%s" (car entry) (nth 1 entry)
+                                             (if (eq (car entry) current) "  (now)" ""))
+                                     (car entry)))
+                             approve-diff-orders))
+         (choice (approve-input-with-submit-key
+                   (completing-read "Put the diff's files in the order: " candidates nil t))))
+    (cdr (assoc choice candidates))))
+
+(defun approve-diff-order-set (name)
+  "Put the diff's files in the order NAME of `approve-diff-orders' (D58).
+Interactively, the order is read with completion.  The diff, the
+file list, the thread picker and the feedback mode then go through
+the files in it.  It holds across \\<approve-pr-mode-map>\\[approve-pr-refresh]; a buffer starts in
+`approve-diff-order'."
+  (interactive (list (progn (approve-filter--check) (approve-diff-order--read))))
+  (approve-filter--check)
+  (let ((entry (or (assq name approve-diff-orders)
+                   (user-error "No order of the diff is named %s" name))))
+    (approve-session-put :diff-order name)
+    (approve-pr-redraw)
+    (message "Diff: %s" (nth 1 entry))))
+
+(defun approve-diff-order-cycle ()
+  "Put the diff's files in the next order of `approve-diff-orders'.
+After the last, the first again."
+  (interactive)
+  (approve-filter--check)
+  (let ((names (mapcar #'car approve-diff-orders)))
+    (unless names
+      (user-error "There is no order of the diff (`approve-diff-orders')"))
+    (approve-diff-order-set (or (cadr (memq (approve-diff-order-current) names))
+                                (car names)))))
 
 ;;; The filters Approve has
 

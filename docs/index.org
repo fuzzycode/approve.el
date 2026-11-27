@@ -263,6 +263,15 @@ task only needs the files it touches.
   or a function), or =approve-checks-group-by-repository= for some
   repositories, puts them under headings of their own: a group with a
   failing or running check starts expanded, the others collapsed.
+- Asked for by the author the same day ([[file:decisions.org::*D58 The diff's files in an order the user picks: GitHub's, or headers first][D58]]): the diff's files in
+  an order of one's own, to review C++ top-down.  =approve-diff-orders=
+  lists them, =(NAME DESCRIPTION KEY)=, KEY a function of a file that
+  returns its sort key; =s= in the filter menu goes to the next, and
+  =approve-diff-order= is the one a buffer starts with (=github=).
+  Built in: GitHub's, by path, and =headers=, a header before the
+  sources of its name (=approve-diff-order-extensions=).  The file
+  list, =j /=, the thread picker and the feedback mode's next file
+  follow the order.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

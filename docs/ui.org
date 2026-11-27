@@ -243,7 +243,8 @@ Notes:
   expanding the file and unfolding the line they are under.
 - ~=~ filters the diff: it then draws only the files that pass, and its
   heading reads =Diff (6 of 30)= and names the filters, its counts
-  those of the files shown ([[*Filter (~=~)][Filter]], [[file:decisions.org::*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]).
+  those of the files shown ([[*Filter (~=~)][Filter]], [[file:decisions.org::*D54 Filters on the diff, registered by the user, toggled from a menu][D54]]).  Its =s= puts the files in
+  another order, headers before their sources ([[*Order of the diff (~=~ =s=)][Order]], [[file:decisions.org::*D58 The diff's files in an order the user picks: GitHub's, or headers first][D58]]).
 
 ** The file list, not shown by default
 #+begin_example
@@ -577,7 +578,7 @@ when =approve-show-hints= is nil.  Evil users start in insert state.
   b Add to batch             k Delete at point        a Assignees           o Open in browser
   v Toggle viewed            + React                  A Request reviewers   y Copy URL / sha
   S Submit review…           H Hide / unhide          M Milestone           j Jump…
-  X Discard pending review   C Conversation comment   D Draft / ready       = Filter the diff…
+  X Discard pending review   C Conversation comment   D Draft / ready       = Filter and sort the diff…
   V Review range…                                     w Subscription        L Layout
                                                       # Lock conversation   ! Doctor
                                                       m Merge / close…      K Details (eldoc)
@@ -594,8 +595,8 @@ run: the menu asks the command's preflight ([[file:decisions.org::*D06 Menus are
 do: "Fold all threads", or "Unfold all threads" once they are folded; =#=
 "Lock conversation", or "Unlock conversation" once it is locked; =x=
 "Commit the batch (2)" while there is one; =b= "Take out of batch" on a
-suggestion in it; ~=~ "Filter the diff… (5 of 12 files)" while a filter
-is on.  =#= has
+suggestion in it; ~=~ "Filter and sort the diff… (5 of 12 files)"
+while a filter is on.  =#= has
 no key in the buffer: it is seldom used.  Nor has =U=, the fetch into
 your clones, at the author's choice ([[file:decisions.org::*D53 A pull request is fetched into its clones on the user's command][D53]]).
 
@@ -721,9 +722,9 @@ there, at its line ([[*A file's buffer in your clone (feedback mode)][feedback m
 
 ** Filter (~=~)
 #+begin_example
- Filter the diff  6 of 30 files
- Filters                                        Combine
-  r Path matching regexp… (path ~ _test)         & Combine [and|or]
+ Filter and sort the diff  6 of 30 files
+ Filters                                        Combine                Order
+  r Path matching regexp… (path ~ _test)         & Combine [and|or]     s Sort [github|headers]
   o I am a code owner (owned by @alice)          DEL Clear all filters
   t My team is a code owner
 #+end_example
@@ -760,6 +761,36 @@ when it is shown ([[file:decisions.org::*D54 Filters on the diff, registered by 
   them, =j /= and =j j= offer them and their threads; a file a filter
   hides says so.  The filters stay on across =g=, until turned off or
   the buffer is killed.
+
+** Order of the diff (~=~ =s=)
+#+begin_example
+ ▾ Diff (30)                              order: headers · 3/30 viewed · 2 unresolved threads
+   ▸ · ~ src/engine/parser.h
+   ▸ · ~ src/engine/parser.cpp                                                        💬 1
+   ▸ · + src/engine/parser_test.cpp
+   ▸ ✓ ~ src/engine/widget.h
+   ▸ · ~ src/engine/widget.cpp
+   …
+#+end_example
+
+GitHub lists the files by path, =parser.cpp= before =parser.h=.  =s= in
+the filter menu puts them in the next order of =approve-diff-orders=,
+and the menu stays open ([[file:decisions.org::*D58 The diff's files in an order the user picks: GitHub's, or headers first][D58]]):
+- =github=: by path, as GitHub lists them.
+- =headers=: the files of one directory whose names differ only by
+  their extension come in the order of =approve-diff-order-extensions=,
+  headers before sources (=.h= before =.cpp=); the others keep their
+  order.
+- An order of one's own: =approve-diff-order-register= with a
+  function of a file that returns its sort key.
+
+=Sort [github|headers]= lights the buffer's order; the echo area says
+the new one ("Diff: Headers before their sources").  A buffer starts
+in =approve-diff-order= (=github=), and keeps its order across =g=.
+The heading names an order that isn't that one, after the filters, in
+=approve-order=; the file list draws its files in it, =j /= offers
+them in it, and the thread picker and the feedback mode's next file go
+by it.
 
 ** Review range (=V=)
 #+begin_example
@@ -1274,7 +1305,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Discard pending review        | =X=           | =X=                     | any                       |
 | Conversation comment          | =C=           | =C=                     | any                       |
 | Jump…                         | =j=           | =J=                     | any                       |
-| Filter the diff…              | ~=~           | ~=~                     | any                       |
+| Filter and sort the diff…     | ~=~           | ~=~                     | any                       |
 | Next / previous unviewed file | =]u= =[u=     | =]u= =[u=               | any                       |
 | Next / previous thread        | =]t= =[t=     | =]t= =[t=               | any                       |
 | Next / previous new comment   | =j n= =j N=   | =J n= =J N=             | any                       |
@@ -1390,6 +1421,7 @@ inherit:
 | =approve-file-modified=                          | =diff-indicator-changed=                     | Icon of a modified file   |
 | =approve-updated=                                | =approve-new=                                | Changed on GitHub (D23)   |
 | =approve-filter=                                 | =magit-section-heading-selection=            | Filters on (D54)          |
+| =approve-order=                                  | =approve-filter=                             | The diff's order (D58)    |
 | =approve-diff-added/removed/context=             | =magit-diff-added/removed/context=           | Diff lines                |
 | =approve-diff-hunk-heading=                      | =magit-diff-hunk-heading=                    | =@@= lines                |
 | =approve-diff-bubble=                            | =default=                                    | Thread bubbles on lines   |

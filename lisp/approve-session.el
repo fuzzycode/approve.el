@@ -71,6 +71,9 @@
            (approve-filter.el, decision D54)
 :filter-combine  `and' when a file must pass every filter on, `or'
            when one is enough; nil until a filter is turned on
+:diff-order  the name of the order of `approve-diff-orders' the
+           diff's files are in, or nil for `approve-diff-order'
+           (approve-filter.el, decision D58)
 Read and change it with `approve-session-get' and friends; they use
 the session of `approve-model-owner-buffer'.")
 

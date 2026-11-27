@@ -564,6 +564,18 @@ Implements F19.  Mockups: notifications, the mode-line count.
       check starts expanded, the others collapsed; it lists all its
       checks, without the group's title in their names.  =TAB= on a
       check folds its group.  [[file:ui.org::*Checks in groups][Mockup]].
+- [X] The diff's files in an order the user picks ([[file:decisions.org::*D58 The diff's files in an order the user picks: GitHub's, or headers first][D58]]), added and
+      done (2026-11-27) at the author's request, to review C++
+      top-down: =approve-diff-orders= lists the orders as =(NAME
+      DESCRIPTION KEY)=, KEY a function of a file that returns its sort
+      key, and =approve-diff-order-register= adds one.  =s= in the filter
+      menu (~=~) goes to the next; a buffer starts in
+      =approve-diff-order= and keeps its order across =g=.  Built in:
+      =github=, by path, and =headers=, the files of one name paired by
+      =approve-diff-order-extensions= (=.h= before =.cpp=).  The diff,
+      the file list, =j /=, the thread picker and the feedback mode's
+      next file follow it; the heading names an order that isn't the
+      default.  [[file:ui.org::*Order of the diff (~=~ =s=)][Mockup]].
 - [ ] Move the work to =main=: merge =feature/revamp= (added 2026-11-17, at
       the author's request).  The README and the user's documentation
       are written after it, on =main=.

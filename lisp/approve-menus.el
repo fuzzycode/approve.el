@@ -42,8 +42,9 @@
 ;;                               body, or discarding it (flow F09)
 ;;   m  `approve-merge'          merge, auto-merge, the merge queue, the
 ;;                               branch, close or reopen (flow F13)
-;;   =  `approve-filter-menu'    the diff's filters, on and off, and how
-;;                               they combine (decision D54)
+;;   =  `approve-filter-menu'    the diff's filters, on and off, how
+;;                               they combine (decision D54), and
+;;                               the order of its files (D58)
 ;;
 ;; The dispatch lists the commands that exist, no more: a new command
 ;; joins it, and any other menu it fits, in the change that adds it.
@@ -283,7 +284,7 @@ squash asks for the commit message first, starting as GitHub's; with
 
 (defun approve-menus--filter-heading ()
   "Return the heading of the filter menu: how many files the diff shows."
-  (concat (propertize "Filter the diff" 'face 'transient-heading) "  "
+  (concat (propertize "Filter and sort the diff" 'face 'transient-heading) "  "
           (propertize (if (approve-model-root-ref) (approve-filter-summary) "")
                       'face 'approve-dim)))
 
@@ -332,13 +333,28 @@ They keep the menu open, so several can be turned on in a row."
             (propertize "or" 'face (if any 'transient-value 'transient-inactive-value))
             (propertize "]" 'face 'transient-inactive-value))))
 
+(defun approve-menus--order-description ()
+  "Return the description of `approve-diff-order-cycle': the orders, this one lit."
+  (let ((current (approve-diff-order-current)))
+    (concat "Sort "
+            (propertize "[" 'face 'transient-inactive-value)
+            (mapconcat (lambda (entry)
+                         (propertize (symbol-name (car entry))
+                                     'face (if (eq (car entry) current)
+                                               'transient-value
+                                             'transient-inactive-value)))
+                       approve-diff-orders
+                       (propertize "|" 'face 'transient-inactive-value))
+            (propertize "]" 'face 'transient-inactive-value))))
+
 ;;;###autoload (autoload 'approve-filter-menu "approve-menus" nil t)
 (transient-define-prefix approve-filter-menu ()
-  "Filter the diff: show only the files that pass the filters on (D54).
+  "Filter and sort the diff: show the files that pass the filters on (D54).
 The filters are those of `approve-filters'; a key turns one on or
 off, and the menu stays open.  With several on, a file passes them
 all, or one of them (&).  The diff's heading says how many files
-pass, and the filters hold across \\<approve-pr-mode-map>\\[approve-pr-refresh]."
+pass, and the filters hold across \\<approve-pr-mode-map>\\[approve-pr-refresh].  s puts the files
+in the next order of `approve-diff-orders' (decision D58)."
   :refresh-suffixes t
   [:description approve-menus--filter-heading
    ["Filters" :class transient-column :setup-children approve-menus--filter-suffixes]
@@ -346,7 +362,10 @@ pass, and the filters hold across \\<approve-pr-mode-map>\\[approve-pr-refresh].
     ("&" approve-filter-toggle-combine :description approve-menus--combine-description
      :transient t)
     ("DEL" "Clear all filters" approve-filter-clear :transient t
-     :inapt-if-not approve-sections-filtered-p)]]
+     :inapt-if-not approve-sections-filtered-p)]
+   ["Order"
+    ("s" approve-diff-order-cycle :description approve-menus--order-description
+     :transient t)]]
   (interactive)
   (unless (derived-mode-p 'approve-pr-mode)
     (user-error "Not in an Approve pull request buffer"))
@@ -375,9 +394,9 @@ pass, and the filters hold across \\<approve-pr-mode-map>\\[approve-pr-refresh].
 (defun approve-menus--filter-menu-description ()
   "Return the description of `approve-filter-menu': how many files pass."
   (if (and (approve-model-root-ref) (approve-sections-filtered-p))
-      (concat "Filter the diff… "
+      (concat "Filter and sort the diff… "
               (propertize (format "(%s)" (approve-filter-summary)) 'face 'approve-dim))
-    "Filter the diff…"))
+    "Filter and sort the diff…"))
 
 (defun approve-menus--lock-description ()
   "Return the description of `approve-toggle-lock': what it will do."
