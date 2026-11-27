@@ -1100,6 +1100,47 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   for a value, or fetch data, once, when it is turned on, and the
   redraws stay quick.  Keeping them for the buffer, across =g=, follows
   =T=.
+** D57 Checks in one list by default; in groups where the user asks
+- Status :: accepted (2026-11-27, by the author, who asked for it; he
+  chose built-in groupings and a function, set per repository with a
+  default, groups with a failing or running check expanded and the
+  others collapsed, and every check of a group listed)
+- Decision ::
+  - One list stays the default, as [[file:flows.org::*F16 Inspect checks][F16]] has it: many repositories have
+    no checks or a few.  Its "… N more passed" line goes once it is
+    expanded: its checks show at once, under the others, and the
+    buffer redraws without the line, for as long as the buffer lives
+    (=approve-pr--visibility=, [[*D13 Full redraw, point restored by section ident][D13]]).  Folding the checks and
+    unfolding them lists them all again.
+  - =approve-checks-group-by= groups the checks under headings of
+    their own, under Checks: =workflow= (the Actions workflow, else
+    the app; a commit status by its context up to the last =/=,
+    =codecov= for =codecov/patch=), =app=, =state= (Failed, Running,
+    Passed, Skipped), or a function of a check that returns its
+    group's title.  A check without one is under "Other".  A
+    function that signals puts the check there, and its error is
+    logged once.
+  - =approve-checks-group-by-repository= says otherwise for some
+    repositories: =(REGEXP . GROUPING)=, the first that matches
+    =OWNER/NAME= (ignoring case) wins.
+  - A group's heading has its title, its count and, on the right,
+    how its checks went, as the Checks heading has them.  Groups come
+    as their first check would in one list (failing first), then by
+    title, "Other" last.  A group with a failing or running check
+    starts expanded, the others collapsed; its value holds which, so a
+    group that comes to fail after =g= opens again.  A group lists all
+    its checks, in GitHub's order; no "… N more" there.
+  - A check's name drops its group's title from its start: "CI /
+    lint" is "lint" under "CI".  The columns line up across the groups.
+  - =TAB= on a check folds its group, or the checks when they are in
+    one list, as a row of a list folds its list ([[*D38 Lists of pull requests: a state icon first, columns the user picks, GitHub's review decision][D38]]).
+- Why :: A repository with a handful of checks reads best in one list,
+  sorted as GitHub's merge box sorts them.  A monorepo has hundreds,
+  and its failing check is found faster in its workflow, the passed
+  ones out of the way.  How a repository's checks are best grouped
+  depends on its CI, so the grouping is chosen per repository, and a
+  function covers what Approve can't guess.  The "…" line had done its
+  work once expanded; keeping it took a line and said nothing more.
 ** D07 ghub, wrapped by approve-api
 - Status :: accepted (project.org)
 - Decision :: All network calls go through =approve-api.el=, which wraps

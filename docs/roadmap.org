@@ -555,6 +555,15 @@ Implements F19.  Mockups: notifications, the mode-line count.
       is in the first clone of its repository, else the home directory;
       the dashboard and the log are in the home directory, a file view
       in its PR buffer's.
+- [X] Checks in groups ([[file:decisions.org::*D57 Checks in one list by default; in groups where the user asks][D57]]), added and done (2026-11-27) at the
+      author's request: one list stays the default, and its "… N more"
+      line goes once it is expanded.  =approve-checks-group-by= groups
+      the checks under headings of their own, by =workflow=, =app=,
+      =state= or a function, and =approve-checks-group-by-repository=
+      chooses for some repositories.  A group with a failing or running
+      check starts expanded, the others collapsed; it lists all its
+      checks, without the group's title in their names.  =TAB= on a
+      check folds its group.  [[file:ui.org::*Checks in groups][Mockup]].
 - [ ] Move the work to =main=: merge =feature/revamp= (added 2026-11-17, at
       the author's request).  The README and the user's documentation
       are written after it, on =main=.

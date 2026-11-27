@@ -78,10 +78,60 @@ Each is one of `author', `repository', `branch' (head → base),
 
 (defcustom approve-checks-passed-shown 5
   "Number of passed checks listed before the rest are folded.
-The others are under \"… N more passed\".  To list them all:
+The others are under \"… N more passed\".  Once that line is
+expanded, it goes and they join the list, for as long as the
+buffer lives.  To list them all from the start:
 
-  (setq approve-checks-passed-shown most-positive-fixnum)"
+  (setq approve-checks-passed-shown most-positive-fixnum)
+
+Checks in groups (`approve-checks-group-by') are all listed."
   :type 'natnum
+  :group 'approve)
+
+(defconst approve-sections--check-groupings
+  '(choice (const :tag "In one list" nil)
+           (const :tag "By workflow" workflow)
+           (const :tag "By app" app)
+           (const :tag "By how they went" state)
+           (function :tag "Function that returns a check's group"))
+  "The `:type' of a way of grouping the checks.")
+
+(defcustom approve-checks-group-by nil
+  "How the checks are grouped under the Checks heading.
+nil lists them in one list.  The others put each group under a
+heading of its own, which starts expanded when one of its checks
+failed or still runs, collapsed otherwise:
+
+  `workflow'  by the GitHub Actions workflow that ran them, or the
+              app for other check runs; a commit status by its
+              context up to its last \"/\", \"codecov\" for
+              \"codecov/patch\"
+  `app'       by the app that ran them, such as \"GitHub Actions\";
+              a commit status as for `workflow'
+  `state'     failed, running, passed and skipped
+  FUNCTION    called with a check, an alist as GitHub sends it (a
+              CheckRun or a StatusContext); it returns the title of
+              the check's group, or nil for \"Other\"
+
+A check's name drops its group's title from its start: \"CI /
+lint\" is \"lint\" under \"CI\".  `approve-checks-group-by-repository'
+says otherwise for some repositories.  To group by workflow:
+
+  (setq approve-checks-group-by \\='workflow)"
+  :type approve-sections--check-groupings
+  :group 'approve)
+
+(defcustom approve-checks-group-by-repository nil
+  "How the checks are grouped in some repositories.
+An alist of (REGEXP . GROUPING).  The first REGEXP that matches a
+repository's \"OWNER/NAME\", ignoring case, says how its checks are
+grouped, as `approve-checks-group-by' does, which is for the
+others.  To group by workflow in one repository only:
+
+  (setq approve-checks-group-by-repository
+        \\='((\"^big-org/monorepo$\" . workflow)))"
+  :type `(alist :key-type (regexp :tag "Repository")
+                :value-type ,approve-sections--check-groupings)
   :group 'approve)
 
 (defcustom approve-diffstat-width 15
@@ -107,7 +157,13 @@ The largest file fills it."
 (defclass approve-check-section (magit-section) ()
   "One check run or status; its value is its id.")
 (defclass approve-checks-more-section (magit-section) ()
-  "The passed checks that are folded away.")
+  "The passed checks that are folded away, under \"… N more\".
+Once expanded it loses that line: its checks join the list.")
+(defclass approve-checks-group-section (magit-section) ()
+  "A group of checks (`approve-checks-group-by').
+Its value is (TITLE . OPEN), TITLE nil for \"Other\", OPEN non-nil
+when one of its checks failed or still runs: such a group starts
+expanded, and one that comes to fail opens again.")
 (defclass approve-commits-section (magit-section) ()
   "The commits of the pull request.")
 (defclass approve-commit-section (magit-section) ()
@@ -361,21 +417,27 @@ they don't fail the pull request, and GitHub counts them apart."
     ((or "PENDING" "EXPECTED") (approve-icon 'check-pending 'approve-check-pending))
     (_ (approve-icon 'check-pending 'approve-dim))))
 
+(defun approve-sections--check-counts-text (icon counts)
+  "Return ICON and COUNTS in words, such as \"◐ 7 passed · 1 failed\".
+COUNTS is (PASSED FAILED RUNNING SKIPPED); a count of 0 is left out."
+  (pcase-let ((`(,passed ,failed ,running ,skipped) counts))
+    (concat icon " "
+            (approve-render-join
+             (list (and (> passed 0) (approve-face (format "%d passed" passed)
+                                                   'approve-check-success))
+                   (and (> failed 0) (approve-face (format "%d failed" failed)
+                                                   'approve-check-failure))
+                   (and (> running 0) (approve-face (format "%d running" running)
+                                                    'approve-check-pending))
+                   (and (> skipped 0) (approve-face (format "%d skipped" skipped)
+                                                    'approve-check-skipped)))))))
+
 (defun approve-sections-checks-summary ()
   "Return the checks summary, such as \"◐ 7 passed · 1 failed\", or nil."
   (when-let* ((rollup (approve-pr-field 'statusCheckRollup))
               (counts (approve-sections-check-counts)))
-    (pcase-let ((`(,passed ,failed ,running ,skipped) counts))
-      (concat (approve-sections--rollup-icon (alist-get 'state rollup)) " "
-              (approve-render-join
-               (list (and (> passed 0) (approve-face (format "%d passed" passed)
-                                                     'approve-check-success))
-                     (and (> failed 0) (approve-face (format "%d failed" failed)
-                                                     'approve-check-failure))
-                     (and (> running 0) (approve-face (format "%d running" running)
-                                                      'approve-check-pending))
-                     (and (> skipped 0) (approve-face (format "%d skipped" skipped)
-                                                      'approve-check-skipped))))))))
+    (approve-sections--check-counts-text
+     (approve-sections--rollup-icon (alist-get 'state rollup)) counts)))
 
 (defun approve-sections--status ()
   "Return the status row's value: review decision, conflicts, checks."
@@ -606,33 +668,35 @@ Example:
             (cl-decf start))
           (concat "…" (string-trim-left (substring name start)))))))
 
-(defun approve-sections--check-columns (checks)
-  "Return the widths of the columns of CHECKS: (NAME WHEN REQUIRED).
-NAME fits the longest name, up to the page's width less 60, which
+(defun approve-sections--check-columns (rows &optional indent)
+  "Return the widths of the columns of ROWS: (NAME WHEN REQUIRED INDENT).
+ROWS are (CHECK . NAME), NAME the name the check's line shows.  The
+lines are indented INDENT columns, 2 by default.  NAME fits the
+longest name, up to the page's width less 58 and INDENT, which
 leaves the notes room.  REQUIRED is 0 when no check is required."
-  (list (min (apply #'max 1 (mapcar (lambda (check)
-                                      (string-width (approve-sections-check-name check)))
-                                    checks))
-             (max 30 (- (approve-render-width) 60)))
-        (apply #'max 0 (mapcar (lambda (check)
-                                 (string-width (approve-sections--check-when check)))
-                               checks))
-        (if (seq-some (lambda (check) (alist-get 'isRequired check)) checks)
-            (string-width "required")
-          0)))
+  (let ((indent (or indent 2))
+        (checks (mapcar #'car rows)))
+    (list (min (apply #'max 1 (mapcar (lambda (row) (string-width (cdr row))) rows))
+               (max 30 (- (approve-render-width) 58 indent)))
+          (apply #'max 0 (mapcar (lambda (check)
+                                   (string-width (approve-sections--check-when check)))
+                                 checks))
+          (if (seq-some (lambda (check) (alist-get 'isRequired check)) checks)
+              (string-width "required")
+            0)
+          indent)))
 
-(defun approve-sections--check-line (check columns)
-  "Return the line of CHECK in the expanded checks.
-COLUMNS are the widths of its columns, from
+(defun approve-sections--check-line (check name columns)
+  "Return the line of CHECK, which shows NAME, in the expanded checks.
+COLUMNS are the widths of its columns and its indentation, from
 `approve-sections--check-columns'.  Its note (the check's title or
 the status's description) fills the line up to the page's width
 \(`approve-render-width')."
-  (pcase-let ((`(,name-width ,when-width ,required-width) columns))
+  (pcase-let ((`(,name-width ,when-width ,required-width ,indent) columns))
     (let-alist check
       (let* ((left (concat
                     (approve-sections-check-icon check) " "
-                    (approve-render-pad (approve-sections--shorten-check-name
-                                         (approve-sections-check-name check) name-width)
+                    (approve-render-pad (approve-sections--shorten-check-name name name-width)
                                         name-width)
                     (if (> when-width 0)
                         (concat "  " (approve-render-pad (approve-sections--check-when check)
@@ -644,8 +708,8 @@ the status's description) fills the line up to the page's width
                                        (make-string required-width ?\s)))
                       "")))
              (note (car (split-string (or .description .title "") "\n")))
-             ;; Two columns of indentation, and two between left and note.
-             (room (- (approve-render-width) (string-width left) 4)))
+             ;; The indentation, and two columns between left and note.
+             (room (- (approve-render-width) (string-width left) indent 2)))
         (approve-thing
          (string-trim-right
           (concat left
@@ -655,14 +719,17 @@ the status's description) fills the line up to the page's width
                                                'approve-dim)))))
          (list :kind 'check :check check :url (or .detailsUrl .targetUrl .url)))))))
 
+(defun approve-sections--check-rank (check)
+  "Return where CHECK comes as GitHub lists checks, the lowest first.
+Failing, running, passed, then skipped; required ones first in each."
+  (+ (pcase (approve-sections-check-kind check)
+       ('failure 0) ('running 2) ('success 4) (_ 6))
+     (if (alist-get 'isRequired check) 0 1)))
+
 (defun approve-sections-sort-checks (checks)
   "Return CHECKS as GitHub lists them: failing, running, passed, skipped.
 Required checks come first in each; the others keep GitHub's order."
-  (let ((rank (lambda (check)
-                (+ (pcase (approve-sections-check-kind check)
-                     ('failure 0) ('running 2) ('success 4) (_ 6))
-                   (if (alist-get 'isRequired check) 0 1)))))
-    (seq-sort-by rank #'< checks)))
+  (seq-sort-by #'approve-sections--check-rank #'< checks))
 
 (defun approve-sections--more-checks (more)
   "Return the heading of the folded checks MORE, such as \"… 4 more passed\"."
@@ -677,29 +744,198 @@ Required checks come first in each; the others keep GitHub's order."
                    ", "))
      'approve-dim)))
 
-(defun approve-sections--insert-checks (checks)
-  "Insert the lines of CHECKS, folding passed and skipped ones beyond a few.
+(defun approve-sections--insert-check-rows (rows columns)
+  "Insert the line of each of ROWS, (CHECK . NAME), in COLUMNS.
+COLUMNS are from `approve-sections--check-columns'."
+  (pcase-dolist (`(,check . ,name) rows)
+    (magit-insert-section (approve-check-section (alist-get 'id check))
+      (insert (approve-sections--check-line check name columns) "\n"))))
+
+(defun approve-sections--insert-check-list (checks)
+  "Insert CHECKS in one list, folding passed and skipped ones beyond a few.
 The first `approve-checks-passed-shown' of them show, passed ones
-first; the rest go under \"… N more passed\"."
-  (let* ((sorted (approve-sections-sort-checks checks))
-         (columns (approve-sections--check-columns checks))
+first; the rest go under \"… N more passed\".  That line goes once it
+is expanded: its checks show at once, and the buffer is drawn again
+without it, as it stays (`approve-pr--visibility')."
+  (let* ((rows (mapcar (lambda (check) (cons check (approve-sections-check-name check)))
+                       (approve-sections-sort-checks checks)))
+         (columns (approve-sections--check-columns rows))
          (shown 0)
+         (listed nil)
          (more nil))
-    (dolist (check sorted)
-      (let ((done (memq (approve-sections-check-kind check) '(success skipped))))
-        (if (and done (>= shown approve-checks-passed-shown))
-            (push check more)
-          (when done
-            (cl-incf shown))
-          (magit-insert-section (approve-check-section (alist-get 'id check))
-            (insert (approve-sections--check-line check columns) "\n")))))
+    (dolist (row rows)
+      (cond ((not (memq (approve-sections-check-kind (car row)) '(success skipped)))
+             (push row listed))
+            ((< shown approve-checks-passed-shown)
+             (cl-incf shown)
+             (push row listed))
+            (t (push row more))))
+    (approve-sections--insert-check-rows (nreverse listed) columns)
     (when more
       (setq more (nreverse more))
-      (magit-insert-section (approve-checks-more-section nil t)
-        (magit-insert-heading (approve-sections--more-checks more))
-        (dolist (check more)
-          (magit-insert-section (approve-check-section (alist-get 'id check))
-            (insert (approve-sections--check-line check columns) "\n")))))))
+      (magit-insert-section section (approve-checks-more-section nil t)
+        (if (not (oref section hidden))
+            (approve-sections--insert-check-rows more columns)
+          (magit-insert-heading (approve-sections--more-checks (mapcar #'car more)))
+          (approve-sections-lazy-body
+            (let ((start (point)))
+              (approve-sections--insert-check-rows more columns)
+              (approve-sections-insert-body start))
+            (approve-pr-schedule-redraw)))))))
+
+;;;; Groups
+
+(defvar approve-sections--failed-groupings (make-hash-table :test #'eq :weakness 'key)
+  "The functions grouping the checks that signalled, logged once each.")
+
+(defun approve-sections--status-prefix (check)
+  "Return the context of the commit status CHECK up to its last \"/\", or nil."
+  (let ((context (or (alist-get 'context check) "")))
+    (when-let* ((slash (string-match-p "/[^/]*\\'" context))
+                ((> slash 0)))
+      (substring context 0 slash))))
+
+(defun approve-sections-check-workflow (check)
+  "Return the workflow of CHECK, the title of its group by workflow, or nil.
+That is the GitHub Actions workflow that ran it, else the app that
+did; for a commit status, its context up to the last \"/\": \"codecov\"
+for \"codecov/patch\"."
+  (let-alist check
+    (if (equal .__typename "StatusContext")
+        (approve-sections--status-prefix check)
+      (or .checkSuite.workflowRun.workflow.name .checkSuite.app.name))))
+
+(defun approve-sections-check-app (check)
+  "Return the app that ran CHECK, the title of its group by app, or nil.
+A commit status names no app: its context up to the last \"/\" stands
+in, as for `approve-sections-check-workflow'."
+  (let-alist check
+    (if (equal .__typename "StatusContext")
+        (approve-sections--status-prefix check)
+      .checkSuite.app.name)))
+
+(defun approve-sections-check-outcome (check)
+  "Return how CHECK went, the title of its group by state.
+That is \"Failed\", \"Running\", \"Passed\" or \"Skipped\", as
+`approve-sections-check-kind' says."
+  (pcase (approve-sections-check-kind check)
+    ('failure "Failed")
+    ('running "Running")
+    ('success "Passed")
+    (_ "Skipped")))
+
+(defun approve-sections--check-grouping ()
+  "Return the function that names a check's group in this buffer, or nil.
+Nil lists the checks in one list.  `approve-checks-group-by-repository'
+says, for the pull request's repository, else `approve-checks-group-by'."
+  (let* ((repository (format "%s/%s" (approve-model-meta :owner) (approve-model-meta :repo)))
+         (entry (let ((case-fold-search t))
+                  (seq-find (lambda (entry) (string-match-p (car entry) repository))
+                            approve-checks-group-by-repository)))
+         (grouping (if entry (cdr entry) approve-checks-group-by)))
+    (pcase grouping
+      ('workflow #'approve-sections-check-workflow)
+      ('app #'approve-sections-check-app)
+      ('state #'approve-sections-check-outcome)
+      ((pred functionp) grouping))))
+
+(defun approve-sections--check-group (function check)
+  "Return the title of CHECK's group by FUNCTION, or nil for \"Other\".
+A FUNCTION that signals puts CHECK under \"Other\", so the checks
+still draw; its error is logged once."
+  (let ((title (condition-case-unless-debug err
+                   (funcall function check)
+                 (error
+                  (unless (gethash function approve-sections--failed-groupings)
+                    (puthash function t approve-sections--failed-groupings)
+                    (approve-log-condition "The grouping of the checks" err))
+                  nil))))
+    (and (stringp title) (not (string-empty-p title)) title)))
+
+(defun approve-sections-group-checks (checks function)
+  "Return CHECKS in groups by FUNCTION, as a list of (TITLE . CHECKS).
+FUNCTION returns the title of a check's group, a string, or nil: the
+group of TITLE nil, \"Other\".  Each group's checks are sorted as in
+one list (`approve-sections-sort-checks').  The groups come as their
+first checks would, failing ones first, then by title, \"Other\" last."
+  (let ((groups nil))
+    (dolist (check (approve-sections-sort-checks checks))
+      (let* ((title (approve-sections--check-group function check))
+             (group (assoc title groups)))
+        (if group
+            (push check (cdr group))
+          (push (list title check) groups))))
+    (sort (mapcar (lambda (group) (cons (car group) (reverse (cdr group)))) groups)
+          (lambda (a b)
+            (let ((rank-a (approve-sections--check-rank (cadr a)))
+                  (rank-b (approve-sections--check-rank (cadr b))))
+              (cond ((/= rank-a rank-b) (< rank-a rank-b))
+                    ((null (car a)) nil)
+                    ((null (car b)) t)
+                    (t (string< (downcase (car a)) (downcase (car b))))))))))
+
+(defun approve-sections--check-name-in (check title)
+  "Return the name of CHECK in the group TITLE, without TITLE at its start.
+\"CI / lint\" is \"lint\" in \"CI\", and the status \"codecov/patch\"
+\"patch\" in \"codecov\"."
+  (let ((name (approve-sections-check-name check)))
+    (or (and title
+             (seq-some (lambda (separator)
+                         (let ((prefix (concat title separator)))
+                           (and (string-prefix-p prefix name)
+                                (< (length prefix) (length name))
+                                (substring name (length prefix)))))
+                       '(" / " "/")))
+        name)))
+
+(defun approve-sections--check-group-heading (title checks)
+  "Return the heading of the group TITLE of CHECKS, sorted.
+Its title, \"Other\" for nil, how many, and how they went on the
+right, after the icon of the first."
+  (let ((kinds (mapcar #'approve-sections-check-kind checks)))
+    (approve-render-justify
+     (concat (approve-face (or title "Other") 'approve-secondary-heading)
+             (approve-face (format " (%d)" (length checks)) 'approve-count))
+     (approve-sections--check-counts-text
+      (approve-sections-check-icon (car checks))
+      (mapcar (lambda (kind) (seq-count (apply-partially #'eq kind) kinds))
+              '(success failure running skipped))))))
+
+(defun approve-sections--insert-check-groups (checks function)
+  "Insert CHECKS in groups by FUNCTION, each under a heading of its own.
+A group starts expanded when one of its checks failed or still runs,
+collapsed otherwise, and lists all its checks.  Their columns line
+up across the groups."
+  (let* ((groups (mapcar (lambda (group)
+                           (let ((title (car group)))
+                             (cons title
+                                   (mapcar (lambda (check)
+                                             (cons check (approve-sections--check-name-in
+                                                          check title)))
+                                           (cdr group)))))
+                         (approve-sections-group-checks checks function)))
+         (columns (approve-sections--check-columns (apply #'append (mapcar #'cdr groups))
+                                                   4)))
+    (pcase-dolist (`(,title . ,rows) groups)
+      (let ((open (and (seq-some (lambda (row)
+                                   (memq (approve-sections-check-kind (car row))
+                                         '(failure running)))
+                                 rows)
+                       t)))
+        (magit-insert-section (approve-checks-group-section (cons title open) (not open))
+          (magit-insert-heading
+            (approve-sections--check-group-heading title (mapcar #'car rows)))
+          (let ((start (point)))
+            (approve-sections--insert-check-rows rows columns)
+            (approve-sections-insert-body start)))))))
+
+(defun approve-sections--insert-checks (checks)
+  "Insert the lines of CHECKS, in one list or in groups.
+`approve-checks-group-by-repository' and `approve-checks-group-by'
+say which."
+  (if-let* ((function (approve-sections--check-grouping)))
+      (approve-sections--insert-check-groups checks function)
+    (approve-sections--insert-check-list checks)))
 
 (defun approve-insert-checks-section ()
   "Insert the checks: the summary in the heading, each check when expanded.

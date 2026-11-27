@@ -374,13 +374,22 @@ roll   [label="Checks heading shows the rollup\n(statusCheckRollup.state from Q 
 u      [label="[user] TAB on Checks" @user];
 have   [label="contexts loaded?" @dec];
 fetch  [label="statusCheckRollup.contexts\nfor the head commit (lazy)" @api];
-list   [label="failing, running, passed, then skipped;\nrequired first in each\n\"… 73 more passed, 14 skipped\""];
+sort   [label="failing, running, passed, then skipped;\nrequired first in each"];
+grp    [label="grouped for this\nrepository?" @dec];
+groups [label="a heading per group (workflow, app,\nstate, function): failing groups first,\nexpanded; the others collapsed"];
+list   [label="five passed or skipped, then\n\"… 73 more passed, 14 skipped\""];
+more   [label="[user] TAB on \"…\"" @user];
+join   [label="the line goes;\nits checks join the list"];
+shown  [label="the checks, as they show"];
 ret    [label="[user] RET on a check" @user];
 open   [label="browse-url detailsUrl / targetUrl" @ok];
 g      [label="[user] g" @user];
 refetch[label="F17: the whole PR loads again,\nthe checks with it" @api];
-roll -> u -> have; have -> fetch [@no]; have -> list [@yes]; fetch -> list;
-list -> ret -> open; list -> g -> refetch -> list;
+roll -> u -> have; have -> fetch [@no]; have -> sort [@yes]; fetch -> sort;
+sort -> grp; grp -> groups [@yes]; grp -> list [@no];
+list -> more -> join;
+groups -> shown; list -> shown; join -> shown;
+shown -> ret -> open; shown -> g -> refetch -> sort;
 
 %% F17
 subgraph cluster_g { label="g — refresh";

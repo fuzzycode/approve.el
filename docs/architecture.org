@@ -378,7 +378,10 @@ buffer, which the file list opens at a file (its key is chosen with F18).
  │   └── approve-html-details *      <details> in the body (value: (index . summary))
  ├── approve-checks-section          collapsed; contexts load when first expanded
  │   ├── approve-check-section *     (value: check id)
- │   └── approve-checks-more-section "… N more passed"
+ │   ├── approve-checks-more-section "… N more passed"; no heading once expanded (lazy body)
+ │   └── approve-checks-group-section *  instead, when grouped (D57)
+ │       │                           (value: (title . open)) collapsed unless failing or running
+ │       └── approve-check-section *
  ├── approve-commits-section         collapsed
  │   └── approve-commit-section *    (value: oid)
  ├── approve-conversation-section

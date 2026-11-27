@@ -33,6 +33,7 @@ eldoc.</p>
   <li><a href="#react">React</a></li>
   <li><a href="#merge">Merge / state menu</a></li>
   <li><a href="#checks">Checks expanded</a></li>
+  <li><a href="#checks-groups">Checks in groups</a></li>
   <li><a href="#range">Re-review: review range</a></li>
   <li><a href="#file">Whole-file view</a></li>
   <li><a href="#jump">Jump menu</a></li>
@@ -157,7 +158,7 @@ removed. Assignees, reviewers (GitHub's suggestions first) and the milestone wor
 <!-- ================================================================== -->
 <section class="shot" id="checks">
 <h2>Checks expanded <span class="ref">F16</span></h2>
-<p>Failing, running, passed, then skipped; required first in each. Contexts load lazily when the section opens, and again on each <span class="k">g</span>.</p>
+<p>Failing, running, passed, then skipped; required first in each. Contexts load lazily when the section opens, and again on each <span class="k">g</span>. The “… N more” line goes once it is expanded: its checks join the list.</p>
 <div class="emacs">
 <div class="win">
 <div class="buf">
@@ -176,6 +177,55 @@ removed. Assignees, reviewers (GitHub's suggestions first) and the milestone wor
 </div>
 </div>
 <div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   18%  L31      <span class="pi">Approve-PR</span></div>
+</div>
+<div class="echo"><span class="b">CI / lint</span> — failure — “2 errors in approve-api.el” · required</div>
+</div>
+</section>
+
+<!-- ================================================================== -->
+<section class="shot" id="checks-groups">
+<h2>Checks in groups <span class="ref">F16 · D57</span></h2>
+<p>With <code>approve-checks-group-by</code> (here <code>workflow</code>), or <code>approve-checks-group-by-repository</code>
+for some repositories, each group has a heading of its own: its title, its count and how its checks went. A group with a
+failing or running check starts expanded, the others collapsed; failing groups come first, then by title, “Other” last.
+A group lists all its checks, their names without the group's title; <span class="k">TAB</span> on a check folds its
+group. Without a grouping the checks are one list, and its “… N more” line goes once it is expanded.</p>
+<div class="emacs">
+<div class="win">
+<div class="buf">
+<div class="s">
+<p class="hd"><span class="tog"></span> <span class="h">Checks</span> (11)                       <span class="wa"><i data-i="check-pending">◐</i></span> <span class="ok">7 passed</span> <span class="d">·</span> <span class="er">1 failed</span> <span class="d">·</span> <span class="wa">1 running</span> <span class="d">·</span> <span class="d">2 skipped</span></p>
+<div class="sb">
+<div class="s">
+<p class="hd">  <span class="tog"></span> <span class="b">CI</span> (7)                          <span class="er"><i data-i="check-failure">✗</i></span> <span class="ok">4 passed</span> <span class="d">·</span> <span class="er">1 failed</span> <span class="d">·</span> <span class="wa">1 running</span> <span class="d">·</span> <span class="d">1 skipped</span></p>
+<div class="sb">
+<p class="cur">      <span class="er"><i data-i="check-failure">✗</i></span> lint                        32s      <span class="m">required</span>  <span class="d">2 errors in approve-api.el</span></p>
+<p>      <span class="wa"><i data-i="check-pending">◐</i></span> test (macos-latest, 30.2)   <span class="wa">running</span>  <span class="m">required</span></p>
+<p>      <span class="ok"><i data-i="check-success">✓</i></span> test (ubuntu-latest, 29.4)  2m 10s   <span class="m">required</span></p>
+<p>      <span class="ok"><i data-i="check-success">✓</i></span> build                       1m 02s</p>
+<p>      <span class="ok"><i data-i="check-success">✓</i></span> docs                        12s</p>
+<p>      <span class="ok"><i data-i="check-success">✓</i></span> package-lint                20s</p>
+<p>      <span class="d"><i data-i="check-skipped">⊘</i></span> deploy                      <span class="d">skipped</span></p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd">  <span class="tog"></span> <span class="b">codecov</span> (2)                                                        <span class="ok"><i data-i="check-success">✓</i></span> <span class="ok">2 passed</span></p>
+<div class="sb">
+<p>      <span class="ok"><i data-i="check-success">✓</i></span> patch                                         <span class="d">85.2% of diff hit (+0.4%)</span></p>
+<p>      <span class="ok"><i data-i="check-success">✓</i></span> project                                       <span class="d">91.0% (+0.1%) compared to 4f2c1d9</span></p>
+</div>
+</div>
+<div class="s closed">
+<p class="hd">  <span class="tog"></span> <span class="b">Release</span> (2)                                            <span class="ok"><i data-i="check-success">✓</i></span> <span class="ok">1 passed</span> <span class="d">·</span> <span class="d">1 skipped</span></p>
+<div class="sb">
+<p>      <span class="ok"><i data-i="check-success">✓</i></span> package                     41s</p>
+<p>      <span class="d"><i data-i="check-skipped">⊘</i></span> publish                     <span class="d">skipped</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="ml"> <span class="ir">&lt;N&gt;</span>  <span class="b">*approve: fuzzycode/approve#1234*</span>   18%  L32      <span class="pi">Approve-PR</span></div>
 </div>
 <div class="echo"><span class="b">CI / lint</span> — failure — “2 errors in approve-api.el” · required</div>
 </div>

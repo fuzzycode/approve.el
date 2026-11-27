@@ -633,18 +633,26 @@ clone that has it (decision D37).")
     (browse-url url)))
 
 (defconst approve-nav--fold-through
-  '(approve-thread-section approve-comment-section approve-list-pr-section)
+  '(approve-thread-section approve-comment-section approve-list-pr-section
+    approve-check-section)
   "Sections that toggling passes to their parent.
 Threads do not fold by themselves: in a thread, toggling folds the
 diff line it is on, or its group (\"On this file\", \"Outdated\").  A
-row of a list of pull requests folds its list.")
+row of a list of pull requests folds its list, and a check its group
+or the checks.")
 
 (defun approve-nav--foldable-section ()
   "Return the section at point that toggling folds, or nil.
 That is the current section, or for one of
-`approve-nav--fold-through' the first parent of another type."
+`approve-nav--fold-through' the first parent of another type.  A
+section of sections without a heading of its own, which has nothing
+to fold, passes it on too: the checks that were under \"… N more\"
+fold the checks."
   (let ((section (magit-current-section)))
-    (while (and section (memq (oref section type) approve-nav--fold-through))
+    (while (and section
+                (or (memq (oref section type) approve-nav--fold-through)
+                    (and (oref section parent) (oref section children)
+                         (null (oref section content)))))
       (setq section (oref section parent)))
     (and section (not (eq section magit-root-section)) section)))
 

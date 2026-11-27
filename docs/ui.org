@@ -831,7 +831,9 @@ The checks load when the section is first expanded, and again on each
 =g= after that ([[file:flows.org::*F16 Inspect checks][F16]]).  They come in the order of GitHub's merge box:
 failing, running, passed, then skipped or neutral (a grey ⊘), required
 ones first in each.  Five passed or skipped ones show
-(=approve-checks-passed-shown=), the rest fold under "… N more".  The
+(=approve-checks-passed-shown=), the rest fold under "… N more".  Once
+that line is expanded it goes, and its checks join the list for as long
+as the buffer lives ([[file:decisions.org::*D57 Checks in one list by default; in groups where the user asks][D57]]).  The
 heading counts skipped checks apart, as GitHub does; the status row and
 the merge box count only the others.  A line has the check's name
 (workflow / job: a long one loses its start first, since the job's own
@@ -839,7 +841,34 @@ name tells it from its siblings), how long it ran or else its state
 ("running", "queued", "skipped", "cancelled", …), "required" where the
 base branch's rules require it, and its title or description, up to
 the page's right edge.  =RET= and =o= open its details (=detailsUrl=, or a
-status's =targetUrl=); =K= adds its app, times and duration.
+status's =targetUrl=); =K= adds its app, times and duration; =TAB= folds
+the checks.
+
+** Checks in groups
+#+begin_example
+ ▾ Checks (11)                       ◐ 7 passed · 1 failed · 1 running · 2 skipped
+   ▾ CI (7)                          ✗ 4 passed · 1 failed · 1 running · 1 skipped
+       ✗ lint                        32s      required  2 errors in approve-api.el
+       ◐ test (macos-latest, 30.2)   running  required
+       ✓ test (ubuntu-latest, 29.4)  2m 10s   required
+       ✓ build                       1m 02s
+       ✓ docs                        12s
+       ✓ package-lint                20s
+       ⊘ deploy                      skipped
+   ▸ codecov (2)                                                        ✓ 2 passed
+   ▸ Release (2)                                            ✓ 1 passed · 1 skipped
+#+end_example
+
+With =approve-checks-group-by=, or =approve-checks-group-by-repository=
+for some repositories, the checks are grouped under headings of their
+own ([[file:decisions.org::*D57 Checks in one list by default; in groups where the user asks][D57]]): by =workflow= (above; a commit status by its context up to
+the last =/=), by =app=, by =state= (Failed, Running, Passed, Skipped),
+or by a function of a check.  A group has its title, its count and how
+its checks went; it starts expanded when one of them failed or still
+runs, collapsed otherwise.  Groups come failing first, then by title,
+"Other" (checks without a group) last.  A group lists all its checks,
+in the order of one list, their names without the group's title; the
+columns line up across the groups.  =TAB= on a check folds its group.
 
 * File view
 =RET= on a diff line opens the whole file at that line: at the PR head, or

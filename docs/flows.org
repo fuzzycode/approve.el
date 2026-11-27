@@ -645,7 +645,18 @@ overlays a clone's buffers share).  The diff is one =RET= away.
    ◀───────────────────────────┘
    ▼
  failing, running, passed, then skipped; required first in each
- five passed or skipped, then "… 73 more passed, 14 skipped"
+   │
+   ▼
+ ◇ grouped for this repository? ◇──yes──▶ a heading per group (workflow, app,
+   │ no                                    state, function): failing groups
+   ▼                                       first, expanded; the others collapsed
+ five passed or skipped,                     │
+ then "… 73 more passed, 14 skipped"         │
+   │                                         │
+ [user] TAB on "…" ──▶ the line goes;        │
+   │                   its checks join       │
+   │                   the list              │
+   ◀─────────────────────────────────────────┘
    │
  [user] RET on a check ──▶ browse-url detailsUrl/targetUrl
  [user] g              ──▶ F17: the whole PR loads again, the checks with it
@@ -653,7 +664,8 @@ overlays a clone's buffers share).  The diff is one =RET= away.
 
 The checks alone are never loaded again: =g= anywhere loads the whole pull
 request, checks included once they were loaded (the author's choice,
-2026-11-16).
+2026-11-16).  One list is the default; =approve-checks-group-by= and
+=approve-checks-group-by-repository= group them ([[file:decisions.org::*D57 Checks in one list by default; in groups where the user asks][D57]]).
 
 Later ideas: show a failing job's log in a buffer (REST Actions API); list
 the required checks that never reported, as GitHub's "Expected" (roadmap,

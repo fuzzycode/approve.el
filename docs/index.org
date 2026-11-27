@@ -257,6 +257,12 @@ task only needs the files it touches.
   A PR buffer is now in the first clone of its repository, else the
   home directory (=approve-pr-directory-functions=); the dashboard and
   the log are in the home directory, a file view in its PR buffer's.
+- Asked for by the author on 2026-11-27 ([[file:decisions.org::*D57 Checks in one list by default; in groups where the user asks][D57]]): the checks in
+  groups.  One list stays the default, and its "… N more" line goes once
+  it is expanded.  =approve-checks-group-by= (=workflow=, =app=, =state=
+  or a function), or =approve-checks-group-by-repository= for some
+  repositories, puts them under headings of their own: a group with a
+  failing or running check starts expanded, the others collapsed.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

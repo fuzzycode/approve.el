@@ -476,6 +476,164 @@ MORE alternates field names and values, as in `list'."
               (kill-buffer buffer)
               (approve-icon-clear-cache))))))))
 
+(defmacro test-sections--with-checks (name &rest body)
+  "Run BODY in the PR buffer of fixture NAME with its checks loaded.
+The Checks section is expanded and icons are plain text."
+  (declare (indent 1) (debug t))
+  `(let ((approve-use-nerd-icons nil))
+     (approve-icon-clear-cache)
+     (approve-test-with-fixture ,name
+       (let ((buffer (approve-test-open-pr ,name)))
+         (unwind-protect
+             (with-current-buffer buffer
+               (magit-section-show (approve-test-find-section 'approve-checks-section))
+               (approve-pr--run-lazy-loaders)
+               (approve-test-wait-for (lambda () (approve-pr-loaded-p 'checks)))
+               (approve-pr-redraw)
+               ,@body)
+           (kill-buffer buffer)
+           (approve-icon-clear-cache))))))
+
+(defun test-sections--checks-lines ()
+  "Return the lines of the Checks section, its heading first."
+  (split-string (approve-test-section-text (approve-test-find-section
+                                            'approve-checks-section))
+                "\n" t))
+
+(defun test-sections--status (context state)
+  "Return a commit status CONTEXT in STATE."
+  `((__typename . "StatusContext") (id . ,(concat "SC_" context)) (context . ,context)
+    (state . ,state)))
+
+(describe "The checks in one list"
+  (it "lose the \"… N more\" line once it is expanded"
+    (let ((approve-checks-passed-shown 1))
+      (test-sections--with-checks "small"
+        (expect (cdr (test-sections--checks-lines))
+                :to-equal
+                '("  ✓ Tests / test (3.12)  4m 00s   required  test (3.12): success"
+                  "  … 1 more passed, 2 skipped"))
+        (goto-char (oref (approve-test-find-section 'approve-checks-more-section) start))
+        (approve-section-toggle)
+        ;; They show at once, and the line goes as the buffer redraws.
+        (expect (length (test-sections--checks-lines)) :to-equal 6)
+        (expect approve-pr--redraw-timer :to-be-truthy)
+        (approve-pr-redraw)
+        (expect (cdr (test-sections--checks-lines))
+                :to-equal
+                '("  ✓ Tests / test (3.12)  4m 00s   required  test (3.12): success"
+                  "  ✓ Lint / lint          4m 00s             lint: success"
+                  "  ⊘ Tests / deploy       skipped            deploy: skipped"
+                  "  ⊘ Docs / docs          neutral            docs: neutral"))
+        ;; Point is on the first check that was folded.
+        (expect (buffer-substring-no-properties (line-beginning-position) (line-end-position))
+                :to-match "Lint / lint")
+        ;; A check folds the checks, the line that was "…" too.
+        (approve-section-toggle)
+        (expect (oref (approve-test-find-section 'approve-checks-section) hidden) :to-be t)
+        (approve-section-toggle)
+        (approve-pr-redraw)
+        (expect (length (test-sections--checks-lines)) :to-equal 5)))))
+
+(describe "The checks in groups"
+  (it "are grouped by workflow, app or state; a status by its context"
+    (let ((run (test-sections--check "lint" "COMPLETED" "SUCCESS"
+                                     'checkSuite '((app (name . "GitHub Actions"))
+                                                   (workflowRun (workflow (name . "CI"))))))
+          (app-run (test-sections--check "patch" "COMPLETED" "FAILURE"
+                                         'checkSuite '((app (name . "Codecov")))))
+          (status (test-sections--status "ci/circleci: build" "PENDING"))
+          (bare (test-sections--status "Vercel" "SUCCESS")))
+      (expect (mapcar #'approve-sections-check-workflow (list run app-run status bare))
+              :to-equal '("CI" "Codecov" "ci" nil))
+      (expect (mapcar #'approve-sections-check-app (list run app-run status bare))
+              :to-equal '("GitHub Actions" "Codecov" "ci" nil))
+      (expect (mapcar #'approve-sections-check-outcome (list run app-run status bare))
+              :to-equal '("Passed" "Failed" "Running" "Passed"))))
+
+  (it "come as their first checks would, then by title, \"Other\" last"
+    (let ((groups (approve-sections-group-checks
+                   (list (test-sections--check "b-passed" "COMPLETED" "SUCCESS")
+                         (test-sections--check "other" "COMPLETED" "SUCCESS")
+                         (test-sections--check "a-passed" "COMPLETED" "SUCCESS")
+                         (test-sections--check "c-running" "IN_PROGRESS" nil)
+                         (test-sections--check "b-failed" "COMPLETED" "FAILURE"))
+                   (lambda (check)
+                     (let ((name (alist-get 'name check)))
+                       (unless (equal name "other")
+                         (upcase (substring name 0 1))))))))
+      (expect (mapcar (lambda (group)
+                        (cons (car group) (mapcar (lambda (check) (alist-get 'name check))
+                                                  (cdr group))))
+                      groups)
+              :to-equal '(("B" "b-failed" "b-passed")
+                          ("C" "c-running")
+                          ("A" "a-passed")
+                          (nil "other")))))
+
+  (it "put a check under \"Other\" when the grouping signals, and log it once"
+    (spy-on 'approve-log-condition)
+    ;; Outside buttercup's `debug-on-error', as in a user's Emacs.
+    (let ((failing (lambda (_check) (error "Oops")))
+          (debug-on-error nil))
+      (expect (approve-sections-group-checks
+               (list (test-sections--check "a" "COMPLETED" "SUCCESS")
+                     (test-sections--check "b" "COMPLETED" "SUCCESS"))
+               failing)
+              :to-equal (list (cons nil (list (test-sections--check "a" "COMPLETED" "SUCCESS")
+                                              (test-sections--check "b" "COMPLETED" "SUCCESS")))))
+      (expect 'approve-log-condition :to-have-been-called-times 1)))
+
+  (it "name a check without its group's title"
+    (let ((run (test-sections--check "lint" "COMPLETED" "SUCCESS"
+                                     'checkSuite '((workflowRun (workflow (name . "CI")))))))
+      (expect (approve-sections--check-name-in run "CI") :to-equal "lint")
+      (expect (approve-sections--check-name-in run "GitHub Actions") :to-equal "CI / lint")
+      (expect (approve-sections--check-name-in run nil) :to-equal "CI / lint")
+      (expect (approve-sections--check-name-in
+               (test-sections--status "codecov/patch" "SUCCESS") "codecov")
+              :to-equal "patch")))
+
+  (it "follow the repository's grouping, else the default one"
+    (let ((approve-checks-group-by 'state)
+          (approve-checks-group-by-repository '(("^ACME-example/rocket$" . workflow))))
+      (test-sections--with-checks "medium"
+        (expect (test-sections--checks-lines)
+                :to-equal
+                '("Checks (6)  ✗ 2 passed · 1 failed · 3 running"
+                  "  CI (3)  ✗ 2 passed · 1 failed"
+                  "    ✗ test                   4m 00s   required  test: failure"
+                  "    ✓ build (ubuntu-latest)  4m 00s   required  build (ubuntu-latest): success"
+                  "    ✓ build (macos-latest)   4m 00s             build (macos-latest): success"
+                  "  coverage (1)  ◐ 1 running"
+                  "    ◐ patch                  pending            Waiting for the coverage report"
+                  "  E2E (1)  ◐ 1 running"
+                  "    ◐ e2e                    queued"
+                  "  Lint (1)  ◐ 1 running"
+                  "    ◐ lint                   running"))
+        (expect (approve-test-find-section 'approve-checks-group-section '("CI" . t))
+                :to-be-truthy)
+        (setq-local approve-checks-group-by-repository nil)
+        (approve-pr-redraw)
+        (expect (mapcar (lambda (section) (oref section value))
+                        (oref (approve-test-find-section 'approve-checks-section) children))
+                :to-equal '(("Failed" . t) ("Running" . t) ("Passed"))))))
+
+  (it "start expanded when a check failed or runs, collapsed otherwise"
+    (let ((approve-checks-group-by 'state))
+      (test-sections--with-checks "medium"
+        (expect (mapcar (lambda (section) (oref section hidden))
+                        (oref (approve-test-find-section 'approve-checks-section) children))
+                :to-equal '(nil nil t))
+        ;; A check folds its group.
+        (goto-char (point-min))
+        (search-forward "Lint / lint")
+        (approve-section-toggle)
+        (expect (oref (approve-test-find-section 'approve-checks-group-section
+                                                 '("Running" . t))
+                      hidden)
+                :to-be t)))))
+
 (describe "approve-sections-insert-each"
   (it "inserts sections after their siblings, with markers, drawn bodies included"
     (with-temp-buffer
