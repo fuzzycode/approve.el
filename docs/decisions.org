@@ -646,6 +646,29 @@ Open questions sit at the end.  Decisions that come from [[file:project.org][pro
   asked for to see the lists as they are now, unlike a PR buffer, whose
   text must not move under the reader ([[*D23 Remote changes are announced, never auto-applied][D23]]).  =gR= follows approve-v2's
   dashboard and sits next to =gr=, which refreshes everything.
+- Amended (2026-11-27, by the author) :: The "… N more" line said how
+  many were left out but gave no way to see them in Emacs.
+  - A heading counts what a list shows and what it finds, =(20/23)=,
+    when it shows fewer; =(3)= when it shows them all.  No line under
+    the rows says it; =o= on the heading still opens the search on
+    GitHub.
+  - =+= (=approve-dashboard-load-more=, =+= in evil too, as the PR
+    buffer's react) on a list's heading or rows shows as many more as
+    its =:limit=: the list loads again, keeping its rows meanwhile,
+    asking for all its rows at once, in pages of 100 beyond 100.  A
+    pull request a later page finds again is shown once.  It keeps
+    showing that many each time it loads again (=g=, =G=, =M-x
+    approve-dashboard=), until the buffer is killed.  =:limit= is how
+    many a list shows at first.
+  - "Recently opened" counts the pull requests opened in the session
+    too, those past its rows included, so =+= shows more of them.
+  - =+= is dimmed in =?=, and says why, while the list loads, after it
+    failed, when it shows all it finds, and when GitHub's search gives
+    no more (it stops at 1000).
+  - The count in the heading says what the line did, in less room.
+    Loading the list again, rather than its next page, keeps one way
+    to load a list and no cursor to keep: a page of 40 costs what a
+    page of 20 does.
 
 ** D48 A count in the mode line, from the dashboard's lists
 - Status :: accepted (2026-11-17, by the author: what it counts, the

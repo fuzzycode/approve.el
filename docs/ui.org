@@ -404,7 +404,7 @@ Emacs session ([[file:decisions.org::*D39 The dashboard: lists loaded anew each 
  ▾ My pull requests (2)
    ● #1230  Normalize GraphQL connections          fuzzycode/approve  @bjornlarsson    +88 −120  5h  ✓  ✓
    ● #1229  Docs: architecture                     fuzzycode/approve  @bjornlarsson    +45   −2  1d  ✗  ·
- ▸ Involved (5)
+ ▸ Involved (10/14)
  ▸ Recently opened (10)
 #+end_example
 
@@ -434,14 +434,21 @@ the list at point alone.  A list keeps its rows while it loads again, with
 "⟳ loading…" on its heading; before its first answer it says "⟳
 Loading…", and a failed one says why, with how to retry.  A token error
 is shown once, for the whole dashboard.  A heading counts what GitHub
-finds; when a list shows fewer, its last line says how many more:
+finds; when a list shows fewer, it counts what it shows too, and =+= on
+the list (its heading or a row) shows as many more as its =:limit=:
 
 #+begin_example
- ▾ Needs my review (23)
+ ▾ Needs my review (20/23)
    ● #1234  Add retry logic to the GraphQL client  fuzzycode/approve  @alice          +340  −56  2h  ◐  ✗
    …
-   … 3 more · o show them on GitHub
 #+end_example
+
+The list loads again with them, keeping its rows meanwhile, and shows as
+many each time it loads again, until the buffer is killed.  "Recently
+opened" counts every pull request opened in the session, so =+= shows
+more of them too.  =+= is dimmed in =?= while the list loads, when it
+shows all it finds, and when GitHub's search gives no more (it stops at
+1000); =o= on the heading opens the search on GitHub.
 
 On a row, =RET= opens the PR, =o= opens it in the browser, =y= copies its
 URL, =K= shows its details (eldoc), and =TAB= folds its list.  On a list's
@@ -457,8 +464,9 @@ them all, and =O= or =zp= folds the others.  =?= opens the dashboard's dispatch:
  Pull request              Lists
   RET Open                  g Refresh all
   o   Open in browser       G Refresh list at point
-  y   Copy URL / search     T Fold all lists
-  K   Details (eldoc)       O Fold other lists
+  y   Copy URL / search     + Show more of the list
+  K   Details (eldoc)       T Fold all lists
+                            O Fold other lists
 #+end_example
 
 =s= will open search with the section's filter, once search exists
@@ -1271,6 +1279,7 @@ Keys are a draft to check in Phases 1–2.  Principles:
 | Dispatch                      | =?=           | =?=                     | any                       |
 | Refresh (=C-u=: clear caches) | =g=           | =gr=                    | any                       |
 | Refresh list at point         | =G=           | =gR=                    | dashboard list            |
+| Show more of the list         | =+=           | =+=                     | dashboard list            |
 | Bury / back                   | =q=           | =q=                     | any                       |
 | Toggle section                | =TAB=         | =TAB= =za=              | section                   |
 | Unfold / fold section         | via =TAB=     | =zo= / =zc=             | section                   |

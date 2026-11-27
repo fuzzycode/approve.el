@@ -5,8 +5,9 @@
 ;; The dashboard (docs/ui.org, "Dashboard"; decision D39): a list per
 ;; entry of `approve-dashboard-sections', from GitHub's searches or the
 ;; pull requests opened in the session; loading, errors, a refresh of
-;; one list, answers that come too late, and the commands on its rows
-;; and headings.  A fake transport answers the requests.
+;; one list, more of a list with +, answers that come too late, and
+;; the commands on its rows and headings.  A fake transport answers
+;; the requests.
 
 ;;; Code:
 
@@ -23,7 +24,8 @@
 
 (defvar test-dashboard--searches nil
   "What the fake GitHub finds: an alist of (SEARCH TOTAL . PRS).
-SEARCH is the search as sent, is:pr included.")
+SEARCH is the search as sent, is:pr included.  It sends PRS a page
+at a time, its cursor the position after the page.")
 
 (defvar test-dashboard--failing nil
   "An alist of (QUERY . STATUS): requests of QUERY fail with STATUS.")
@@ -111,10 +113,14 @@ defaults: by @alice, open, updated two hours before `approve-test-now'."
         ("queries/viewer.graphql"
          `(:body ((data (viewer ,@test-dashboard--viewer)))))
         ("queries/search-pull-requests.graphql"
-         (let ((found (cdr (assoc (alist-get 'search variables) test-dashboard--searches))))
+         (let* ((found (cdr (assoc (alist-get 'search variables) test-dashboard--searches)))
+                (prs (cdr found))
+                (start (string-to-number (or (alist-get 'after variables) "0")))
+                (end (min (length prs) (+ start (alist-get 'first variables)))))
            `(:body ((data (search (issueCount . ,(or (car found) 0))
-                                  (pageInfo (hasNextPage) (endCursor))
-                                  (nodes ,@(cdr found))))))))
+                                  (pageInfo (hasNextPage . ,(< end (length prs)))
+                                            (endCursor . ,(number-to-string end)))
+                                  (nodes ,@(seq-subseq prs start end))))))))
         ("queries/pull-request-summary.graphql"
          (let ((number (alist-get 'number variables)))
            (if (equal (alist-get 'owner variables) "gone")
@@ -167,11 +173,13 @@ No pull request was opened before; the dashboard is killed after."
          (kill-buffer buffer)))))
 
 (defun test-dashboard--settle ()
-  "Wait until every request is answered and the dashboard is redrawn."
+  "Wait until every list has loaded and the dashboard is redrawn."
   (approve-test-wait-for
-   (lambda () (and (zerop test-dashboard--pending)
-                   (not (buffer-local-value 'approve-dashboard--redraw-timer
-                                            (get-buffer approve-dashboard-buffer-name)))))))
+   (lambda () (with-current-buffer approve-dashboard-buffer-name
+                (and (zerop test-dashboard--pending)
+                     (not (seq-some (lambda (list) (plist-get (cdr list) :loading))
+                                    approve-dashboard--lists))
+                     (not approve-dashboard--redraw-timer))))))
 
 (defun test-dashboard--open ()
   "Open the dashboard, wait until it has loaded, and return its buffer."
@@ -182,10 +190,13 @@ No pull request was opened before; the dashboard is killed after."
     buffer))
 
 (defun test-dashboard--searches-sent ()
-  "Return the searches sent, oldest first, as (SEARCH . FIRST)."
+  "Return the searches sent, oldest first, as (SEARCH . FIRST).
+A later page's is (SEARCH FIRST . AFTER)."
   (mapcar (lambda (request)
-            (let ((variables (plist-get request :variables)))
-              (cons (alist-get 'search variables) (alist-get 'first variables))))
+            (let-alist (plist-get request :variables)
+              (if .after
+                  (cons .search (cons .first .after))
+                (cons .search .first))))
           (seq-filter (lambda (request)
                         (equal (plist-get request :name)
                                "queries/search-pull-requests.graphql"))
@@ -312,12 +323,97 @@ No pull request was opened before; the dashboard is killed after."
       (expect (oref (approve-test-find-section 'approve-dashboard-list-section "Folded") hidden)
               :to-be-truthy)))
 
-  (it "says how many more pull requests a search finds than it shows"
+  (it "counts in a heading how many of what it finds a list shows, and nothing under"
     (setf (cadr (assoc "is:pr is:open review-requested:@me" test-dashboard--searches)) 23)
     (test-dashboard--with test-dashboard--two
       (test-dashboard--open)
-      (expect (buffer-string) :to-match "^Needs my review (23)\n")
-      (expect (buffer-string) :to-match "^  … 21 more · o show them on GitHub\n")))
+      (expect (buffer-string) :to-match "^Needs my review (2/23)\n")
+      (expect (buffer-string) :to-match "^My pull requests (0)\n")
+      (expect (buffer-string) :not :to-match "more")))
+
+  (it "shows as many more as a list's limit with +, and as many when it loads again"
+    (setcdr (assoc "is:pr is:open review-requested:@me" test-dashboard--searches)
+            (cons 5 (mapcar #'test-dashboard--pr '(1 2 3 4 5))))
+    (test-dashboard--with '((:title "Needs my review" :filter "is:open review-requested:@me"
+                             :limit 2))
+      (test-dashboard--open)
+      (expect (buffer-string) :to-match "^Needs my review (2/5)\n  ● #1 .*\n  ● #2 .*\n\\'")
+      (expect (keymap-lookup approve-dashboard-mode-map "+") :to-be 'approve-dashboard-load-more)
+      (test-dashboard--goto "#2 ")
+      (approve-dashboard-load-more)
+      ;; It loads again, keeping its rows meanwhile.
+      (expect (buffer-string) :to-match "^Needs my review (2/5) +⟳ loading…\n  ● #1 .*\n  ● #2 ")
+      (test-dashboard--settle)
+      (expect (buffer-string) :to-match "^Needs my review (4/5)\n  ● #1 .*\n  ● #2 .*\n  ● #3 .*\n  ● #4 ")
+      (expect (buffer-substring-no-properties (pos-bol) (pos-eol)) :to-match "\\`  ● #2 ")
+      (approve-dashboard-load-more)
+      (test-dashboard--settle)
+      (expect (buffer-string) :to-match "^Needs my review (5)\n")
+      (expect (buffer-string) :to-match "#5 ")
+      (expect (approve-dashboard-load-more) :to-throw 'user-error '("The list shows all it finds"))
+      (approve-dashboard-refresh)
+      (test-dashboard--settle)
+      (expect (test-dashboard--searches-sent)
+              :to-equal '(("is:pr is:open review-requested:@me" . 2)
+                          ("is:pr is:open review-requested:@me" . 4)
+                          ("is:pr is:open review-requested:@me" . 6)
+                          ("is:pr is:open review-requested:@me" . 6)))))
+
+  (it "asks for more than 100 pull requests in pages, each shown once"
+    ;; GitHub's second page finds #1 again: it moved down the list meanwhile.
+    (setcdr (assoc "is:pr is:open review-requested:@me" test-dashboard--searches)
+            (cons 200 (mapcar #'test-dashboard--pr
+                              (append (number-sequence 1 100) '(1) (number-sequence 101 200)))))
+    (test-dashboard--with '((:title "Needs my review" :filter "is:open review-requested:@me"
+                             :limit 100))
+      (test-dashboard--open)
+      (expect (buffer-string) :to-match "^Needs my review (100/200)\n")
+      (test-dashboard--goto "Needs my review")
+      (approve-dashboard-load-more)
+      (test-dashboard--settle)
+      (expect (cdr (test-dashboard--searches-sent))
+              :to-equal '(("is:pr is:open review-requested:@me" . 100)
+                          ("is:pr is:open review-requested:@me" 100 . "100")
+                          ("is:pr is:open review-requested:@me" 1 . "200")))
+      (expect (buffer-string) :to-match "^Needs my review (200)\n")
+      (expect (how-many "^  ● #1 " (point-min) (point-max)) :to-be 1)
+      (expect (buffer-string) :to-match "#200 ")))
+
+  (it "shows more of the pull requests opened in the session with +"
+    (test-dashboard--with '((:title "Recently opened" :recent t :limit 1))
+      (dolist (number '(1 2 3))
+        (approve-pr-remember `(:host "github.com" :owner "fuzzycode" :repo "approve"
+                               :number ,number)))
+      (test-dashboard--open)
+      (expect (buffer-string) :to-match "^Recently opened (1/3)\n  ● #3 .*\n\\'")
+      (test-dashboard--goto "#3 ")
+      (approve-dashboard-load-more)
+      (test-dashboard--settle)
+      (expect (buffer-string) :to-match "^Recently opened (2/3)\n  ● #3 .*\n  ● #2 .*\n\\'")))
+
+  (it "says why + can't show more of a list, and the menu dims it"
+    ;; GitHub's search finds 23 but gives 2: it gives no more than 1000.
+    (setf (cadr (assoc "is:pr is:open review-requested:@me" test-dashboard--searches)) 23)
+    (test-dashboard--with test-dashboard--two
+      (with-current-buffer (approve-dashboard)
+        (test-dashboard--goto "Needs my review")
+        (expect (approve-action-why-not 'approve-dashboard-load-more)
+                :to-equal "The list is loading")
+        (test-dashboard--settle)
+        (expect (approve-action-why-not 'approve-dashboard-load-more)
+                :to-equal "GitHub gives no more of this search; open it on GitHub for the rest")
+        (test-dashboard--goto "My pull requests")
+        (expect (approve-action-why-not 'approve-dashboard-load-more)
+                :to-equal "The list shows all it finds")
+        (goto-char (point-min))
+        (expect (approve-action-why-not 'approve-dashboard-load-more)
+                :to-equal "Put point on a list of the dashboard")
+        (setq test-dashboard--failing '(("queries/search-pull-requests.graphql" . 502)))
+        (test-dashboard--goto "My pull requests")
+        (approve-dashboard-refresh-section)
+        (test-dashboard--settle)
+        (expect (approve-dashboard-load-more) :to-throw 'user-error
+                '("The list could not load; load it again first")))))
 
   (it "loads only the list at point again with G, keeping point on its row"
     (test-dashboard--with test-dashboard--two
@@ -394,7 +490,8 @@ No pull request was opened before; the dashboard is killed after."
                 :to-equal '(4 3 2))
         (expect (plist-get (car summaries) :host) :to-equal "git.example.com/api/v3")
         (expect (plist-get (cadr summaries) :host) :to-equal "api.github.com"))
-      (expect (buffer-string) :to-match "^Recently opened (2)\n  ● #4 .*\n  ● #3 ")
+      ;; #1, past the limit, is counted but not asked for.
+      (expect (buffer-string) :to-match "^Recently opened (2/3)\n  ● #4 .*\n  ● #3 ")
       (expect (buffer-string) :not :to-match "#2 ")))
 
   (it "loads every list again each time it is asked for"

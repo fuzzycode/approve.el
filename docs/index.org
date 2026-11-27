@@ -272,6 +272,10 @@ task only needs the files it touches.
   sources of its name (=approve-diff-order-extensions=).  The file
   list, =j /=, the thread picker and the feedback mode's next file
   follow the order.
+- Asked for by the author the same day ([[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]], amended): more of a
+  dashboard's list.  A heading counts what a list shows and what it
+  finds, =(20/23)=, instead of a "… N more" line, and =+= shows as
+  many more as its =:limit=; the list keeps that many across =g=.
 - Next step: the first task of [[file:roadmap.org::*Phase 8 — Notifications, polish, release][Phase 8]], =approve-notifications.el=
   and the filter transient.
 - On the same day the split layout and =L= ([[file:flows.org::*F18 Switch layout][F18]]) moved to a new last

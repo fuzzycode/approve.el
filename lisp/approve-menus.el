@@ -572,6 +572,8 @@ visual states, the keys are normal state's."
     ("g" "Refresh all" approve-dashboard-refresh)
     ("G" "Refresh list at point" approve-dashboard-refresh-section
      :inapt-if (lambda () (approve-action-why-not 'approve-dashboard-refresh-section)))
+    ("+" "Show more of the list" approve-dashboard-load-more
+     :inapt-if (lambda () (approve-action-why-not 'approve-dashboard-load-more)))
     ("T" approve-dashboard-toggle-lists
      :description (lambda () (if (approve-dashboard-lists-folded-p)
                                  "Unfold all lists"

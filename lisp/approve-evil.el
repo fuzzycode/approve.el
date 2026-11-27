@@ -34,8 +34,9 @@
 ;; backward, which opens the dispatch menu as in evil-collection's
 ;; Magit, in visual state too, so its commands act on the selection
 ;; (/ still searches), and +, a line motion that j and RET do too,
-;; which reacts.  Keys that would edit text in a file
-;; buffer (c s r R x D C S X i a A) are free in a read-only buffer, so the
+;; which reacts, and in the dashboard shows more of a list.  Keys
+;; that would edit text in a file buffer (c s r R x D C S X i a A)
+;; are free in a read-only buffer, so the
 ;; commands that change the pull request take them; in visual state,
 ;; c s r C act on the selection, and ? opens the dispatch menu on it.
 ;; So are o and O, which open a line: they are Emacs's o and O there,
@@ -189,6 +190,7 @@ a motion, so gb shows the other version.")
     ("zr" . approve-dashboard-unfold-lists)
     ("gr" . approve-dashboard-refresh)
     ("gR" . approve-dashboard-refresh-section)
+    ("+" . approve-dashboard-load-more)
     ("o" . approve-browse)
     ("go" . approve-browse)
     ("gy" . approve-copy)
@@ -201,7 +203,8 @@ a motion, so gb shows the other version.")
     ("q" . quit-window))
   "Keys of `approve-dashboard-mode' in evil's normal state: (KEY . COMMAND).
 The PR buffer's keys for the same commands; G, which refreshes the
-list at point in Emacs, is evil's motion, so gR does it.  The z keys
+list at point in Emacs, is evil's motion, so gR does it.  + shows
+more of the list at point, as in Emacs.  The z keys
 fold as in vim: za, zo and zc the list at point (zO and zC too, as
 lists hold no folds), zM and zm every list; zR and zr unfold them.
 O and zp fold every list but the one at point, as in a PR buffer.")

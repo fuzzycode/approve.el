@@ -48,6 +48,10 @@
 ;;   (`approve-dashboard-refresh-section') loads the list at point.  A
 ;;   list keeps its rows while it loads, and an answer to a request
 ;;   made before the list's last one is dropped.
+;; - A heading counts what the list finds, "(20/23)" when it shows
+;;   fewer.  + (`approve-dashboard-load-more') shows as many more as
+;;   its :limit: the list loads again with them, and keeps that many
+;;   when it loads again.
 ;; - RET, o, y, TAB and K are the PR buffer's commands (approve-nav.el,
 ;;   approve-eldoc.el): on a row they open, copy or describe its pull
 ;;   request; on the heading of a search, o opens the search on GitHub
@@ -100,7 +104,8 @@ Each is a plist:
            loads.  \"is:pr\" is added when it says nothing of the type.
   :recent  non-nil for the pull requests opened in this Emacs
            session, newest first, instead of a search
-  :limit   how many pull requests it shows, at most 100;
+  :limit   how many pull requests it shows at first, at most 100,
+           and how many more + adds (`approve-dashboard-load-more');
            `approve-dashboard-limit' when absent
   :hidden  non-nil to show it collapsed at first
 
@@ -121,9 +126,10 @@ For the open pull requests of an organization, newest first:
   :group 'approve)
 
 (defcustom approve-dashboard-limit 20
-  "How many pull requests a list of the dashboard shows, at most.
-A list's :limit in `approve-dashboard-sections' says otherwise for
-it.  GitHub sends at most 100 at once.
+  "How many pull requests a list of the dashboard shows at first.
++ on a list (`approve-dashboard-load-more') shows as many more.  A
+list's :limit in `approve-dashboard-sections' says otherwise for it.
+GitHub sends at most 100 at once.
 
   (setq approve-dashboard-limit 30)"
   :type 'natnum
@@ -140,7 +146,11 @@ STATE is a plist:
 :loaded   non-nil once a request for it has answered
 :prs      the pull requests of the last answer, in order
 :total    how many there are in all: what the search finds, or the
-          rows of the recently opened
+          rows of the recently opened and those not asked for
+:more     non-nil when GitHub has more of them than :prs, for
+          `approve-dashboard-load-more' to show
+:pages    how many times its :limit it shows, 1 when absent; each
+          `approve-dashboard-load-more' adds one
 :search   the search it sent, is:pr included, or nil
 :loading  non-nil while a request for it is out
 :error    the error of its last request, or nil
@@ -178,8 +188,14 @@ It is `approve-render-window-width' then; its rows fit it.")
     (setf (alist-get title approve-dashboard--lists nil nil #'equal) state)))
 
 (defun approve-dashboard--limit (spec)
-  "Return how many pull requests the list of SPEC shows, at most."
+  "Return how many pull requests the list of SPEC shows at first."
   (min 100 (or (plist-get spec :limit) approve-dashboard-limit)))
+
+(defun approve-dashboard--want (spec)
+  "Return how many pull requests the list of SPEC asks for now.
+Its :limit, as many times as its :pages say."
+  (* (approve-dashboard--limit spec)
+     (or (plist-get (approve-dashboard--state (plist-get spec :title)) :pages) 1)))
 
 (defun approve-dashboard--filter (spec)
   "Return the search of SPEC: its :filter, or what that function returns."
@@ -205,18 +221,39 @@ Every request fails the same way then; the echo area says it once."
     (message "Approve: could not load the dashboard: %s"
              (car (split-string (approve-api-error-message err) "\n")))))
 
+(defun approve-dashboard--add-new (prs more)
+  "Return PRS, then those of MORE that are not among them, by id.
+A search's later page finds a pull request again when it moved up
+the list meanwhile."
+  (let ((ids (mapcar (lambda (pr) (alist-get 'id pr)) prs)))
+    (append prs (seq-remove (lambda (pr) (member (alist-get 'id pr) ids)) more))))
+
 (defun approve-dashboard--load-search (spec answer)
   "Ask GitHub for the pull requests of SPEC's search; call ANSWER with them.
-ANSWER takes the keys and values to set in the list's state."
-  (let ((search (approve-query-pull-request-search (approve-dashboard--filter spec))))
+It asks for as many as the list shows now (`approve-dashboard--want'),
+in pages of at most 100, GitHub's largest.  ANSWER takes the keys
+and values to set in the list's state."
+  (let ((search (approve-query-pull-request-search (approve-dashboard--filter spec)))
+        (want (approve-dashboard--want spec))
+        (prs nil))
     (approve-dashboard--put (plist-get spec :title) :search search)
-    (approve-query-search
-     search
-     :first (approve-dashboard--limit spec)
-     :callback (lambda (result)
-                 (funcall answer :loaded t :prs (alist-get 'nodes result)
-                          :total (alist-get 'issueCount result)))
-     :errorback (lambda (err) (funcall answer :error err)))))
+    (cl-labels
+        ((page (after)
+           (approve-query-search
+            search
+            :first (min 100 (- want (length prs)))
+            :after after
+            :callback
+            (lambda (result)
+              (let-alist (alist-get 'pageInfo result)
+                (setq prs (approve-dashboard--add-new prs (alist-get 'nodes result)))
+                (if (and .hasNextPage .endCursor (< (length prs) want))
+                    (page .endCursor)
+                  (funcall answer :loaded t :prs prs
+                           :total (alist-get 'issueCount result)
+                           :more (and .hasNextPage t)))))
+            :errorback (lambda (err) (funcall answer :error err)))))
+      (page nil))))
 
 (defun approve-dashboard--load-recent (spec answer)
   "Ask GitHub for the pull requests opened in the session, as SPEC limits.
@@ -224,7 +261,9 @@ Each is asked for by itself, all at once; ANSWER is called once
 they all answered, with the rows in the order they were opened.  A
 pull request GitHub no longer has, or that the token can't read, is
 left out; any other error is the list's."
-  (let* ((prs (seq-take (approve-pr-recent) (approve-dashboard--limit spec)))
+  (let* ((recent (approve-pr-recent))
+         (prs (seq-take recent (approve-dashboard--want spec)))
+         (left-out (- (length recent) (length prs)))
          (rows (make-vector (length prs) nil))
          (left (length prs))
          (failure nil)
@@ -233,9 +272,11 @@ left out; any other error is the list's."
                      (if failure
                          (funcall answer :error failure)
                        (let ((rows (delq nil (append rows nil))))
-                         (funcall answer :loaded t :prs rows :total (length rows))))))))
+                         (funcall answer :loaded t :prs rows
+                                  :total (+ (length rows) left-out)
+                                  :more (> left-out 0))))))))
     (if (null prs)
-        (funcall answer :loaded t :prs nil :total 0)
+        (funcall answer :loaded t :prs nil :total 0 :more nil)
       (seq-do-indexed
        (lambda (pr index)
          (approve-query-summary
@@ -286,9 +327,6 @@ The answer to an earlier request for the list is dropped."
 (defclass approve-dashboard-list-section (magit-section) ()
   "A list of the dashboard; its value is the list's title.")
 
-(defclass approve-dashboard-more-section (magit-section) ()
-  "The line that says how many more pull requests a search finds.")
-
 (defun approve-dashboard--title-line (width)
   "Return the title line: what the buffer is, who the viewer is, and when.
 Its right part ends at column WIDTH."
@@ -308,18 +346,15 @@ Its right part ends at column WIDTH."
     (list :kind 'search :title (plist-get spec :title) :search search
           :total (plist-get state :total) :url (approve-dashboard--search-url search))))
 
-(defun approve-dashboard--insert-more (count thing)
-  "Insert the line that says COUNT more pull requests are found.
-It carries THING, the list's search, which `approve-browse' opens."
-  (magit-insert-section (approve-dashboard-more-section)
-    (insert (approve-thing
-             (concat approve-list-indentation
-                     (approve-face (format "… %d more" count) 'approve-dim)
-                     (when-let* ((hint (approve-render-hints
-                                        '(approve-browse "show them on GitHub"))))
-                       (concat (approve-face " · " 'approve-dim) hint))
-                     "\n")
-             thing))))
+(defun approve-dashboard--count (state)
+  "Return the count on the heading of a list with STATE.
+How many pull requests it finds, or how many of them it shows and
+how many it finds, \"20/23\", when it shows fewer."
+  (let ((shown (length (plist-get state :prs)))
+        (total (plist-get state :total)))
+    (if (and total (< shown total))
+        (format "%d/%d" shown total)
+      total)))
 
 (defun approve-dashboard--rows (spec)
   "Return the pull requests the list of SPEC shows, in order.
@@ -335,13 +370,11 @@ Its rows are laid out by LAYOUT, from `approve-list-layout'; what
 its heading has on the right ends at column WIDTH."
   (let* ((title (plist-get spec :title))
          (state (approve-dashboard--state title))
-         (prs (plist-get state :prs))
-         (total (plist-get state :total))
          (thing (approve-dashboard--search-thing spec state))
          (shown (and (plist-get state :loaded) (not (plist-get state :error)))))
     (magit-insert-section (approve-dashboard-list-section title (plist-get spec :hidden))
       (let ((heading (approve-sections-heading
-                      title (and shown total)
+                      title (and shown (approve-dashboard--count state))
                       (and shown (plist-get state :loading)
                            (concat (approve-icon 'loading 'approve-loading) " "
                                    (approve-face "loading…" 'approve-loading)))
@@ -355,12 +388,11 @@ its heading has on the right ends at column WIDTH."
        ((not (plist-get state :loaded))
         (insert approve-list-indentation (approve-render-loading)))
        (t
-        (approve-list-insert prs (if (plist-get spec :recent)
-                                     "None opened in this session."
-                                   "No pull requests.")
-                             layout)
-        (when (and total (> total (length prs)))
-          (approve-dashboard--insert-more (- total (length prs)) thing)))))))
+        (approve-list-insert (plist-get state :prs)
+                             (if (plist-get spec :recent)
+                                 "None opened in this session."
+                               "No pull requests.")
+                             layout))))))
 
 (defun approve-dashboard--insert ()
   "Insert the dashboard: its title line, then its lists or a token error.
@@ -469,6 +501,38 @@ the dashboard's menu asks whether to dim it (decision D06)."
 (put 'approve-dashboard-refresh-section 'approve-preflight
      #'approve-dashboard--list-preflight)
 
+(defun approve-dashboard--more-preflight ()
+  "Return the entry of the list at point, or say why it can't show more.
+It is the preflight of `approve-dashboard-load-more', which the
+dashboard's menu asks whether to dim it (decision D06)."
+  (let* ((spec (approve-dashboard--list-preflight))
+         (state (approve-dashboard--state (plist-get spec :title))))
+    (cond ((or (plist-get state :loading) (not (plist-get state :loaded)))
+           (user-error "The list is loading"))
+          ((plist-get state :error)
+           (user-error "The list could not load; load it again first"))
+          ((plist-get state :more) spec)
+          ((< (length (plist-get state :prs)) (or (plist-get state :total) 0))
+           (user-error "GitHub gives no more of this search; open it on GitHub for the rest"))
+          (t (user-error "The list shows all it finds")))))
+
+(defun approve-dashboard-load-more ()
+  "Show more of the list at point: as many more as its :limit.
+The list loads again with them, keeping its rows meanwhile, and
+shows as many each time it loads again, until the dashboard is
+killed.  GitHub's search finds at most 1000."
+  (interactive)
+  (approve-dashboard--check-mode)
+  (let* ((spec (approve-dashboard--more-preflight))
+         (title (plist-get spec :title)))
+    (approve-dashboard--put title :pages
+                            (1+ (or (plist-get (approve-dashboard--state title) :pages) 1)))
+    (approve-dashboard--load spec)
+    (approve-dashboard-redraw)))
+
+(put 'approve-dashboard-load-more 'approve-preflight
+     #'approve-dashboard--more-preflight)
+
 (defun approve-dashboard--list-sections ()
   "Return the sections of the dashboard's lists, in order."
   (and magit-root-section
@@ -512,6 +576,7 @@ the dashboard loads again, until it is unfolded."
 ;; that exists as it is: loading this file again then binds new keys.
 (keymap-set approve-dashboard-mode-map "g" #'approve-dashboard-refresh)
 (keymap-set approve-dashboard-mode-map "G" #'approve-dashboard-refresh-section)
+(keymap-set approve-dashboard-mode-map "+" #'approve-dashboard-load-more)
 (keymap-set approve-dashboard-mode-map "RET" #'approve-visit)
 (keymap-set approve-dashboard-mode-map "<remap> <magit-section-toggle>"
             #'approve-section-toggle)
@@ -524,7 +589,8 @@ the dashboard loads again, until it is unfolded."
 (define-derived-mode approve-dashboard-mode magit-section-mode "Approve-Dashboard"
   "Major mode of the dashboard of pull requests.
 Its lists come from `approve-dashboard-sections';
-\\[approve-dashboard-refresh] loads them again, \\[approve-dashboard-refresh-section] the one at point.
+\\[approve-dashboard-refresh] loads them again, \\[approve-dashboard-refresh-section] the one at point, and
+\\[approve-dashboard-load-more] shows more of the one at point.
 
 \\{approve-dashboard-mode-map}"
   :group 'approve

@@ -576,6 +576,13 @@ Implements F19.  Mockups: notifications, the mode-line count.
       the file list, =j /=, the thread picker and the feedback mode's
       next file follow it; the heading names an order that isn't the
       default.  [[file:ui.org::*Order of the diff (~=~ =s=)][Mockup]].
+- [X] More of a dashboard's list ([[file:decisions.org::*D39 The dashboard: lists loaded anew each time, "Recently opened" for the session][D39]], amended), added and done
+      (2026-11-27) at the author's request: a heading counts what a
+      list shows and what it finds, =(20/23)=, instead of a "… N more"
+      line, and =+= (=approve-dashboard-load-more=) shows as many more
+      as its =:limit=, loading the list again with them; it keeps that
+      many across =g=.  "Recently opened" counts every pull request
+      opened in the session.  [[file:ui.org::*Dashboard][Mockup]].
 - [ ] Move the work to =main=: merge =feature/revamp= (added 2026-11-17, at
       the author's request).  The README and the user's documentation
       are written after it, on =main=.
